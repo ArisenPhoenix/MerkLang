@@ -1,0 +1,9 @@
+.vscode
+build
+code
+grammar
+Info
+CMakeLists.txt
+debugger_config.cpp
+rebuild.sh
+errors
