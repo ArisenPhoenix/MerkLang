@@ -5,6 +5,7 @@
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
+#include "ast/ast_callable.h"
 // #include "ast/ast_function.h"
 
 Vector<UniquePtr<BaseAST>> CodeBlock::getChildrenOfType(AstType astType, bool recurse) {

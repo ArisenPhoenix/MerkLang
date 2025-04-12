@@ -22,17 +22,17 @@
 
 
 // Constructor
-Parser::Parser(const Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpretMode, bool byBlock)
+Parser::Parser(Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpretMode, bool byBlock)
     : tokens(tokens), rootScope(rootScope), currentScope(rootScope), interpretMode(interpretMode), byBlock(byBlock) {
-        DEBUG_FLOW(FlowLevel::HIGH);
+        // DEBUG_FLOW(FlowLevel::HIGH);
         if (!rootScope) {
             throw MerkError("Root scope must not be null when initializing the parser.");
         }
         rootBlock = makeUnique<CodeBlock>(rootScope);
         // nativeFunctionNames = rootScope->functionNames;
-        DEBUG_LOG(LogLevel::INFO, "Parser initialized with root scope at level: ", rootScope->getScopeLevel(),
-                " | Memory Loc: ", rootScope.get());
-        DEBUG_FLOW_EXIT();
+        // DEBUG_LOG(LogLevel::INFO, "Parser initialized with root scope at level: ", rootScope->getScopeLevel(),
+        //         " | Memory Loc: ", rootScope.get());
+        // DEBUG_FLOW_EXIT();
 }
 
 bool Parser::getAllowScopeCreation() const {return allowScopecreation;}
@@ -40,24 +40,24 @@ bool Parser::getAllowScopeCreation() const {return allowScopecreation;}
 // Enter a new scope
 void Parser::enterScope(SharedPtr<Scope> manualScope) {
     SharedPtr<Scope> thisScope = manualScope ? manualScope : currentScope;
-    DEBUG_FLOW(FlowLevel::HIGH);
-    // DEBUG_LOG(LogLevel::ERROR, "allowScopeCreation:", highlight(getAllowScopeCreation() ? "true" : "false", Colors::red));
+    // DEBUG_FLOW(FlowLevel::HIGH);
+    // DEBUG_LOG(LogLevel::DEBUG, "allowScopeCreation:", highlight(getAllowScopeCreation() ? "true" : "false", Colors::red));
 
     if (!thisScope) {
         throw MerkError("Cannot enter a new scope because currentScope is null.");
     }
 
     if (getAllowScopeCreation()){
-        DEBUG_LOG(LogLevel::TRACE, "\n=========================================================================================");
-        DEBUG_LOG(LogLevel::TRACE, "DEBUG: Entering new Scope. Current Level: ", currentScope->getScopeLevel(), 
-                 " | New Scope Level: ", thisScope->getScopeLevel() + 1);
+        // DEBUG_LOG(LogLevel::TRACE, "\n=========================================================================================");
+        // DEBUG_LOG(LogLevel::TRACE, "DEBUG: Entering new Scope. Current Level: ", currentScope->getScopeLevel(), 
+        //          " | New Scope Level: ", thisScope->getScopeLevel() + 1);
 
         // Create a child scope and update the currentScope
         auto newScope = thisScope->createChildScope();
 
-        DEBUG_LOG(LogLevel::TRACE, "DEBUG: New Scope Created. Scope Address: ", thisScope, 
-                 " | Parent Scope Address: ", thisScope->getParent());
-        debugLog(true, "=========================================================================================\n");
+        // DEBUG_LOG(LogLevel::TRACE, "DEBUG: New Scope Created. Scope Address: ", thisScope, 
+        //          " | Parent Scope Address: ", thisScope->getParent());
+        // debugLog(true, "=========================================================================================\n");
     
         currentScope = newScope;
         if (!currentScope) {
@@ -66,7 +66,7 @@ void Parser::enterScope(SharedPtr<Scope> manualScope) {
         currentScopeLevel++;
     }
     
-    DEBUG_FLOW_EXIT();
+    // DEBUG_FLOW_EXIT();
 }
 
 // Exit the current scope
@@ -106,26 +106,25 @@ void Parser::exitScope(SharedPtr<Scope> manualScope) {
 }
 
 void Parser::interpret(CodeBlock* block) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    // DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting CodeBlock ===========================", Colors::yellow));
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting CodeBlock ===========================", Colors::yellow));
 
     try {
-       
         block->evaluate(); // Evaluate the updated statement
     } catch (const std::exception& e) {
         DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
         throw MerkError(e.what());
     }
-    DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting CodeBlock ===========================", Colors::yellow));
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting CodeBlock ===========================", Colors::yellow));
 
-    DEBUG_FLOW_EXIT();
+    // DEBUG_FLOW_EXIT();
 }
 
 void Parser::interpret(ASTStatement* ASTStatement) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    // DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting ASTStatement ===========================", Colors::yellow));
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting ASTStatement ===========================", Colors::yellow));
 
     try {
         ASTStatement->evaluate(currentScope); // Evaluate the updated statement
@@ -136,17 +135,17 @@ void Parser::interpret(ASTStatement* ASTStatement) const {
         // }
 
     } catch (const std::exception& e) {
-        DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
+        // DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
         throw MerkError(e.what());
     }
-    DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting ASTStatement ===========================", Colors::yellow));
-    DEBUG_FLOW_EXIT();
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting ASTStatement ===========================", Colors::yellow));
+    // DEBUG_FLOW_EXIT();
 }
 
 void Parser::interpret(BaseAST* block_or_ast) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    // DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting BaseAST ===========================", Colors::yellow));
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting BaseAST ===========================", Colors::yellow));
     try {
         if (block_or_ast->getBranch() == "Block"){
             block_or_ast->evaluate(); // Evaluate the updated statement
@@ -165,19 +164,19 @@ void Parser::interpret(BaseAST* block_or_ast) const {
         DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
         throw MerkError(e.what());
     }
-    DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting BaseAST ===========================", Colors::yellow));
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting BaseAST ===========================", Colors::yellow));
 
-    DEBUG_FLOW_EXIT();
+    // DEBUG_FLOW_EXIT();
 }
 
 UniquePtr<CodeBlock> Parser::parse() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    // DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
+    // DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
     try {
         while (currentToken().type != TokenType::EOF_Token) {
-            DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: with token:", currentToken().toString());
-            DEBUG_LOG(LogLevel::INFO, "Scope use_count: ", currentScope.use_count(), ", Address: ", currentScope.get());
+            // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parse: with token:", currentToken().toString());
+            // DEBUG_LOG(LogLevel::TRACE, "Scope use_count: ", currentScope.use_count(), ", Address: ", currentScope.get());
     
             if (currentToken().type == TokenType::Newline) {
                 advance(); // Skip blank lines
@@ -191,11 +190,11 @@ UniquePtr<CodeBlock> Parser::parse() {
     
             // If interpretMode is enabled and interpretation is by block, evaluate each statement one-by-one, whether it is a control or variable
             if (interpretMode && byBlock){
-                DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-                DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting AST by Block ===========================", Colors::bg_red));
+                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting AST by Block ===========================", Colors::bg_red));
                 interpret(statement.get());
-                DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting AST by Block ===========================", Colors::bg_red));
-                DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting AST by Block ===========================", Colors::bg_red));
+                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
             }
             
             // Add the parsed statement to the block
@@ -205,26 +204,28 @@ UniquePtr<CodeBlock> Parser::parse() {
     
         // If interpretMode is enabled and interpretation is not by block, evaluate the entire AST in a batch.
         if (interpretMode && !byBlock){
-            DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting Full AST ===========================", Colors::bg_red));
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting Full AST ===========================", Colors::bg_red));
     
     
             // rootBlock->printAST(std::cout);
+            
             interpret(rootBlock.get());
-            DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting Full AST ===========================", Colors::bg_red));
-            DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            
+            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting Full AST ===========================", Colors::bg_red));
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
             
             // currentScope->printContext();
             // DEBUG_LOG(LogLevel::INFO, "\n\n\n");
             // currentScope->debugPrint();
         }
     
-        DEBUG_LOG(LogLevel::INFO, "Returning CodeBlock from parse() with scope address: ", currentScope.get(), ", at block address: ", rootBlock.get());
+        // DEBUG_LOG(LogLevel::INFO, "Returning CodeBlock from parse() with scope address: ", currentScope.get(), ", at block address: ", rootBlock.get());
         
         // rootBlock->printAST(std::cout);
         // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
         // rootBlock->printAST(std::cout);
-        DEBUG_FLOW_EXIT();
+        // DEBUG_FLOW_EXIT();
         return std::move(rootBlock); // Return the parsed block node
     } catch (MerkError& e) {
         rootScope->printChildScopes();
@@ -241,13 +242,17 @@ Token Parser::currentToken() const {
 }
 
 Token Parser::advance() {
+    DEBUG_LOG(LogLevel::TRACE, "Advancing From Current Token: ", currentToken().toString());
     if (position < tokens.size() - 1) {
         ++position;
+
     } else if (position == tokens.size() - 1) {
         ++position;
-        DEBUG_LOG(LogLevel::INFO, "DEBUG Parser advance(): Reached EOF.");
+        DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser advance(): Reached EOF.");
         return eofToken;
     }
+    DEBUG_LOG(LogLevel::TRACE, "New Current Token: ", currentToken().toString());
+
     return currentToken();
 }
 
@@ -258,6 +263,98 @@ Token Parser::peek(){
     return nextToken;
 }
 
+bool Parser::consume(TokenType type) {
+    if (match(type)) { // match only checks the type here because no value is provided
+        // return previousToken(); // Return the matched token
+        advance();
+        return true;
+    }
+    throw UnexpectedTokenError(currentToken(), "Expected Type: " + tokenTypeToString(type));
+}
+
+bool Parser::consume(String value) {
+    if (currentToken().value == value){
+        advance();
+        return true;
+    }
+    throw UnexpectedTokenError(currentToken(), value);
+}
+
+
+bool Parser::consume(TokenType type, String val1, String val2, String val3) {
+    Token token = currentToken();
+    String val = token.value;
+    if (token.type == type && (val == val1 || val == val2 || val == val3)){
+        advance();
+        return true;
+    }
+
+    String msg = val1;
+    if (!val2.empty()){
+        msg += " | " + val2;
+        if (!val3.empty()){
+            msg += " | " + val3;
+        }
+    }
+    throw UnexpectedTokenError(token, msg);
+}
+
+
+bool Parser::check(TokenType type, const String& value) const {
+    return currentToken().type == type && (value.empty() || currentToken().value == value);
+}
+
+bool Parser::match(TokenType type, const String& value) {
+    if (currentToken().type == type && (value.empty() || currentToken().value == value)) {
+        advance(); // Consume the token
+        return true;
+    }
+    return false;
+};
+
+
+
+
+bool Parser::existing(TokenType type, int limit){
+    int currentPosition = position;
+    Token lastToken = currentToken();
+    int count = 0;
+    while (lastToken.type != eofToken.type && count < limit) {
+        ++position;
+        ++count;
+        lastToken = currentToken();
+        if (lastToken.type == type) {
+            position = currentPosition;  // Restore original position.
+            return true;
+        }
+    }
+    position = currentPosition;
+    return false;
+}
+
+
+Token Parser::find(TokenType type, int limit) {
+    int currentPosition = position;
+    Token lastToken = currentToken();
+    int count = 0;
+    while (lastToken.type != eofToken.type && count < limit) {
+        ++position;
+        ++count;
+
+        lastToken = currentToken();
+        if (lastToken.type == type) {
+            position = currentPosition;  // Restore original position.
+            return lastToken;
+        }
+    }
+
+    position = currentPosition;
+    String msg = " Expected token type " + tokenTypeToString(type) + ", but found " + lastToken.toString();
+    throw RunTimeError(msg);
+}
+
+
+
 Token Parser::previousToken() const {
     if (position > 0) {
         return tokens[position - 1];
@@ -265,7 +362,18 @@ Token Parser::previousToken() const {
     throw MerkError("No previous token available. Token: " + currentToken().toString());
 }
 
+String Parser::getCurrentClassAccessor() {
+    return classAccessors.back();
+}
 
+void Parser::addAccessor(String accessorName) {
+    classAccessors.emplace_back(accessorName);
+}
+void Parser::popAccessor() {
+    if (classAccessors.size() > 0){
+        classAccessors.pop_back();
+    }
+}
 
 template <typename T, typename... Args>
 UniquePtr<T> createNode(SharedPtr<Scope> scope, Args&&... args) {

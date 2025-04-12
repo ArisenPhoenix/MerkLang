@@ -4,11 +4,14 @@
 #include "core/types.h"
 #include "core/node.h"
 #include "core/context.h"
-#include "core/registry/registry.h"
+#include "core/registry/function_registry.h"
+#include "core/registry/class_registry.h"
 
+class UserFunction;
+class CallableSignature;
 
-class UserFunctionNode;
-class FunctionSignature;
+class ClassBase;
+class ClassSignature;
 
 
 class Scope : public std::enable_shared_from_this<Scope> {
@@ -25,12 +28,11 @@ public:
     int currentLine;
     int currentColumn;
     void exitScope();                    // Exit the current scope -> moving back to parent, not really used
-    // void enterScope();
     int getScopeLevel() const;           // Get the current scope level
 
     // Created For Debugging Scope when developing functions. Will keep until such time as deemed unnecessary
     bool isDetached = false;
-    bool isFunctionCallScope = false;
+    bool isCallableScope = false;
     bool isClonedScope = false;
 
     // Context Management
@@ -48,33 +50,54 @@ public:
 
     
     // Registry Management
-    const FunctionRegistry& getFunctionRegistry() const { return functionRegistry; }
-    FunctionRegistry& getFunctionRegistry() { return functionRegistry; }
+    const FunctionRegistry& getFunctionRegistry() const;
+    FunctionRegistry& getFunctionRegistry();
     const FunctionRegistry& getAllFunctions(FunctionRegistry& callingRegister) const;
+    bool hasFunction(const String& name) const;
 
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
-    void registerFunction(const String& name, SharedPtr<FunctionSignature> function);
+    void registerFunction(const String& name, SharedPtr<CallableSignature> function);
 
-    std::optional<std::reference_wrapper<FunctionSignature>> getFunction(const String& name, const Vector<Node>& args);
-    std::optional<std::reference_wrapper<FunctionSignature>> getFunction(const String& name);
- 
+    std::optional<std::reference_wrapper<CallableSignature>> getFunction(const String& name, const Vector<Node>& args);
+    std::optional<std::reference_wrapper<CallableSignature>> getFunction(const String& name);
+
+
+    // Class Management
+    const ClassRegistry& getClassRegistry() const;
+    ClassRegistry& getClassRegistry();
+    bool hasClass(const String& name) const;
+    // void registerClass();
+    void registerClass(const String& name, SharedPtr<ClassBase> cls);
+    void registerClass(const String& name, SharedPtr<ClassSignature> classSig);
+    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getClass(const String& name);
+
+    // for dynamic resolution of chains
+    Node lookup(const String& name, IdentifierType type);
+    
+
+
+    // Scope Other
     Vector<SharedPtr<Scope>> getChildren();
     bool hasChildren();
     void debugPrint() const;
     void printChildScopes(int indentLevel = 0) const;
 
 
-    void setParent(SharedPtr<Scope> scope){
-        scope->appendChildScope(shared_from_this());
-        parentScope = scope;
-        scopeLevel = scope->getScopeLevel() + 1;
-    }
+    void setParent(SharedPtr<Scope> scope);
 
     void appendChildScope(SharedPtr<Scope> childScope);
     SharedPtr<Scope> detachScope(const std::unordered_set<String>& freeVarNames);
     SharedPtr<Scope> mergeScope(SharedPtr<Scope> newScope);
 
     SharedPtr<Scope> clone() const;
+
+    bool parentIsValid();
+
+    void registerCallableType(const String& name, CallableType type);
+    SharedPtr<std::unordered_map<String, CallableType>> globalCallables;
+    std::optional<CallableType> getCallableType(const String& name) const;
+    Node resolveCallable(const String& name, const Vector<Node>& args = {});
+
 
 
 
@@ -85,6 +108,8 @@ private:
     int scopeLevel;                            // The level of the scope in the hierarchy
     Context context;                           // The context for variable management
     FunctionRegistry functionRegistry;         // Registry for function management
+    ClassRegistry classRegistry;               // Add class registry
+
     bool interpretMode;
 };
 

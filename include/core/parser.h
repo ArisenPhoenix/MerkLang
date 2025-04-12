@@ -10,12 +10,16 @@
 #include "core/node.h"
 #include "core/tokenizer.h"
 #include "ast/ast.h"
+#include "ast/ast_chain.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
+// #include "ast/ast_import.h"
+#include "ast/ast_callable.h"
+#include "ast/ast_class.h"
 
 class Parser {
 private:
-    const Vector<Token>& tokens;
+    Vector<Token>& tokens;
     size_t position = 0;
     SharedPtr<Scope> rootScope;       // Root scope of the parser
     SharedPtr<Scope> currentScope;    // Current active scope for tracking
@@ -24,6 +28,9 @@ private:
 
     int currentScopeLevel = 0;        // Track the current scope level
     int loopContextCounter = 0;       // Tracks the depth of nested loops
+    bool allowScopecreation = true;
+    bool insideClass = false;
+    Vector<String> classAccessors;
 
     UniquePtr<CodeBlock> rootBlock;
 
@@ -32,26 +39,16 @@ private:
     Token currentToken() const;
     Token advance();
 
-    Token consume(TokenType type, const String& errorMessage) {
-        if (match(type)) { // match only checks the type here because no value is provided
-            return previousToken(); // Return the matched token
-        }
-        throw std::runtime_error(errorMessage + " at line " +
-                                std::to_string(currentToken().line) +
-                                ", column " + std::to_string(currentToken().column));
-    }
+    bool consume(TokenType type);
+    bool consume(String value);
+    bool consume(TokenType type, String val1, String val2 = "", String val3 = "");
     Token peek();
+    Token find(TokenType type, int limit);
+    bool existing(TokenType type, int limit);
     Token previousToken() const;
-    bool check(TokenType type, const String& value = "") const {
-        return currentToken().type == type && (value.empty() || currentToken().value == value);
-    }
-    bool match(TokenType type, const String& value = "") {
-        if (currentToken().type == type && (value.empty() || currentToken().value == value)) {
-            advance(); // Consume the token
-            return true;
-        }
-        return false;
-    };
+    bool check(TokenType type, const String& value = "") const;
+    bool match(TokenType type, const String& value = "");
+    
     int getOperatorPrecedence(const String& op) const;
 
     // Scope Management
@@ -71,6 +68,7 @@ private:
 
     UniquePtr<CodeBlock> parseBlock(SharedPtr<Scope> = nullptr);
     UniquePtr<BaseAST> parseStatement();
+    
 
     std::optional<std::type_index> getStaticType();
     void interpret(CodeBlock* CodeBlockForEvaluation) const;
@@ -82,19 +80,43 @@ private:
     UniquePtr<FunctionDef> parseFunctionDefinition();
     UniquePtr<FunctionCall> parseFunctionCall();
 
+    UniquePtr<ASTStatement> parseClassCall();
+    UniquePtr<ASTStatement> parseClassDefinition();
+    UniquePtr<MethodDef> parseClassInitializer();
+    UniquePtr<MethodDef> parseClassMethod();
+
+    UniquePtr<ASTStatement> parseProtectedClassAttributes();
+    UniquePtr<ASTStatement> parseClassAttributes();
+    UniquePtr<Chain> parseChain();
+
+    String getCurrentClassAccessor();
+
+    void addAccessor(String accessorName);
+    void popAccessor();
+    
+    // UniquePtr<ASTStatement> parseClassMembers();
+
     UniquePtr<ASTStatement> parseReturnStatement();
+    UniquePtr<ASTStatement> parseContinueStatement();
 
     void processIndent(SharedPtr<Scope> manualScope = nullptr);
     void processDedent(SharedPtr<Scope> manualScope = nullptr);
     bool processNewLines();
     void processBlankSpaces();
+    // ParamList parseParameters(TokenType type = TokenType::FunctionDef);
 
     bool expect(TokenType tokenType, bool strict = false);
+
+    Token handleAttributNotation();
+    ParamList handleParameters(TokenType type = TokenType::FunctionDef);
+
+    // For Future Implementation
+    // UniquePtr<ImportStatement> parseImport();
+    // Vector<UniquePtr<ImportStatement>> parseImports();
     
-    bool allowScopecreation = true;
 
 public:
-    explicit Parser(const Vector<Token>& tokens, SharedPtr<Scope> scope, bool interpretMode=true, bool byBlock=false);
+    explicit Parser(Vector<Token>& tokens, SharedPtr<Scope> scope, bool interpretMode=true, bool byBlock=false);
     Vector<String> nativeFunctionNames;
     UniquePtr<CodeBlock> parse();
     bool interpretMode;

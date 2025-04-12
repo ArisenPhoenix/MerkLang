@@ -4,13 +4,43 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
 
+// bool Tokenizer::isLogicOperator() {
+//     size_t start = position;
+//     int startColumn = column;
+
+//     // Read identifier (letters, digits, underscores)
+//     while (position < source.size() && (isLetter(source[position])) && (!isWhitespace(source[position]))) {
+//         start++;
+//         startColumn++;
+//     }
+
+//     String value = source.substr(start, position - start);
+//     if (value == "and" || value == "or" || value == "not"){
+//         return true;
+//     }
+//     return false;
+// }
+
+
+bool Tokenizer::isLogicOperator() {
+    size_t lookahead = position;
+    while (lookahead < source.size() &&
+           (std::isalpha(static_cast<unsigned char>(source[lookahead])) || source[lookahead] == '_')) {
+        lookahead++;
+    }
+
+    String value = source.substr(position, lookahead - position);
+    return (value == "and" || value == "or" || value == "not");
+}
+
+
 
 Vector<Token> Tokenizer::tokenize() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     while (position < source.size()) {
         DEBUG_LOG(LogLevel::DEBUG, "Processing char: ", source[position], " at position: ", position);
-
+        
         // Skip whitespace
         while (position < source.size() && isWhitespace(source[position])) {
             position++;
@@ -19,7 +49,7 @@ Vector<Token> Tokenizer::tokenize() {
 
         if (source[position] == '\n') {
             // Secondary Backslash for viewing properly in the output
-            tokens.emplace_back(TokenType::Newline, "\\n", line, column);
+            tokens.emplace_back(TokenType::Newline, "NewLine", line, column);
             position++;
             line++;
             column = 1;
@@ -56,6 +86,14 @@ Vector<Token> Tokenizer::tokenize() {
             insideParams = false;
             continue;
         }
+
+        // else if (isLogicOperator()){
+        //     Token string = readString();
+        //     tokens.push_back(Token(TokenType::Operator, string.value, line, column));
+        //     position+=string.value.size();
+        //     column ++;
+        //     continue;
+        // }
 
         // Handle compound operators first
         if ((isOperator(source[position]) || isPunctuation(source[position])) &&
@@ -96,9 +134,6 @@ Vector<Token> Tokenizer::tokenize() {
     return tokens;
 }
 
-
-
-
 Token Tokenizer::readCompoundOperatorOrPunctuation() {
     int startColumn = column;
     String twoCharOp = String(1, source[position]) + peek(); // Look ahead
@@ -132,19 +167,36 @@ Token Tokenizer::readOperatorOrPunctuation() {
     throw UnknownTokenError(String(1, c), line, column, currentLineText);
 }
 
-
-
 Token Tokenizer::readNumber() {
     size_t start = position;
     int startColumn = column;
 
+    // bool hasDot = false;
+
+    // Read leading digits
     while (position < source.size() && isDigit(source[position])) {
         position++;
         column++;
     }
 
-    return Token(TokenType::Number, source.substr(start, position - start), line, startColumn);
+    // Check for decimal part
+    if (position < source.size() && source[position] == '.') {
+        if (isDigit(peek())) {
+            // hasDot = true;
+            position++;
+            column++;
+
+            while (position < source.size() && isDigit(source[position])) {
+                position++;
+                column++;
+            }
+        }
+    }
+
+    String number = source.substr(start, position - start);
+    return Token(TokenType::Number, number, line, startColumn);
 }
+
 
 Token Tokenizer::readString() {
     int startColumn = column;
@@ -213,32 +265,61 @@ Token Tokenizer::readIdentifier() {
     TokenType type = TokenType::Variable;  // Default to Variable
 
     DEBUG_LOG(LogLevel::DEBUG, "Found identifier: ", value);
+    const Token& prev = lastToken();  // Do once
+
+    // Class definition keyword: "Class"
+    if (value == "Class") {
+        type = TokenType::ClassDef;
+        insideClass = true;
+        classIndentLevel = currentIndent;
+    }
+
+    else if (lastTokenWas(TokenType::ClassDef)) {
+        type = TokenType::ClassRef;
+        classes.insert(value);
+    }
+
+    else if (value == "and" || value == "or" || value == "not"){
+        type = TokenType::Operator;
+    }
+    
 
     // Function Definition Keyword?
-    if (value == "function" || value == "def") {
-        type = TokenType::FunctionDef;
+    else if (value == "function" || value == "def") {
+        type = insideClass ? TokenType::ClassMethodDef : TokenType::FunctionDef; 
         insideParams = true; // Keep this active until after ')'
+    }
+
+
+    else if (!tokens.empty() && prev.type == TokenType::ClassDef) {
+        type = TokenType::ClassRef;
+        classes.insert(value);
     }
     
     // Function Name (Immediately after `def`)
-    // else if (tokens.size() > 0 && tokens.back().type == TokenType::FunctionDef || tokens.back().type == TokenType::Punctuation) {
-    else if (tokens.size() > 0 && tokens.back().type == TokenType::FunctionDef){
-        type = TokenType::FunctionRef;
+    else if (tokens.size() > 0 && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef)){
+        type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
         functions.insert(value);
+    }
+
+    
+    else if (isClass(value)) {
+        type = TokenType::ClassCall;
+        insideArgs = true;
     }
 
     // Function Name (Immediately after `FunctionDef`
     else if (isFunction(position)) {
-        type = TokenType::FunctionCall;
+        type = insideClass ? TokenType::ClassMethodCall : TokenType::FunctionCall;
         insideArgs = true;
     }
 
     else if (isFunction(value)){
-        type = TokenType::FunctionRef;
+        type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
     }
 
     // Function Argument (Immediately after `call` and inside function call lists)
-    else if (insideArgs && tokens.back().type == TokenType::Punctuation){
+    else if (insideArgs && prev.type == TokenType::Punctuation){
         type = TokenType::Argument;
     }
 
@@ -257,8 +338,13 @@ Token Tokenizer::readIdentifier() {
         type = TokenType::Keyword;
     }
 
+    // Recognize import-related keywords:
+    else if (value == "import" || value == "from") {
+        type = TokenType::Keyword;
+    }
+
     // Loop Keywords
-    else if (value == "for" || value == "while" || value == "break" || value == "return") {
+    else if (value == "for" || value == "while" || value == "break" || value == "return" || value == "continue") {
         type = TokenType::Keyword;
     }
 
@@ -268,87 +354,14 @@ Token Tokenizer::readIdentifier() {
     }
 
     // Function Call?
-    else if (isFunction(position)) {
-        type = TokenType::FunctionCall;
-        DEBUG_LOG(LogLevel::DEBUG, "Classified as function call: ", value);
-    }
+    // else if (isFunction(position)) {
+    //     type = TokenType::FunctionCall;
+    //     DEBUG_LOG(LogLevel::DEBUG, "Classified as function call: ", value);
+    // }
 
     DEBUG_LOG(LogLevel::DEBUG, "Exiting readIdentifier with value: ", value, " (Type: ", tokenTypeToString(type), ")");
     DEBUG_FLOW_EXIT();
     return Token(type, value, line, startColumn);
-}
-
-bool Tokenizer::isWhitespace(char c) const {
-    return c == ' ' || c == '\t';
-}
-
-bool Tokenizer::isLetter(char c) const {
-    if (position >= source.size()) {
-        throw OutOfBoundsError(line, column, currentLineText);
-    }
-    return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
-}
-
-bool Tokenizer::isDigit(char c) const {
-    if (position >= source.size()) {
-        throw OutOfBoundsError(line, column, currentLineText);
-    }
-    return std::isdigit(static_cast<unsigned char>(c));
-}
-
-bool Tokenizer::isOperator(char c) const {
-    return c == '+' || c == '-' || c == '*' || c == '/' || 
-           c == '%' || c == '=' || c == '<' || c == '>' || 
-           c == '&' || c == '|' || c == '!';
-}
-
-bool Tokenizer::isPunctuation(char c) const {
-    return c == ':' || c == ',' || c == '.' || c == '(' || c == ')' || c == ';' || c == '[' || c == ']';
-}
-
-bool Tokenizer::isFunction(size_t startPos) {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-    bool insideFunction = false;
-    DEBUG_LOG(LogLevel::DEBUG, "Entering isFunction() at position: ", startPos);
-    
-    // If the last token was 'def' or 'function', this is a function definition
-    if (!tokens.empty() && tokens.back().type == TokenType::Function) {
-        DEBUG_LOG(LogLevel::DEBUG, "[isFunction] Identified as function definition at position: ", startPos);
-        insideFunction = true;
-    }
-
-    size_t lookahead = startPos;
-    
-    // Skip whitespace after the identifier
-    while (lookahead < source.size() && isWhitespace(source[lookahead])) {
-        lookahead++;
-    }
-
-    // **Handle Function Definitions**: Check if the previous token was a function definition
-    if (!tokens.empty() && (tokens.back().type == TokenType::FunctionDef)) {
-        DEBUG_LOG(LogLevel::DEBUG, "[isFunction] Identified as function definition at position: ", startPos);
-        insideFunction = true;
-    }
-
-    // **Handle Function Calls**: If the next non-whitespace character is '(', it is a function call
-    if (lookahead < source.size() && source[lookahead] == '(') {
-        DEBUG_LOG(LogLevel::DEBUG, "[isFunction] Identified as function call at position: ", startPos);
-        insideFunction = true;
-    }
-
-    DEBUG_LOG(LogLevel::DEBUG, "[isFunction] Identified as regular identifier at position: ", startPos);
-    DEBUG_FLOW_EXIT();
-    return insideFunction;
-}
-
-bool Tokenizer::isFunction(String value){
-    for (auto& func : functions){
-        if (value == func){
-            return true;
-        }
-    }
-    return false;
 }
 
 void Tokenizer::skipWhitespace() {
@@ -361,53 +374,6 @@ void Tokenizer::skipWhitespace() {
         OutOfBoundsError(line, column, currentLineText);
     }
 }
-
-void Tokenizer::handleIndentation(Vector<Token>& tokens) {
-    size_t lineStart = position;
-
-    // Skip leading spaces/tabs to find the first non-whitespace character
-    while (lineStart < source.size() && (source[lineStart] == ' ' || source[lineStart] == '\t')) {
-        lineStart++;
-    }
-
-    // Skip blank lines (no tokens needed)
-    if (lineStart == source.size() || source[lineStart] == '\n') {
-        return;
-    }
-
-    // Count leading spaces/tabs
-    int newIndentLevel = countLeadingSpaces(source.substr(position, lineStart - position));
-
-    if (newIndentLevel > currentIndent) {
-        tokens.emplace_back(TokenType::Indent, "", line, column);
-        indentStack.push_back(newIndentLevel);
-    } else if (newIndentLevel < currentIndent) {
-        while (!indentStack.empty() && newIndentLevel < indentStack.back()) {
-            tokens.emplace_back(TokenType::Dedent, "", line, column);
-            indentStack.pop_back();
-        }
-
-        if (indentStack.empty() || newIndentLevel != indentStack.back()) {
-            throw IndentationError(line, column, currentLineText);
-
-
-        }
-    }
-
-    currentIndent = newIndentLevel;
-    position = lineStart;
-}
-
-void Tokenizer::updateCurrentLineText() {
-        // Update currentLineText on newline or at the start
-        if (column == 1) { // Start of a new line
-            size_t lineEnd = source.find('\n', position);
-            if (lineEnd == String::npos) {
-                lineEnd = source.size(); // Handle the last line without a newline
-            }
-            currentLineText = source.substr(position, lineEnd - position);
-        }
-    }
 
 int Tokenizer::countLeadingSpaces(const String& line) {
     int count = 0;
@@ -450,13 +416,38 @@ char Tokenizer::peek(size_t offset) const {
     return result;
 }
 
-void Tokenizer::printTokens(bool colored) const {
-    for (const auto& token : tokens) {
-        String tok = colored ? highlight("Token", Colors::green) : "Token";
-        std::cout << tok + "(Type: " << tokenTypeToString(token.type, colored)
-                  << ", Value: " << token.value
-                  << ", Line: " << token.line
-                  << ", Column: " << token.column << ")" << std::endl;
-    }
+
+
+bool Tokenizer::isWhitespace(char c) const {
+    return c == ' ' || c == '\t';
 }
+
+// bool Tokenizer::isLetter(char c) const {
+//     if (position >= source.size()) {
+//         throw OutOfBoundsError(line, column, currentLineText);
+//     }
+//     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+// }
+
+bool Tokenizer::isLetter(char c) const {
+    return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+}
+
+bool Tokenizer::isDigit(char c) const {
+    if (position >= source.size()) {
+        throw OutOfBoundsError(line, column, currentLineText);
+    }
+    return std::isdigit(static_cast<unsigned char>(c));
+}
+
+bool Tokenizer::isOperator(char c) const {
+    return c == '+' || c == '-' || c == '*' || c == '/' || 
+           c == '%' || c == '=' || c == '<' || c == '>' || 
+           c == '&' || c == '|' || c == '!';
+}
+
+bool Tokenizer::isPunctuation(char c) const {
+    return c == ':' || c == ',' || c == '.' || c == '(' || c == ')' || c == ';' || c == '[' || c == ']';
+}
+
 

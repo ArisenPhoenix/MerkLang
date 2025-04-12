@@ -11,13 +11,23 @@
 #include <any>
 #include <map>
 #include <functional>
+#include <unordered_set>
 
 // This is essentially a global types repository used throughout the whole codebase
 
 // Forward declarations
 class Node;
 class Function;
+class FunctionNode;
+class Callable;
 
+class ClassBase;
+class ClassNode;
+class CallableNode;
+class Method;
+class MethodNode;
+class InstanceNode;
+class ClassInstance;
 
 
 // Aliases
@@ -47,6 +57,15 @@ std::unique_ptr<T> makeUnique(Args&&... args) {
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
+template <typename T, typename... Args>
+std::shared_ptr<T> makeShared(Args&&... args) {
+    return std::make_shared<T>(std::forward<Args>(args)...);
+}
+
+
+
+using DependencyGraph = std::unordered_map<String, std::unordered_set<String>>;
+
 // Enum for Tokens and their types of the value held by the variant
 enum class TokenType {
     Keyword,
@@ -58,6 +77,7 @@ enum class TokenType {
     VarDeclaration,
     VarAssignment,
     Variable,
+    AccessorVariable,
 
     Operator,
     Punctuation,
@@ -87,7 +107,11 @@ enum class TokenType {
     ClassDef,
     ClassCall,
     ClassRef,
-    ClassMethod,
+
+    ClassMethodDef,
+    ClassMethodCall,
+    ClassMethodRef,
+    ClassAttribute,
 
     Unknown
 };
@@ -105,9 +129,12 @@ enum class NodeValueType {
     Bool,
     Shared_Vector,
     Function,
-    Class,
     Parameter,
+
+    Class,
     Method,
+    Callable,
+    ClassInstance,
     Null,
     None,
     Uninitialized,
@@ -140,6 +167,12 @@ enum class AstType {
     Return,
     Continue,
     LoopBlock,
+
+    CallableBody,
+    CallableDefinition,
+    CallableReference,
+    CallableCall,
+
     Function,
     FunctionBlock,
     FunctionCall,
@@ -147,8 +180,39 @@ enum class AstType {
     UserFunction,
     FunctionDefinition,
     FunctionReference,
+
+    ClassDefinition,
+    ClassCall,
+    ClassReference,
+    ClassBlock,
+
+    ClassMethodBlock,
+    ClassMethodDef,
+    ClassMethodRef,
+    ClassMethodCall,
+
+    AttributeDeclaration,
+    AttributeReference,
+    AttributeAssignment,
+
+    Chain,
+
     Unknown,
-    NoOp
+    NoOp,
+
+    // Structures
+    KeyValueStructure,
+    Enum,
+
+    ImportStatement
+};
+
+
+enum class IdentifierType {
+    Variable,
+    Function,
+    Method,
+    Class
 };
 
 
@@ -182,7 +246,11 @@ using VariantType = std::variant<
     SharedPtr<Vector<Node>>,
     NullType,
     UninitializedType,
-    SharedPtr<Function>
+    SharedPtr<Function>,
+    SharedPtr<ClassBase>,
+    SharedPtr<Method>,
+    SharedPtr<Callable>,
+    SharedPtr<ClassInstance>
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
 
@@ -201,8 +269,8 @@ constexpr NodeValueType getNodeTypeFromType() {
         return NodeValueType::Bool;
     else if constexpr (std::is_same_v<T, String>)
         return NodeValueType::String;
-    else if constexpr (std::is_same_v<T, Vector<Node>>) // Replace with actual `Node`
-        return NodeValueType::Vector;
+    // else if constexpr (std::is_same_v<T, Vector<Node>>) // Replace with actual `Node`
+    //     return NodeValueType::Vector;
     // else if constexpr (std::is_same_v<T, SharedPtr<Vector<Node>>>) // Replace with actual `Node`
         // return NodeValueType::Shared_Vector;
     else if constexpr (std::is_same_v<T, std::nullptr_t>)
@@ -284,7 +352,7 @@ struct Colors {
 
 // General-purpose color function
 inline String highlight(const String& text, const char* color) {
-    return Colors::enabled ? String(color) + text + Colors().reset : text;
+    return Colors::enabled ? String(color) + text + Colors::reset : text;
 }
 
 // Highlight a single character in a string
@@ -296,7 +364,7 @@ inline String highlightText(
 
     // Slice the text and insert highlight
     return text.substr(0, highlightIndex) + highlight(String(1, text[highlightIndex]), highlightColor) +
-           text.substr(highlightIndex + 1);
+           text.substr(highlightIndex);
 }
 
 // Highlight a token in a context string - for simplicity
@@ -347,15 +415,24 @@ struct Token {
 }; 
 
 
-enum class FunctionType {
+enum class CallableType {
     DEF,        // Can capture outside variables but does not modify them
     FUNCTION,   // Only has access to its parameters, no external variables and supports overloads
     LAMBDA,     // Future lambda type
-    NATIVE      // Placeholder in case there are native functions that are hardcoded in C++
+    NATIVE,     // Placeholder in case there are native functions that are hardcoded in C++
+
+    METHOD,
+    CLASS,
+    CALLABLE,
+    INSTANCE
 };
 
 
-String functionTypeAsString(FunctionType functionType);
+String callableTypeAsString(CallableType callableType);
+
+
+String identifierTypeToString(IdentifierType identifierType);
+
 
 #endif // TYPES_H
 

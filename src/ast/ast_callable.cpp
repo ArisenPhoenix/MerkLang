@@ -1,0 +1,345 @@
+#include <unordered_set>
+
+#include "core/types.h"
+#include "core/node.h"
+#include "core/errors.h"
+#include "utilities/debugger.h"
+#include "utilities/helper_functions.h"
+#include "core/scope.h"
+#include "ast/ast_base.h"
+#include "ast/ast.h"
+#include "ast/ast_control.h"
+
+#include "core/functions/function_node.h"
+#include "core/evaluator.h"
+#include "ast/ast_function.h"
+#include "ast/ast_class.h"  
+#include "ast/ast_callable.h"
+
+
+// For Calling Within A Method's Context
+MethodBody* CallableBody::toMethodBody() {
+    return static_cast<MethodBody*>(this);
+
+}
+    
+// For Calling Within A Function's Context
+FunctionBody* CallableBody::toFunctionBody() {
+    return static_cast<FunctionBody*>(this);
+}
+
+CallableBody* CallableBody::toCallableBody() {
+    return static_cast<CallableBody*>(this);
+}
+
+UniquePtr<BaseAST> CallableBody::clone() const {
+    UniquePtr<CallableBody> newBlock = makeUnique<CallableBody>(getScope());
+
+    for (const auto &child : children) {
+        newBlock->addChild(child->clone());
+    }
+    
+    return newBlock;
+
+}
+
+UniquePtr<BaseAST> MethodBody::clone() const {
+    UniquePtr<MethodBody> newBlock = makeUnique<MethodBody>(getScope());
+
+    for (const auto &child : children) {
+        newBlock->addChild(child->clone());
+    }
+    return newBlock;
+}
+
+UniquePtr<BaseAST> CallableDef::clone() const {
+    ParamList clonedParams;
+    for (auto& param: parameters){
+        clonedParams.addParameter(ParamNode(param));
+    }
+
+    UniquePtr<CallableBody> clonedBodyBase = static_unique_ptr_cast<CallableBody>(body->clone());
+    
+
+    UniquePtr<CallableDef> calDef = std::make_unique<CallableDef>(name, clonedParams, std::move(clonedBodyBase), callType, getScope());
+    return calDef;
+}
+
+UniquePtr<BaseAST> CallableCall::clone() const {
+    Vector<UniquePtr<ASTStatement>> clonedArgs;
+    for (auto& arg : arguments){
+        UniquePtr<ASTStatement> argBase = static_unique_ptr_cast<ASTStatement>(arg->clone());
+        clonedArgs.emplace_back(std::move(argBase));
+    }
+    UniquePtr<CallableCall> calCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
+    return calCall;
+}
+
+UniquePtr<BaseAST> CallableRef::clone() const {
+    UniquePtr<CallableRef> calRef = std::make_unique<CallableRef>(name, getScope());
+    return calRef;
+}
+
+ClassBody::ClassBody(UniquePtr<CodeBlock>&& block)
+    : CallableBody(block->getScope()) {
+    this->children = std::move(block->children);
+    block.reset();
+}
+ClassBody::ClassBody(SharedPtr<Scope> scope)
+    : CallableBody(scope) {}
+
+CallableBody::CallableBody(UniquePtr<CallableBody>&& oldBody)
+  : CodeBlock(std::move(oldBody->getChildren()), oldBody->getScope()) {
+    oldBody.release();
+}
+
+CallableBody::CallableBody(SharedPtr<Scope> scope)
+    : CodeBlock(scope) {}
+
+CallableBody::CallableBody(UniquePtr<CallableBody>* block) : CodeBlock(std::move(block->get()->getChildren()), block->get()->getScope()) {
+    block->release();
+}
+
+FunctionBody::FunctionBody(SharedPtr<Scope> scope) : CallableBody(scope) {
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+
+    DEBUG_LOG(LogLevel::DEBUG, "Creating FunctionBody with scope level: ", scope->getScopeLevel());
+    if (!scope){
+        throw MerkError("FunctionBody Must Have A Valid Scope: ");
+    }
+
+    DEBUG_FLOW_EXIT();
+}
+
+
+CallableDef::CallableDef(String name, ParamList parameters, UniquePtr<CallableBody> body, CallableType callType, SharedPtr<Scope> scope) 
+    : ASTStatement(scope), name(name), parameters(parameters), body(std::move(body)), callType(callType){
+    if (callableTypeAsString(callType) == "Unknown"){
+        throw MerkError("Failed to instantiate callType at CallableDef instantiation");
+    }
+    branch = "Callable";
+}
+
+CallableCall::CallableCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
+    : ASTStatement(scope), name(name), arguments(std::move(arguments)) {
+        branch = "Callable";
+}
+
+CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
+    : ASTStatement(scope), name(name) {
+        branch = "Callable";
+}
+
+ClassBody::~ClassBody() {
+    DEBUG_LOG(LogLevel::DEBUG, "Destroying Class Body");
+}
+
+
+UniquePtr<BaseAST> ClassBody::clone() const {
+    UniquePtr<ClassBody> newBlock = makeUnique<ClassBody>(getScope());
+    DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Created a Unique ClassBody");
+     
+    for (const auto &child : children) {
+        DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "current child", child->toString());
+
+        if (!child){
+            DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Null child encountered in ClassBody::clone()");
+        }
+
+        newBlock->addChild(child->clone());
+        DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Added Child to ClassBody", child->getAstTypeAsString());
+
+    }
+    DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Returning newClassBody");
+    return newBlock;
+}
+
+
+MethodBody::MethodBody(UniquePtr<CodeBlock>&& body) : CallableBody(std::move(body)){};
+MethodBody::MethodBody(SharedPtr<Scope> scope) : CallableBody(scope) {}
+MethodBody::MethodBody(UniquePtr<CallableBody>* body) : CallableBody(std::move(body)) {}
+
+
+
+CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType callTypeAdded)
+    : callable(std::move(callable)), callType(callTypeAdded)
+{
+  DEBUG_FLOW(FlowLevel::VERY_LOW);
+  callType = callTypeAdded;
+  if (callableTypeAsString(callType) == "Unknown"){
+    throw MerkError("Failed to instantiate callType at CallableSignature instantiation");
+}
+  DEBUG_FLOW_EXIT();
+}
+
+// CallableSignature::~CallableSignature(){
+//   DEBUG_FLOW(FlowLevel::VERY_LOW);
+//   DEBUG_LOG(LogLevel::TRACE, "Destroying CallableSignature: ", callable->getName(), ", Use count: ", callable.use_count());
+//   DEBUG_FLOW_EXIT();
+// }
+
+
+void CallableSignature::setCallableType(CallableType functionType) { 
+    callType = functionType; 
+}
+// void CallableSignature::setSubType(CallableType subClassification) {subType = subClassification;} 
+
+bool CallableSignature::getIsUserFunction() { return callType != CallableType::NATIVE;}
+
+
+
+Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    auto val = callable->execute(args, scope);
+    DEBUG_FLOW_EXIT();
+    return val;
+  }
+  
+  
+SharedPtr<Callable> CallableSignature::getCallable() const { return callable;}
+
+const Vector<NodeValueType>& CallableSignature::getParameterTypes() const {
+if (parameterTypes.size() == 0) {
+    parameterTypes = callable->parameters.getParameterTypes();
+}
+return parameterTypes;
+}
+
+bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
+DEBUG_FLOW(FlowLevel::LOW);
+debugLog(true, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
+// First, check that the number of arguments matches.
+if (parameterTypes.size() != argTypes.size()) {
+    
+    DEBUG_LOG(LogLevel::INFO, "Parameter count does not match. Expected: ", parameterTypes.size(),
+                ", got: ", argTypes.size());
+    DEBUG_FLOW_EXIT();
+    return false;
+}
+
+// Now check each parameter type.
+for (size_t i = 0; i < parameterTypes.size(); ++i) {
+    NodeValueType expected = parameterTypes[i];
+    NodeValueType provided = argTypes[i];
+    DEBUG_LOG(LogLevel::DEBUG, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
+
+    // Allow a parameter declared as "Any" to match any argument.
+    if (expected == NodeValueType::Any) {
+        continue;
+    }
+    // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
+    if (provided == NodeValueType::Uninitialized) {
+        continue;
+    }
+
+    // Otherwise, they must match exactly.
+    if (expected != provided) {
+        DEBUG_LOG(LogLevel::DEBUG, "Type mismatch on parameter ", i, ": expected ",
+        nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
+        DEBUG_LOG(LogLevel::DEBUG, "Parameter Failed Expected Type Criteria, returning false");
+
+        DEBUG_FLOW_EXIT();
+        return false;
+    }
+}
+
+DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
+
+DEBUG_FLOW_EXIT();
+return true;
+}
+
+Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
+    Vector<Node> evaluatedArgs;
+
+    for (const auto &arg : arguments) {
+        evaluatedArgs.push_back(arg->evaluate(scope));
+    }
+    return evaluatedArgs;
+}
+
+
+void CallableBody::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, astTypeToString(getAstType()), "()");
+    for (auto& child : children){
+        child->printAST(os, indent);
+    }
+}
+
+
+
+
+
+Node CallableBody::evaluate(SharedPtr<Scope> scope) const {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    auto val = Evaluator::evaluateBlock(children, scope);
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
+
+Node ClassBody::evaluate(SharedPtr<Scope> scope) const {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    Node last;
+
+    for (const auto& child : children) {
+        if (!child) {
+            throw MerkError("The child in ClassBody::evaluate Was Null");
+        }
+
+        if (child->getAstType() == AstType::ClassMethodDef) {
+            // auto methodDef = static_cast<MethodDef*>(child.get());
+            // methodDef->evaluate(scope);
+            child->evaluate(scope);
+            // SharedPtr<Method> method = methodDef->evaluate(scope); // Must register self, name, args, etc.
+            // scope->registerFunction(method->getName(), method); // You need this to exist in ClassBase/Scope
+            // DEBUG_LOG(LogLevel::DEBUG, "Registered method in class: ", method->getName());
+        
+        } else {
+            last = child->evaluate(scope);
+        }
+    }
+
+    DEBUG_FLOW_EXIT();
+    return last;
+}
+
+
+
+Node MethodBody::evaluate(SharedPtr<Scope> scope) const {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    auto val = Evaluator::evaluateBlock(children, scope);
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
+Node CallableDef::evaluate(SharedPtr<Scope> scope) const {
+    (void)scope;
+    return Node(scope->getVariable("var"));
+}
+
+Node CallableCall::evaluate(SharedPtr<Scope> scope) const {
+    (void)scope;
+    return Node(scope->getVariable("var"));
+}
+
+
+Node CallableRef::evaluate(SharedPtr<Scope> scope) const {
+    (void)scope;
+    return Node(scope->getVariable("var"));
+}
+
+
+
+void CallableDef::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), name, "(scope",getScope(), ")");
+    body->printAST(os, indent);
+};
+
+
+void CallableCall::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), "()");
+}

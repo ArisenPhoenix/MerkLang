@@ -16,6 +16,48 @@
 
 // const bool debugNodeC = false;
 
+
+bool validateSingleNode(Node node, String methodName, bool debug){
+    if (debug){
+        MARK_UNUSED_MULTI(node, methodName);
+
+        DEBUG_LOG(LogLevel::TRACE, methodName, ": Evaluated Node - ", node);
+    }
+    return true;
+}
+
+bool validateConditionIsBool(Node node, String methodName, bool debug){
+    if (debug){
+        if (!node.isBool()) {
+            // throw TypeMismatchError("Boolean", node.getTypeAsString(), "IfStatementNode::evaluate");
+            throw RunTimeError(methodName + " condition must evaluate to a boolean value.");
+        } else {
+            DEBUG_LOG(LogLevel::TRACE, "Condition for ", methodName, " is a bool value.");
+        }
+    }
+    return true;
+}
+
+bool validateLeftAndRightNodes(Node leftNode, Node rightNode, String methodName, String op, bool debug){
+    (void)op;
+    if (debug){
+        DEBUG_LOG(LogLevel::TRACE, "Evaluating leftNode: ", leftNode);
+        if (!leftNode.isValid()) {
+            throw RunTimeError(methodName + "left Node is invalid in " + methodName);
+        } else {
+            DEBUG_LOG(LogLevel::TRACE, "left Node is valid in " + methodName);
+        }
+
+        DEBUG_LOG(LogLevel::TRACE, "Evaluating rightNode: ", rightNode);
+        if (!rightNode.isValid()) {
+            throw RunTimeError(methodName + "right Node is invalid in " + methodName);
+        } else {
+            DEBUG_LOG(LogLevel::TRACE, "right Node is valid in " + methodName);
+        }
+    }
+    return true;
+}
+
 bool areFloatsEqual(float a, float b) {
     float diff = std::fabs(a - b);
     float tolerance = std::numeric_limits<float>::epsilon() * std::max(std::fabs(a), std::fabs(b));
@@ -105,6 +147,10 @@ std::ostream& operator<<(std::ostream& os, const VarNode& node) {
     os << ")";
     return os;
 }
+
+
+
+
 
 // Overload to accept value and type as strings
 void Node::setInitialValue(const String& value, const String& typeStr) {
@@ -295,8 +341,26 @@ String Node::toString() const {
     
 }
 
+Node Node::negate() const {
+    if (!isNumeric()) throw MerkError("Cannot negate non-numeric Node.");
+    DEBUG_LOG(LogLevel::ERROR, "Type: ", nodeTypeToString(getType()));
+
+    switch (getType()) {
+        case NodeValueType::Int:
+            return Node(-toInt());
+        case NodeValueType::Float:
+            return Node(-toFloat());
+        case NodeValueType::Double:
+            return Node(-toDouble());
+        case NodeValueType::Long:
+            return Node(-toLong());
+        default:
+            throw MerkError("Unsupported type for negation.");
+    }
+}
+
 NodeValueType Node::getNodeValueType(const String& typeStr, const String& valueStr) {
-    if (typeStr == "Variable" || typeStr == "Argument" || typeStr == "FunctionCall"){
+    if (typeStr == "Variable" || typeStr == "AccessorVariable" || typeStr == "Argument" || typeStr == "FunctionCall"){
         data.type = NodeValueType::String;
         data.value = valueStr;
         return NodeValueType::String;
@@ -429,13 +493,17 @@ NodeValueType determineNumericResultType(const Node& left, const Node& right) {
         throw MerkError("Cannot perform arithmetic on non-numeric types.");
     }
 
+    DEBUG_LOG(LogLevel::ERROR, "Left Side: ", nodeTypeToString(left.getType()));
+    DEBUG_LOG(LogLevel::ERROR, "Right Side: ", nodeTypeToString(right.getType()));
+
+
     // Follow type promotion rules for dynamic variables
     if (!left.isStatic && !right.isStatic) {
-        if (left.isDouble() || right.isDouble()) return NodeValueType::Double;
-        if ((left.isFloat() && right.isFloat()) || (left.isFloat() && right.isInt()) || (left.isInt() && right.isFloat())) {
-            return NodeValueType::Float; // Ensure int+float stays float
-        }
-        if (left.isLong() || right.isLong()) return NodeValueType::Long;
+        if (left.isDouble() || right.isDouble()) {return NodeValueType::Double;}
+        if (left.isFloat() || right.isFloat()) {return NodeValueType::Float;}
+        if (left.isLong() || right.isLong()) {return NodeValueType::Long;}
+
+        // Otherwise Int
         return NodeValueType::Int;
     }
 
@@ -452,16 +520,41 @@ NodeValueType determineNumericResultType(const Node& left, const Node& right) {
 }
 
 
+// Node resolveMember(const String& name, IdentifierType type) const {
+//     if (!isObject()) {
+//         throw std::runtime_error("Cannot resolve member on non-object");
+//     }
+
+//     // Example logic, assuming you have a class object or instance
+//     if (type == IdentifierType::Method) {
+//         return objectValue->methodRegistry->get(name);
+//     } else if (type == IdentifierType::Variable) {
+//         return objectValue->context->get(name);
+//     } else if (type == IdentifierType::Function) {
+//         return objectValue->functionRegistry->get(name);
+//     } else if (type == IdentifierType::Class) {
+//         return objectValue->classRegistry->get(name);
+//     }
+
+//     throw std::runtime_error("Unknown identifier type");
+// }
+// };
+
+
 // Helper function to validate if a node can be modified
+
+
+
+
 
 void validateModifiability(const Node& node) {
     if (node.isConst) {
-        std::cout << "🚨 validateModifiability: Attempting to modify a constant Node! 🚨" << std::endl;
+        std::cout << "validateModifiability: Attempting to modify a constant Node!" << std::endl;
         throw MerkError("Cannot modify a constant Node.");
     }
 
     if (!node.isMutable) {
-        std::cout << "🚨 validateModifiability: Attempting to modify an immutable Node! 🚨" << std::endl;
+        std::cout << "validateModifiability: Attempting to modify an immutable Node!" << std::endl;
         throw MerkError("Cannot modify an immutable Node.");
     }
 }
@@ -470,16 +563,31 @@ void validateModifiability(const Node& node) {
 Node performArithmeticOperation(const Node& left, const Node& right, 
                                 const std::function<double(double, double)>& operation) {
     NodeValueType resultType = determineNumericResultType(left, right);
+    DEBUG_LOG(LogLevel::ERROR, "ResultType: ", nodeTypeToString(resultType));
 
     double leftValue = left.toDouble();
     double rightValue = right.toDouble();
     double result = operation(leftValue, rightValue);
 
     // Return result with appropriate type
-    if (resultType == NodeValueType::Int) return Node(static_cast<int>(result));
-    if (resultType == NodeValueType::Float) return Node(static_cast<float>(result));
-    if (resultType == NodeValueType::Double) return Node(result);
-    if (resultType == NodeValueType::Long) return Node(static_cast<long>(result));
+    if (resultType == NodeValueType::Int) {
+        DEBUG_LOG(LogLevel::ERROR, "Returning INT");
+        return Node(static_cast<int>(result));
+    }
+    if (resultType == NodeValueType::Float) {
+        DEBUG_LOG(LogLevel::ERROR, "Returning FLOAT");
+
+        return Node(static_cast<float>(result));
+    }
+    if (resultType == NodeValueType::Double) {
+        DEBUG_LOG(LogLevel::ERROR, "Returning DOUBLE");
+        return Node(result);
+    }
+    if (resultType == NodeValueType::Long) {
+        DEBUG_LOG(LogLevel::ERROR, "Returning LONG");
+
+        return Node(static_cast<long>(result));
+    }
 
     throw MerkError("Unsupported numeric type in arithmetic operation.");
 }
@@ -488,6 +596,9 @@ Node performArithmeticOperation(const Node& left, const Node& right,
 Node Node::operator+(const Node& other) const {
     if (isString() && other.isString()) {
         return Node(toString() + other.toString());
+    }
+    else if ((isString() && !other.isString()) || (!isString() && other.isString())){
+        throw MerkError("Cannot concatenate string with another type");
     }
     return performArithmeticOperation(*this, other, [](double a, double b) { return a + b; });
 }
@@ -558,7 +669,6 @@ Node Node::plusEquals(const Node& other) {
 
     return *this += other;
 };
-
 Node& Node::minusEquals(const Node& other) {
     return *this -= other;
 };
@@ -675,7 +785,7 @@ Node::Node() : data() {
 
 // Copy Constructor (Handles VarNode properly)
 Node::Node(const Node& other) {
-    if (this == &other) return;
+    if (this == &other) {return;}
 
     this->data = other.data;
     isConst = other.isConst;
@@ -745,6 +855,68 @@ Node* Node::clone() const {
     return new Node(*this);
 }
 
+
+
+
+// Node Node::resolveMember(const String& name, IdentifierType type) const {
+//     if (!isObject()) {
+//         throw std::runtime_error("Cannot resolve member on non-object");
+//     }
+
+//     // Example logic, assuming you have a class object or instance
+//     if (type == IdentifierType::Variable) {
+//         return objectValue->context->get(name);
+//     } else if (type == IdentifierType::Function) {
+//         return objectValue->functionRegistry->get(name);
+//     } else if (type == IdentifierType::Class) {
+//         return objectValue->classRegistry->get(name);
+//     }
+
+//     throw std::runtime_error("Unknown identifier type");
+// }
+
+// Default constructor
+LitNode::LitNode() : Node() {
+    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was created without initialization.");
+}
+
+// Constructor accepting a VariantType
+LitNode::LitNode(const VariantType& value) : Node(value) {
+    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized with VariantType.");
+}
+
+// Constructor accepting a string value and type
+LitNode::LitNode(const String& value, const String& typeStr) : Node(value, typeStr) {
+    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized with String and typeStr.");
+}
+
+// Constructor accepting another Node
+LitNode::LitNode(const Node& parentNode) : Node(parentNode) {
+    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized from another Node.");
+}
+
+// Copy constructor
+LitNode::LitNode(const LitNode& other) : Node(other) {
+    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-constructed.");
+}
+
+// Move constructor
+LitNode::LitNode(LitNode&& other) noexcept : Node(std::move(other)) {
+    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-constructed.");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 // VarNode Default Constructor
 VarNode::VarNode() : Node() {
     DEBUG_LOG(LogLevel::DEBUG, "===== VarNode was created without initialization.");
@@ -809,4 +981,40 @@ VarNode& VarNode::operator=(VarNode&& other) noexcept {
 
 VarNode* VarNode::clone() const {
     return new VarNode(*this);
+}
+
+
+
+
+
+String LitNode::toString() const {
+    try {
+        switch (data.type) {
+            case NodeValueType::Int:
+                return std::to_string(std::get<int>(data.value));
+            case NodeValueType::Float:
+                return std::to_string(std::get<float>(data.value));
+            case NodeValueType::Double:
+                return std::to_string(std::get<double>(data.value));
+            case NodeValueType::Long:
+                return std::to_string(std::get<long>(data.value));
+            case NodeValueType::Bool:
+                return std::get<bool>(data.value) ? "true" : "false";
+            case NodeValueType::Char:
+                return std::string(1, std::get<char>(data.value));
+            case NodeValueType::String:
+                return std::get<String>(data.value);
+            case NodeValueType::Null:
+                return "null"; 
+            case NodeValueType::Uninitialized:
+                return "[Uninitialized]";
+            case NodeValueType::Any:
+                return "[Any Type]";
+            default:
+                throw RunTimeError("Unsupported type for Node toString.");
+        }
+    } catch (const std::exception& e) {
+        debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());
+        return "[Error in toString]";
+    }
 }

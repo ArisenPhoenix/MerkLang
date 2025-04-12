@@ -6,7 +6,7 @@
 
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
-
+#include "ast/ast_callable.h"
 
 UniquePtr<BaseAST> ASTStatement::clone() const {
     throw MerkError("Cannot Clone Base Class ASTStatement");
@@ -149,7 +149,7 @@ UniquePtr<BaseAST> FunctionBody::clone() const {
 }
 
 UniquePtr<BaseAST> FunctionRef::clone() const {
-    return makeUnique<FunctionRef>(functionName, getScope());
+    return makeUnique<FunctionRef>(name, getScope());
 }
 
 UniquePtr<BaseAST> FunctionCall::clone() const {
@@ -159,5 +159,5 @@ UniquePtr<BaseAST> FunctionCall::clone() const {
         auto clonedArg = static_unique_ptr_cast<ASTStatement>(std::move(clonedArgBase));
         clonedArgs.push_back(std::move(clonedArg));
     }
-    return makeUnique<FunctionCall>(functionName, std::move(clonedArgs), getScope());
+    return makeUnique<FunctionCall>(name, std::move(clonedArgs), getScope());
 }

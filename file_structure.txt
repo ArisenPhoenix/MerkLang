@@ -1,0 +1,98 @@
+.
+├── CMakeLists.txt
+├── code
+│   ├── bools.merk
+│   ├── class.merk
+│   ├── declarations.merk
+│   ├── dec.merk
+│   ├── def.merk
+│   ├── enum.merk
+│   ├── fail_test.merk
+│   ├── for_loop.merk
+│   ├── funcs.merk
+│   ├── function.merk
+│   ├── functions.merk
+│   ├── nested_test.merk
+│   ├── scope.merk
+│   ├── simple_test.merk
+│   ├── test1.merk
+│   ├── test2.merk
+│   ├── testBinary.merk
+│   ├── test.merk
+│   └── while.merk
+├── debugger_config.cpp
+├── file_structure.txt
+├── include
+│   ├── ast
+│   │   ├── ast_base.h
+│   │   ├── ast_callable.h
+│   │   ├── ast_chain.h
+│   │   ├── ast_class.h
+│   │   ├── ast_control.h
+│   │   ├── ast_function.h
+│   │   ├── ast.h
+│   │   ├── ast_structures.h
+│   │   └── exceptions.h
+│   ├── core
+│   │   ├── classes
+│   │   ├── context.h
+│   │   ├── errors.h
+│   │   ├── evaluator.h
+│   │   ├── functions
+│   │   ├── node.h
+│   │   ├── parser.h
+│   │   ├── registry
+│   │   ├── scope.h
+│   │   ├── tokenizer.h
+│   │   └── types.h
+│   ├── helpers
+│   │   └── iterable.h
+│   ├── node
+│   │   ├── node_finals.h
+│   │   ├── node_numbers.h
+│   │   └── node_strings.h
+│   ├── tests
+│   │   ├── test_ast.h
+│   │   ├── test_node.h
+│   │   ├── test_params.h
+│   │   ├── test_parser.h
+│   │   └── test_tokenizer.h
+│   └── utilities
+│       ├── debugger.h
+│       ├── debugging_functions.h
+│       ├── helper_functions.h
+│       ├── streaming.h
+│       └── utilities.h
+├── LICENSE
+├── main.cpp
+├── README.md
+└── src
+    ├── ast
+    │   ├── ast_callable.cpp
+    │   ├── ast_chain.cpp
+    │   ├── ast_class.cpp
+    │   ├── ast_clone.cpp
+    │   ├── ast_collect.cpp
+    │   ├── ast_control.cpp
+    │   ├── ast.cpp
+    │   ├── ast_function.cpp
+    │   ├── ast_print.cpp
+    │   └── ast_structures.cpp
+    ├── core
+    │   ├── classes
+    │   ├── context.cpp
+    │   ├── evaluator.cpp
+    │   ├── functions
+    │   ├── node.cpp
+    │   ├── parser
+    │   ├── registry
+    │   ├── scope
+    │   ├── tokenizer
+    │   └── types.cpp
+    ├── helpers
+    │   └── iterable.cpp
+    └── utilities
+        ├── debugger.cpp
+        └── helper_functions.cpp
+
+23 directories, 73 files

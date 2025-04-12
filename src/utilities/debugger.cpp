@@ -2,6 +2,8 @@
 #include "utilities/debugger.h"
 #include <algorithm>
 #include <iomanip> // For setw, left, etc.
+#include <unordered_map>
+#include <regex>
 
 String stripAnsi(const String& input) {
     static const std::regex ansiPattern("\033\\[[0-9;]*m");
@@ -142,7 +144,7 @@ String Debugger::handleFileDisplay(String filePath, int line) {
 }
 
 FlowLevel Debugger::getFileFlowLevel(const String& file) {
-    if (fileLevels.contains(file)){
+    if (fileLevels.contains(file)){ 
         return fileFlowLevels[file];
     } 
     return flowLevel;
@@ -240,7 +242,7 @@ std::function<void()> Debugger::flowEnter(const String &methodName, FlowLevel le
         String fileDisplayStr = handleFileDisplay(normFile, line);
         String levelDisplayStr = handleLevel(LogLevel::FLOW);
         String flowLevelStr = handleFlowLevelDisplay(level);
-
+ 
         std::ostringstream oss;
         oss << timeStr 
             << fileDisplayStr 

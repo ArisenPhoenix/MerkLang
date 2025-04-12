@@ -58,6 +58,10 @@ Operator stringToOperator(const String& op) {
 }
 
 void evaluatingFor(const String& value, const String& methodName, int scopeLevel = -2) {
+    #if !ENABLE_DEBUG_LOGGING
+        MARK_UNUSED_MULTI(value, methodName);
+    #endif
+    
     if (Debugger::getInstance().getLevel() == LogLevel::DEBUG){
         String level;
         if (scopeLevel > -2){
@@ -70,6 +74,10 @@ void evaluatingFor(const String& value, const String& methodName, int scopeLevel
 }
 
 void evaluatingFor(const Node& value, const String& methodName, int scopeLevel = -2) {
+    #if !ENABLE_DEBUG_LOGGING
+        MARK_UNUSED_MULTI(value, methodName);
+    #endif
+    (void)value;
     if (Debugger::getInstance().getLevel() == LogLevel::DEBUG){
         String level;
         if (scopeLevel > -2){
@@ -85,39 +93,15 @@ namespace Evaluator {
 
 
     Node evaluateLiteral(Node value, bool isString, bool isBool){
-        DEBUG_FLOW();
-
-        if (isBool) {
-            DEBUG_LOG(LogLevel::INFO, "Creating A Literal Bool");
-            DEBUG_FLOW_EXIT();
-            return LitNode(value == Node(true));
-        }
-        if (isString) {
-            DEBUG_LOG(LogLevel::INFO, "Creating A Literal String");
-            DEBUG_FLOW_EXIT();
-            return LitNode(value.getValue());
-        }
-
-        
-
-        debugLog(true, "Node is not a String nor a Bool");
-        try {
-            int intValue = value.toInt(); 
-            DEBUG_LOG(LogLevel::INFO, "Creating A Literal Number");
-            DEBUG_FLOW_EXIT();
-            return LitNode(intValue);
-        } catch (const std::invalid_argument&) {
-            DEBUG_FLOW_EXIT();
-            throw MerkError("Invalid literal: " + value);
-        } catch (const std::out_of_range&) {
-            DEBUG_FLOW_EXIT();
-            throw MerkError("Literal out of range: " + value);
-        }
+        (void)isString;
+        (void)isBool;
+        DEBUG_FLOW(FlowLevel::LOW);
+        return value;
         
     }
 
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, SharedPtr<Scope> scope){
-        DEBUG_FLOW();
+        DEBUG_FLOW(FlowLevel::LOW);
         VarNode resolvedVariable = VarNode(valueNode->evaluate(scope)); // Use the current scope
         scope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, var.isStatic)); // Declare variable in scope
 
@@ -129,18 +113,20 @@ namespace Evaluator {
     }
 
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope){
-        DEBUG_FLOW();
+        // (void)scope;
+        DEBUG_FLOW(FlowLevel::LOW);
         if (!scope->hasVariable(name)) {
             DEBUG_FLOW_EXIT();
             throw UndefinedVariableError(name, "VariableAssignmentNode::evaluate");
         }
 
         auto& var = scope->getVariable(name);
+        // (void)var;
         DEBUG_LOG(LogLevel::INFO, "VariableAssignmentNode: Retrieved variable '", name, 
                 "' with current value: ", var.getValue());
 
         // Evaluate the right-hand side
-        auto newValue = value->evaluate(); // Evaluate the RHS
+        auto newValue = value->evaluate(scope); // Evaluate the RHS
         DEBUG_LOG(LogLevel::INFO, "VariableAssignmentNode: New value for '", name, "': ", newValue);
 
         if (!newValue.isValid()){
@@ -180,12 +166,15 @@ namespace Evaluator {
         return variable;
     }
     
-    
+
     Node evaluateFunction(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope){
         DEBUG_FLOW(FlowLevel::LOW);
+        MARK_UNUSED_MULTI(scope);
+
         Node lastValue;
-        try {
+        // try {
             for (const auto& child : children) {
+
                 DEBUG_LOG(LogLevel::INFO, 
                     highlight("Evaluating FunctionBody child:", Colors::orange), 
                     highlight(child->getAstTypeAsString(), Colors::green), 
@@ -193,7 +182,7 @@ namespace Evaluator {
                     highlight(std::to_string(scope->getScopeLevel()), Colors::blue)
                 );
                                 
-                child->getScope()->debugPrint();
+                // child->getScope()->debugPrint();
                 lastValue = child->evaluate();
     
                
@@ -202,24 +191,27 @@ namespace Evaluator {
                     continue;
                 }
             }
-        } catch (const ReturnException& e) {
-            DEBUG_LOG(LogLevel::INFO, highlight("Caught ReturnException. Returning value:", Colors::red), e.getValue());
-            DEBUG_FLOW_EXIT();
-            return e.getValue();  // ✅ Extract and return function's result
-        }
+        // } catch (const ReturnException& e) {
+        //     DEBUG_LOG(LogLevel::INFO, highlight("Caught ReturnException. Returning value:", Colors::red), e.getValue());
+        //     DEBUG_FLOW_EXIT();
+        //     return e.getValue();  // Extract and return function's result
+        // }
         
         DEBUG_FLOW_EXIT();
         return lastValue; // Return the last evaluated value
     }
 
     Node evaluateBlock(const Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope){
-        DEBUG_FLOW();
+        DEBUG_FLOW(FlowLevel::LOW);
         Node lastValue;
 
         for (const auto& child : children) {
-            DEBUG_LOG(LogLevel::INFO, "Evaluating child node in CodeBlock: ", child->getAstTypeAsString());
+            // DEBUG_LOG(LogLevel::INFO, "Evaluating child node in CodeBlock: ", child->getAstTypeAsString());
             if (child.get()) {
+
+                DEBUG_LOG(LogLevel::ERROR, "Found Child: ", child->getAstTypeAsString());
                 lastValue = child.get()->evaluate(scope);
+                DEBUG_LOG(LogLevel::DEBUG, "Child Evaluated To: ", lastValue.toString());
                 if (!lastValue.isValid()){
                     
                     DEBUG_LOG(LogLevel::INFO, "Invalid value returned from child node evaluation: ", lastValue.toString());
@@ -228,7 +220,7 @@ namespace Evaluator {
                 }
 
             } else {
-                DEBUG_LOG(LogLevel::INFO, "Null child node encountered in CodeBlock.");
+                DEBUG_LOG(LogLevel::INFO, highlight("Null child node encountered in CodeBlock.", Colors::red));
                 DEBUG_LOG(LogLevel::INFO, "Null child: ", child->getAstTypeAsString());
             }
         }
@@ -239,7 +231,7 @@ namespace Evaluator {
 
     Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> scope) {
         DEBUG_FLOW(FlowLevel::LOW);
-
+        DEBUG_LOG(LogLevel::ERROR, "evaluateIf");
         if (ifStatement.getCondition()->evaluate(scope).toBool()) {
             DEBUG_FLOW_EXIT();
             return ifStatement.getBody()->evaluate(scope);
@@ -267,16 +259,17 @@ namespace Evaluator {
 
     Node evaluateElif (const ElifStatement& elifStatement, SharedPtr<Scope> scope) {
         DEBUG_FLOW(FlowLevel::LOW);
+
         if (!elifStatement.getCondition()) {
             DEBUG_FLOW_EXIT();
             throw MerkError("ElIfStatement missing condition in Evaluator::evaluateElif");
         }
 
-
-        // 1️⃣ Evaluate the condition
+        
+        // Evaluate the condition
         if (elifStatement.getCondition()->evaluate(scope).toBool()) {
             DEBUG_FLOW_EXIT();
-            return elifStatement.getBody()->evaluate(scope); // 2️⃣ Execute body if condition is true
+            return elifStatement.getBody()->evaluate(scope); // Execute body if condition is true
         } 
 
         DEBUG_FLOW_EXIT();
@@ -284,21 +277,22 @@ namespace Evaluator {
 }
 
     Node evaluateElse(const CodeBlock& body, SharedPtr<Scope> scope){
-        // (void)scope;
+        (void)scope;
         DEBUG_FLOW(FlowLevel::LOW);
-        auto val = body.evaluate(scope); // Default to empty node if no body
+        auto val = body.evaluate(); // Default to empty node if no body
         DEBUG_FLOW_EXIT();
         return val;
 }
 
     Node evaluateBasicLoop(){
-        DEBUG_FLOW();
+        DEBUG_FLOW(FlowLevel::LOW);
         throw MerkError("LoopNode is a base class and cannot be evaluated directly.");
         DEBUG_FLOW_EXIT();
     }
 
     Node evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* body, SharedPtr<Scope> scope){
-        DEBUG_FLOW();
+        (void)scope;
+        DEBUG_FLOW(FlowLevel::LOW);
         if (!body) {
             DEBUG_LOG(LogLevel::INFO, "Error: WhileLoop body is nullptr!");
             DEBUG_FLOW_EXIT();
@@ -307,7 +301,9 @@ namespace Evaluator {
         }
         while (true) {
             // Evaluate the condition
-            Node conditionResult = condition.evaluate(scope);
+            DEBUG_LOG(LogLevel::DEBUG, "About To Evaluate While Loop Condition Result");
+ 
+            Node conditionResult = condition.evaluate();
             DEBUG_LOG(LogLevel::INFO, "While Loop Condition Result: ", conditionResult);
             if (!conditionResult.toBool()) {
                 DEBUG_LOG(LogLevel::INFO, "Condition evaluated to false. Exiting loop.");
@@ -318,7 +314,10 @@ namespace Evaluator {
 
             try {
                 // Evaluate the body
-                body->evaluate(scope);
+                body->evaluate();
+            } catch (const ContinueException&){
+                DEBUG_LOG(LogLevel::INFO, "Continue statement encountered. Skipping to next iteration.");
+                continue;
             } catch (const BreakException&) {
                 DEBUG_LOG(LogLevel::INFO, "Break statement encountered. Exiting loop.");
                 break;  // Exit the loop if a break statement is encountered
@@ -350,6 +349,9 @@ namespace Evaluator {
         if (op == "/") val = leftValue / rightValue;
         if (op == "%") val = leftValue % rightValue;
 
+        // if (op == "and") val = leftValue && rightValue;
+        // if (op == "or") val == leftValue || rightValue;
+
         // if (op == "+=") val = leftValue.plusEquals(rightValue);
         // if (op == "-=") val = leftValue -= rightValue;
         // if (op == "*=") val = leftValue *= rightValue;
@@ -374,20 +376,26 @@ namespace Evaluator {
 
     Node evaluateUnaryOperation(const String& op, const Node& operand) {
         DEBUG_FLOW(FlowLevel::LOW);
+        MARK_UNUSED_MULTI(operand);
         evaluatingFor(operand, "evaluateUnaryOperation");
-        if (op == "!") {
+        Node val;
+        if (op == "!" or op == "not") {
             if (operand.isBool()) {
                 return Node(!operand.toBool());
             }
             DEBUG_FLOW_EXIT();
             throw MerkError("Invalid type for '!': Operand must be boolean.");
+        } else if (op == "-"){
+            return operand.negate();
         }
+        
         DEBUG_FLOW_EXIT();
         throw MerkError("Unsupported unary operator: " + op);
     }
 
     [[noreturn]] Node evaluateBreak(SharedPtr<Scope> scope) {
         DEBUG_FLOW(FlowLevel::LOW);
+        MARK_UNUSED_MULTI(scope);
         DEBUG_LOG(LogLevel::INFO, "Evaluating break statement in scope level: ", scope->getScopeLevel());
         DEBUG_LOG(LogLevel::INFO, "Throwing A Break for ", "scope level: ", scope->getScopeLevel());
         DEBUG_FLOW_EXIT();

@@ -40,13 +40,18 @@ int printIndent(std::ostream& os, int indent) {
     return indent + 2;
 }
 
-String readFile(String filePath, int chars) {
+
+void outputFileContents(String fileContent, int chars){
+    std::cout << "File content loaded. Size: " << fileContent.size() << " bytes\n";
+    std::cout << "First " << chars << " characters of the merk Code:\n"
+      << fileContent.substr(0, std::min(fileContent.size(), size_t(chars))) << "\n";
+}
+
+String readFile(String filePath) {
     String content;
     try {
         content = readFileContent(filePath);
-        std::cout << "File content loaded. Size: " << content.size() << " bytes\n";
-        std::cout << "First " << chars << " characters of the merk Code:\n"
-          << content.substr(0, std::min(content.size(), size_t(chars))) << "\n";
+        
 
     } catch (const std::exception& ex) {
         std::cerr << "Error reading file: " << ex.what() << std::endl;

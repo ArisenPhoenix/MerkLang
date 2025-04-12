@@ -38,6 +38,7 @@ String nodeTypeToString(NodeValueType type) {
 
 String astTypeToString(AstType type) {
     switch (type) {
+        case AstType::Base: return highlight("Base - shouldn't be present", Colors::bold_red);
         case AstType::Literal: return highlight("Literal", Colors::bold_blue);
         case AstType::VariableDeclaration: return highlight("VariableDeclaration", Colors::bold_cyan);
         case AstType::VariableReference: return highlight("VariableReference", Colors::teal);
@@ -67,8 +68,26 @@ String astTypeToString(AstType type) {
         case AstType::UserFunction: return highlight("UserFunction", Colors::bold_blue);
         case AstType::NativeFunction: return highlight("NativeFunction", Colors::bold_blue);
 
+
+        case AstType::ClassBlock: return highlight("ClassBlock", Colors::bold_cyan);
+        case AstType::ClassCall: return highlight("ClassCall", Colors::bold_red);
+        case AstType::ClassDefinition: return highlight("ClassDefinition", Colors::bold_red);
+        case AstType::ClassReference: return highlight("ClassReference", Colors::bold_blue);
+
+        case AstType::ClassMethodBlock: return highlight("ClassMethodBody", Colors::bold_purple);
+        case AstType::ClassMethodDef: return highlight("ClassMethodDef", Colors::bold_red);
+        case AstType::ClassMethodCall: return highlight("ClassMethodCall", Colors::bold_red);
+        case AstType::ClassMethodRef: return highlight("ClassMethodRef", Colors::bold_blue);
+
+        case AstType::AttributeDeclaration: return highlight("AttributeDeclaration", Colors::bold_cyan);
+        case AstType::AttributeAssignment: return highlight("AttributeAssignment", Colors::bold_cyan);
+        case AstType::AttributeReference: return highlight("AttributeReference", Colors::teal);
+        case AstType::Chain: return highlight("Chain", Colors::yellow);
+
         case AstType::Function: return "Function";
         case AstType::NoOp: return highlight("NoOp", Colors::light_gray);
+
+        case AstType::ImportStatement: return highlight("ImportStatement", Colors::light_blue);
 
         default: return "Unknown";
     }
@@ -111,27 +130,39 @@ String tokenTypeToString(TokenType type, bool colored) {
         case TokenType::Parameter: return colored ? highlight("Parameter", Colors::bold_cyan) : "Parameter";
         case TokenType::Argument: return colored ? highlight("Argument", Colors::bold_cyan) : "Argument";
 
-        case TokenType::ClassDef: return colored ? highlight("ClassDefinition", Colors::pink) : "ClassDefinition";
+        case TokenType::ClassDef: return colored ? highlight("ClassDefinition", Colors::pink) : "ClassDef";
         case TokenType::ClassCall: return colored ? highlight("ClassCall", Colors::pink) : "ClassCall";
-        case TokenType::ClassRef: return colored ? highlight("ClassReference", Colors::pink) : "ClassReference";
+        case TokenType::ClassRef: return colored ? highlight("ClassReference", Colors::pink) : "ClassRef";
+
+        case TokenType::ClassMethodCall: return colored ? highlight("ClassMethodCall", Colors::purple) : "ClassMethodCall";
+        case TokenType::ClassMethodDef: return colored ? highlight("ClassMethodDef", Colors::purple) : "ClassMethodDef";
+        case TokenType::ClassMethodRef: return colored ? highlight("ClassMethodRef", Colors::purple) : "ClassMethodRef";
+
+
         case TokenType::Unknown: return colored ? highlight("Unknown", Colors::pink) : "Unknown";
 
         case TokenType::Newline: return colored ? highlight("Newline", Colors::purple) : "Newline";
         case TokenType::Indent: return colored ? highlight("Indent", Colors::purple) : "Indent";
         case TokenType::Dedent: return colored ? highlight("Dedent", Colors::purple) : "Dedent";
+        case TokenType::AccessorVariable: return colored ? highlight("AccessorVariable", Colors::bold_cyan) : "AccessorVariable";
+
         case TokenType::EOF_Token: return colored ? highlight("EOF_Token", Colors::red) : "EOF_Token";
 
         default: return "Invalid TokenType";
     }
 }
 
-String functionTypeAsString(FunctionType functionType){
-    switch (functionType)
+String callableTypeAsString(CallableType callableType){
+    switch (callableType)
     {
-    case FunctionType::FUNCTION: return "Function";
-    case FunctionType::DEF: return "Def";
-    case FunctionType::LAMBDA: return "Lambda";
-    case FunctionType::NATIVE: return "Native";
+    case CallableType::FUNCTION: return "Function";
+    case CallableType::DEF: return "Def";
+    case CallableType::LAMBDA: return "Lambda";
+    case CallableType::NATIVE: return "Native";
+    case CallableType::METHOD: return "Method";
+    case CallableType::CLASS: return "Class";
+    case CallableType::CALLABLE: return "Callable";
+    case CallableType::INSTANCE: return "Instance";
     default: return "Unknown";
 
     }
@@ -166,6 +197,12 @@ String getTokenDescription(TokenType type) {
         case TokenType::Case: return "A Case Statement";
         case TokenType::Continue: return "Continue In A Loop";
 
+        case TokenType::ClassDef: return "A Class Is Being Defined";
+        case TokenType::ClassCall: return "A Class Is Being Instantiated";
+        case TokenType::ClassRef: return "A Class Is Likely Being Passed as a Value";
+        case TokenType::ClassMethodDef: return "A Class Method Is Being Defined";
+        case TokenType::ClassMethodRef: return "A Class Is Probably Being Used As A Value";
+        case TokenType::ClassMethodCall: return "A Class Method is Being Called";
 
         case TokenType::Function: return "A Function";
         case TokenType::FunctionCall: return "A Function To Be Called";
@@ -176,8 +213,20 @@ String getTokenDescription(TokenType type) {
         case TokenType::Argument: return "An Argument Used within a Function/Class/Method call";
 
         case TokenType::Unknown: return "An unknown literal was found in the document";
+        case TokenType::AccessorVariable: return "An Member Variable of an Object";
+
         default: return "Unknown or invalid token.";
     }
 }
 
+String identifierTypeToString(IdentifierType identifierType) {
+    switch (identifierType)
+    {
+    case IdentifierType::Variable: return "Variable";
+    case IdentifierType::Function: return "Function";
+    case IdentifierType::Method: return "Method";
+    case IdentifierType::Class: return "Class";
+    default: return "Unknown";
 
+    }
+}

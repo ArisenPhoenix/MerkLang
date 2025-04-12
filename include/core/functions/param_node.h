@@ -135,6 +135,8 @@ public:
     Vector<NodeValueType> getParameterTypes();
     void printAST(std::ostream& os, int indent = 0) const;
     void resetToDefaults();
+    ParamList clone();
+    ParamList clone() const;
 
     auto begin() { return parameters.begin(); }
     auto end() { return parameters.end(); }

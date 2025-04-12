@@ -6,6 +6,7 @@
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
+#include "ast/ast_callable.h"
 #include "core/scope.h"
 
 
@@ -117,8 +118,6 @@ void UnaryOperation::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW_EXIT();
 }
 
-Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
-    : ASTStatement(scope), returnValue(std::move(value)) {}
 
 // Convert Return to a string
 String Return::toString() const {
@@ -126,19 +125,7 @@ String Return::toString() const {
 }
 
 // Evaluate: Simply return the stored value
-Node Return::evaluate(SharedPtr<Scope> scope) const  {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    if (!returnValue) {
-        throw RunTimeError("Return statement must have a value.");
-    }
-    auto value = returnValue->evaluate(scope);
 
-    DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
-
-    DEBUG_FLOW_EXIT();
-    throw ReturnException(value);  // Immediately exit function with value
-
-}
 
 // Print function for debugging
 void Return::printAST(std::ostream& os, int indent) const  {
@@ -297,14 +284,14 @@ bool CodeBlock::containsReturnStatement() const {
     for (const auto& child : children) {
         if (!child) continue;
 
-        // ✅ Check if the child is a ReturnNode
+        // Check if the child is a ReturnNode
         if (child->getAstType() == AstType::Return) {
             // DEBUG_FLOW_EXIT();
 
             return true;
         }
 
-        // ✅ If the child is a nested CodeBlock, check recursively
+        // If the child is a nested CodeBlock, check recursively
         auto blockPtr = dynamic_cast<CodeBlock*>(child.get());
         if (blockPtr && blockPtr->containsReturnStatement()) {
 
@@ -357,14 +344,14 @@ void FunctionRef::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", functionName, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", name, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
 
     DEBUG_FLOW_EXIT();
 }
 
 void FunctionCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", functionName, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", name, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
     // DEBUG_LOG(LogLevel::DEBUG, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", functionName, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
     for (const auto& arg : arguments){
         printIndent(os, indent);
@@ -378,7 +365,7 @@ void ParameterAssignment::printAST(std::ostream& os, int indent) const {
 
     indent = printIndent(os, indent);
     debugLog(true, "ParameterAssignment (variable = ", getName(), ", scope = ", getScope()->getScopeLevel(), ")"); 
-    getValue()->printAST(os, indent);
+    getExpression()->printAST(os, indent);
 
     DEBUG_FLOW_EXIT();
 

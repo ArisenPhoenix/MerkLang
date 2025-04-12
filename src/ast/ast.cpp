@@ -24,6 +24,7 @@
 
 
 bool validateLeftAndRightAST(const UniquePtr<ASTStatement>& left, const UniquePtr<ASTStatement>& right, const String& methodName, String op = "") {
+    (void)op;
     if (!left) {
         throw MerkError(methodName + ": Left ASTStatement operand is null.");
     }
@@ -60,15 +61,30 @@ VariableDeclaration::VariableDeclaration(String name, VarNode value, SharedPtr<S
         typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
         validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
         DEBUG_LOG(LogLevel::DEBUG, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
-
-
-
 }
+
+VariableDeclaration::VariableDeclaration(UniquePtr<VariableDeclaration> varDec) : ASTStatement(varDec->getScope()) {
+    name = varDec->name;
+    variable = varDec->variable;
+    typeTag = varDec->typeTag;
+    valueExpression = std::move(varDec->valueExpression);       
+}
+
+VariableReference::VariableReference(UniquePtr<VariableReference> varRef) : ASTStatement(varRef->getScope()) {
+    name = varRef->name;
+}
+
 
 VariableAssignment::VariableAssignment(String name, UniquePtr<ASTStatement> valueExpression, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name), valueExpression(std::move(valueExpression)) {
         validateScope(scope, "VariableAssignment::VariableAssignment", name);
     }
+
+VariableAssignment::VariableAssignment(UniquePtr<VariableAssignment> varAssign) : ASTStatement(varAssign->getScope()) {
+    name = varAssign->getName();
+    valueExpression = std::move(varAssign->valueExpression);
+}
+
 
 VariableReference::VariableReference(const String& name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
@@ -81,8 +97,8 @@ VariableReference::VariableReference(const String& name, SharedPtr<Scope> scope)
 
 UnaryOperation::UnaryOperation(const String& op, UniquePtr<ASTStatement> operand, SharedPtr<Scope> scope)
     : ASTStatement(scope), op(op), operand(std::move(operand)) {
-        validateScope(scope, "UnaryOperation::UnaryOperation", op + operand->toString());
-    }
+    validateScope(scope, "UnaryOperation::UnaryOperation", op );
+}
 
 
 
@@ -92,6 +108,18 @@ BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left,
     validateScope(scope, "BinaryOperation::BinaryOperation", op);
 }
 
+
+
+
+Node LiteralValue::evaluate(SharedPtr<Scope> scope) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+
+    validateScope(scope, "LiteralValue", this->toString());
+    Node val =  Evaluator::evaluateLiteral(value, _isString, _isBool);
+
+    DEBUG_FLOW_EXIT();
+    return val;
+};
 
 // Variable Evaluations
 Node VariableDeclaration::evaluate(SharedPtr<Scope> scope) const {
@@ -159,17 +187,17 @@ Node UnaryOperation::evaluate(SharedPtr<Scope> scope) const {
 
 // Set Scope overrides for particular functionality and debugging
 void VariableDeclaration::setScope(SharedPtr<Scope> newScope) {
-    DEBUG_LOG(LogLevel::TRACE, highlight("Setting VariableDeclaration Scope", Colors::blue));
+    DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
     scope = newScope;
 }
 
 void VariableReference::setScope(SharedPtr<Scope> newScope) {
-    DEBUG_LOG(LogLevel::TRACE, highlight("Setting VariableReference Scope", Colors::blue));
+    DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
     scope = newScope;
 }
 
 void VariableAssignment::setScope(SharedPtr<Scope> newScope) {
-    DEBUG_LOG(LogLevel::TRACE, highlight("Setting VariableAssignment Scope", Colors::blue));
+    DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
     scope = newScope;
     valueExpression->setScope(newScope);
 }
@@ -195,3 +223,40 @@ void Return::setScope(SharedPtr<Scope> newScope) {
     
 }
 
+Node Return::evaluate(SharedPtr<Scope> scope) const  {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    if (!returnValue) {
+        throw RunTimeError("Return statement must have a value.");
+    }
+    auto value = returnValue->evaluate(scope);
+
+    DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
+
+    DEBUG_FLOW_EXIT();
+    throw ReturnException(value);  // Immediately exit function with value
+
+}
+
+
+
+Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
+    : ASTStatement(scope), returnValue(std::move(value)) {}
+
+
+
+Continue::Continue(SharedPtr<Scope> scope) : ASTStatement(scope) {}
+
+Node Continue::evaluate(SharedPtr<Scope> scope) const {
+    (void)scope;
+    DEBUG_FLOW();
+    throw ContinueException();
+}
+
+String Continue::toString() const { return "Continue"; }
+void Continue::printAST(std::ostream& os, int indent) const {
+    os << std::string(indent, ' ') << highlight("Continue", Colors::cyan) << "\n";
+}
+
+UniquePtr<BaseAST> Continue::clone() const {
+    return makeUnique<Continue>(getScope());
+}

@@ -27,7 +27,7 @@
 
 // Control Constructors
 CodeBlock::CodeBlock(SharedPtr<Scope> scope) : BaseAST(scope) {
-    DEBUG_FLOW();
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     if (!getScope()) {
         DEBUG_LOG(LogLevel::INFO, highlight("CodeBlock initialized with nullptr scope.", Colors::red), scope);
@@ -40,8 +40,13 @@ CodeBlock::CodeBlock(SharedPtr<Scope> scope) : BaseAST(scope) {
     DEBUG_FLOW_EXIT();
 }
 
+
+CodeBlock::CodeBlock(Vector<UniquePtr<BaseAST>> otherChildren, SharedPtr<Scope> scope) : BaseAST(scope) {
+    children = std::move(otherChildren);
+}
+
 CodeBlock::~CodeBlock() {
-    DEBUG_FLOW();
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     DEBUG_LOG(LogLevel::INFO, 
         getScope() && getScope()->getScopeLevel() == 0 
@@ -63,6 +68,7 @@ void CodeBlock::addChild(UniquePtr<BaseAST> child) {
     String childType = child->getAstTypeAsString();
     DEBUG_LOG(LogLevel::INFO, "Adding", childType, "to CodeBlock. Child address: ", child.get(), 
              ", CodeBlock address: ", this, ", Scope address: ", getScope());
+             
     if (!child) {
         throw MerkError("Attempted to add a " + childType + "child to CodeBlock.");
     }
@@ -74,7 +80,6 @@ void CodeBlock::addChild(UniquePtr<BaseAST> child) {
         child->setScope(getScope());
     }
 
-    // debugLog(true, "Attempting to Add a Child to to CodeBlock: ", child.get()->toString(), "Type: ", childType);
     children.push_back(std::move(child));
     DEBUG_LOG(LogLevel::INFO, childType, "added. Children count: ", children.size());
 }
@@ -116,7 +121,7 @@ ConditionalBlock::ConditionalBlock(UniquePtr<ASTStatement> condition, SharedPtr<
     }
 
 ElifStatement::ElifStatement(UniquePtr<ASTStatement> condition, UniquePtr<CodeBlock> body, SharedPtr<Scope> scope)
-    : ConditionalBlock(std::move(condition), scope), body(std::move(body)) {
+    : ASTStatement(scope), body(std::move(body)), condition(ConditionalBlock::create(std::move(condition), scope)) {
         DEBUG_FLOW(FlowLevel::VERY_LOW);
 
         if (!getCondition()){
@@ -129,7 +134,8 @@ ElifStatement::ElifStatement(UniquePtr<ASTStatement> condition, UniquePtr<CodeBl
     }
 
 IfStatement::IfStatement(UniquePtr<ASTStatement> condition, UniquePtr<CodeBlock> body, SharedPtr<Scope> scope)
-    : ConditionalBlock(std::move(condition), scope), body(std::move(body)) {
+    // : ConditionalBlock(std::move(condition), scope), body(std::move(body)) {
+    : ASTStatement(scope), body(std::move(body)), condition(ConditionalBlock::create(std::move(condition), scope)) {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     DEBUG_LOG(LogLevel::INFO, highlight("Constructing IfStatement", Colors::red));
@@ -190,23 +196,15 @@ Break::Break(SharedPtr<Scope> scope) : ASTStatement(scope) {
     DEBUG_FLOW_EXIT();
 }
 
-Node LiteralValue::evaluate(SharedPtr<Scope> scope) const {
-    DEBUG_FLOW(FlowLevel::LOW);
-
-    validateScope(scope, "LiteralValue", this->toString());
-    Node val =  Evaluator::evaluateLiteral(value, _isString, _isBool);
-
-    DEBUG_FLOW_EXIT();
-    return val;
-};
-
+Node ConditionalBlock::evaluate(SharedPtr<Scope> scope) const {return condition.get()->evaluate(scope);}
+Node ConditionalBlock::evaluate() const {return condition.get()->evaluate(getScope());}
 
 // Loop Evaluations
 Node LoopBlock::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::MED);
 
     (void)scope;
-    // DEBUG_FLOW_EXIT();
+    DEBUG_FLOW_EXIT();
     throw MerkError("LoopBlock is a base class and cannot be evaluated directly.");
 
 
@@ -234,16 +232,16 @@ Node CodeBlock::evaluate(SharedPtr<Scope> scope) const {
     return val;
 }
 
-Node CodeBlock::evaluate() const {
-    DEBUG_FLOW(FlowLevel::LOW);
+// Node CodeBlock::evaluate() const {
+//     DEBUG_FLOW(FlowLevel::LOW);
 
-    validateScope(getScope(), "CodeBlock::evaluate");
+//     validateScope(getScope(), "CodeBlock::evaluate");
 
-    Node val = evaluate(getScope());
+//     Node val = evaluate(getScope());
     
-    DEBUG_FLOW_EXIT();
-    return val;
-}
+//     DEBUG_FLOW_EXIT();
+//     return val;
+// }
 
 Node ElseStatement::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::LOW);
@@ -274,7 +272,7 @@ Node ElifStatement::evaluate(SharedPtr<Scope> scope) const {
 
 Node IfStatement::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::TRACE, "Validating IfStatement");
+    DEBUG_LOG(LogLevel::TRACE, highlight("Validating IfStatement", Colors::red));
     if (!condition){
         throw MerkError("IfStatement missing condition.");
     }
@@ -304,6 +302,7 @@ void CodeBlock::setScope(SharedPtr<Scope> newScope) {
 void ElseStatement::setScope(SharedPtr<Scope> newScope) {
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting ElseStatement Scope", Colors::blue));
     scope = newScope;
+    body->setScope(newScope);
 }
 
 void ElifStatement::setScope(SharedPtr<Scope> newScope) {
@@ -311,6 +310,7 @@ void ElifStatement::setScope(SharedPtr<Scope> newScope) {
 
     scope = newScope;
     condition->setScope(newScope);
+    body->setScope(newScope);
 }
 
 void IfStatement::setScope(SharedPtr<Scope> newScope) {
@@ -361,17 +361,6 @@ Node NoOpNode::evaluate([[maybe_unused]] SharedPtr<Scope> scope) const {
 
     DEBUG_FLOW_EXIT();
     Evaluator::evaluateBreak(scope);
-}
-
-[[noreturn]] Node Break::evaluate() const {
-    DEBUG_FLOW();
-
-    validateScope(getScope(), "Break");
-    DEBUG_LOG(LogLevel::INFO, "Evaluating break statement in scope level: ", getScope()->getScopeLevel());
-    DEBUG_LOG(LogLevel::INFO, "Throwing A Break for ", "scope level: ", getScope()->getScopeLevel());
-
-    DEBUG_FLOW_EXIT();
-    Evaluator::evaluateBreak();
 }
 
 

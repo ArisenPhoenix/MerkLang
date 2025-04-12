@@ -10,6 +10,7 @@
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
+#include "ast/ast_callable.h"
 #include "core/scope.h"
 
 #include "utilities/utilities.h"
@@ -20,43 +21,19 @@
 #include "core/parser.h"
 
 
+ParamList Parser::handleParameters(TokenType type){
+    DEBUG_FLOW();
+    (void)type;
+    ParamList params;
+    DEBUG_LOG(LogLevel::DEBUG, highlight("Current Token In handleParameters", Colors::pink), currentToken().toColoredString());
 
-
-
-UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    DEBUG_LOG(LogLevel::INFO, "Parsing function definition...");
-    Token token = currentToken();
-
-    if (token.type != TokenType::FunctionDef || (token.value != "def" && token.value != "function")) {
-        throw SyntaxError("Expected 'def' or 'function' keyword.", token);
-    }
-
-    String functionDefType = token.value;
-    DEBUG_LOG(LogLevel::INFO, highlight("Function Type: ", Colors::red), functionDefType);
-    advance(); // Consume 'def' or 'function'
-
-
-    if (currentToken().type != TokenType::FunctionRef) {
-        throw SyntaxError("Expected function name.", currentToken());
-    }
-
-    String functionName = currentToken().value;
-
-    advance(); // Consume function name
-
-    if (currentToken().type != TokenType::Punctuation || currentToken().value != "(") {
-        throw SyntaxError("Expected '(' after function name.", currentToken());
-    }
-
-    advance(); // Consume '('
-
-    ParamList parameters;
-    
     if (!(expect(TokenType::Parameter) && currentToken().value == ")")) { // If not empty
         do {
+            if (currentToken().type == TokenType::Punctuation && currentToken().value == ")"){
+                return params;
+            }
             if (currentToken().type != TokenType::Parameter) {
-                throw SyntaxError("Expected parameter name.", currentToken());
+                throw UnexpectedTokenError(currentToken(), "parameter name");
             }
 
             String paramName = currentToken().value;
@@ -71,7 +48,9 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
                 DEBUG_LOG(LogLevel::INFO, "Param Token:", token.toString());
                 if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool){
                     ParamNode paramNode(paramName, token.value, false, false);
-                    parameters.addParameter(paramNode);
+                    params.addParameter(paramNode);
+                    DEBUG_LOG(LogLevel::DEBUG, "Parameter: ", paramName, "Added");
+
                     advance(); // consume param value.
                 } else {
                     throw MerkError("Placeholder Param Error For Accurately Accounting For Assignment");
@@ -81,10 +60,11 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
                 // Create parameter node
                 NodeValueType finalParamType = paramType ? paramType.value() : NodeValueType::Any;
                 ParamNode paramNode = ParamNode(paramName, finalParamType, false, false);
-                parameters.addParameter(paramNode);
+                params.addParameter(paramNode);
+                DEBUG_LOG(LogLevel::DEBUG, "Parameter: ", paramName, "Added");
+
             }
 
-            DEBUG_LOG(LogLevel::INFO, "Param Added: ");
             if (expect(TokenType::Punctuation) && currentToken().value == ",") {
                 advance(); // Consume ','
             } else {
@@ -96,6 +76,45 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
             throw SyntaxError("Expected ')' after parameters.", currentToken());
         }
     }
+    DEBUG_FLOW_EXIT();
+    return params;
+}
+
+
+
+UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    Token token = currentToken();
+    DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
+
+    if (!(token.type == TokenType::FunctionDef || token.type == TokenType::ClassMethodDef)) {
+        throw SyntaxError("Expected TokenType 'def' or TokenType 'function'.", token);
+    }
+
+    if (!(token.value == "def" || token.value == "function")){
+        throw SyntaxError("Expected 'def' or 'function' keyword.", token);
+    }
+
+    String functionDefType = token.value;
+    DEBUG_LOG(LogLevel::INFO, highlight("Function Type: ", Colors::red), functionDefType);
+    advance(); // Consume 'def' or 'function'
+
+
+    if (!(currentToken().type == TokenType::FunctionRef || currentToken().type == TokenType::ClassMethodRef)) {
+        throw SyntaxError("Expected function name.", currentToken());
+    }
+
+    String functionName = currentToken().value;
+
+    advance(); // Consume function name
+
+    if (currentToken().type != TokenType::Punctuation || currentToken().value != "(") {
+        throw SyntaxError("Expected '(' after function name.", currentToken());
+    }
+
+    advance(); // Consume '('
+
+    ParamList parameters = handleParameters();
     
     advance(); // Consume ')'
 
@@ -115,21 +134,23 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
 
     DEBUG_LOG(LogLevel::INFO, "FunctionBody type: ", typeid(*functionBlock).name());
     
-    FunctionType funcType;
+    CallableType funcType;
 
     if (functionDefType == "def"){
-        funcType = FunctionType::DEF;
+        funcType = CallableType::DEF;
     }
 
     else if (functionDefType == "function"){
-        funcType = FunctionType::FUNCTION;
+        funcType = CallableType::FUNCTION;
     } 
     
     else {
-        DEBUG_LOG(LogLevel::INFO, "Function definition parsed unsuccessfully: ", functionName, ":", functionDefType);
+        // DEBUG_LOG(LogLevel::INFO, "Function definition parsed unsuccessfully: ", functionName, ":", functionDefType);
         throw MerkError("Function Type: " + functionDefType + " is not Valid");
     }
+
     
+    // DEBUG_LOG(LogLevel::DEBUG, "CurrentToken Before Leaving parseFunctionDefinitions: ", currentToken().toString());
     UniquePtr<FunctionDef> functionNode = makeUnique<FunctionDef>(
         functionName,
         std::move(parameters),
@@ -137,6 +158,10 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
         funcType,  
         currentScope
     );
+
+    if (callableTypeAsString(functionNode->callType) == "Unknown"){
+        throw MerkError("Failed to instantiate callType at Parser::parseFunctionDefinition");
+    }
     
     DEBUG_LOG(LogLevel::INFO, "Function definition parsed successfully: ", functionName);
     DEBUG_FLOW_EXIT();

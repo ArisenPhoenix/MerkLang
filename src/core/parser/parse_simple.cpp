@@ -1,4 +1,3 @@
-
 #include <stdexcept>
 #include <iostream>
 #include <string>
@@ -22,7 +21,69 @@
 
 
 
+// Input	Meaning
+// self.x	Dot syntax (attribute)
+// -3.14	Numeric literal (float)
+// fib(3).x	Dot syntax after a call
+// 0.5	Float literal
+// myFunc().3 Invalid
+// myClass().x Valid
 
+
+
+
+Token Parser::handleAttributNotation(){
+    DEBUG_FLOW(FlowLevel::HIGH);
+    Token variableToken = currentToken();
+    if (variableToken.type == TokenType::AccessorVariable){
+        return variableToken;
+    }
+    TokenType tokenType = variableToken.type;
+
+    String varName;
+    
+    if (!(expect(TokenType::Variable) || expect(TokenType::Argument))){
+        throw UnexpectedTokenError(currentToken(), "variable, argument");
+    }
+
+    if (insideClass && existing(TokenType::Punctuation, 2)){
+        // DEBUG_LOG(LogLevel::DEBUG, highlight("Inside Class and Punctuation exists", Colors::red));
+
+        String accessor = currentToken().value;
+        tokenType = TokenType::AccessorVariable;
+        advance(); // consume the accessor
+        if (currentToken().value != "."){
+            throw UnexpectedTokenError(currentToken(), ".");
+        }
+        advance(); // consume the dot
+        // DEBUG_LOG(LogLevel::DEBUG, highlight("Advanced Past DOT, Current Token: ", Colors::red), currentToken().toString());
+        // DEBUG_LOG(LogLevel::DEBUG, "Checking a self.<whatever>");
+        if (!expect(TokenType::Variable)){
+            throw UnexpectedTokenError(currentToken(), "Expected a variable after dot for class Object");
+        }
+
+
+    if (!(expect(TokenType::Variable) || expect(TokenType::Argument))){
+        throw UnexpectedTokenError(currentToken(), "variable, argument");
+    }
+
+    String attributeName = currentToken().value;
+
+    varName = variableToken.value + String(".") + attributeName;
+
+    } else {
+        DEBUG_LOG(LogLevel::DEBUG, "This is A Normal Variable Declaration");
+        varName = variableToken.value;
+    }
+
+    Token updatedToken = Token(tokenType, varName, currentToken().line, currentToken().column);
+    tokens[position] = updatedToken;
+    DEBUG_LOG(LogLevel::DEBUG, "Updated Token:", updatedToken.toColoredString());
+    DEBUG_LOG(LogLevel::DEBUG, "Updated Token At Position", position, "Should Be the Same: ", tokens[position].toColoredString());
+    DEBUG_LOG(LogLevel::DEBUG, "CurrentToken AT Position", position, "Should Be the Same: ", currentToken().toColoredString());
+    DEBUG_FLOW_EXIT();
+    return updatedToken;
+}
 
 UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     DEBUG_LOG(LogLevel::DEBUG, "Parser::parseVariableDeclaration with token: ", currentToken().toString());
@@ -31,15 +92,16 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     bool isConst = false;
 
     if (currentToken().value == "var" || currentToken().value == "const") {
-        isConst = (currentToken().value == "const");
+        isConst = currentToken().value == "const";
         advance();  // Consume 'var' or 'const'
     } else {
         throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + currentToken().toString());
     }
 
      // Expects a variable name
-    Token variableToken = currentToken();
-    if (variableToken.type != TokenType::Variable) {
+    // Token variableToken = currentToken();
+    Token variableToken = handleAttributNotation();
+    if (variableToken.type != TokenType::Variable && variableToken.type != TokenType::AccessorVariable) {
         throw MerkError("Expected a variable name after 'var' or 'const'. Token: " + currentToken().toString());
     }
 
@@ -72,23 +134,25 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     DEBUG_LOG(LogLevel::INFO, "[VarNode Type]: ", nodeTypeToString(varNode.getType()));
     DEBUG_LOG(LogLevel::INFO, "[VarNode Value]: ", varNode.toString());
     
-    return makeUnique<VariableDeclaration>(
+    auto varDec = makeUnique<VariableDeclaration>(
         variableToken.value,
         varNode,
         currentScope,  // Use the currentScope at the time of declaration
         std::nullopt,
         std::move(valueNode)
     );
+    return variableToken.type == TokenType::Variable ? std::move(varDec) : makeUnique<AttributeDeclaration>(AttributeDeclaration(std::move(varDec)));
 }
 
 UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
+    DEBUG_FLOW(FlowLevel::HIGH);
     DEBUG_LOG(LogLevel::DEBUG, "DEBUG Parser: Entering parseVariableAssignment with token: ", currentToken().toString());
 
-    if (currentToken().type != TokenType::Variable) {
+    if (!(currentToken().type == TokenType::Variable || currentToken().type == TokenType::AccessorVariable)) {
         throw MerkError("Expected an identifier for variable assignment.");
     }
 
-    Token identifier = currentToken();
+    Token variableToken = handleAttributNotation();
     advance();
 
     if (currentToken().type != TokenType::VarAssignment || 
@@ -101,15 +165,18 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
 
     auto valueNode = parseExpression();
     if (!valueNode) {
-        throw MerkError("Failed to parse value for assignment to " + identifier.value);
+        throw MerkError("Failed to parse value for assignment to " + variableToken.value);
     }
 
-    DEBUG_LOG(LogLevel::DEBUG, "Parser: Created VariableAssignment for ", identifier.toString(), "\n");
-    return makeUnique<VariableAssignment>(
-        identifier.value,
+    // DEBUG_LOG(LogLevel::DEBUG, "Parser: Created VariableAssignment for ", variableToken.toString(), "\n");
+    auto varAssign = makeUnique<VariableAssignment>(
+        variableToken.value,
         std::move(valueNode),
         currentScope
     );
+    DEBUG_FLOW_EXIT();
+    return variableToken.type == TokenType::Variable ? std::move(varAssign) : makeUnique<AttributeAssignment>(AttributeAssignment(std::move(varAssign)));
+ 
 }
 
 UniquePtr<ASTStatement> Parser::parseExpression() {
@@ -119,9 +186,9 @@ UniquePtr<ASTStatement> Parser::parseExpression() {
 
 // Though a bit of a misnomer, it was named BinaryExpression or BinaryOperation due to how it only handles two values at a time (or one)
 UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
+    DEBUG_FLOW(FlowLevel::HIGH);
     DEBUG_LOG(LogLevel::DEBUG, highlight("=============================== Entering parseBinaryExpression ===============================", Colors::yellow), "\n\n\n");
     DEBUG_LOG(LogLevel::DEBUG, "DEBUG Parser: Entering parseExpression with token: ", currentToken().toString());
-
     auto left = parsePrimaryExpression();
     if (!left) {
         throw SyntaxError("Expected a valid left-hand side expression.", currentToken());
@@ -137,6 +204,9 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
             DEBUG_LOG(LogLevel::INFO, "No operator found, breaking loop.");
             break;
         }
+        // else if (op.value == "and" || op.value == "or" || op.value == "!" || op.value == "not" || op.value == "&&" || op.value == "||"){
+        //     break;
+        // }
 
         int opPrecedence = getOperatorPrecedence(op.value);
         if (opPrecedence < precedence) {
@@ -160,7 +230,7 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
 
     }
     DEBUG_LOG(LogLevel::DEBUG, "\n\n\n", highlight("=============================== Exiting parseBinaryExpression ===============================", Colors::yellow), "\n\n\n");
-
+    DEBUG_FLOW_EXIT();
     return left;
 }
 
@@ -170,9 +240,11 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toString());
     
     Token token = currentToken();
-    LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
+    
 
     if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool) {
+        LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
+
         auto literalVal = makeUnique<LiteralValue>(
             nodeLiteral,
             currentScope,
@@ -185,15 +257,61 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
         return literalVal;
     }
 
+
+    if (token.type == TokenType::Punctuation && token.value == "(") {
+        advance();  // consume '('
+    
+        auto expr = parseBinaryExpression(0);  // recursively parse inner expression
+    
+        if (currentToken().type != TokenType::Punctuation || currentToken().value != ")") {
+            throw UnexpectedTokenError(currentToken(), "expected ')'");
+        }
+    
+        advance();  // consume ')'
+    
+        return expr;
+    }
+
+    if (token.type == TokenType::Operator && (token.value == "-" || token.value == "!" || token.value == "not" || token.value == "and" || token.value == "or")) {
+        String op = token.value;
+        advance(); // move past '-'
+        Token current = currentToken();
+        
+        if (current.type != TokenType::Number && op == "-"){
+            throw MerkError("Cannot Make Type " + current.typeAsString() + " a negative");
+        }
+
+        if ((op == "and" || op == "or" || op == "not" || op == "!") && 
+        (current.type != TokenType::Number && current.type != TokenType::Bool && current.type != TokenType::String)) {
+            throw MerkError("Cannot Perform a Logical Operation On Type " + current.typeAsString());
+  
+        }
+        auto operand = parsePrimaryExpression(); // recursively parse next value
+        DEBUG_LOG(LogLevel::ERROR, "Operand: ", operand->toString());
+        return makeUnique<UnaryOperation>(op, std::move(operand), currentScope);
+    }
+    // Chain-based variable, method, class references like a.b.c or Foo::bar
+    if ((token.type == TokenType::Variable || 
+        token.type == TokenType::FunctionRef || 
+        token.type == TokenType::ClassRef || 
+        token.type == TokenType::Parameter) && (peek().value == "." || peek().value == "::")) {
+
+        return parseChain();
+}
+
     if (token.type == TokenType::Variable) {
-        auto varRefNode = makeUnique<VariableReference>(token.value, currentScope);
+        Token variableToken = handleAttributNotation();
+
+        auto varRefNode = makeUnique<VariableReference>(variableToken.value, currentScope);
         advance();  // Consume Variable Name
         DEBUG_FLOW_EXIT();
-        return varRefNode;
+        return variableToken.type == TokenType::Variable ? std::move(varRefNode) : makeUnique<AttributeReference>(AttributeReference(std::move(varRefNode)));
     }
 
     else if (token.type == TokenType::Argument){
-        auto varRefNode = makeUnique<VariableReference>(token.value, currentScope);
+        Token argumentToken = handleAttributNotation();
+
+        auto varRefNode = makeUnique<VariableReference>(argumentToken.value, currentScope);
         advance(); // consume Argument
         DEBUG_FLOW_EXIT();
         return varRefNode;
@@ -204,6 +322,12 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
         auto functionCall = parseFunctionCall();
         DEBUG_FLOW_EXIT();
         return functionCall;
+    }
+
+    else if (token.type == TokenType::ClassCall) {
+        auto classCall = parseClassCall();
+        DEBUG_FLOW_EXIT();
+        return classCall;
     }
 
     DEBUG_FLOW_EXIT();
@@ -230,6 +354,10 @@ UniquePtr<BaseAST> Parser::parseStatement() {
         case TokenType::VarDeclaration:
             DEBUG_LOG(LogLevel::INFO, "Detected VarDeclaration, calling parseVariableDeclaration()");
             return parseVariableDeclaration();
+        
+        case TokenType::ClassDef:
+            DEBUG_LOG(LogLevel::INFO, "Detected VarDeclaration, calling parseVariableDeclaration()");
+            return parseClassDefinition();
 
         case TokenType::FunctionDef:
             if (token.type == TokenType::FunctionDef){
@@ -248,7 +376,7 @@ UniquePtr<BaseAST> Parser::parseStatement() {
             if (token.type == TokenType::FunctionCall){
                 UniquePtr<ASTStatement> statement;
 
-                statement = parsePrimaryExpression();  //Resolve to A RunctionCall
+                statement = parsePrimaryExpression();  //Resolve to A FunctionCall
 
                 DEBUG_LOG(LogLevel::INFO, "Detected FunctionCall, calling parseFunctionCall()");
                 DEBUG_FLOW_EXIT();
@@ -256,14 +384,33 @@ UniquePtr<BaseAST> Parser::parseStatement() {
             } else {
                 throw MerkError("Token Is Not A Function Call");
             }
+        
+        case TokenType::ClassCall:
+            if (token.type == TokenType::ClassCall){
+                UniquePtr<ASTStatement> statement;
+
+                statement = parsePrimaryExpression();  //Resolve to A ClassCall
+
+                DEBUG_LOG(LogLevel::INFO, "Detected FunctionCall, calling parseFunctionCall()");
+                DEBUG_FLOW_EXIT();
+                return statement;
+            }
+            
 
 
 
-        case TokenType::Variable: 
+        case TokenType::Variable:
+            if (token.type == TokenType::Variable)
             {
                 Token nextToken = peek(); 
                 if (nextToken.type == TokenType::VarAssignment) {  
                     DEBUG_LOG(LogLevel::INFO, "Detected Variable Assignment, calling parseVariableAssignment()");
+                    return parseVariableAssignment();
+                }
+                
+                else if (nextToken.type == TokenType::Punctuation && nextToken.value == ".") {
+                    handleAttributNotation();
+                    // advance(); // consume varName
                     return parseVariableAssignment();
                 }
                 DEBUG_LOG(LogLevel::INFO, "Detected Variable Reference, treating as expression.");
@@ -272,6 +419,7 @@ UniquePtr<BaseAST> Parser::parseStatement() {
             }
 
         case TokenType::Keyword:
+            // String val = token.value;
             if (token.value == "if" || token.value == "while") {
                 // Entering a new scope here ensures that all branches of the 'if' statement 
                 // (then, elif, else) share the same scope. Allowing them to share scope since they are
@@ -293,6 +441,10 @@ UniquePtr<BaseAST> Parser::parseStatement() {
                 return parseReturnStatement(); 
                 
             } 
+
+            else if (token.value == "continue") {
+                return parseContinueStatement();
+            }
             else if (token.value == "break") {
                 // Ensure 'break' is inside a valid loop
                 if (!isInsideLoop()) {  // Implement `isInsideLoop()`
@@ -304,15 +456,21 @@ UniquePtr<BaseAST> Parser::parseStatement() {
                 DEBUG_FLOW_EXIT();
                 return makeUnique<Break>(currentScope);
             }
+
+
+            
             else {
+                
                 DEBUG_FLOW_EXIT();
                 throw SyntaxError("Unexpected Keyword token in parseStatement: ", currentToken());
             }
 
+        // case TokenType::Operator:
+        //     return parseExpression();
 
         default:
             DEBUG_FLOW_EXIT();
-            throw SyntaxError("Unexpected token in parseStatement: ", currentToken());
+            throw UnexpectedTokenError(token, "Keyword, Variable, FunctionCall, FunctionDef, ClassDef, VarDeclaration", "ClassCall");
 
     }
 }
@@ -343,3 +501,26 @@ UniquePtr<ASTStatement> Parser::parseBreakStatement() {
 
 
 
+UniquePtr<ASTStatement> Parser::parseContinueStatement() {
+    DEBUG_FLOW(FlowLevel::HIGH);
+
+    DEBUG_LOG(LogLevel::INFO, "Parser: parseContinueStatement with token: ", currentToken().toString());
+
+    if (!isInsideLoop()) {
+        throw MerkError("Continue statement not allowed outside of a loop.");
+    }
+    
+    DEBUG_LOG(LogLevel::INFO, "Parsing break statement at token: ", currentToken().toString());
+
+
+    advance(); // Consume 'continue'
+
+    if (position < tokens.size() &&
+        currentToken().type != TokenType::Newline &&
+        currentToken().type != TokenType::EOF_Token) {
+        DEBUG_FLOW_EXIT();
+        throw UnexpectedTokenError(currentToken(), "");
+    }
+    DEBUG_FLOW_EXIT();
+    return makeUnique<Continue>(currentScope);
+}

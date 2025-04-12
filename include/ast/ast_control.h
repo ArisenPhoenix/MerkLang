@@ -1,10 +1,10 @@
 #ifndef AST_CONTROL_H
 #define AST_CONTROL_H
+#include <unordered_set>
 
 #include "core/types.h"
 #include "ast/ast_base.h"
 
-#include <unordered_set>
 #include "core/errors.h"
 
 // This alias was used for clarity, when dealing with free variables specifically. 
@@ -31,11 +31,12 @@ class CodeBlock : public BaseAST, public FreeVarCollection {
 
 protected:
     Vector<UniquePtr<BaseAST>> children;
-
+    bool containsReturn = false;
 public:
     explicit CodeBlock(SharedPtr<Scope> scope);
 
     CodeBlock(const CodeBlock&) = delete;
+    CodeBlock(Vector<UniquePtr<BaseAST>> children, SharedPtr<Scope>);
     CodeBlock& operator=(const CodeBlock&) = delete;
     ~CodeBlock() override;
 
@@ -50,15 +51,18 @@ public:
     void printAST(std::ostream& os, int indent = 0) const override;
 
     AstType getAstType() const override { return AstType::CodeBlock; }
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
     String toString() const override;
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override;
+    Node evaluate() const override {return evaluate(getScope());}
 
     bool containsReturnStatement() const;
-
+    void setContainsReturnStatement(bool val) {containsReturn = val;}
+    friend class CallableBody;
     friend class FunctionBody;
+    friend class ClassBody;
+    friend class MethodBody;
+    friend class ClassDef;
 
     UniquePtr<BaseAST> clone() const override;
     
@@ -75,17 +79,19 @@ protected:
     UniquePtr<ASTStatement> condition; // The condition to evaluate
 
 public:
+
     ConditionalBlock(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope);
     const ASTStatement* getCondition() const {return condition.get();};
 
     void printAST(std::ostream& os, int indent = 0) const override;
-    Node evaluate(SharedPtr<Scope> scope) const override {return condition.get()->evaluate(scope);}
-    Node evaluate() const override {return evaluate(getScope());}
-
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
+    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate() const override;
     AstType getAstType() const override {return AstType::Conditional;}
 
     UniquePtr<BaseAST> clone() const override;
+    static UniquePtr<ConditionalBlock> create(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope) {
+        return makeUnique<ConditionalBlock>(std::move(condition), scope);
+    }
 };
 
 
@@ -100,11 +106,7 @@ public:
     UniquePtr<CodeBlock>& getBody() const {return body;}
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
-
     AstType getAstType() const override { return AstType::ElseStatement;}
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
-
     void printAST(std::ostream& os, int indent = 0) const override;
 
     UniquePtr<BaseAST> clone() const override;
@@ -114,21 +116,23 @@ public:
     void setScope(SharedPtr<Scope> newScope) override;
 };
 
-class ElifStatement : public ConditionalBlock, public FreeVarCollection { // Also contains the logic of If, parser's job to ensure if is always first.
+class ElifStatement : public ASTStatement, public FreeVarCollection { // Also contains the logic of If, parser's job to ensure if is always first.
 
 protected:
     mutable UniquePtr<CodeBlock> body;
 public:
+    UniquePtr<ConditionalBlock> condition;
+
     ElifStatement(UniquePtr<ASTStatement> condition, UniquePtr<CodeBlock> body, SharedPtr<Scope> scope);
+    // const UniquePtr<ConditionalBlock>& getCondition() const { return condition; }
+    const ASTStatement* getCondition() const { return condition->getCondition(); }
+
 
     Node evaluate(SharedPtr<Scope> scope) const override;
 
     const UniquePtr<CodeBlock>& getBody() const { return body; }
-    Node evaluate() const override {return evaluate(getScope());}
     AstType getAstType() const override { return AstType::ElifStatement; }
-    void printAST(std::ostream& os, int indent = 0) const override;
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
-    
+    void printAST(std::ostream& os, int indent = 0) const override;    
     UniquePtr<BaseAST> clone() const override;
     FreeVars collectFreeVariables() const override;
 
@@ -139,14 +143,18 @@ public:
 // Originally IfStatement inherited from ElifStatement because if it quacks and walks like a duck...
 // During some debugging it was made to be a standalone, the issue was not related to its derivative
 // However, I haven't decided to make it inherit from Elif again, for actually no good reason, though it is a bit counterintuitive.
-class IfStatement : public ConditionalBlock, public FreeVarCollection {
+class IfStatement : public ASTStatement, public FreeVarCollection {
 protected:
+    UniquePtr<ConditionalBlock> condition;
     mutable UniquePtr<CodeBlock> body;
     Vector<UniquePtr<ElifStatement>> elifNodes; // Vector of `elif` nodes
     UniquePtr<ElseStatement> elseNode;          // Optional `else` block
-    
+
 public:
+
+
     IfStatement(UniquePtr<ASTStatement>condition, UniquePtr<CodeBlock> body, SharedPtr<Scope> scope);
+    const ASTStatement* getCondition() const { return condition->getCondition(); }
 
     void addElifNode(UniquePtr<ElifStatement> elifNode) {
         if (!elifNode) {
@@ -158,14 +166,11 @@ public:
     void setElseNode(UniquePtr<ElseStatement> elseNode) {this->elseNode = std::move(elseNode);}
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
 
     const Vector<UniquePtr<ElifStatement>>& getElifs() const {return elifNodes;}
     const UniquePtr<ElseStatement>& getElse() const {return elseNode;}
 
     AstType getAstType() const override { return AstType::IfStatement; }
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
-
     void printAST(std::ostream& os, int indent = 0) const override;
 
     UniquePtr<BaseAST> clone() const override;
@@ -181,11 +186,9 @@ public:
     NoOpNode(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 
     Node evaluate([[maybe_unused]] SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
     String toString() const override {return "NoOpNode";}
     
     AstType getAstType() const override {return AstType::NoOp;};
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
     void printAST(std::ostream& os, int indent = 0) const override;
     UniquePtr<BaseAST> clone() const override;
 }; 
@@ -205,12 +208,9 @@ public:
 
     void printAST(std::ostream& os, int indent = 0) const override {(void)os; (void)indent; throw MerkError("Cannot Print a Base LoopBlock");};
  
-    // Executes the loop
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
 
     virtual AstType getAstType() const override {return AstType::LoopBlock;};
-    virtual String getAstTypeAsString() const override {return astTypeToString(getAstType());}
     virtual String toString() const override { return getAstTypeAsString();}
     virtual FreeVars collectFreeVariables() const override = 0;
 
@@ -227,12 +227,10 @@ public:
     String toString() const override;
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
 
     void printAST(std::ostream& os, int indent = 0) const override;
 
     AstType getAstType() const override {return AstType::WhileLoop;};
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
 
     UniquePtr<BaseAST> clone() const override;
 
@@ -243,4 +241,4 @@ public:
  
 
 
-#endif //AST_CONTROL_H
+#endif //AST_CONTROL_H 

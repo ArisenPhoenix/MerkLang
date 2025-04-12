@@ -7,9 +7,18 @@
 #include <sstream>
 #include <variant>
 #include "core/types.h"
-#include "utilities/debugging_functions.h"
+// #include "utilities/debugging_functions.h"
+// #include "utilities/debugger.h"
 
-const bool debugNode = false;
+
+// namespace std {
+//     template <>
+//     struct hash<Node> {
+//         size_t operator()(const Node& node) const {
+//             return std::hash<std::string>{}(node.toString()); // Use string representation for hashing
+//         }
+//     };
+// }
 
 // class VarNode; // Forward Declare VarNode
 
@@ -100,7 +109,7 @@ public:
     bool isValid() const;
     bool isLong() const;
 
-
+    Node negate() const;
     VariantType getValue() const;
 
     Node operator+(const Node& other) const;
@@ -128,46 +137,39 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const Node& node);
     friend String operator+(const String& lhs, const Node& node);
+
+    // Node resolveMember(const String& name, IdentifierType type) const;
+
 };
+
+
 
 // Literal Node for literals - mostly for clarity in the parser
 class LitNode : public Node {
 public:
     // Default constructor
-    LitNode() : Node() {
-        debugLog(debugNode, "===== LitNode was created without initialization.");
-    }
+    LitNode();
 
     // Constructor accepting a VariantType
-    explicit LitNode(const VariantType& value) : Node(value) {
-        debugLog(debugNode, "===== LitNode was initialized with VariantType.");
-    }
+    explicit LitNode(const VariantType& value);
 
     // Constructor accepting a string value and type
-    explicit LitNode(const String& value, const String& typeStr) : Node(value, typeStr) {
-        debugLog(debugNode, "===== LitNode was initialized with String and typeStr.");
-    }
+    explicit LitNode(const String& value, const String& typeStr);
 
     // Constructor accepting another Node
-    explicit LitNode(const Node& parentNode) : Node(parentNode) {
-        debugLog(debugNode, "===== LitNode was initialized from another Node.");
-    }
+    explicit LitNode(const Node& parentNode);
 
     // Copy constructor
-    LitNode(const LitNode& other) : Node(other) {
-        debugLog(debugNode, "===== LitNode was copy-constructed.");
-    }
+    LitNode(const LitNode& other);
 
     // Move constructor
-    LitNode(LitNode&& other) noexcept : Node(std::move(other)) {
-        debugLog(debugNode, "===== LitNode was move-constructed.");
-    }
+    LitNode(LitNode&& other) noexcept;
 
     // Copy assignment operator
     LitNode& operator=(const LitNode& other) {
         if (this != &other) {
             Node::operator=(other);
-            debugLog(debugNode, "===== LitNode was copy-assigned.");
+            // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-assigned.");
         }
         return *this;
     }
@@ -176,42 +178,12 @@ public:
     LitNode& operator=(LitNode&& other) noexcept {
         if (this != &other) {
             Node::operator=(std::move(other));
-            debugLog(debugNode, "===== LitNode was move-assigned.");
+            // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-assigned.");
         }
         return *this;
     } 
 
-    String toString() const override {
-        try {
-            switch (data.type) {
-                case NodeValueType::Int:
-                    return std::to_string(std::get<int>(data.value));
-                case NodeValueType::Float:
-                    return std::to_string(std::get<float>(data.value));
-                case NodeValueType::Double:
-                    return std::to_string(std::get<double>(data.value));
-                case NodeValueType::Long:
-                    return std::to_string(std::get<long>(data.value));
-                case NodeValueType::Bool:
-                    return std::get<bool>(data.value) ? "true" : "false";
-                case NodeValueType::Char:
-                    return std::string(1, std::get<char>(data.value));
-                case NodeValueType::String:
-                    return std::get<String>(data.value);
-                case NodeValueType::Null:
-                    return "null"; 
-                case NodeValueType::Uninitialized:
-                    return "[Uninitialized]";
-                case NodeValueType::Any:
-                    return "[Any Type]";
-                default:
-                    throw RunTimeError("Unsupported type for Node toString.");
-            }
-        } catch (const std::exception& e) {
-            debugLog(true, highlight("[Error] Exception in Node::toString():", Colors::red), e.what());
-            return "[Error in toString]";
-        }
-    }
+    String toString() const override;
 
 };
 
@@ -267,46 +239,11 @@ public:
 
 
 
-inline bool validateSingleNode(Node node, String methodName, bool debug = true){
-    if (debug){
-        debugLog(debug, methodName, ": Evaluated Node - ", node);
-    }
-    return true;
-}
+inline bool validateSingleNode(Node node, String methodName, bool debug = true);
 
-inline bool validateConditionIsBool(Node node, String methodName, bool debug = true){
-    if (debug){
-        if (!node.isBool()) {
-            // throw TypeMismatchError("Boolean", node.getTypeAsString(), "IfStatementNode::evaluate");
-            throw RunTimeError(methodName + " condition must evaluate to a boolean value.");
-        } else {
-            debugLog(debug, "Condition for ", methodName, " is a bool value.");
-        }
-    }
-    return true;
-}
+inline bool validateConditionIsBool(Node node, String methodName, bool debug = true);
 
-
-
-inline bool validateLeftAndRightNodes(Node leftNode, Node rightNode, String methodName, String op = "", bool debug = true){
-    (void)op;
-    if (debugNode){
-        debugLog(debugNode, "Evaluating leftNode: ", leftNode);
-        if (!leftNode.isValid()) {
-            throw RunTimeError(methodName + "left Node is invalid in " + methodName);
-        } else {
-            debugLog(debug, "left Node is valid in " + methodName);
-        }
-
-        debugLog(debugNode, "Evaluating rightNode: ", rightNode);
-        if (!rightNode.isValid()) {
-            throw RunTimeError(methodName + "right Node is invalid in " + methodName);
-        } else {
-            debugLog(debug, "right Node is valid in " + methodName);
-        }
-    }
-    return true;
-}
+bool validateLeftAndRightNodes(Node leftNode, Node rightNode, String methodName, String op = "", bool debug = true);
 
 
 #endif // NODE_H

@@ -13,8 +13,16 @@
 #include <memory>
 #include <filesystem>
 #include "core/types.h"
-#include "core/node.h"
+
+
+
+// #include "core/node.h"
+class VarNode;
+class Node;
+class LitNode;
 #include "utilities/helper_functions.h"
+
+
 
 // --- Helper templates - modified names for clarity ---
 template <typename T>
@@ -179,14 +187,12 @@ private:
     void setFileFlowLevel(const String& file, FlowLevel level);
 };
 
-#define DEBUG_LOG(level, ...) Debugger::getInstance().log(level, __FILE__, __LINE__, __VA_ARGS__)
-
-
 #ifdef _MSC_VER
   #define FUNCTION_SIGNATURE __FUNCSIG__
 #else
   #define FUNCTION_SIGNATURE __PRETTY_FUNCTION__
 #endif
+
 
 // --- Overloaded helper functions for flow logging ---
 // When no FlowLevel is provided, use FlowLevel::LOW to allow minute details
@@ -205,14 +211,28 @@ inline auto flowEnterHelper(const char* funcSig, FlowLevel level, const char* fi
 
 
 
-// --- DEBUG_FLOW macros ---
-// DEBUG_FLOW: enters a flow log scope, storing the exit lambda in a fixed variable.
-// __VA_OPT__ appends the optional FlowLevel argument if provided.
+// Always define FUNCTION_SIGNATURE regardless of logging state
+#ifdef _MSC_VER
+  #define FUNCTION_SIGNATURE __FUNCSIG__
+#else
+  #define FUNCTION_SIGNATURE __PRETTY_FUNCTION__
+#endif
+
+
+
+
+
+
+
+#define DEBUG_LOG(level, ...) Debugger::getInstance().log(level, __FILE__, __LINE__, __VA_ARGS__)
 #define DEBUG_FLOW(...) \
     auto __DEBUG_FLOW_EXIT__ = flowEnterHelper(FUNCTION_SIGNATURE, __VA_OPT__(__VA_ARGS__, ) __FILE__, __LINE__)
+#define DEBUG_FLOW_EXIT() __DEBUG_FLOW_EXIT__()
+#define MARK_UNUSED_MULTI(...) \
+    do { (void)([](auto&&... args){ ((void)args, ...); }(__VA_ARGS__)); } while (0)
 
-// DEBUG_FLOW_EXIT: calls the exit lambda to log the "exiting" message.
-#define DEBUG_FLOW_EXIT() __DEBUG_FLOW_EXIT__();
+
+
 
 
  
@@ -225,6 +245,9 @@ namespace Debug {
     // All can be done on a file based level as well to limit output etc.
     void configureDebugger();
 }
+
+
+
 
 #endif // DEBUGGER_H 
 

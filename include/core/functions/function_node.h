@@ -3,94 +3,55 @@
 #define FUNCTION_NODE_H
 
 #include <functional>
-#include <memory>
-
+#include <memory> 
 
 #include "core/types.h"
 #include "core/node.h"
 #include "core/functions/param_node.h"    // For ParamList
-#include "core/functions/function_node.h"
 #include "ast/ast_control.h"              // For CodeBlock
+#include "core/functions/callable.h"      // New base callable class
+#include "ast/ast_callable.h"
 
 
-// Forward declarations
-class Scope;  
-class FunctionSignature;
+
+class Scope;
 class FunctionBody;
 
-// Abstract base class for all functions
-class Function {
+
+// Function now inherits from Callable.
+class Function : public Callable {
+protected:
+    CallableType subType = CallableType::DEF;
 public:
-    String name;
-    mutable ParamList parameters;
-    FunctionType funcType;
-    Function(String name, ParamList params, FunctionType functionType);
+    // Constructor: simply forward to Callable.
+    Function(String name, ParamList params, CallableType functionType);
     virtual ~Function() = default;
 
+    // Execute must be implemented by derived classes.
     virtual Node execute(const Vector<Node> args, SharedPtr<Scope> scope) const = 0;
 
-    virtual SharedPtr<FunctionSignature> toFunctionSignature() const = 0;
-    virtual FunctionBody* getBody() const {return nullptr;}
+    // Return a FunctionSignature representing this callable.
+    virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
+
+    // Optionally, return a pointer to the function body (if applicable).
+    virtual FunctionBody* getBody() const { return nullptr; }
+    virtual String toString() const override = 0;
 
     virtual void setCapturedScope(SharedPtr<Scope> scope) = 0;
-    virtual SharedPtr<Scope> getCapturedScope() const {return nullptr;}
-    virtual FunctionType getFunctionType() const {return funcType;};
-    String getName() const { return name; }
-
+    virtual SharedPtr<Scope> getCapturedScope() const = 0;
 
 };
-
-// A thin wrapper that “signs” a function for registration.
-// In a more complete design, will include return type info.
-class FunctionSignature {
-private:
-    SharedPtr<Function> function;
-    mutable Vector<NodeValueType> parameterTypes; 
-    FunctionType funcType;
-     
-
-public:
-    explicit FunctionSignature(SharedPtr<Function> function, FunctionType funcType);
-    ~FunctionSignature();
-      
-    Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;
     
-    bool matches(const Vector<NodeValueType>& otherTypes) const;
-    
-    SharedPtr<Function> getFunction() const;
-    const Vector<NodeValueType>& getParameterTypes() const;
-    FunctionType getFunctionType() {return funcType;}
-    void setFunctionType(FunctionType functionType);
-    bool getIsUserFunction();
-};
-
-
-
-class NativeFunction : public Function {
-private:
-    std::function<Node(Vector<Node>&, SharedPtr<Scope>)> nativeImpl;
-
-public:
-    NativeFunction(String name, std::function<Node(Vector<Node>&, SharedPtr<Scope>)> impl, ParamList parameters);
-
-    Node execute(Vector<Node> args, SharedPtr<Scope> scope) const override;
-    virtual SharedPtr<FunctionSignature> toFunctionSignature() const = 0;
-    virtual String toString() const = 0;
-};
-
-
-
-
 class UserFunction : public Function {
 private:
-    SharedPtr<Scope> capturedScope;  // Store the captured scope to prevent deletion
+    SharedPtr<Scope> capturedScope;  // Store the captured scope to prevent automatic destruction (a shared_ptr)
 
 public:
     UniquePtr<FunctionBody> body;   // The function’s code block
 
 
 public:
-    UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, FunctionType funcType);
+    UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType);
 
     Node execute(Vector<Node> args, SharedPtr<Scope> scope) const override;
 
@@ -98,31 +59,22 @@ public:
 
     SharedPtr<Scope> getCapturedScope() const;
 
-    SharedPtr<FunctionSignature> toFunctionSignature() const override;
+    SharedPtr<CallableSignature> toCallableSignature() override;
     
     FunctionBody* getBody() const override {return body.get();}
 
-    String toString() const {return "<Function: " + getName() + ">";}
+    String toString() const override {return "<Function: " + getName() + ">";}
 };
 
 
-
-class FunctionNode : public Node {
+class FunctionNode : public CallableNode {
 public:
-   
-    explicit FunctionNode(SharedPtr<Function> func) {
+    FunctionNode(SharedPtr<Function> function) : CallableNode(function , "Function") {data.type = NodeValueType::Function;}
+
+    FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {
         data.type = NodeValueType::Function;
-        data.value = func; // Stored as SharedPtr<Function>
-        nodeType = "FunctionNode";
     }
-
-    SharedPtr<Function> getFunction() const {
-        return std::get<SharedPtr<Function>>(data.value);
-    }
-
-    String toString() const {
-        return "<Function: " + getFunction()->getName() + ">";
-    }
+    SharedPtr<Callable> getCallable() const override {return std::get<SharedPtr<Function>>(data.value);}
 };
 
 

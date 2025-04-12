@@ -9,6 +9,9 @@
 
 #include "core/functions/param_node.h"
 #include "core/context.h"
+#include "core/functions/function_node.h"
+#include "core/registry/class_registry.h"
+#include "core/registry/function_registry.h"
 
 #include "core/functions/native_functions.h"
 #include "core/errors.h"
@@ -19,33 +22,33 @@
 
 // this was the original idea for function scoping, but a better one was made, namely detaching, filling, then reattaching the scope using appendChildScope
 // The idea may still be useful in the future so keeping the idea and its implementation in-tact
-SharedPtr<Scope> Scope::mergeScope(SharedPtr<Scope> definingScope) {  
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-    (void)definingScope;
+// SharedPtr<Scope> Scope::mergeScope(SharedPtr<Scope> definingScope) {  
+//     // DEBUG_FLOW(FlowLevel::VERY_LOW);
+//     (void)definingScope;
 
-    SharedPtr<Scope> callScope = std::make_shared<Scope>(0, interpretMode);
-    DEBUG_LOG(LogLevel::TRACE, "******************************************************************************************");
-    DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Variables: Creating a temporary function call scope.");
-    getAllVariables(context);
-    context.debugPrint();
+//     SharedPtr<Scope> callScope = std::make_shared<Scope>(0, interpretMode);
+//     // DEBUG_LOG(LogLevel::TRACE, "******************************************************************************************");
+//     // DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Variables: Creating a temporary function call scope.");
+//     getAllVariables(context);
+//     // context.debugPrint();
     
-    DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Functions: Creating a temporary function call scope.");
-    // Step 3: Copy functions from definingScope **only if they aren't already updated in the current scope**
-    getAllFunctions(functionRegistry);
+//     // DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Functions: Creating a temporary function call scope.");
+//     // Step 3: Copy functions from definingScope **only if they aren't already updated in the current scope**
+//     getAllFunctions(functionRegistry);
 
 
-    DEBUG_LOG(LogLevel::TRACE, "Scope for mergedScope in Scope::mergeScope");
-    callScope->debugPrint();
+//     // DEBUG_LOG(LogLevel::TRACE, "Scope for mergedScope in Scope::mergeScope");
+//     // callScope->debugPrint();
 
-    DEBUG_LOG(LogLevel::TRACE, "FunctionRegistry for mergedScope in Scope::mergeScope");
-    functionRegistry.debugPrint();
+//     // DEBUG_LOG(LogLevel::TRACE, "FunctionRegistry for mergedScope in Scope::mergeScope");
+//     // functionRegistry.debugPrint();
 
-    DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Function call scope created successfully.");
-    // callScope->parentScope = nullptr;
-    DEBUG_LOG(LogLevel::TRACE, "******************************************************************************************");
-    DEBUG_FLOW_EXIT();
-    return callScope;
-}
+//     // DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Function call scope created successfully.");
+//     // callScope->parentScope = nullptr;
+//     // DEBUG_LOG(LogLevel::TRACE, "******************************************************************************************");
+//     // DEBUG_FLOW_EXIT();
+//     return callScope;
+// }
 
 UniquePtr<VarNode> cloneVarNode(VarNode* original) {
     return UniquePtr<VarNode>(original);
@@ -79,7 +82,7 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
         }
     }
 
-    DEBUG_LOG(LogLevel::INFO, highlight("[Context Variables From Detached Scope]:", Colors::yellow));
+    // DEBUG_LOG(LogLevel::INFO, highlight("[Context Variables From Detached Scope]:", Colors::yellow));
 
     DEBUG_FLOW_EXIT();
     return detached;
@@ -99,23 +102,23 @@ SharedPtr<Scope> Scope::clone() const {
     DEBUG_FLOW_EXIT();
     newScope->isDetached = isDetached;
     newScope->isClonedScope = true;
-    newScope->isFunctionCallScope = isFunctionCallScope;
+    newScope->isCallableScope = isCallableScope;
     return newScope;
 }
 
 
 // Exit the current scope (optional logic if cleanup is needed)
-void Scope::exitScope() {
-    DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::TRACE, "Exiting scope at level: ", scopeLevel, " with ", context.getVariables().size(), " variables present.");
+// void Scope::exitScope() {
+//     // DEBUG_FLOW(FlowLevel::LOW);
+//     // DEBUG_LOG(LogLevel::TRACE, "Exiting scope at level: ", scopeLevel, " with ", context.getVariables().size(), " variables present.");
 
-    if (auto parent = parentScope.lock()) {
-        std::cout << "Returning to parent scope at level: " << parent->getScopeLevel() << "\n";
-    } else {
-        std::cout << "No parent scope exists; exiting root scope.\n";
-    }
-    DEBUG_FLOW_EXIT();
-}
+//     // if (auto parent = parentScope.lock()) {
+//     //     std::cout << "Returning to parent scope at level: " << parent->getScopeLevel() << "\n";
+//     // } else {
+//     //     std::cout << "No parent scope exists; exiting root scope.\n";
+//     // }
+//     // DEBUG_FLOW_EXIT();
+// }
 
 Vector<SharedPtr<Scope>> Scope::getChildren() {
     return childScopes;
@@ -125,6 +128,16 @@ bool Scope::hasChildren(){
     return childScopes.size() > 0;
 }
 
+bool Scope::parentIsValid() {
+    auto parent = parentScope.lock();
+    if (parent){
+        return true;
+    }
+
+    return false;
+
+}
+
 // Debugging
 void Scope::debugPrint() const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
@@ -132,7 +145,7 @@ void Scope::debugPrint() const {
         debugLog(true, highlight("\n\n======================== Start Scope::debugPrint ======================== ", Colors::cyan));
     }
 
-    debugLog(true, "Scope Level: ", scopeLevel, "isDetached:", isDetached ? "true" : "false", "isCloned:", isClonedScope ? "true" : "false", "isFuncCallScope:", isFunctionCallScope ? "true" : "false");
+    debugLog(true, "Scope Level: ", scopeLevel, "isDetached:", isDetached ? "true" : "false", "isCloned:", isClonedScope ? "true" : "false", "isCallableScope:", isCallableScope ? "true" : "false");
     context.debugPrint();
     functionRegistry.debugPrint();
     
@@ -204,6 +217,50 @@ void Scope::printContext(int depth) const {
 }
 
 
+void Scope::registerCallableType(const String& name, CallableType type) {
+    (*globalCallables)[name] = type;
+}
+
+std::optional<CallableType> Scope::getCallableType(const String& name) const {
+    auto it = globalCallables->find(name);
+    if (it != globalCallables->end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
 
 
+Node Scope::resolveCallable(const String& name, const Vector<Node>& args) {
+    auto typeOpt = getCallableType(name);
+    if (!typeOpt.has_value()) {
+        throw MerkError("Callable '" + name + "' not found in global callables.");
+    }
 
+    CallableType kind = *typeOpt;
+
+    switch (kind) {
+        case CallableType::FUNCTION:
+        case CallableType::DEF:
+        case CallableType::LAMBDA:
+        case CallableType::NATIVE: {
+            auto funcOpt = getFunction(name, args);
+            if (!funcOpt) throw FunctionNotFoundError(name);
+            return FunctionNode(funcOpt->get().getCallable());
+        }
+
+        case CallableType::CLASS: {
+            auto classOpt = getClass(name);
+            if (!classOpt.has_value()) {
+                throw MerkError("Class '" + name + "' not found.");
+            }
+            return ClassNode(std::dynamic_pointer_cast<ClassBase>(classOpt->get()->getCallable()));
+        }
+
+        case CallableType::METHOD:
+        case CallableType::INSTANCE:
+        case CallableType::CALLABLE:
+            throw MerkError("Cannot resolve callable of unsupported type directly: " + name);
+    }
+
+    throw MerkError("Unrecognized callable type for '" + name + "'.");
+}

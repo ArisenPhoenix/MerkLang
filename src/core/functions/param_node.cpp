@@ -219,3 +219,22 @@ Vector<String> ParamList::getNames() const {
     }
     return paramNames;
 }
+
+
+ParamList ParamList::clone() {
+    ParamList params;
+    for (auto& param : parameters) {
+        params.addParameter(param.copy());
+    }
+
+    return params;
+};
+
+ParamList ParamList::clone() const {
+    ParamList params;
+    for (auto& param : parameters) {
+        params.addParameter(param.copy());
+    }
+
+    return params;
+};

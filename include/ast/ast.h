@@ -16,7 +16,6 @@
 #include "utilities/debugging_functions.h"
 
 
-class FunctionNode;
 class Scope;
 
 class LiteralValue : public ASTStatement {
@@ -30,9 +29,7 @@ public:
 
     String toString() const override;
 
-    String getAstTypeAsString() const {return astTypeToString(getAstType());}
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::Literal;}
     UniquePtr<BaseAST> clone() const override {
@@ -52,27 +49,32 @@ private:
     VarNode variable;
     std::optional<std::type_index> typeTag;
     UniquePtr<ASTStatement> valueExpression;
+    // void setName(String newName) {name = newName;}
 
 
 public:
+    // VariableDeclaration(SharedPtr<Scope> scope) : ASTStatement(scope) {}
     VariableDeclaration(
         String name,
         VarNode variable,
         SharedPtr<Scope> scope,
         std::optional<std::type_index> typeTag = std::nullopt,
-        UniquePtr<ASTStatement> valueNode = nullptr
+        UniquePtr<ASTStatement> valueExpression = nullptr
     );
+    VariableDeclaration(UniquePtr<VariableDeclaration> varDec);
+    friend class AttributeDeclaration;
+    virtual String toString() const override;
 
-    String toString() const override;
-
-    String getAstTypeAsString() const {return astTypeToString(getAstType());}
-    Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
-    void printAST(std::ostream& os, int indent = 0) const override;
-    AstType getAstType() const override {return AstType::VariableDeclaration;}
     String getName() const {return name;}
-    UniquePtr<BaseAST> clone() const override;  
+    VarNode getVariable() {return variable;}
+    std::optional<std::type_index> getTypeTag() {return typeTag;}
+    const UniquePtr<ASTStatement>& getExpression() {return valueExpression;}
     void setScope(SharedPtr<Scope> newScope) override;
+
+    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual void printAST(std::ostream& os, int indent = 0) const override;
+    virtual AstType getAstType() const override {return AstType::VariableDeclaration;}
+    virtual UniquePtr<BaseAST> clone() const override;  
 };
 
 class VariableReference : public ASTStatement {
@@ -80,21 +82,16 @@ class VariableReference : public ASTStatement {
 
 public:
     explicit VariableReference(const String& name, SharedPtr<Scope> scope);
-
-    String toString() const override;
-
-    AstType getAstType() const override {
-        return AstType::VariableReference;
-    }
+    explicit VariableReference(UniquePtr<VariableReference> varRef);
 
     const String& getName() const { return name; }
-
-    Node evaluate(SharedPtr<Scope> scope) const;
-    Node evaluate() const override {return evaluate(getScope());}
-    String getAstTypeAsString() const {return astTypeToString(getAstType());}
-    void printAST(std::ostream& os, int indent = 0) const override;
-    UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
+    String toString() const override;
+
+    virtual AstType getAstType() const override {return AstType::VariableReference;}
+    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual void printAST(std::ostream& os, int indent = 0) const override;
+    virtual UniquePtr<BaseAST> clone() const override;
 
 };
 
@@ -107,21 +104,22 @@ private:
 
 public:
     VariableAssignment(String name, UniquePtr<ASTStatement> value, SharedPtr<Scope> scope);
+    VariableAssignment(UniquePtr<VariableAssignment> varAssign);
 
     String toString() const override;
-    void printAST(std::ostream& os, int indent = 0) const override;
-
-    Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
-
+    
     friend class ParameterAssignment;
-    const UniquePtr<ASTStatement>& getValue() const {return valueExpression;}
-    AstType getAstType() const override {return AstType::VariableAssignment;}
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
+    // const UniquePtr<ASTStatement>& getValue() const {return valueExpression;}
+    // const UniquePtr<ASTStatement> getFullValue() {return std::move(valueExpression);}
+    const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
 
-    UniquePtr<BaseAST> clone() const override;
     const String& getName() const { return name; }
     void setScope(SharedPtr<Scope> newScope);
+
+    virtual void printAST(std::ostream& os, int indent = 0) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual AstType getAstType() const override {return AstType::VariableAssignment;}
+    virtual UniquePtr<BaseAST> clone() const override;
 
 };
 
@@ -136,11 +134,8 @@ public:
     String toString() const override;
    
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
 
     AstType getAstType() const override {return AstType::BinaryOperation;}
-    String getAstTypeAsString() const {return astTypeToString(getAstType());}
-
     const String& getOperator() const { return op;}
 
     const ASTStatement* getLeftSide() const { return left.get(); }
@@ -159,13 +154,9 @@ public:
     String toString() const override;
     const String& getOperator() const { return op; }
     const ASTStatement* getOperand() const { return operand.get(); }
-    AstType getAstType() const override {
-        return AstType::BinaryOperation;
-    }
+    AstType getAstType() const override {return AstType::BinaryOperation;}
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
-
     void printAST(std::ostream& os, int indent = 0) const override;
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
@@ -176,6 +167,7 @@ private:
     UniquePtr<ASTStatement> operand;
 };
 
+
 class Break : public ASTStatement {
 public:
     Break(SharedPtr<Scope> scope);
@@ -185,10 +177,8 @@ public:
     }
     
     AstType getAstType() const override {return AstType::Break;}
-    String getAstTypeAsString() const override {return astTypeToString(getAstType());}
 
     [[noreturn]] Node evaluate(SharedPtr<Scope> scope) const override;
-    [[noreturn]] Node evaluate() const override;
 
     void printAST(std::ostream& os, int indent = 0) const override;
 
@@ -196,19 +186,7 @@ public:
 };
 
 
-class ReturnException : public std::exception {
-    private:
-        Node returnValue;
-    
-    public:
-        explicit ReturnException(Node value) : returnValue(std::move(value)) {}
-    
-        const char* what() const noexcept override {
-            return "Return statement encountered.";
-        }
-    
-        Node getValue() const { return returnValue; }
-};
+
 
 
 class Return : public ASTStatement {
@@ -217,25 +195,34 @@ private:
 
 public:
     explicit Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value);
-
     Node evaluate(SharedPtr<Scope> scope) const override;
-    Node evaluate() const override {return evaluate(getScope());}
-
     String toString() const;
     void printAST(std::ostream& os, int indent = 0) const override;
-
     AstType getAstType() const override { return AstType::Return; }
-    String getAstTypeAsString() const { return astTypeToString(getAstType()); }
-
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
 
 };
 
 
+
+class Continue : public ASTStatement {
+public:
+    explicit Continue(SharedPtr<Scope> scope);
+
+    Node evaluate(SharedPtr<Scope> scope) const override;
+
+    String toString() const override;
+    void printAST(std::ostream& os, int indent = 0) const override;
+
+    AstType getAstType() const override { return AstType::Continue; }
+    UniquePtr<BaseAST> clone() const override;
+};
+        
+
 #endif // AST_H
 
-
+ 
 
 
 

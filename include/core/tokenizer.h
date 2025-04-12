@@ -24,7 +24,11 @@ private:
     bool insideParams = false;  // Tracks whether inside function parameters or not
     bool insideArgs = false;    // same but for arguments, KISS
 
-    std::set<String> functions;
+    bool insideClass = false;
+    int classIndentLevel = 0;
+
+    std::unordered_set<String> functions;
+    std::unordered_set<String> classes;
 
 
     Vector<int> indentStack; // Stack to manage indentation levels
@@ -37,6 +41,15 @@ private:
 
     bool isFunction(size_t startPos);
     bool isFunction(String value);
+
+    bool isClass(size_t startPos);
+    bool isClass(String value);
+
+    const Token& previousToken(size_t offset = 1) const;
+    const Token& lastToken() const;
+    bool lastTokenWas(TokenType type, size_t offset = 1) const;
+    bool isLogicOperator();
+
     bool isComparisonOperator(char c) const;
     bool isCompoundOperator(char c) const;
 
@@ -61,12 +74,7 @@ public:
         indentStack.push_back(0); // Initialize with base indent level
     }
 
-    void finalizeIndentation(Vector<Token>& tokens) {                
-        while (!indentStack.empty() && indentStack.back() > 0) {
-            tokens.emplace_back(TokenType::Dedent, "", line, column);
-            indentStack.pop_back();
-        }
-    }
+    void finalizeIndentation(Vector<Token>& tokens);
 
     Vector<Token> tokens;
     Vector<Token> tokenize();

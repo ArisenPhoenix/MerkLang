@@ -29,6 +29,12 @@ UniquePtr<T> dynamic_unique_ptr_cast(UniquePtr<U>&& ptr) {
 }
 
 
+template <typename T, typename U>
+UniquePtr<T> static_shared_ptr_cast(SharedPtr<U>&& ptr) {
+    return SharedPtr<T>(static_cast<T*>(ptr.release()));
+}
+
+
 class BaseAST {
 protected:
     WeakPtr<Scope> scope;
@@ -43,19 +49,17 @@ public:
 
     // Virtual method for printing the AST node (for debugging purposes)
     virtual void printAST(std::ostream& os, int indent = 0) const {
-        // (void)os;
         (void)indent;
-        // throw MerkError("Cannot print a BaseAST class");
         os << highlight("BaseAST", Colors::red) << "\n";
     }
 
     virtual bool contains(const BaseAST* node) const {
         (void)node;
-        return false; // Default behavior for non-BlockNode types
+        return false; // Default behavior
     }
     
     virtual AstType getAstType() const {return AstType::Base;}
-    virtual String getAstTypeAsString() const {return astTypeToString(getAstType());}
+    String getAstTypeAsString() const {return astTypeToString(getAstType());}
     
     virtual void setScope(SharedPtr<Scope> newScope);
 
@@ -66,14 +70,15 @@ public:
 
     // Default implementations throw errors if called on BaseAST - just another debugging step
     // Chose logic error as it is certainly preventable
-    virtual Node evaluate(SharedPtr<Scope> scope) const {
-        (void)scope;
-        throw std::logic_error("Node-based evaluate(scope) called on unsupported BaseAST type.");
-    }
+    // virtual Node evaluate(SharedPtr<Scope> scope) const {
+    //     (void)scope;
+    //     throw std::logic_error("Node-based evaluate(scope) called on unsupported BaseAST type.");
+    // }
 
-    virtual Node evaluate() const {
-        throw std::logic_error("Node-based evaluate() called on unsupported BaseAST type.");
-    }
+    virtual Node evaluate(SharedPtr<Scope> scope) const = 0;
+
+
+    virtual Node evaluate() const = 0;
 
     virtual UniquePtr<BaseAST> clone() const = 0;
     String getBranch() const {return branch;}
@@ -96,8 +101,11 @@ public:
         os << highlight("ASTStatement", Colors::red) << "\n";
     }
     virtual AstType getAstType() const override {return AstType::AST;}
-    virtual String getAstTypeAsString() const override {return "ASTStatement";}
     virtual String toString() const override {return getAstTypeAsString();}
+
+    virtual Node evaluate(SharedPtr<Scope> scope) const override= 0;
+
+    virtual Node evaluate() const override {return evaluate(getScope());}
 
     virtual UniquePtr<BaseAST> clone() const override;
 

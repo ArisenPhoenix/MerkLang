@@ -168,6 +168,39 @@ x = float(y) + 2.5  // Explicit cast ensures behavior
 
 <p>These rules ensure Merk remains fast, efficient, and predictable while allowing developers the flexibility they need.</p>
 
+### 🔧 Variable Type Combinations in Merk
+
+Merk uses three key boolean flags to determine variable behavior:
+
+- `isConst`: Whether the variable name can be reassigned.
+- `isMutable`: Whether the internal data can be changed.
+- `isStatic`: Whether the type is fixed after assignment.
+
+These combinations allow developers to precisely control **immutability**, **type stability**, and **optimization potential**.
+
+| `isConst` | `isMutable` | `isStatic` | Description                                                                 | Tags         |
+|-----------|-------------|------------|-----------------------------------------------------------------------------|--------------|
+| `false`   | `false`     | `false`    | Reassignable, data locked, type flexible.                                   | ⚠️🧩          |
+| `false`   | `false`     | `true`     | Reassignable, data locked, type fixed.                                      | 🚀           |
+| `false`   | `true`      | `false`    | Reassignable, data mutable, type flexible (default `var`).                  | ⚠️🧩          |
+| `false`   | `true`      | `true`     | Reassignable, data mutable, type fixed — stable & performant.              | 🚀🧩          |
+| `true`    | `false`     | `false`    | Not reassignable, data locked, type flexible — weak `const`.               | 🔒⚠️          |
+| `true`    | `false`     | `true`     | Fully immutable constant (`const x := val`) — ideal for optimization.      | 🔒🚀✅         |
+| `true`    | `true`      | `false`    | Not reassignable, but mutable internals — dynamic objects with permanence. | 🧩⚠️          |
+| `true`    | `true`      | `true`     | Not reassignable, mutable internals, type fixed — ideal for classes/maps.  | 🔒🚀          |
+
+---
+
+**Legend**:
+
+- 🔒 = Immutable or constant behavior  
+- 🧩 = Flexible and dynamic  
+- 🚀 = Optimizable and type-safe  
+- ⚠️ = Requires caution (less strict behavior)  
+- ✅ = Ideal for performance-critical use cases  
+
+
+---
 
 Merk is being developed as a proof of concept for SAL, ensuring that a high-level language can seamlessly map to its functional grammar while maintaining efficiency.
 
