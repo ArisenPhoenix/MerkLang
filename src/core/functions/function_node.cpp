@@ -13,21 +13,22 @@
 #include "ast/ast_callable.h"
 
 
+FunctionBody::FunctionBody(SharedPtr<Scope> scope) : CallableBody(scope) {
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
 
+    DEBUG_LOG(LogLevel::DEBUG, "Creating FunctionBody with scope level: ", scope->getScopeLevel());
+    if (!scope){
+        throw MerkError("FunctionBody Must Have A Valid Scope: ");
+    }
+
+    DEBUG_FLOW_EXIT();
+}
 
 Function::Function(String name, ParamList params, CallableType funcType)
     : Callable(name, std::move(params), CallableType::FUNCTION)
 {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    // if (funcType != CallableType::FUNCTION){
-    //     if (callableTypeAsString(funcType) == "Unknown"){
-    //         throw MerkError("Constructor Doesn't have a valid Callable Type for Function::Function");
-    //     }
-    //     setSubType(funcType);
-    //     setCallableType(CallableType::FUNCTION);
-    // }
-
-    // setSubType(funcType);
+    
 
     DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
     DEBUG_FLOW_EXIT();
@@ -36,15 +37,6 @@ Function::Function(String name, ParamList params, CallableType funcType)
 UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType)
     : Function(name, std::move(parameters), CallableType::FUNCTION), body(std::move(body)) {
         DEBUG_FLOW(FlowLevel::LOW);
-        // setSubType(funcType);
-        // if (funcType != CallableType::FUNCTION){
-        //     if (callableTypeAsString(funcType) == "Unknown"){
-        //         throw MerkError("Constructor Doesn't have a valid Callable Type for UserFunction::UserFunction");
-        //     }
-        //     setSubType(funcType);
-            
-        //     setCallableType(CallableType::FUNCTION);
-        // }
 
         setSubType(funcType);
             

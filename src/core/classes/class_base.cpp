@@ -3,7 +3,7 @@
 #include "core/errors.h"
 #include "utilities/debugger.h"
 #include "core/node.h"
-
+#include "ast/ast_class.h"
 #include "core/classes/method.h"
 #include "core/classes/class_base.h"
 #include "core/scope.h"
@@ -80,9 +80,6 @@ void ClassBase::setClassScope(SharedPtr<Scope> scope) {
 SharedPtr<Scope> ClassBase::getCapturedScope() const {return capturedScope;}
 SharedPtr<Scope> ClassBase::getClassScope() const {return classScope;}
 
-// Returns the class's scope.
-// SharedPtr<Scope> ClassBase::getScope() const {return scope;}
-
 String ClassBase::toString() const {
     return "ClassBase()";
 };
@@ -156,71 +153,6 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
 }
 
 
-// Produce a ClassSignature for this class definition.
-// SharedPtr<CallableSignature> ClassBase::toCallableSignature() const {
-//     DEBUG_FLOW(FlowLevel::LOW);
-
-//     if (!body){
-//         throw MerkError("The Body in ClassBase::toCallableSignature() is null");
-//     }
-
-//     if (!scope){
-//         throw MerkError("scope is null in ClassBase::toCallableSignature()");
-//     }
-//     // getBody(); 
-//     auto clonedBodyBase = body->clone();
-
-//     DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "Class Body Was cloned");
-//     auto clonedClassBody = static_unique_ptr_cast<ClassBody>(std::move(clonedBodyBase));
-//     DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "Class Body casted");
-
-
-//     ParamList clonedParams;
-//     for (const auto& param : parameters) {
-//         clonedParams.addParameter(param.copy());  // Create a copy
-//     }
-//     DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "Parameters Were Copied");
-
-//     if (!getCapturedScope()){
-//         throw MerkError("Captured Scope in ClassBase::toCallableSignature is null");
-//     }
-
-//     // Create a new runtime Method with the cloned body.
-//     SharedPtr<ClassBase> classBase = std::make_shared<ClassBase>(getName(), accessor, std::move(clonedClassBody), getCapturedScope()->clone());
-//     if (!classScope){
-//         throw MerkError("Class Scope is null in ClassBase::toCallableSignature");
-//     }
-//     classBase->setClassScope(classScope);
-//     DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "Class was created and made shared");
-//     DEBUG_LOG(LogLevel::ERROR, "Attempting To Create a Detached Scope in ClassBase::toCallableSignature");
-//     auto classDefScope = scope->detachScope({});
-//     DEBUG_LOG(LogLevel::ERROR, "Detached Scope was successfully created in ClassBase::toCallableSignature");
-
-//     DEBUG_LOG(LogLevel::ERROR, "Attempting To Set Detached Scope in ClassBase::toCallableSignature");
-
-//     classBase->setClassScope(classDefScope);
-//     DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "ClassScope Was Set");
-//     if (!classBase->getClassScope()) {
-//         throw MerkError("Class Base is null after setting in ClassBase::toCallableSignature");
-//     }
-    
-//     // Wrap the Method in a FunctionSignature and return it.
-//     // SharedPtr<CallableSignature> classSig = std::make_shared<CallableSignature>(classBase, callType);
-//     SharedPtr<CallableSignature> classSig = std::make_shared<ClassSignature>(classBase);
-//     assert(classSig && "Cast to ClassSignature should never fail now.");
-
-//     DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "Class Signature Was Created");
-//     DEBUG_FLOW_EXIT();
-//     return classSig;
-
-// }
-
-
-
-
-
-
-
 ClassInstance::ClassInstance(SharedPtr<ClassBase> base)
     : Callable(base->getName(), base->getParameters(), CallableType::INSTANCE),
       baseClass(base),
@@ -228,7 +160,9 @@ ClassInstance::ClassInstance(SharedPtr<ClassBase> base)
 {
     // Deep copy the captured scope from base
     accessor = base->getAccessor();
-    capturedScope = base->getCapturedScope()->clone();
+    setCapturedScope(base->getCapturedScope()->clone());
+    
+    // capturedScope = base->getCapturedScope()->clone();
 }
 
 SharedPtr<Scope> ClassInstance::getCapturedScope() const {
@@ -247,28 +181,9 @@ SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
     throw MerkError("Instances are not directly callable unless '__call__' is defined.");
 }
 
-// Called only if someone explicitly invokes the instance (not common unless __call__ exists)
-// Node ClassInstance::execute(Vector<Node>& args, SharedPtr<Scope> callerScope) const override {
-
-
-// This is the key initializer you're asking for
-// void ClassInstance::construct(const Vector<Node>& args) {
-//     if (!capturedScope->hasFunction("construct")) {
-//         return; // No constructor defined
-//     }
-
-//     auto sigOpt = capturedScope->getFunction("construct", args);
-//     if (!sigOpt.has_value()) {
-//         throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");
-//     }
-
-//     sigOpt->get().call(args, capturedScope);
-// }
-
 void ClassInstance::construct(const Vector<Node>& args) {
     if (!instanceScope->hasFunction("construct")) {
-        // return; // No constructor defined
-        throw MerkError("A construct method must be implemented in class" + getName());
+        throw MerkError("A construct method must be implemented in class: " + getName());
     }
 
     auto sigOpt = instanceScope->getFunction("construct", args);
@@ -370,11 +285,10 @@ SharedPtr<ClassInstance> ClassSignature::instantiate(const Vector<Node>& args) c
     // Create instance
     SharedPtr<ClassInstance> instance = std::make_shared<ClassInstance>(classBase);
     instance->setCapturedScope(capturedScope);
-    
+    capturedScope->appendChildScope(instanceScope);
 
     // Run constructor if defined
     instance->construct(args);
-    capturedScope->appendChildScope(instanceScope);
 
     return instance;
 }

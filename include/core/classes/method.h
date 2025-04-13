@@ -8,16 +8,19 @@
 #include "core/functions/function_node.h"  // Now includes Callable (and Function)
 
 
+
+
 class Method : public Callable {
 protected:
     CallableType subType = CallableType::DEF;
     String accessor;
+    SharedPtr<Scope> classScope;
 
 public:
     UniquePtr<MethodBody> body;
     // Use the same constructor signature as functions
 
-    Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, bool requiresReturn = false);
+    Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn = false);
     Method(Function&& function);  // For preparation of dynamic updates of methods in a class etc.
     // Method(Function&& function);
     Method(Method& method);
@@ -30,11 +33,16 @@ public:
     SharedPtr<Scope> getCapturedScope() const override;
 
     SharedPtr<CallableSignature> toCallableSignature() override;
+    SharedPtr<CallableSignature> toCallableSignature(SharedPtr<Method> method);
+    
     String toString() const override;
 
     String getAccessor();
     void setAccessor(String access);
 
+    SharedPtr<Scope> getClassScope();
+    void setClassScope(SharedPtr<Scope> newClassScope);
+    MethodBody* getBody();
 protected:
     SharedPtr<Scope> capturedScope;
 };

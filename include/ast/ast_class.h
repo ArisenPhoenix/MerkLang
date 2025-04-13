@@ -15,6 +15,39 @@
 class Scope;
 class Method;
 
+
+class ClassBody : public CallableBody {
+    
+    public:
+        explicit ClassBody(SharedPtr<Scope> scope);
+        
+        // Steal constructor: take over a CodeBlock's children.
+        ClassBody(UniquePtr<CodeBlock>&& block);
+    
+        ~ClassBody();
+    
+        Node evaluate(SharedPtr<Scope> scope) const override;
+    
+        UniquePtr<BaseAST> clone() const override;    
+        AstType getAstType() const override {return AstType::ClassBlock;}
+    };
+
+class MethodBody : public CallableBody {
+public:
+    MethodBody(SharedPtr<Scope> scope);
+    MethodBody(UniquePtr<CodeBlock>&& body);
+    MethodBody(UniquePtr<CallableBody>* body);
+    ~MethodBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying MethodBody", Colors::orange));}
+    Node evaluate(SharedPtr<Scope> scope) const override;
+    // void printAST(std::ostream& os, int indent = 0) const;
+    Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
+    UniquePtr<BaseAST> clone() const override;
+
+    AstType getAstType() const override { return AstType::ClassMethodBlock;}
+    // UniquePtr<BaseAST> clone() const override;
+};
+// class ClassBody;
+
 class AttributeHandler {
 
 // AttributeHandler::AttributeHandler(String name);
@@ -137,14 +170,14 @@ public:
     ~MethodDef() = default;
 
     // Node evaluate(SharedPtr<Scope> scope) const override;
-    // UniquePtr<BaseAST> clone() const override;
+    UniquePtr<BaseAST> clone() const override;
 
     String toString() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
 
     AstType getAstType() const override { return AstType::ClassMethodDef;}
     void setMethodAccessor(String& accessorName);
-    String getMethodAccessor();
+    String getMethodAccessor() const;
     Node evaluate(SharedPtr<Scope> scope) const override;
 };
     

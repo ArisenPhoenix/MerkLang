@@ -1,58 +1,78 @@
 #include "core/types.h"
 #include "utilities/debugger.h"
 #include "core/errors.h"
-#include "ast/exceptions.h"
+#include "core/evaluator.h"
+#include "ast/exceptions.h" 
 #include "ast/ast_class.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_callable.h"
 #include "core/classes/method.h"
 
 // Constructor implementation.
-Method::Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, bool requiresReturn)
-    : Callable(std::move(name), std::move(params), CallableType::METHOD, requiresReturn), body(std::move(body->toMethodBody())), capturedScope(scope)
+
+
+
+
+
+Method::Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn)
+    : Callable(std::move(name), std::move(params), CallableType::METHOD, requiresReturn), body(std::move(body)), capturedScope(scope)
 {
     DEBUG_LOG(LogLevel::DEBUG, "Method created: ", getName());
-    this->subType = callType;
-
+    setSubType(callType);
 }
 
 Method::Method(Function&& function)
     : Callable(function.getName(), std::move(function.parameters), CallableType::METHOD, false) {
-        // MethodBody newBody = MethodBody(function.getCapturedScope());
-        body = std::make_unique<MethodBody>(function.getCapturedScope());
+    body = std::make_unique<MethodBody>(function.getCapturedScope());
 
-        for (auto& child : function.getBody()->getChildren()){
-            body->addChild(child->clone());
-        }
+    for (auto& child : function.getBody()->getChildren()){
+        body->addChild(child->clone());
+    }
 
-        setCapturedScope(function.getCapturedScope());
-
+    setCapturedScope(function.getCapturedScope());
+    setCallableType(CallableType::METHOD);
+    setSubType(function.getSubType());
 }
 
 Method::Method(Method& method) : Callable(method) {
     body = std::move(method.body);
     capturedScope = method.capturedScope;
+    setCallableType(CallableType::METHOD);
+    setSubType(method.getSubType());
 }
 
+SharedPtr<CallableSignature> Method::toCallableSignature(SharedPtr<Method> method) {
+    auto sig = makeShared<CallableSignature>(method, CallableType::METHOD);
+    sig->setSubType(method->getSubType());
+    return sig;
+}
+SharedPtr<CallableSignature> Method::toCallableSignature() {
+    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
+    DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(this->subType));
 
+    SharedPtr<CallableSignature> methodSig = std::make_shared<CallableSignature>(
+        shared_from_this(), getCallableType()
+    );
 
-// Method::Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, String accessor, bool requiresReturn)
-//     : Callable(name, params, std::move(body), scope, requiresReturn), accessor(accessor) {
-//     this->callType = CallableType::METHOD;
-// }
+    methodSig->setSubType(getSubType());
+
+    if (methodSig->getCallableType() == CallableType::DEF) {
+        throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));
+    }
+    DEBUG_FLOW_EXIT();
+    return methodSig;
+}
+
 
 // Execute: Create a new method activation scope from the captured scope, bind parameters, and evaluate the body.
 Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope) const {
     (void) callScope;
-    // Create a new child scope from the captured scope.
     SharedPtr<Scope> methodScope = capturedScope->createChildScope();
-    // Verify that the arguments match the method's parameter list.
     parameters.verifyArguments(args);
-    // Bind each parameter into the method activation scope.
     for (size_t i = 0; i < parameters.size(); ++i) {
         methodScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(args[i]));
     }
-    // Evaluate the method body in the new activation scope.
     try {
         return body->clone()->evaluate(methodScope);
     } catch (const ReturnException& e) {
@@ -78,53 +98,12 @@ SharedPtr<Scope> Method::getCapturedScope() const {
 String Method::getAccessor() {return accessor;}
 void Method::setAccessor(String access) {accessor = access;}
 
+SharedPtr<Scope> Method::getClassScope() {return classScope;}
+void Method::setClassScope(SharedPtr<Scope> newClassScope) {classScope = newClassScope;} 
+
 String Method::toString() const {return "Method";}
 
-// toFunctionSignature: Returns a FunctionSignature wrapping this callable (using shared_from_this()).
-// SharedPtr<CallableSignature> Method::toCallableSignature() const {
-
-//     auto clonedBodyBase = body->clone();
-//     auto clonedMethodBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
-
-//     ParamList clonedParams;
-//     for (const auto& param : parameters) {
-//         clonedParams.addParameter(param.copy());  // Create a copy
-//     }
-//     // Create a new runtime Method with the cloned body.
-//     SharedPtr<Method> method = std::make_shared<Method>(getName(), clonedParams, std::move(clonedMethodBody), getCapturedScope(), requiresReturn);
-    
-//     // Wrap the Method in a FunctionSignature and return it.
-//     SharedPtr<CallableSignature> methodSig = std::make_shared<CallableSignature>(method, callType);
-//     return methodSig;
-// }
-// Method::Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, bool requiresReturn)
+MethodBody* Method::getBody() {return body.get();}
 
 
-SharedPtr<CallableSignature> Method::toCallableSignature() {
-    DEBUG_FLOW(FlowLevel::LOW);
-
-    auto clonedBodyBase = body->clone();
-    auto clonedMethodBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
-
-    ParamList clonedParams;
-    for (const auto& param : parameters) {
-        clonedParams.addParameter(param.copy());
-    }
-
-    SharedPtr<Method> method = std::make_shared<Method>(
-        getName(),
-        clonedParams,
-        std::move(clonedMethodBody),
-        getCapturedScope(),
-        requiresReturn
-    );
-
-    method->setAccessor(accessor);  // optional, if you store this elsewhere
-
-    SharedPtr<CallableSignature> methodSig = std::make_shared<CallableSignature>(method, callType);
-    methodSig->setSubType(subType);  // Also set the subtype, if relevant
-
-    DEBUG_FLOW_EXIT();
-    return methodSig;
-}
 

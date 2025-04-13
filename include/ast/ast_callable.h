@@ -13,6 +13,7 @@ class MethodDef;
 class Callable;
 class MethodBody;
 class FunctionBody;
+// class CodeBlock;
 
 
 class CallableSignature {
@@ -81,60 +82,6 @@ public:
     
 };
 
-class FunctionBody : public CallableBody {
-public:
-    friend class MethodBody;
-    FunctionBody(SharedPtr<Scope> scope);
-
-    // Steal Constructor
-    FunctionBody(UniquePtr<CodeBlock>&& block);
-
-    ~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange));} 
-
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
-    virtual UniquePtr<BaseAST> clone() const override;
-    virtual AstType getAstType() const override { return AstType::FunctionBlock;}    
-    void printAST(std::ostream& os, int indent = 0) const override;
-    // UniquePtr<BaseAST> clone() const override;
-
-    
-    Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
-};
-
-class MethodBody : public CallableBody {
-public:
-    MethodBody(SharedPtr<Scope> scope);
-    MethodBody(UniquePtr<CodeBlock>&& body);
-    MethodBody(UniquePtr<CallableBody>* body);
-    ~MethodBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying MethodBody", Colors::orange));}
-    Node evaluate(SharedPtr<Scope> scope) const override;
-    // void printAST(std::ostream& os, int indent = 0) const;
-    Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
-    UniquePtr<BaseAST> clone() const override;
-
-    AstType getAstType() const override { return AstType::ClassMethodBlock;}
-    // UniquePtr<BaseAST> clone() const override;
-
-};
-
-
-// Class Body Containing Methods and such
-class ClassBody : public CallableBody {
-    
-public:
-    explicit ClassBody(SharedPtr<Scope> scope);
-    
-    // Steal constructor: take over a CodeBlock's children.
-    ClassBody(UniquePtr<CodeBlock>&& block);
-
-    ~ClassBody();
-
-    Node evaluate(SharedPtr<Scope> scope) const override;
-
-    UniquePtr<BaseAST> clone() const override;    
-    AstType getAstType() const override {return AstType::ClassBlock;}
-};
-
 
 
 // FunctionDef: defines a function, registers it, and may return nothing.
@@ -158,6 +105,7 @@ public:
     virtual String toString() const override {return astTypeToString(getAstType());}
 
     UniquePtr<CallableBody>& getBody() { return body; }
+    CallableBody* getBody() const {return body.get();}
     String getName() {return name;}
     ParamList getParameters() {return parameters;}
 };

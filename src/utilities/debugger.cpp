@@ -3,9 +3,14 @@
 #include <algorithm>
 #include <iomanip> // For setw, left, etc.
 #include <unordered_map>
+#include <sstream>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <regex>
+#pragma GCC diagnostic pop
 
 String stripAnsi(const String& input) {
+    // #include <regex>  // lazy include here
     static const std::regex ansiPattern("\033\\[[0-9;]*m");
     return std::regex_replace(input, ansiPattern, "");
 }
@@ -42,13 +47,13 @@ String Debugger::flowLevelToString(FlowLevel level) const {
 void Debugger::printLog(String message){
     std::lock_guard<std::mutex> lock(mtx);
     std::cout << message << std::endl;
-    return;
 }
 
 String Debugger::currentTime() const {
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);
     std::tm tm_time;
+    
 #if defined(_MSC_VER)
     localtime_s(&tm_time, &now_time);
 #else

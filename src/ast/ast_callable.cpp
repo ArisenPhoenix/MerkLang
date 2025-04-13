@@ -43,14 +43,6 @@ UniquePtr<BaseAST> CallableBody::clone() const {
 
 }
 
-UniquePtr<BaseAST> MethodBody::clone() const {
-    UniquePtr<MethodBody> newBlock = makeUnique<MethodBody>(getScope());
-
-    for (const auto &child : children) {
-        newBlock->addChild(child->clone());
-    }
-    return newBlock;
-}
 
 UniquePtr<BaseAST> CallableDef::clone() const {
     ParamList clonedParams;
@@ -80,13 +72,7 @@ UniquePtr<BaseAST> CallableRef::clone() const {
     return calRef;
 }
 
-ClassBody::ClassBody(UniquePtr<CodeBlock>&& block)
-    : CallableBody(block->getScope()) {
-    this->children = std::move(block->children);
-    block.reset();
-}
-ClassBody::ClassBody(SharedPtr<Scope> scope)
-    : CallableBody(scope) {}
+
 
 CallableBody::CallableBody(UniquePtr<CallableBody>&& oldBody)
   : CodeBlock(std::move(oldBody->getChildren()), oldBody->getScope()) {
@@ -98,17 +84,6 @@ CallableBody::CallableBody(SharedPtr<Scope> scope)
 
 CallableBody::CallableBody(UniquePtr<CallableBody>* block) : CodeBlock(std::move(block->get()->getChildren()), block->get()->getScope()) {
     block->release();
-}
-
-FunctionBody::FunctionBody(SharedPtr<Scope> scope) : CallableBody(scope) {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-    DEBUG_LOG(LogLevel::DEBUG, "Creating FunctionBody with scope level: ", scope->getScopeLevel());
-    if (!scope){
-        throw MerkError("FunctionBody Must Have A Valid Scope: ");
-    }
-
-    DEBUG_FLOW_EXIT();
 }
 
 
@@ -130,34 +105,8 @@ CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
         branch = "Callable";
 }
 
-ClassBody::~ClassBody() {
-    DEBUG_LOG(LogLevel::DEBUG, "Destroying Class Body");
-}
 
 
-UniquePtr<BaseAST> ClassBody::clone() const {
-    UniquePtr<ClassBody> newBlock = makeUnique<ClassBody>(getScope());
-    DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Created a Unique ClassBody");
-     
-    for (const auto &child : children) {
-        DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "current child", child->toString());
-
-        if (!child){
-            DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Null child encountered in ClassBody::clone()");
-        }
-
-        newBlock->addChild(child->clone());
-        DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Added Child to ClassBody", child->getAstTypeAsString());
-
-    }
-    DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Returning newClassBody");
-    return newBlock;
-}
-
-
-MethodBody::MethodBody(UniquePtr<CodeBlock>&& body) : CallableBody(std::move(body)){};
-MethodBody::MethodBody(SharedPtr<Scope> scope) : CallableBody(scope) {}
-MethodBody::MethodBody(UniquePtr<CallableBody>* body) : CallableBody(std::move(body)) {}
 
 
 
@@ -172,17 +121,9 @@ CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType 
   DEBUG_FLOW_EXIT();
 }
 
-// CallableSignature::~CallableSignature(){
-//   DEBUG_FLOW(FlowLevel::VERY_LOW);
-//   DEBUG_LOG(LogLevel::TRACE, "Destroying CallableSignature: ", callable->getName(), ", Use count: ", callable.use_count());
-//   DEBUG_FLOW_EXIT();
-// }
-
-
 void CallableSignature::setCallableType(CallableType functionType) { 
     callType = functionType; 
 }
-// void CallableSignature::setSubType(CallableType subClassification) {subType = subClassification;} 
 
 bool CallableSignature::getIsUserFunction() { return callType != CallableType::NATIVE;}
 
@@ -278,45 +219,11 @@ Node CallableBody::evaluate(SharedPtr<Scope> scope) const {
     return val;
 }
 
-
-Node ClassBody::evaluate(SharedPtr<Scope> scope) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    Node last;
-
-    for (const auto& child : children) {
-        if (!child) {
-            throw MerkError("The child in ClassBody::evaluate Was Null");
-        }
-
-        if (child->getAstType() == AstType::ClassMethodDef) {
-            // auto methodDef = static_cast<MethodDef*>(child.get());
-            // methodDef->evaluate(scope);
-            child->evaluate(scope);
-            // SharedPtr<Method> method = methodDef->evaluate(scope); // Must register self, name, args, etc.
-            // scope->registerFunction(method->getName(), method); // You need this to exist in ClassBase/Scope
-            // DEBUG_LOG(LogLevel::DEBUG, "Registered method in class: ", method->getName());
-        
-        } else {
-            last = child->evaluate(scope);
-        }
-    }
-
-    DEBUG_FLOW_EXIT();
-    return last;
-}
-
-
-
-Node MethodBody::evaluate(SharedPtr<Scope> scope) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    auto val = Evaluator::evaluateBlock(children, scope);
-    DEBUG_FLOW_EXIT();
-    return val;
-}
-
 Node CallableDef::evaluate(SharedPtr<Scope> scope) const {
     (void)scope;
-    return Node(scope->getVariable("var"));
+    std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
+    std::cerr << "Type: " << getAstTypeAsString() << std::endl;
+    throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 
 Node CallableCall::evaluate(SharedPtr<Scope> scope) const {

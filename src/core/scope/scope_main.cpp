@@ -38,7 +38,7 @@ Scope::Scope(int scopeLevel, bool interpretMode)
     // DEBUG_LOG(LogLevel::INFO, "Initialized Scope with level: ", scopeLevel, " | Memory Loc: ", this, " | Parent Loc: ", parentScope.lock().get());
     // std::cout << "Attempting to allocate globalCallables...\n";
 
-    // globalCallables = std::make_shared<std::unordered_map<String, CallableType>>();
+    globalCallables = std::make_shared<std::unordered_map<String, CallableType>>();
     // std::cout << "Success\n";
 
     DEBUG_LOG(LogLevel::TRACE, 

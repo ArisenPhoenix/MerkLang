@@ -11,7 +11,7 @@
 #include "ast/ast_callable.h"
 #include "core/classes/method.h" 
 #include "ast/ast_class.h"
-
+#include "ast/exceptions.h"
 
 
 
@@ -83,7 +83,75 @@ AttributeAssignment::AttributeAssignment(UniquePtr<VariableAssignment> varAssign
 AttributeReference::AttributeReference(UniquePtr<VariableReference> varRef)
     : VariableReference(std::move(varRef)) {
     setFullName(getName());
-    varRef.release();
+    // varRef.release();
+}
+
+
+ClassBody::ClassBody(UniquePtr<CodeBlock>&& block)
+    : CallableBody(block->getScope()) {
+    this->children = std::move(block->children);
+    block.reset();
+}
+ClassBody::ClassBody(SharedPtr<Scope> scope)
+    : CallableBody(scope) {}
+
+ClassBody::~ClassBody() {
+    DEBUG_LOG(LogLevel::DEBUG, "Destroying Class Body");
+}
+
+UniquePtr<BaseAST> ClassBody::clone() const {
+    UniquePtr<ClassBody> newBlock = makeUnique<ClassBody>(getScope());
+    DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Created a Unique ClassBody");
+     
+    for (const auto &child : children) {
+        DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "current child", child->toString());
+
+        if (!child){
+            DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Null child encountered in ClassBody::clone()");
+        }
+
+        newBlock->addChild(child->clone());
+        DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Added Child to ClassBody", child->getAstTypeAsString());
+
+    }
+    DEBUG_LOG(LogLevel::ERROR, "ClassBody::clone()", "Returning newClassBody");
+    return newBlock;
+}
+
+
+MethodBody::MethodBody(UniquePtr<CodeBlock>&& body) : CallableBody(std::move(body)){};
+MethodBody::MethodBody(SharedPtr<Scope> scope) : CallableBody(scope) {}
+MethodBody::MethodBody(UniquePtr<CallableBody>* body) : CallableBody(std::move(body)) {}
+Node MethodBody::evaluate(SharedPtr<Scope> scope) const {
+    DEBUG_FLOW(FlowLevel::HIGH);
+
+    if (!scope) {
+        throw MerkError("MethodBody::evaluate: scope is null");
+    }
+
+    // Execute the children in the given scope
+    Node last;
+    try {
+        for (const auto& child : children) {
+            if (!child) continue;
+            last = child->evaluate(scope);
+        }
+    } catch (const ReturnException& e) {
+        DEBUG_FLOW_EXIT();
+        return e.getValue();
+    }
+
+    DEBUG_FLOW_EXIT();
+    return last;
+}
+
+UniquePtr<BaseAST> MethodBody::clone() const {
+    UniquePtr<MethodBody> newBlock = makeUnique<MethodBody>(getScope());
+
+    for (const auto &child : children) {
+        newBlock->addChild(child->clone());
+    }
+    return newBlock;
 }
 
 ClassCall::ClassCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
@@ -96,199 +164,127 @@ ClassDef::ClassDef(String name, ParamList parameters, UniquePtr<ClassBody> body,
 void ClassDef::setClassAccessor(String accessorName){accessor = accessorName;}
 String ClassDef::getClassAccessor() {return accessor;}
     
-MethodDef::MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, SharedPtr<Scope> scope)
-: CallableDef(name, std::move(parameters), std::move(body), CallableType::METHOD, scope) {
-}
+// MethodDef::MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, SharedPtr<Scope> scope)
+// : CallableDef(name, std::move(parameters), std::move(body), CallableType::METHOD, scope) {}
 MethodDef::MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, CallableType methodType, SharedPtr<Scope> scope)
-: CallableDef(name, std::move(parameters), std::move(body), CallableType::METHOD, scope) {
-    methodType = methodType;
+: CallableDef(name, std::move(parameters), std::move(body), methodType, scope) {
+    // this->methodType = ;
 }
-
-
-
-
-String MethodDef::toString() const {return astTypeToString(getAstType());}
 MethodDef::MethodDef(UniquePtr<FunctionDef> funcDef)
     : CallableDef(funcDef->getName(), funcDef->getParameters(), makeUnique<MethodBody>(std::move(funcDef->getBody())), CallableType::METHOD, funcDef->getScope()) 
 {
     funcDef.release();
 }
+
+
 MethodCall::MethodCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
     : CallableCall(name, std::move(arguments), scope) {
 }
+
 void MethodDef::setMethodAccessor(String& accessorName) {accessor = accessorName;}
-String MethodDef::getMethodAccessor() {return accessor;}
+String MethodDef::getMethodAccessor() const {return accessor;}
 
 
 
-// Attributes
-String AttributeDeclaration::toString() const {
-    return getAstTypeAsString() + "(accessor=" + getAccessor() + ", name=" + getVarName() + ", delimiter" + getDelimiter() + 
-        ", variable=" + variable.toString() +
-        ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
-}
-String AttributeAssignment::toString() const {
-    return getAstTypeAsString() + "(accessor=" + getAccessor() + ", name=" + getVarName() + ", delimiter" + getDelimiter();
-
-}
-String AttributeReference::toString() const {
-    return getAstTypeAsString() + "(accessor=" + getAccessor() + ", name=" + getVarName() + ", delimiter" + getDelimiter() +
-    ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
-}
-
-
-void ClassDef::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, "ClassDef: ", name);
-    body->printAST(os, indent);
-}
-void ClassCall::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    for (const auto& arg : arguments){
-        printIndent(os, indent);
-        debugLog(true, arg->toString());
-    }
-}
-void MethodDef::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, "MethodDef: ", name);
-    body->printAST(os, indent);
-}
-void AttributeDeclaration::printAST(std::ostream& os, int indent) const {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-    indent = printIndent(os, indent);
-    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(Chain =", getFullName(), ", scope =", getScope()->getScopeLevel(), ")");
-    valueExpression->printAST(os, indent);
-
-    DEBUG_FLOW_EXIT();
-};
-void AttributeAssignment::printAST(std::ostream& os, int indent) const {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-    indent = printIndent(os, indent);
-    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(Chain =", getFullName(), ", scope =", getScope()->getScopeLevel(), ")");
-
-    if (getExpression()) {
-        getExpression()->printAST(os, indent);
-    }
-
-    DEBUG_FLOW_EXIT();
-};
-void AttributeReference::printAST(std::ostream& os, int indent) const {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-    printIndent(os, indent);
-    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(Chain =", getFullName(), ", scope =", getScope()->getScopeLevel(), ")");
-
-    DEBUG_FLOW_EXIT();
-};
-
-
-Node ClassDef::evaluate(SharedPtr<Scope> scope) const{
-    
+Node ClassDef::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
-    if (!scope){
+    
+    if (!scope) {
         throw MerkError("No Scope Was Found in ClassDef::evaluate()");
     }
-    // Collect free variables from the class body (attributes and methods)
+
     FreeVars freeVarNames = body->collectFreeVariables();
-
-
     DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), got freeVarNames");
 
-    // This scope will capture any free variables from the class body.
-    SharedPtr<Scope> classDefScope = scope->detachScope(freeVarNames);
+    // Clone the class body AST
+    UniquePtr<BaseAST> clonedBodyBase = body->clone();
+    auto clonedBody = static_unique_ptr_cast<ClassBody>(std::move(clonedBodyBase));
 
-    if (!classDefScope){
+    if (!clonedBody) {
+        throw MerkError("ClassDef::evaluate(): clonedBody is null");
+    }
+
+    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), casted the cloned body");
+
+    if (!clonedBody->getScope()) {
+        DEBUG_FLOW_EXIT();
+        throw MerkError("Scope not present in ClassDef::evaluate");
+    }
+
+    // Create the ClassBase object
+    SharedPtr<ClassBase> cls = std::make_shared<ClassBase>(
+        name,
+        accessor,
+        std::move(clonedBody),
+        scope
+    );
+
+    cls->setParameters(parameters.clone());
+    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), created Shared ClassBase scope");
+
+    // Capture Free Variables
+    SharedPtr<Scope> classDefScope = scope->detachScope(freeVarNames);
+    if (!classDefScope) {
         throw MerkError("Failed to create detachedScope in ClassDef::evaluate");
     }
 
     DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), detached scope");
 
     classDefScope->isCallableScope = true;
-
-    // Clone the class body AST.
-    UniquePtr<BaseAST> clonedBodyBase = body->clone();
-    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), cloned the body");
-
-    // Cast it to a ClassBody type
-    auto clonedBody = static_unique_ptr_cast<ClassBody>(std::move(clonedBodyBase));
-    
-
-    if (!clonedBody){
-        throw MerkError("ClassDef::evaluate(): clonedBody is null");
-    }
-    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), casted the cloned body");
-
-    if (!clonedBody->getScope()){
-        DEBUG_FLOW_EXIT();
-        throw MerkError("Scope not present in ClassDef::evaluate");
-    }
-
-
-    
-    // Create a new Class object.
-    SharedPtr<ClassBase> cls = std::make_shared<ClassBase>(
-        name,           // The class name.
-        accessor,
-        std::move(clonedBody),
-        scope
-    );
-    // ClassBase(name, accessor, )
-
-    cls->setParameters(parameters.clone());
-
-    
-    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), created Shared ClassBase scope");
-    
-    // Set the captured scope on the class so that methods later can refer to it.
     cls->setCapturedScope(classDefScope);
-    cls->setClassScope(classDefScope->createChildScope());
-    if (!cls->getCapturedScope()){
+
+    if (!cls->getCapturedScope()) {
         throw MerkError("CapturedScope was not set correctly on the ClassBase.");
     }
-    // Determine Method Details and makde decisions about handling.
-    // for (auto& method : body->getMutableChildren()) {
-    //     if (method->getAstType() == AstType::ClassMethodDef){
-    //         auto castedChild = static_unique_ptr_cast<MethodDef>(std::move(method));
-    //         castedChild->getName();
-    //         method = castedChild;
-    //     }
-    // }
-    // for (auto method :)
-    // Register the class in the current scope's class registry.
 
-
-    
-    for (const auto& child : cls->getBody()->getChildren()) {
-        if (child->getAstType() == AstType::ClassMethodDef) {
-            child->evaluate(cls->getClassScope());  // Ensure it gets registered
-        }
-        // You might want to evaluate attributes or nested logic as well
+    // Create the inner class scope
+    auto classScope = classDefScope->createChildScope();
+    if (!classScope) {
+        throw MerkError("createChildScope returned null");
     }
+
+    cls->setClassScope(classScope);
+    DEBUG_LOG(LogLevel::ERROR, "Class Scope level: ", cls->getClassScope()->getScopeLevel());
+    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), set the class Scope");
+
+    // Evaluate class body children (methods, attributes, etc.)
+    for (const auto& child : cls->getBody()->getChildren()) {
+        std::cerr << "Evaluating AST Child: " << child->getAstTypeAsString() << "\n";
+
+        switch (child->getAstType()) {
+            case AstType::ClassMethodDef:
+            case AstType::VariableDeclaration:
+            case AstType::VariableAssignment:
+            case AstType::ParameterAssignment:
+            case AstType::ClassDefinition:
+                child->evaluate(cls->getClassScope());
+                break;
+
+            default:
+                std::cerr << "Unhandled AST type in ClassBody: " << child->getAstTypeAsString() << std::endl;
+                throw MerkError("Unexpected AST statement in ClassBody: " + child->getAstTypeAsString());
+        }
+    }
+
+    // Ensure the class has a construct method
+    if (!cls->getClassScope()->hasFunction("construct")) {
+        throw MerkError("Class '" + name + "' must implement a 'construct' method.");
+    }
+
     scope->registerClass(name, cls);
 
-    auto classTest = scope->getClass(name);
-    if (!classTest){
-        throw MerkError("Class Was Not Registered in ClassDef::evaluate()");
-    }
-     
-    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), registered class in scope and ClassRegistry");
-
-    
-    DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), set the captured Scope");
-    if (!cls->getCapturedScope()){
-        throw MerkError("Captured Scope is null in ClassDef::evaluate()");
-    }
-
-    // Wrap the class object in a ClassNode (so that it can be treated as a value)
-    ClassNode classNode(cls);
     DEBUG_FLOW_EXIT();
-    return classNode;
+    return ClassNode(cls);
 }
 
 
+Node ClassBody::evaluate(SharedPtr<Scope> scope) const {
+    (void)scope;
+    DEBUG_FLOW();
+    // Possibly validate the structure but do nothing
+    DEBUG_FLOW_EXIT();
+    return Node();  // or nullptr
+}
 
 Node ClassCall::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
@@ -303,6 +299,7 @@ Node ClassCall::evaluate(SharedPtr<Scope> scope) const {
     // auto classSig = std::dynamic_pointer_cast<ClassSignature>(classOpt->get());
     SharedPtr<CallableSignature> callableSig = classOpt.value().get();
     DEBUG_LOG(LogLevel::DEBUG, "The call is of type: ", callableTypeAsString(callableSig->getCallableType()));
+
     SharedPtr<ClassSignature> classSig = std::dynamic_pointer_cast<ClassSignature>(callableSig);
 
     // std::shared_ptr<ClassSignature> classSig = std::dynamic_pointer_cast<ClassSignature>(classOpt.value().get());
@@ -313,55 +310,102 @@ Node ClassCall::evaluate(SharedPtr<Scope> scope) const {
 
     // Create the instance
     SharedPtr<ClassInstance> instance = classSig->instantiate(argValues);
-    SharedPtr<Scope> captured = instance->getCapturedScope();   // cloned captured scope
-    SharedPtr<Scope> instanceScope = instance->getInstanceScope(); // cloned class scope
+    SharedPtr<Scope> captured = instance->getCapturedScope()->clone();   // cloned captured scope
+    SharedPtr<Scope> instanceScope = instance->getInstanceScope()->clone(); // cloned class scope
+    captured->appendChildScope(instanceScope);
 
     scope->appendChildScope(captured);
-    captured->appendChildScope(instanceScope);
+
 
     DEBUG_FLOW_EXIT();
     return ClassInstanceNode(instance);
 }
 
-
-
 Node MethodDef::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
+    auto freeVarNames = body->collectFreeVariables();
 
-    // Clone the method body for this specific instantiation
-    auto clonedBodyBase = body->clone();
-    auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
+    DEBUG_LOG(LogLevel::ERROR,"MethodDef::evaluate | ", "CallType: ", callableTypeAsString(callType), "SubType: ", callableTypeAsString(methodType));
 
-    if (!clonedBody) {
-        throw MerkError("MethodDef::evaluate: failed to clone method body");
+    if (callType == CallableType::FUNCTION){
+        FreeVars tempFreeVars = freeVarNames;
+        for (auto& param : parameters){
+            auto it = tempFreeVars.find(param.getName()); // find a matching param name
+            if (it != tempFreeVars.end()){                // indicates a match
+                tempFreeVars.erase(it);
+            }
+        }
+
+        if (tempFreeVars.size() > 0){
+            std::ostringstream oss;
+            for (auto& var : tempFreeVars){
+                oss << highlight("'", Colors::yellow) << highlight(var, Colors::purple) << highlight("'", Colors::yellow) << " ";
+            }
+            throw MerkError("The Following Vars: " + oss.str() + "; were defined outside of function defined using function");
+        }
+    } 
+
+    SharedPtr<Scope> defScope = scope->detachScope(freeVarNames);
+    defScope->isCallableScope = true;
+
+    if (!body->getScope()){
+        DEBUG_LOG(LogLevel::ERROR, "Body's Scope is null in FunctionDef::evaluate()");
+        throw MerkError("Scope not present in FunctionDef::evaluate(scope)");
     }
 
-    // Construct the Method object
-    SharedPtr<Method> method = std::make_shared<Method>(
-        name,
-        parameters.clone(),
-        std::move(clonedBody),
-        scope,
-        false
-    );
+    UniquePtr<BaseAST> clonedBodyBase = body->clone();
+    auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
+ 
+    if (!clonedBody->getScope()){
+        DEBUG_LOG(LogLevel::ERROR, "Body's Scope is null in FunctionDef::evaluate()");
+        throw MerkError("Scope not present in FunctionDef::evaluate(scope) of clonedBody");
+    }
+
+    DEBUG_LOG(LogLevel::DEBUG, "FunctionDef Defining Scope: ", scope->getScopeLevel());
     
-    // SharedPtr<Method> method = std::make_shared<Method>(
-    //     getName(),
-    //     clonedParams,
-    //     std::move(clonedMethodBody),
-    //     getCapturedScope(),
-    //     requiresReturn
-    // );
+    
+    SharedPtr<Method> method = std::make_shared<Method>(name, parameters, std::move(clonedBody), getScope(), callType);
+    method->setSubType(methodType);
+    
+    auto methodSig = method->toCallableSignature();
 
-    method->setAccessor(accessor);
+    scope->registerFunction(name, methodSig);
 
-    // Register the method into the provided class scope
-    scope->registerFunction(name, method->toCallableSignature());
+    if (!defScope){
+        DEBUG_FLOW_EXIT();
+        throw MerkError("Defining Scope for FunctionDef::evaluate is null");
+    }
+    
+    if (!method->getBody()){
+        DEBUG_FLOW_EXIT();
+        throw MerkError("Function body is null in FunctionDef::evaluate");
+    }
 
-    DEBUG_LOG(LogLevel::DEBUG, "Method registered: ", name);
+    method->setCapturedScope(defScope);
+
+    // Wrap it in a FunctionNode (for returning it as a value)
+    MethodNode methodNode(method);
+
     DEBUG_FLOW_EXIT();
-    return Node();  // Evaluation doesn't produce a runtime value
+    return methodNode;
 }
+
+
+UniquePtr<BaseAST> MethodDef::clone() const {
+    DEBUG_FLOW(FlowLevel::LOW);
+
+    UniquePtr<BaseAST> clonedBodyBase = body->clone();
+    auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
+    // MethodDef(name, parameters, std::move(clonedBody), callType, getScope());
+    auto methodDef = makeUnique<MethodDef>(name, parameters.clone(), std::move(clonedBody), callType, getScope());
+    String access = getMethodAccessor();
+
+    methodDef->setMethodAccessor(access);
+
+    DEBUG_FLOW_EXIT();
+    return methodDef;
+}
+
 
 
 Node AttributeDeclaration::evaluate(SharedPtr<Scope> scope) const {
@@ -423,3 +467,69 @@ UniquePtr<BaseAST> AttributeAssignment::clone() const {
 
 
 
+
+// Attributes
+String AttributeDeclaration::toString() const {
+    return getAstTypeAsString() + "(accessor=" + getAccessor() + ", name=" + getVarName() + ", delimiter" + getDelimiter() + 
+        ", variable=" + variable.toString() +
+        ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+}
+String AttributeAssignment::toString() const {
+    return getAstTypeAsString() + "(accessor=" + getAccessor() + ", name=" + getVarName() + ", delimiter" + getDelimiter();
+
+}
+String AttributeReference::toString() const {
+    return getAstTypeAsString() + "(accessor=" + getAccessor() + ", name=" + getVarName() + ", delimiter" + getDelimiter() +
+    ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+}
+
+
+String MethodDef::toString() const {return astTypeToString(getAstType());}
+
+
+void ClassDef::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, "ClassDef: ", name);
+    body->printAST(os, indent);
+}
+void ClassCall::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    for (const auto& arg : arguments){
+        printIndent(os, indent);
+        debugLog(true, arg->toString());
+    }
+}
+void MethodDef::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, "MethodDef: ", name);
+    body->printAST(os, indent);
+}
+void AttributeDeclaration::printAST(std::ostream& os, int indent) const {
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+
+    indent = printIndent(os, indent);
+    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(Chain =", getFullName(), ", scope =", getScope()->getScopeLevel(), ")");
+    valueExpression->printAST(os, indent);
+
+    DEBUG_FLOW_EXIT();
+};
+void AttributeAssignment::printAST(std::ostream& os, int indent) const {
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+
+    indent = printIndent(os, indent);
+    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(Chain =", getFullName(), ", scope =", getScope()->getScopeLevel(), ")");
+
+    if (getExpression()) {
+        getExpression()->printAST(os, indent);
+    }
+
+    DEBUG_FLOW_EXIT();
+};
+void AttributeReference::printAST(std::ostream& os, int indent) const {
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+
+    printIndent(os, indent);
+    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(Chain =", getFullName(), ", scope =", getScope()->getScopeLevel(), ")");
+
+    DEBUG_FLOW_EXIT();
+};

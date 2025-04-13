@@ -15,7 +15,29 @@
 
 
 class Scope;
-class FunctionBody;
+
+class FunctionBody : public CallableBody {
+    public:
+        friend class MethodBody;
+        FunctionBody(SharedPtr<Scope> scope);
+    
+        // Steal Constructor
+        FunctionBody(UniquePtr<CodeBlock>&& block);
+    
+        ~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange));} 
+    
+        virtual Node evaluate(SharedPtr<Scope> scope) const override;
+        virtual UniquePtr<BaseAST> clone() const override;
+        virtual AstType getAstType() const override { return AstType::FunctionBlock;}    
+        void printAST(std::ostream& os, int indent = 0) const override;
+        // UniquePtr<BaseAST> clone() const override;
+    
+        
+        Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
+    };
+// class FunctionBody;
+
+
 
 
 // Function now inherits from Callable.

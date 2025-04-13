@@ -394,6 +394,8 @@ UniquePtr<BaseAST> Parser::parseStatement() {
                 DEBUG_LOG(LogLevel::INFO, "Detected FunctionCall, calling parseFunctionCall()");
                 DEBUG_FLOW_EXIT();
                 return statement;
+            } else {
+                throw MerkError("Was A CLASS CALL, THEN NOT");
             }
             
 
@@ -416,6 +418,8 @@ UniquePtr<BaseAST> Parser::parseStatement() {
                 DEBUG_LOG(LogLevel::INFO, "Detected Variable Reference, treating as expression.");
                 DEBUG_FLOW_EXIT();
                 return parseExpression(); // Could be used in an expression (like a function argument)
+            } else {
+                throw MerkError("Was A VARIABLE, THEN NOT");
             }
 
         case TokenType::Keyword:

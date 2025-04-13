@@ -64,7 +64,7 @@ UniquePtr<Chain> Parser::parseChain() {
         ChainElement next;
         next.name = currentToken().value;
         next.type = inferIdentifierType(currentToken().type);
-        next.delimiter = ""; // may be set next loop
+        next.delimiter = ""; // maybe set next loop
 
         advance(); // consume the identifier
         currentElem = next; // advance the loop
@@ -182,14 +182,14 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
 
     DEBUG_LOG(LogLevel::INFO, "MethodBody type: ", typeid(*methodBlock).name());
     
-    CallableType funcType;
+    CallableType methodType;
 
     if (methodDefType == "def"){
-        funcType = CallableType::DEF;
+        methodType = CallableType::DEF;
     }
 
     else if (methodDefType == "function"){
-        funcType = CallableType::FUNCTION;
+        methodType = CallableType::FUNCTION;
     } 
     
     else {
@@ -203,13 +203,9 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
         methodName,
         std::move(parameters),
         std::move(methodBlock),
-        funcType,  
+        methodType,  
         currentScope
     );
-
-    // if (callableTypeAsString(functionNode->callType) == "Unknown"){
-    //     throw MerkError("Failed to instantiate callType at Parser::parseFunctionDefinition");
-    // }
     
     DEBUG_LOG(LogLevel::INFO, "Function definition parsed successfully: ", methodName);
     DEBUG_FLOW_EXIT();
@@ -323,8 +319,8 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
             classBody->addChild(std::move(attr));
         }
         // If we see a method definition.
-        else if (currentToken().type == TokenType::ClassMethodDef ||
-                 currentToken().type == TokenType::FunctionDef) {
+        else if (currentToken().type == TokenType::ClassMethodDef) {
+        //  ||      currentToken().type == TokenType::FunctionDef) {
             // The first method must be the constructor.
             if (!foundConstructor) {
                 if (peek().value != "construct") {

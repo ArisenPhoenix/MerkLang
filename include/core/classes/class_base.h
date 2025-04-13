@@ -12,7 +12,9 @@ class Scope;
 class ClassSignature;
 class FunctionSignature;
 class MethodSignature;
+class ClassBody;
 
+// Class Body Containing Methods and such
 
 
 
@@ -39,9 +41,9 @@ public:
     // Retrieve a method's signature from the class scope.
     SharedPtr<Callable> getMethod(const String& name);
 
-
     // Update (or set) a member variable's value.
     void addMember(const String& name, UniquePtr<VarNode> value);
+
     // Retrieve a member variable's value.
     Node getMember(const String& name);
 
@@ -53,6 +55,7 @@ public:
 
     SharedPtr<Scope> getCapturedScope() const override;
     SharedPtr<Scope> getClassScope() const;
+    SharedPtr<Scope> getScope() {return scope;}
 
     String toString() const override;
 
@@ -108,6 +111,7 @@ class ClassInstance : public Callable {
         String toString() const override;
         String getAccessor() {return accessor;}
         void construct(const Vector<Node>& args);
+        SharedPtr<Scope> getScope() {return baseClass->getScope();}
         
         
     };

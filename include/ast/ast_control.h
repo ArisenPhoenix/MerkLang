@@ -4,6 +4,7 @@
 
 #include "core/types.h"
 #include "ast/ast_base.h"
+// #include "ast/ast_class.h"
 
 #include "core/errors.h"
 
@@ -63,6 +64,7 @@ public:
     friend class ClassBody;
     friend class MethodBody;
     friend class ClassDef;
+    friend class MethodDef;
 
     UniquePtr<BaseAST> clone() const override;
     
@@ -145,8 +147,8 @@ public:
 // However, I haven't decided to make it inherit from Elif again, for actually no good reason, though it is a bit counterintuitive.
 class IfStatement : public ASTStatement, public FreeVarCollection {
 protected:
-    UniquePtr<ConditionalBlock> condition;
     mutable UniquePtr<CodeBlock> body;
+    UniquePtr<ConditionalBlock> condition;
     Vector<UniquePtr<ElifStatement>> elifNodes; // Vector of `elif` nodes
     UniquePtr<ElseStatement> elseNode;          // Optional `else` block
 
