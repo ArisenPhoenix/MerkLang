@@ -14,9 +14,6 @@ class FunctionSignature;
 class MethodSignature;
 class ClassBody;
 
-// Class Body Containing Methods and such
-
-
 
 // Represents the runtime definition of a class.
 class ClassBase : public Callable {
@@ -83,65 +80,79 @@ public:
     }
 
     SharedPtr<Callable> getCallable() const override {
-        return std::get<SharedPtr<ClassBase>>(data.value);
+        return std::static_pointer_cast<Callable>(std::get<SharedPtr<ClassBase>>(data.value));
     }
 };
 
 
 
 class ClassInstance : public Callable {
-    private:
-        SharedPtr<ClassBase> baseClass;
-        SharedPtr<Scope> capturedScope;
-        SharedPtr<Scope> instanceScope; // reference to definition (optional)
-        String accessor;
-    
-    public:
-        ClassInstance(SharedPtr<ClassBase> base);
-    
-        // Node execute(const Vector<Node>& args, SharedPtr<Scope> callerScope) const;
-        Node execute(const Vector<Node> args, SharedPtr<Scope> scope) const;
+private:
 
-        SharedPtr<Scope> getCapturedScope() const override;
-        void setCapturedScope(SharedPtr<Scope> scope) override;
-        SharedPtr<Scope> getInstanceScope() const { return instanceScope; }
+    SharedPtr<Scope> capturedScope;
+    SharedPtr<Scope> startingScope;
+    SharedPtr<Scope> instanceScope; // reference to definition (optional)
+    String accessor;
 
-        SharedPtr<CallableSignature> toCallableSignature() override;
+public:
+    ClassInstance(SharedPtr<ClassBase> base);
+    ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, String& accessor);
+
+    // ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, String& accessor);
+
+    // Node execute(const Vector<Node>& args, SharedPtr<Scope> callerScope) const;
+    Node execute(const Vector<Node> args, SharedPtr<Scope> scope) const;
+
+    SharedPtr<Scope> getCapturedScope() const override;
+    void setCapturedScope(SharedPtr<Scope> scope) override;
+    SharedPtr<Scope> getInstanceScope() const { return instanceScope; }
+
+    SharedPtr<CallableSignature> toCallableSignature() override;
+
+    String toString() const override;
+    String getAccessor() {return accessor;}
+    void construct(const Vector<Node>& args);
+    SharedPtr<Scope> getScope() {return startingScope;}
     
-        String toString() const override;
-        String getAccessor() {return accessor;}
-        void construct(const Vector<Node>& args);
-        SharedPtr<Scope> getScope() {return baseClass->getScope();}
-        
-        
-    };
+    Node getField(const String& name, TokenType type) const;
+
+    SharedPtr<Scope> getInstanceScope();
+    void setInstanceScope(SharedPtr<Scope> scope);
+
+};
 
 class ClassInstanceNode : public CallableNode {
-    public:
-        ClassInstanceNode(SharedPtr<ClassInstance> callable) : CallableNode(callable, "ClassInstance") {
-            data.type = NodeValueType::ClassInstance;
-        }
-    
-        SharedPtr<Callable> getCallable() const override {
-            return std::get<SharedPtr<ClassBase>>(data.value);
-        }
-    };
+public:
+    ClassInstanceNode(SharedPtr<ClassInstance> callable) : CallableNode(callable, "ClassInstance") {
+        data.type = NodeValueType::ClassInstance;
+    }
+
+    SharedPtr<Callable> getCallable() const override {
+        return std::static_pointer_cast<Callable>(std::get<SharedPtr<ClassInstance>>(data.value));
+    }
+
+
+};
 
 
 class ClassSignature : public CallableSignature {
-    private:
-        String accessor;
-    
-    public:
-        explicit ClassSignature(SharedPtr<ClassBase> classDef);
-    
-        String getAccessor() const;
-    
-        SharedPtr<ClassBase> getClassDef() const;
-    
-        SharedPtr<ClassInstance> instantiate(const Vector<Node>& args) const;
-    
-        // Optional: override call() to auto-instantiate when the class is "called"
-        Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;
-    };
+private:
+    String accessor;
+    UniquePtr<ClassBody> classBody;
+
+public:
+    explicit ClassSignature(SharedPtr<ClassBase> classDef);
+
+    String getAccessor() const;
+
+    SharedPtr<ClassBase> getClassDef() const;
+
+    SharedPtr<ClassInstance> instantiate(const Vector<Node>& args) const;
+
+    // Optional: override call() to auto-instantiate when the class is "called"
+    Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;
+
+    // UniquePtr<ClassBody>& getBody() {return classBody;}
+};
+
 #endif // CLASS_BASE_H

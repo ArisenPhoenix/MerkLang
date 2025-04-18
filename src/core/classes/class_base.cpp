@@ -117,7 +117,7 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     SharedPtr<Scope> clonedCapturedScope = getCapturedScope()->clone();
 
     // Create ClassBase using the cloned captured scope as parent
-    SharedPtr<ClassBase> classBase = std::make_shared<ClassBase>(
+    SharedPtr<ClassBase> classBase = makeShared<ClassBase>(
         getName(),
         accessor,
         std::move(clonedClassBody),
@@ -147,7 +147,7 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "Scopes cloned and linked");
 
     // Wrap into ClassSignature
-    SharedPtr<CallableSignature> classSig = std::make_shared<ClassSignature>(classBase);
+    SharedPtr<CallableSignature> classSig = makeShared<ClassSignature>(classBase);
     DEBUG_FLOW_EXIT();
     return classSig;
 }
@@ -155,15 +155,28 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
 
 ClassInstance::ClassInstance(SharedPtr<ClassBase> base)
     : Callable(base->getName(), base->getParameters(), CallableType::INSTANCE),
-      baseClass(base),
-      instanceScope(base->getClassScope())
+      capturedScope(base->getCapturedScope()->clone()),
+      startingScope(base->getScope()->clone()),
+      instanceScope(base->getClassScope()->clone()),
+      accessor(base->getAccessor()) 
 {
     // Deep copy the captured scope from base
     accessor = base->getAccessor();
-    setCapturedScope(base->getCapturedScope()->clone());
-    
+    // setCapturedScope(base->getCapturedScope()->clone());
+    capturedScope->appendChildScope(instanceScope);
+    startingScope->appendChildScope(capturedScope);
     // capturedScope = base->getCapturedScope()->clone();
 }
+
+
+ClassInstance::ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, String& accessor)
+    : Callable(name, params, CallableType::INSTANCE), capturedScope(capturedScope), instanceScope(instanceScope), accessor(accessor) {
+        auto startingScopeCheck = capturedScope->getParent();
+        if (!startingScopeCheck) {
+            throw MerkError("Could Not Get Defining Scope For Class Instance");
+        }
+}
+
 
 SharedPtr<Scope> ClassInstance::getCapturedScope() const {
     return capturedScope;
@@ -178,10 +191,12 @@ String ClassInstance::toString() const {
 }
 
 SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
+    // stub for later implementation
     throw MerkError("Instances are not directly callable unless '__call__' is defined.");
 }
 
 void ClassInstance::construct(const Vector<Node>& args) {
+    
     if (!instanceScope->hasFunction("construct")) {
         throw MerkError("A construct method must be implemented in class: " + getName());
     }
@@ -223,6 +238,72 @@ Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope) con
     return sigOpt->get().call(args, classScope);
 }
 
+
+
+
+
+
+ClassSignature::ClassSignature(SharedPtr<ClassBase> classDef)
+: CallableSignature(classDef, CallableType::CLASS), accessor(classDef->getAccessor()) {}
+
+String ClassSignature::getAccessor() const { return accessor; }
+
+SharedPtr<ClassBase> ClassSignature::getClassDef() const {
+    return std::dynamic_pointer_cast<ClassBase>(getCallable());
+}
+
+SharedPtr<Scope> ClassInstance::getInstanceScope() {return instanceScope;}
+void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = scope;};
+
+
+SharedPtr<ClassInstance> ClassSignature::instantiate(const Vector<Node>& args) const {
+    // Clone the classBase from the callable stored in the signature
+    SharedPtr<ClassBase> classBase = std::static_pointer_cast<ClassBase>(getCallable());
+ 
+    // Pass the classBase directly into the ClassInstance constructor (it clones internally)
+    SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classBase);
+
+    // Run the constructor method if applicable
+    instance->construct(args);
+
+    return instance;
+}
+
+
+// Optional: override call() to auto-instantiate when the class is "called"
+Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
+    (void)scope;
+    return Node(ClassInstanceNode(instantiate(args)));
+}
+
+
+Node ClassInstance::getField(const String& name, TokenType type) const {
+    switch (type) {
+        case TokenType::Variable:
+            if (instanceScope->hasVariable(name)) {
+                return instanceScope->getVariable(name);
+            }
+            break;
+
+        case TokenType::ClassMethodCall:
+        case TokenType::FunctionCall:
+        if (instanceScope->hasFunction(name)) {
+            auto sig = instanceScope->getFunction(name);
+            return MethodNode(sig->get().getCallable());
+        }
+            break;
+
+        default:
+            throw MerkError("Unsupported field type for '" + name + "'");
+    }
+
+    throw MerkError("Field or method '" + name + "' not found in class instance.");
+}
+
+
+
+
+
 // Node ClassInstance::execute(const Vector<Node>& args, SharedPtr<Scope> callingScope) const {
 //     // Step 1: Check if the instance has a 'call' method
 //     // auto method = methodRegistry->get("call");  // or "construct" if you're mirroring __init__-style behavior
@@ -232,7 +313,7 @@ Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope) con
 //     }
 
 //     // Step 2: Create a new scope for the method call
-//     SharedPtr<Scope> methodScope = std::make_shared<Scope>(getInstanceScope()); // use the instance’s internal scope as parent
+//     SharedPtr<Scope> methodScope = makeShared<Scope>(getInstanceScope()); // use the instance’s internal scope as parent
     
 //     // Step 3: Push the accessor (like 'self' or 'doggo') into the methodScope
 //     // methodScope->defineVariable(getAccessor(), shared_from_this());  // if ClassInstance is enable_shared_from_this
@@ -242,63 +323,6 @@ Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope) con
 //     // return method->call(args, methodScope);
 //     return method;
 // }
-
-
-
-
-
-ClassSignature::ClassSignature(SharedPtr<ClassBase> classDef)
-: CallableSignature(classDef, CallableType::CLASS),
-    accessor(classDef->getAccessor()) {}
-
-String ClassSignature::getAccessor() const { return accessor; }
-
-SharedPtr<ClassBase> ClassSignature::getClassDef() const {
-    return std::dynamic_pointer_cast<ClassBase>(getCallable());
-}
-
-SharedPtr<ClassInstance> ClassSignature::instantiate(const Vector<Node>& args) const {
-    auto classBase = getClassDef();
-
-    if (!classBase) {
-        throw MerkError("Failed to cast Callable to ClassBase in ClassSignature.");
-    }
-
-    SharedPtr<Scope> instanceScope;
-    if (classBase->getClassScope()) {
-        instanceScope = classBase->getClassScope()->clone();
-    } else {
-        throw MerkError("ClassScope was null during instantiation.");
-    }
-
-    SharedPtr<Scope> capturedScope;
-    if (classBase->getCapturedScope()) {
-        capturedScope = classBase->getCapturedScope()->clone();
-    } else {
-        throw MerkError("CapturedScope was null during instantiation.");
-    }
-
-    // Clone class scope for instance
-    // SharedPtr<Scope> instanceScope = classBase->getClassScope()->clone();
-    // SharedPtr<Scope> capturedScope = classBase->getCapturedScope()->clone();
-
-    // Create instance
-    SharedPtr<ClassInstance> instance = std::make_shared<ClassInstance>(classBase);
-    instance->setCapturedScope(capturedScope);
-    capturedScope->appendChildScope(instanceScope);
-
-    // Run constructor if defined
-    instance->construct(args);
-
-    return instance;
-}
-
-// Optional: override call() to auto-instantiate when the class is "called"
-Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
-    (void)scope;
-    return Node(ClassInstanceNode(instantiate(args)));
-}
-
 
 // void ClassBase::setMethod(const String& name, SharedPtr<Callable> callable) {
 //     if (!callable) {
@@ -322,7 +346,7 @@ Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) cons
 //     if (callable->getCallableType() == CallableType::FUNCTION ||
 //         callable->getCallableType() == CallableType::DEF) {
 
-//         method = std::make_shared<Method>(
+//         method = makeShared<Method>(
 //             callable->getName(),
 //             params.clone(),
 //             static_unique_ptr_cast<MethodBody>(callable->getBody()->clone()),

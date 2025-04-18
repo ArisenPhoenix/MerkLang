@@ -264,6 +264,36 @@ bool Node::isBool() const { return isType(NodeValueType::Bool);}
 bool Node::isChar() const { return isType(NodeValueType::Char);}
 bool Node::isString() const { return isType(NodeValueType::String);}
 
+bool Node::getIsCallable() const { return isCallable; }
+
+bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInstance;}
+
+bool Node::isClassInstance() {return data.type == NodeValueType::ClassInstance;}
+
+Node Node::getField(const String& name) const {
+    (void)name;
+    // if (!isClassInstance()) {
+    //     throw MerkError("Tried to access field '" + name + "' on non-instance Node.");
+    // }
+
+    // auto instance = std::get<SharedPtr<ClassInstance>>(data.value);
+    // SharedPtr<Scope> scope = instance->getCapturedScope(); // or getInstanceScope()
+
+    // if (scope->hasVariable(name)) {
+    //     return scope->getVariable(name);
+    // } else if (scope->hasFunction(name)) {
+    //     auto sig = scope->getFunction(name).value().get();
+    //     return MethodNode(sig->getMethod());
+    // }
+
+    // throw MerkError("Field or method '" + name + "' not found.");
+    return Node();
+}
+Node Node::getField(const String& name, TokenType type) const {
+    (void)name;
+    (void)type;
+    return Node();
+}
 
 bool Node::isNumeric() const { return isInt() || isFloat() || isDouble() || isLong(); }
 
@@ -328,15 +358,20 @@ String Node::toString() const {
             case NodeValueType::Null:
                 return "null"; 
             case NodeValueType::Uninitialized:
-                return "[Uninitialized]";
+                return "<Uninitialized>";
             case NodeValueType::Any:
-                return "[Any Type]";
+                return "Any";
+            case NodeValueType::Class:
+                return "Class";
+
+            case NodeValueType::ClassInstance:
+                return "<ClassInstance>";
             default:
                 throw MerkError("Unsupported type for Node toString.");
         }
     } catch (const std::exception& e) {
         debugLog(true, highlight("[Error] Exception in Node::toString():", Colors::red), e.what());
-        return "[Error in toString]";
+        return "[Error in Node::toString]";
     }
     
 }
@@ -360,7 +395,7 @@ Node Node::negate() const {
 }
 
 NodeValueType Node::getNodeValueType(const String& typeStr, const String& valueStr) {
-    if (typeStr == "Variable" || typeStr == "AccessorVariable" || typeStr == "Argument" || typeStr == "FunctionCall"){
+    if (typeStr == "Variable" || typeStr == "AccessorVariable" || typeStr == "Argument" || typeStr == "FunctionCall" || typeStr == "ClassMethodCall"){
         data.type = NodeValueType::String;
         data.value = valueStr;
         return NodeValueType::String;
@@ -802,7 +837,7 @@ Node::Node(Node&& other) noexcept {
     isConst = other.isConst;
     isMutable = other.isMutable;
     isStatic = other.isStatic;
-    DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-constructed.");
+    // DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-constructed.");
 }
 
 // Copy Assignment Operator
@@ -1015,6 +1050,6 @@ String LitNode::toString() const {
         }
     } catch (const std::exception& e) {
         debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());
-        return "[Error in toString]";
+        return "[Error in LitNode::toString]";
     }
 }

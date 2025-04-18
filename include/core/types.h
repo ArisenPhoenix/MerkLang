@@ -113,6 +113,8 @@ enum class TokenType {
     ClassMethodRef,
     ClassAttribute,
 
+    ChainEntryPoint,
+
     Unknown
 };
 

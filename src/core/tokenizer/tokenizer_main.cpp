@@ -9,7 +9,7 @@
 //     int startColumn = column;
 
 //     // Read identifier (letters, digits, underscores)
-//     while (position < source.size() && (isLetter(source[position])) && (!isWhitespace(source[position]))) {
+//     while (position < sourceLength && (isLetter(source[position])) && (!isWhitespace(source[position]))) {
 //         start++;
 //         startColumn++;
 //     }
@@ -24,7 +24,7 @@
 
 bool Tokenizer::isLogicOperator() {
     size_t lookahead = position;
-    while (lookahead < source.size() &&
+    while (lookahead < sourceLength &&
            (std::isalpha(static_cast<unsigned char>(source[lookahead])) || source[lookahead] == '_')) {
         lookahead++;
     }
@@ -37,12 +37,12 @@ bool Tokenizer::isLogicOperator() {
 
 Vector<Token> Tokenizer::tokenize() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-    while (position < source.size()) {
+    sourceLength = source.size();
+    while (position < sourceLength) {
         DEBUG_LOG(LogLevel::DEBUG, "Processing char: ", source[position], " at position: ", position);
         
         // Skip whitespace
-        while (position < source.size() && isWhitespace(source[position])) {
+        while (position < sourceLength && isWhitespace(source[position])) {
             position++;
             column++;
         }
@@ -58,8 +58,8 @@ Vector<Token> Tokenizer::tokenize() {
         }
 
         // Handle comments
-        if (position < source.size() && source[position] == '#') {
-            while (position < source.size() && source[position] != '\n') {
+        if (position < sourceLength && source[position] == '#') {
+            while (position < sourceLength && source[position] != '\n') {
                 position++;
             }
             continue;
@@ -115,7 +115,21 @@ Vector<Token> Tokenizer::tokenize() {
 
         // Handle identifiers, numbers, and strings
         else if (isLetter(source[position])) {
-            tokens.push_back(readIdentifier());
+            // size_t idStart = position;
+            Token identifier = readIdentifier();  // advances past identifier
+        
+            // Peek at the char immediately after the identifier
+            // char nextChar = position < sourceLength ? source[position] : '\0';
+            char nextChar = position < sourceLength ? source[position] : '\0';
+        
+            char nextNextChar = peek();
+        
+            if (identifier.type == TokenType::Variable && 
+                (nextChar == '.' || (nextChar == ':' && nextNextChar == ':'))) {
+                identifier.type = TokenType::ChainEntryPoint;
+            }
+        
+            tokens.push_back(identifier);
         } else if (isDigit(source[position])) {
             tokens.push_back(readNumber());
         } else if (source[position] == '"') {
@@ -174,19 +188,19 @@ Token Tokenizer::readNumber() {
     // bool hasDot = false;
 
     // Read leading digits
-    while (position < source.size() && isDigit(source[position])) {
+    while (position < sourceLength && isDigit(source[position])) {
         position++;
         column++;
     }
 
     // Check for decimal part
-    if (position < source.size() && source[position] == '.') {
+    if (position < sourceLength && source[position] == '.') {
         if (isDigit(peek())) {
             // hasDot = true;
             position++;
             column++;
 
-            while (position < source.size() && isDigit(source[position])) {
+            while (position < sourceLength && isDigit(source[position])) {
                 position++;
                 column++;
             }
@@ -206,9 +220,9 @@ Token Tokenizer::readString() {
     column++;
 
     String result;
-    while (position < source.size() && source[position] != '"') {
+    while (position < sourceLength && source[position] != '"') {
         if (source[position] == '\\') { // Handle escape sequences
-            if (position + 1 >= source.size()) {
+            if (position + 1 >= sourceLength) {
                 // throw RunTimeError("Unfinished escape sequence in string literal.");
                 TokenizationError("Unfinished escape sequence in string literal.", line, column);
             }
@@ -232,7 +246,7 @@ Token Tokenizer::readString() {
     }
 
     // Ensure the string is properly terminated
-    if (position >= source.size() || source[position] != '"') {
+    if (position >= sourceLength || source[position] != '"') {
         // throw RunTimeError("Unmatched double-quote in string literal.");
         throw UnmatchedQuoteError(line, column, currentLineText);
     }
@@ -248,7 +262,7 @@ Token Tokenizer::readIdentifier() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     DEBUG_LOG(LogLevel::DEBUG, "Entering readIdentifier at position: ", position);
 
-    if (position >= source.size()) {
+    if (position >= sourceLength) {
         throw TokenizationError("Unexpected end of source in readIdentifier.", line, column, currentLineText);
     }
 
@@ -256,7 +270,7 @@ Token Tokenizer::readIdentifier() {
     int startColumn = column;
 
     // Read identifier (letters, digits, underscores)
-    while (position < source.size() && (isLetter(source[position]) || isDigit(source[position]) || source[position] == '_')) {
+    while (position < sourceLength && (isLetter(source[position]) || isDigit(source[position]) || source[position] == '_')) {
         position++;
         column++;
     }
@@ -365,12 +379,12 @@ Token Tokenizer::readIdentifier() {
 }
 
 void Tokenizer::skipWhitespace() {
-    while (position < source.size() && isWhitespace(source[position])) {
+    while (position < sourceLength && isWhitespace(source[position])) {
         position++;
         column++;
     }
 
-    if (position >= source.size()) {
+    if (position >= sourceLength) {
         OutOfBoundsError(line, column, currentLineText);
     }
 }
@@ -412,7 +426,7 @@ bool Tokenizer::isComparisonOrLogicalOperator(char c) const {
 
 // Peeks at the next character without advancing position
 char Tokenizer::peek(size_t offset) const {
-    char result = (position + offset < source.size()) ? source[position + offset] : '\0';
+    char result = (position + offset < sourceLength) ? source[position + offset] : '\0';
     return result;
 }
 
@@ -423,7 +437,7 @@ bool Tokenizer::isWhitespace(char c) const {
 }
 
 // bool Tokenizer::isLetter(char c) const {
-//     if (position >= source.size()) {
+//     if (position >= sourceLength) {
 //         throw OutOfBoundsError(line, column, currentLineText);
 //     }
 //     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
@@ -434,7 +448,7 @@ bool Tokenizer::isLetter(char c) const {
 }
 
 bool Tokenizer::isDigit(char c) const {
-    if (position >= source.size()) {
+    if (position >= sourceLength) {
         throw OutOfBoundsError(line, column, currentLineText);
     }
     return std::isdigit(static_cast<unsigned char>(c));

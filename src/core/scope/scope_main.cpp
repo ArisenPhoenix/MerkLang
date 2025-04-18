@@ -100,10 +100,10 @@ Scope::~Scope() {
                  " | Memory Loc: ", this, 
                  " | Parent Loc: ", parentScope.lock().get());
 
-        // 🔥 1. Explicitly destroy stored variables
+        // 1. Explicitly destroy stored variables
         // DEBUG_LOG(LogLevel::INFO, "Still Need to Handle Cleaning up variables in Context Scope Level: ", scopeLevel);
 
-        // 🔥 2. Explicitly destroy stored functions
+        // 2. Explicitly destroy stored functions
         // DEBUG_LOG(LogLevel::INFO, "Still Need To Handle Cleaning up functions in Registry in Scope Level: ", scopeLevel);
 
         // Explicitly destroy child scopes in reverse order
@@ -196,6 +196,15 @@ void Scope::appendChildScope(SharedPtr<Scope> childScope) {
     // childScope->isDetached = true;
     childScopes.push_back(childScope);
     DEBUG_FLOW_EXIT();
+}
+// In Scope.cpp
+void Scope::attachToInstanceScope(SharedPtr<Scope> instanceScope) {
+    // Set the parent to the instance's scope
+    setParent(instanceScope);
+    scopeLevel = instanceScope->getScopeLevel() + 1;
+
+    // Optionally append this to the instanceScope's children
+    instanceScope->appendChildScope(shared_from_this());
 }
 
 

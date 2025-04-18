@@ -8,33 +8,33 @@
 #include "ast/ast_callable.h"
 // #include "ast/ast_function.h"
 
-Vector<UniquePtr<BaseAST>> CodeBlock::getChildrenOfType(AstType astType, bool recurse) {
-    Vector<UniquePtr<BaseAST>> matches;
-    for (auto& child : children){
-        if (child->getAstType() == astType){
-            matches.emplace_back(std::move(child->clone()));
-        }
+// Vector<UniquePtr<BaseAST>> CodeBlock::getChildrenOfType(AstType astType, bool recurse) {
+//     Vector<UniquePtr<BaseAST>> matches;
+//     for (auto& child : children){
+//         if (child->getAstType() == astType){
+//             matches.emplace_back(std::move(child->clone()));
+//         }
 
-        if (recurse){
-            if (child->getAstType() == AstType::CodeBlock){
-                auto* block = static_cast<CodeBlock*>(child.get());
-                for (auto& subChild : block->getChildrenOfType(astType)) {
-                    matches.emplace_back(std::move(subChild));
-                }
-            }
+//         if (recurse){
+//             if (child->getAstType() == AstType::CodeBlock){
+//                 auto* block = static_cast<CodeBlock*>(child.get());
+//                 for (auto& subChild : block->getChildrenOfType(astType)) {
+//                     matches.emplace_back(std::move(subChild));
+//                 }
+//             }
 
-            else if (child->getAstType() == AstType::FunctionDefinition) {
-                auto* block = static_cast<FunctionDef*>(child.get());
-                for (auto& subChild : block->getBody()->getChildrenOfType(astType)) {
-                    matches.emplace_back(std::move(subChild));
-                }
+//             else if (child->getAstType() == AstType::FunctionDefinition) {
+//                 auto* block = static_cast<FunctionDef*>(child.get());
+//                 for (auto& subChild : block->getBody()->getChildrenOfType(astType)) {
+//                     matches.emplace_back(std::move(subChild));
+//                 }
 
-            }
-        }
-    }
-    DEBUG_LOG(LogLevel::ERROR, highlight("NUMBER OF IFStatments Found", Colors::pink), matches.size());
-    return matches;
-}
+//             }
+//         }
+//     }
+//     DEBUG_LOG(LogLevel::ERROR, highlight("NUMBER OF IFStatments Found", Colors::pink), matches.size());
+//     return matches;
+// }
 
 FreeVars CodeBlock::collectFreeVariables() const {
     DEBUG_FLOW();

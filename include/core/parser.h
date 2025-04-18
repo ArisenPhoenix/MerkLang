@@ -109,7 +109,7 @@ private:
 
     Token handleAttributNotation();
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
-
+    void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
     // For Future Implementation
     // UniquePtr<ImportStatement> parseImport();
     // Vector<UniquePtr<ImportStatement>> parseImports();

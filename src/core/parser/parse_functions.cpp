@@ -22,7 +22,7 @@
 
 
 ParamList Parser::handleParameters(TokenType type){
-    DEBUG_FLOW();
+    DEBUG_FLOW(FlowLevel::MED);
     (void)type;
     ParamList params;
     DEBUG_LOG(LogLevel::DEBUG, highlight("Current Token In handleParameters", Colors::pink), currentToken().toColoredString());

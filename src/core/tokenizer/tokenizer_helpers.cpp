@@ -35,7 +35,7 @@ bool Tokenizer::isFunction(size_t startPos) {
     size_t lookahead = startPos;
     
     // Skip whitespace after the identifier
-    while (lookahead < source.size() && isWhitespace(source[lookahead])) {
+    while (lookahead < sourceLength && isWhitespace(source[lookahead])) {
         lookahead++;
     }
 
@@ -46,7 +46,7 @@ bool Tokenizer::isFunction(size_t startPos) {
     }
 
     // **Handle Function Calls**: If the next non-whitespace character is '(', it is a function call
-    if (lookahead < source.size() && source[lookahead] == '(') {
+    if (lookahead < sourceLength && source[lookahead] == '(') {
         DEBUG_LOG(LogLevel::DEBUG, "[isFunction] Identified as function call at position: ", startPos);
         insideFunction = true;
     }
@@ -91,7 +91,7 @@ bool Tokenizer::isClass(size_t startPos) {
     size_t lookahead = startPos;
     
     // Skip whitespace after the identifier
-    while (lookahead < source.size() && isWhitespace(source[lookahead])) {
+    while (lookahead < sourceLength && isWhitespace(source[lookahead])) {
         lookahead++;
     }
 
@@ -102,7 +102,7 @@ bool Tokenizer::isClass(size_t startPos) {
     }
 
     // **Handle Function Calls**: If the next non-whitespace character is '(', it is a function call
-    if (lookahead < source.size() && source[lookahead] == '(') {
+    if (lookahead < sourceLength && source[lookahead] == '(') {
         DEBUG_LOG(LogLevel::DEBUG, "[isFunction] Identified as function call at position: ", startPos);
         insideClass = true;
     }
@@ -117,7 +117,7 @@ void Tokenizer::updateCurrentLineText() {
     if (column == 1) { // Start of a new line
         size_t lineEnd = source.find('\n', position);
         if (lineEnd == String::npos) {
-            lineEnd = source.size(); // Handle the last line without a newline
+            lineEnd = sourceLength; // Handle the last line without a newline
         }
         currentLineText = source.substr(position, lineEnd - position);
     }
@@ -138,12 +138,12 @@ void Tokenizer::handleIndentation(Vector<Token>& tokens) {
     size_t lineStart = position;
 
     // Skip leading spaces/tabs to find the first non-whitespace character
-    while (lineStart < source.size() && (source[lineStart] == ' ' || source[lineStart] == '\t')) {
+    while (lineStart < sourceLength && (source[lineStart] == ' ' || source[lineStart] == '\t')) {
         lineStart++;
     }
 
     // Skip blank lines (no tokens needed)
-    if (lineStart == source.size() || source[lineStart] == '\n') {
+    if (lineStart == sourceLength || source[lineStart] == '\n') {
         return;
     }
 

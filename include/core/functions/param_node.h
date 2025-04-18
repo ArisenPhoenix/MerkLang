@@ -95,7 +95,7 @@ public:
 
     // Debugging
     String toString() const;
-
+    String toShortString() const; 
     ParamNode copy() const;
 
 
@@ -131,12 +131,19 @@ public:
     Vector<String> getNames() const;
 
     String toString() const;
+    String toShortString() const; 
+    void erase(size_t index);
+
+    // Optional: Remove parameter by name
+    bool eraseByName(const String& name);
 
     Vector<NodeValueType> getParameterTypes();
     void printAST(std::ostream& os, int indent = 0) const;
     void resetToDefaults();
     ParamList clone();
     ParamList clone() const;
+    bool empty() const;
+
 
     auto begin() { return parameters.begin(); }
     auto end() { return parameters.end(); }

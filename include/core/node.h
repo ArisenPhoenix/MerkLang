@@ -47,11 +47,17 @@ public:
     bool isConst = false;
     bool isMutable = true;
     bool isStatic = false;
+    bool isCallable = false;
     void setValue(const Node& other);
     void setValue(const VariantType& newValue);
     NodeValueType determineResultType(const Node& left, const Node& right) const;
     String nodeType = "DataNode";
 
+    virtual Node getField(const String& name) const;
+    virtual Node getField(const String& name, TokenType type) const;
+    bool isClassInstance();
+    bool isClassInstance() const;
+    
     // Clone Method for Proper Copying
     virtual Node* clone() const;
 
@@ -93,6 +99,8 @@ public:
     String getTypeAsString() const;
     virtual String toString() const;
     bool toBool() const;
+
+
     
     NodeValueType getNodeValueType(const String& typeStr, const String& valueStr);
     NodeValueType getNodeValueType(const VariantType& value);
@@ -108,6 +116,7 @@ public:
     bool isDouble() const;
     bool isValid() const;
     bool isLong() const;
+    bool getIsCallable() const;
 
     Node negate() const;
     VariantType getValue() const;

@@ -28,7 +28,29 @@ class FreeVarCollection {
         virtual FreeVars collectFreeVariables() const = 0;
     };
 
-class CodeBlock : public BaseAST, public FreeVarCollection {
+ // ast_collector.h
+// #ifndef AST_COLLECTOR_H
+// #define AST_COLLECTOR_H
+
+// #include "core/types.h"
+// #include "ast/ast_base.h"
+// #include "ast/ast_type_enum.h"
+ 
+class AstCollector {
+protected:
+    mutable Vector<BaseAST*> collectedNodes;
+
+public:
+    const Vector<BaseAST*>& collectChildrenOfType(const Vector<UniquePtr<BaseAST>>& children, AstType type) const;
+
+    const Vector<BaseAST*>& collectChildrenOfType(const Vector<UniquePtr<BaseAST>>& children, const Vector<AstType>& types) const;
+};
+
+// #endif // AST_COLLECTOR_H
+
+    
+
+class CodeBlock : public BaseAST, public FreeVarCollection, AstCollector {
 
 protected:
     Vector<UniquePtr<BaseAST>> children;
@@ -44,7 +66,7 @@ public:
     void addChild(UniquePtr<BaseAST> child);
 
     bool contains(const BaseAST* node) const;
-    Vector<UniquePtr<BaseAST>> getChildrenOfType(AstType AstType, bool recurse = false);
+    // Vector<UniquePtr<BaseAST>> getChildrenOfType(AstType astType, bool recurse = false);
     
     SharedPtr<Scope> getCurrentScope(){return getScope();} 
 
@@ -70,6 +92,7 @@ public:
     
     void setScope(SharedPtr<Scope> newScope) override;
     FreeVars collectFreeVariables() const override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 protected:
     Vector<UniquePtr<BaseAST>>& getMutableChildren() const { return const_cast<Vector<UniquePtr<BaseAST>>&>(children); }
@@ -94,6 +117,7 @@ public:
     static UniquePtr<ConditionalBlock> create(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope) {
         return makeUnique<ConditionalBlock>(std::move(condition), scope);
     }
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 
 
@@ -116,6 +140,7 @@ public:
     FreeVars collectFreeVariables() const override;
 
     void setScope(SharedPtr<Scope> newScope) override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 
 class ElifStatement : public ASTStatement, public FreeVarCollection { // Also contains the logic of If, parser's job to ensure if is always first.
@@ -138,7 +163,8 @@ public:
     UniquePtr<BaseAST> clone() const override;
     FreeVars collectFreeVariables() const override;
 
-    virtual void setScope(SharedPtr<Scope> newScope) override;    
+    virtual void setScope(SharedPtr<Scope> newScope) override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 
 
@@ -181,6 +207,7 @@ public:
     FreeVars collectFreeVariables() const override;
     
     void setScope(SharedPtr<Scope> newScope) override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 
 class NoOpNode: public ASTStatement {
@@ -193,6 +220,7 @@ public:
     AstType getAstType() const override {return AstType::NoOp;};
     void printAST(std::ostream& os, int indent = 0) const override;
     UniquePtr<BaseAST> clone() const override;
+    // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 }; 
 
 // New base class for loops
@@ -217,6 +245,7 @@ public:
     virtual FreeVars collectFreeVariables() const override = 0;
 
     void setScope(SharedPtr<Scope> newScope) override;
+    virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override = 0;
 
     
 
@@ -237,7 +266,7 @@ public:
     UniquePtr<BaseAST> clone() const override;
 
     FreeVars collectFreeVariables() const override;
-
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 
  

@@ -97,8 +97,9 @@ public:
     SharedPtr<std::unordered_map<String, CallableType>> globalCallables;
     std::optional<CallableType> getCallableType(const String& name) const;
     Node resolveCallable(const String& name, const Vector<Node>& args = {});
-
-
+    void attachToInstanceScope(SharedPtr<Scope> instanceScope);
+    
+    bool removeChildScope(const SharedPtr<Scope>& target);
 
 
 private:

@@ -101,11 +101,11 @@ void ParamNode::validateExpectedType(NodeValueType expectedType) {
              " | Actual: ", nodeTypeToString(data.type));
 
     if (expectedType == NodeValueType::Any || data.type == NodeValueType::Any) {
-        return;  // ✅ Allow `Any` without type enforcement
+        return;  // Allow `Any` without type enforcement
     }
 
     if (expectedType == NodeValueType::Null && data.type == NodeValueType::Null) {
-        return;  // ✅ Allow explicitly nullable parameters
+        return;  // Allow explicitly nullable parameters
     }
 
     if (expectedType != NodeValueType::Uninitialized && expectedType != data.type) {
@@ -129,6 +129,11 @@ String ParamNode::toString() const {
            ", Uninitialized: " + (std::holds_alternative<UninitializedType>(defaultValue) ? highlight("true", Colors::bold_blue) : highlight("false", Colors::bold_blue)) + ")";
 }
 
+
+String ParamNode::toShortString() const {
+    return paramName + ":" + VarNode::toString();
+}
+
 ParamNode ParamNode::copy() const {
     return *this;
 }
@@ -141,6 +146,8 @@ void ParamList::addParameter(const ParamNode& param) {
     parameters.push_back(param);
     DEBUG_FLOW_EXIT();
 }
+
+
 
 // Verify arguments against parameters
 void ParamList::verifyArguments(Vector<Node> args) {
@@ -186,13 +193,25 @@ String ParamList::toString() const {
     return output;
 }
 
+String ParamList::toShortString() const {
+    String output;
+    size_t length = parameters.size() - 1;
+    for (const auto& param: parameters) {
+        output += param.toShortString();
+        if (param.getName() != parameters[length].getName()){
+            output += ", ";
+        }
+    }
+    output += ")";
+    return output;
+}
 
 void ParamList::resetToDefaults() {
     for (auto& param : parameters) {
         if (param.hasDefault()) {
-            param.setValue(param.getDefaultValue()); // ✅ Restore default
+            param.setValue(param.getDefaultValue()); // Restore default
         } else {
-            param.setValue(UninitializedType()); // ✅ Reset to uninitialized
+            param.setValue(UninitializedType()); // Reset to uninitialized
         }
     }
 }
@@ -238,3 +257,29 @@ ParamList ParamList::clone() const {
 
     return params;
 };
+
+
+
+void ParamList::erase(size_t index) {
+    if (index < parameters.size()) {
+        parameters.erase(parameters.begin() + index);
+    } else {
+        throw MerkError("ParamList::erase: index out of range");
+    }
+}
+
+bool ParamList::eraseByName(const String& name) {
+    auto it = std::find_if(parameters.begin(), parameters.end(),
+                           [&](const ParamNode& param) {
+                               return param.getName() == name;
+                           });
+    if (it != parameters.end()) {
+        parameters.erase(it);
+        return true;
+    }
+    return false;
+}
+
+
+bool ParamList::empty() const { return parameters.empty(); }
+

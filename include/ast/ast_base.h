@@ -67,21 +67,27 @@ public:
         auto locked = scope.lock();
         return locked;
     }
-
-    // Default implementations throw errors if called on BaseAST - just another debugging step
-    // Chose logic error as it is certainly preventable
-    // virtual Node evaluate(SharedPtr<Scope> scope) const {
-    //     (void)scope;
-    //     throw std::logic_error("Node-based evaluate(scope) called on unsupported BaseAST type.");
-    // }
-
+    virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const;
     virtual Node evaluate(SharedPtr<Scope> scope) const = 0;
-
-
     virtual Node evaluate() const = 0;
 
     virtual UniquePtr<BaseAST> clone() const = 0;
     String getBranch() const {return branch;}
+
+    // Vector<const BaseAST*> BaseAST::getAllAst(std::function<bool(const BaseAST*)> filter, bool includeSelf) const {
+    //     Vector<const BaseAST*> result;
+    
+    //     if (includeSelf && filter(this)) {
+    //         result.push_back(this);
+    //     }
+    
+    //     for (const auto& child : getChildren()) {
+    //         auto subResults = child->getAllAst(filter, true);  // recurse
+    //         result.insert(result.end(), subResults.begin(), subResults.end());
+    //     }
+    
+    //     return result;
+    // }
 };
 
 
@@ -108,6 +114,8 @@ public:
     virtual Node evaluate() const override {return evaluate(getScope());}
 
     virtual UniquePtr<BaseAST> clone() const override;
+
+    virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 };
 

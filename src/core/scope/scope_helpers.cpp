@@ -264,3 +264,17 @@ Node Scope::resolveCallable(const String& name, const Vector<Node>& args) {
 
     throw MerkError("Unrecognized callable type for '" + name + "'.");
 }
+
+
+
+bool Scope::removeChildScope(const SharedPtr<Scope>& target) {
+    DEBUG_FLOW(FlowLevel::LOW);
+    auto it = std::find(childScopes.begin(), childScopes.end(), target);
+    if (it != childScopes.end()) {
+        childScopes.erase(it);
+        DEBUG_LOG(LogLevel::DEBUG, "Removed child scope at memory location: ", target.get());
+        return true;
+    }
+    DEBUG_LOG(LogLevel::DEBUG, "Failed to remove child scope: not found.");
+    return false;
+}

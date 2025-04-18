@@ -25,6 +25,26 @@
 #include "core/scope.h"
 
 
+const Vector<BaseAST*>& AstCollector::collectChildrenOfType(const Vector<UniquePtr<BaseAST>>& children, AstType type) const {
+    collectedNodes.clear();
+    for (const auto& child : children) {
+        if (child && child->getAstType() == type) {
+            collectedNodes.push_back(child.get());
+        }
+    }
+    return collectedNodes;
+}
+const Vector<BaseAST*>& AstCollector::collectChildrenOfType(const Vector<UniquePtr<BaseAST>>& children, const Vector<AstType>& types) const {
+    collectedNodes.clear();
+    for (const auto& child : children) {
+        if (!child) continue;
+        if (std::find(types.begin(), types.end(), child->getAstType()) != types.end()) {
+            collectedNodes.push_back(child.get());
+        }
+    }
+    return collectedNodes;
+}
+
 // Control Constructors
 CodeBlock::CodeBlock(SharedPtr<Scope> scope) : BaseAST(scope) {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
@@ -66,7 +86,7 @@ CodeBlock::~CodeBlock() {
 
 void CodeBlock::addChild(UniquePtr<BaseAST> child) {
     String childType = child->getAstTypeAsString();
-    DEBUG_LOG(LogLevel::INFO, "Adding", childType, "to CodeBlock. Child address: ", child.get(), 
+    DEBUG_LOG(LogLevel::ERROR, "Adding", childType, "to CodeBlock. Child address: ", child.get(), 
              ", CodeBlock address: ", this, ", Scope address: ", getScope());
              
     if (!child) {

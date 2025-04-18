@@ -12,6 +12,10 @@ UniquePtr<BaseAST> ASTStatement::clone() const {
     throw MerkError("Cannot Clone Base Class ASTStatement");
 } 
 
+UniquePtr<BaseAST> LiteralValue::clone() const {
+    return std::make_unique<LiteralValue>(value, getScope(), _isString, _isBool);
+}
+
 UniquePtr<BaseAST> VariableDeclaration::clone() const {
     UniquePtr<ASTStatement> valueInfo = nullptr;
     if (valueExpression){

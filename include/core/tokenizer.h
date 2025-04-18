@@ -7,7 +7,6 @@
 #include <regex>
 #include <iostream>
 #include <ostream> 
-
 #include "core/types.h"
 
 
@@ -15,6 +14,7 @@ class Tokenizer {
 private:
     String source;
     size_t position;
+    size_t sourceLength;
     int line;
     int column;
     int currentIndent;

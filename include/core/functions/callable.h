@@ -60,6 +60,7 @@ public:
         data.type = NodeValueType::Callable;
         data.value = callable; // Stored as SharedPtr<Callable>
         nodeType = callableType+"Node";
+        isCallable = true;
     }
 
     virtual SharedPtr<Callable> getCallable() const {

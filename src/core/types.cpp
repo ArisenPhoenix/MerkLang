@@ -146,6 +146,8 @@ String tokenTypeToString(TokenType type, bool colored) {
         case TokenType::Dedent: return colored ? highlight("Dedent", Colors::purple) : "Dedent";
         case TokenType::AccessorVariable: return colored ? highlight("AccessorVariable", Colors::bold_cyan) : "AccessorVariable";
 
+        case TokenType::ChainEntryPoint: return colored ? highlight("ChainEntryPoint", Colors::yellow) : "ChainEntryPoint";
+
         case TokenType::EOF_Token: return colored ? highlight("EOF_Token", Colors::red) : "EOF_Token";
 
         default: return "Invalid TokenType";
@@ -214,6 +216,8 @@ String getTokenDescription(TokenType type) {
 
         case TokenType::Unknown: return "An unknown literal was found in the document";
         case TokenType::AccessorVariable: return "An Member Variable of an Object";
+
+        case TokenType::ChainEntryPoint: return "The Beginning of a Chain to be resolved within the Parser, Ex: 'self.x', 'singleton::method', 'obj.<method>'";
 
         default: return "Unknown or invalid token.";
     }

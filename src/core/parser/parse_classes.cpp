@@ -20,63 +20,127 @@ IdentifierType inferIdentifierType(TokenType type) {
 
 
 UniquePtr<Chain> Parser::parseChain() {
-    DEBUG_FLOW(FlowLevel::MED);
-
     auto chain = makeUnique<Chain>(currentScope);
+    Token parentToken = currentToken();
+    DEBUG_LOG(LogLevel::ERROR, "parseChain initiated by: ", parentToken.toColoredString());
 
-    // First element must be a Variable, FunctionReference, ClassReference, or Parameter
-    TokenType validStarters[] = {
-        TokenType::Variable,
-        TokenType::FunctionRef,
-        TokenType::ClassRef,
-        TokenType::Parameter
-    };
 
-    auto isValidStarter = [&](TokenType type) {
-        return std::find(std::begin(validStarters), std::end(validStarters), type) != std::end(validStarters);
-    };
-
-    // ==== Parse First Element ====
-    if (!isValidStarter(currentToken().type)) {
-        throw UnexpectedTokenError(currentToken(), "Expected a valid starting identifier for chain");
+    if (!(parentToken.type == TokenType::VarDeclaration || parentToken.type == TokenType::ChainEntryPoint)) {  
+        throw UnexpectedTokenError(parentToken, "VarDeclaration, ChainEntryPoint");
     }
 
-    ChainElement currentElem;
-    currentElem.name = currentToken().value;
-    currentElem.type = inferIdentifierType(currentToken().type);
+    // The element to be declared, if in fact this is a declaration, is the last item to have a delimiter before it
+    bool isDeclaration = parentToken.type == TokenType::VarDeclaration;
+    Token declarationToken = currentToken();
+    Token chainStartToken = peek();
 
-    advance(); // Consume the identifier
+    Token targetToken = chainStartToken;
+    // Assuming if VarDeclaration, then the next will be ChainEntryPoint
+    // if only ChainEntryPoint then assuming VarAssignment
+    if (isDeclaration){
+        if (declarationToken.type != TokenType::VarDeclaration) {
+            throw UnexpectedTokenError(declarationToken, "VarDeclaration");
+        }
+        advance(); // consume var / const
+        if (chainStartToken.type != TokenType::ChainEntryPoint) {
+            throw UnexpectedTokenError(chainStartToken, "ChainEntryPoint");
 
-    // Loop to capture chained accesses
-    while (expect(TokenType::Punctuation) && (currentToken().value == "." || currentToken().value == "::")) {
-        currentElem.delimiter = currentToken().value;
-        chain->addElement(currentElem);
-        advance(); // Consume . or ::
+        } 
+        chainStartToken.type = TokenType::Variable;
+        tokens[position] = chainStartToken;
 
-        // Expect next piece of the chain to be a variable or method/class/function
-        if (!expect(TokenType::Variable) &&
-            !expect(TokenType::FunctionRef) &&
-            !expect(TokenType::ClassRef) &&
-            !expect(TokenType::ClassMethodRef)) {
-            throw UnexpectedTokenError(currentToken(), "Expected identifier after '.' or '::'");
+        DEBUG_LOG(LogLevel::ERROR, "After mutation, token at position: ", tokens[position].toColoredString());
+
+
+        if (currentToken().type != TokenType::Variable){
+            throw MerkError("Failed to Mutate ChainEntryPoint to Variable in parseChain");
+        }
+    } else {
+        // This is an assignment or access chain — mutate token
+        if (parentToken.type == TokenType::ChainEntryPoint) {
+            Token& current = tokens[position];
+            if (current.type != TokenType::ChainEntryPoint) {
+                throw MerkError("Expected ChainEntryPoint at start of parseChain.");
+            }
+            current.type = TokenType::Variable;
+            DEBUG_LOG(LogLevel::ERROR, "Mutated ChainEntryPoint to Variable for assignment chain. Token now: ", current.toColoredString());
+        }
+    }
+    // Handles Accessor/Variable
+    Token token = currentToken(); // should be a variable / accessor - modified form ChainEntryPoint.
+    if (token.type != TokenType::Variable){
+        throw UnexpectedTokenError(token, "Variable");
+    }
+
+    // Start parsing chain elements:
+    while (true) {
+        Token token = currentToken();  // Should be self, then x, etc.
+        
+        // Peek ahead for the delimiter **before** parsing the expression
+        String delimiter = peek().value;;
+        // String delimiter = next
+    
+        // If there is no valid delimiter, we stop before parsing the last piece
+        if (!(delimiter == "." || delimiter == "::")) {
+            break;
+        }
+    
+        auto ref = parsePrimaryExpression();  // Only parse if there's a valid chain continuation
+    
+        ChainElement elem;
+        elem.name = token.value;
+        elem.delimiter = delimiter;
+        elem.object = std::move(ref);
+        elem.type = token.type;
+    
+        chain->addElement(std::move(elem));
+        advance();  // consume delimiter
+    }
+    
+    if (isDeclaration || parentToken.type == TokenType::VarAssignment) {
+        UniquePtr<ASTStatement> lastElement;
+
+        targetToken = currentToken();
+        if (targetToken.type != TokenType::Variable){
+            throw UnexpectedTokenError(targetToken, "Variable");
         }
 
-        ChainElement next;
-        next.name = currentToken().value;
-        next.type = inferIdentifierType(currentToken().type);
-        next.delimiter = ""; // maybe set next loop
+        // tokens[position+1] = targetToken;
+        // tokens.insert(tokens.begin() + position + 1, targetToken);
 
-        advance(); // consume the identifier
-        currentElem = next; // advance the loop
+        if (isDeclaration) {
+            tokens.insert(tokens.begin() + position, declarationToken);
+            DEBUG_LOG(LogLevel::TRACE, "Inserted declarationToken: ", declarationToken.toColoredString());
+
+            lastElement = parseVariableDeclaration();
+        } else {
+            lastElement = parseVariableAssignment();
+        }
+
+        ChainElement finalElem;
+        finalElem.name = targetToken.value;  // Can be refined later
+        finalElem.delimiter = "";  // Final element should not carry a delimiter
+        finalElem.object = std::move(lastElement);
+        finalElem.type = targetToken.type;
+        chain->replaceLastElementWith(std::move(finalElem));
     }
+    DEBUG_LOG(LogLevel::ERROR, "Chain parsing complete. Returning Chain: ", chain->toString());
 
-    // Add the final element
-    chain->addElement(currentElem);
-
-    DEBUG_FLOW_EXIT();
     return chain;
 }
 
+        // if (token.value == parentToken.value && token.type == parentToken.type && token.column == parentToken.column) {
+        //     if (token.type == TokenType::ChainEntryPoint){
+        //         token.type = TokenType::Variable;
+        //         tokens[position] = token;
+        //         if (currentToken().type != TokenType::Variable){
+        //             throw UnexpectedTokenError(token, "ChainEntryPoint Not Set To Variable");
+        //         }
+        //     } else {
+        //         throw UnexpectedTokenError(token, "ChainEntryPoint");
+        //     }
+            
+        // } 
 
 
 
@@ -86,7 +150,10 @@ UniquePtr<ASTStatement> Parser::parseClassAttributes() {
     // For now, simply call parseVariableDeclaration() and return the resulting node.
     // Later you might want to combine multiple declarations into a single ClassAttribute node.
     
-    auto varDec = parseVariableDeclaration();
+    auto varDec = parsePrimaryExpression();
+    // if (varDec->getAstType() != AstType::Chain){
+    //     throw MerkError("Expected Chain")
+    // }
     DEBUG_FLOW_EXIT();
     return varDec;
 }
@@ -94,13 +161,14 @@ UniquePtr<ASTStatement> Parser::parseClassAttributes() {
 UniquePtr<ASTStatement> Parser::parseProtectedClassAttributes() {
     DEBUG_FLOW(FlowLevel::LOW);
     auto varDec = parseVariableDeclaration();
+
     DEBUG_FLOW_EXIT();
     return varDec;
 }
 
 // Skeleton: Parse the constructor (named "construct").
 UniquePtr<MethodDef> Parser::parseClassInitializer() {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    DEBUG_FLOW(FlowLevel::HIGH);
     // Expect the current token to be a method definition and that its name is "construct".
     Token token = currentToken();
     String methodName = peek().value;
@@ -258,7 +326,7 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
 
 // Parse a class definition.
 UniquePtr<ASTStatement> Parser::parseClassDefinition() {
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::HIGH);
     insideClass = true;
     // Expect a 'Class' keyword.
     Token token = currentToken();
@@ -306,19 +374,18 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     String accessor;
 
     ParamList classParams;
-    Vector<UniquePtr<MethodDef>> constructors;
+    // Vector<UniquePtr<MethodDef>> constructors;
     while (currentToken().type != TokenType::Dedent && currentToken().type != TokenType::EOF_Token) {
 
         if (processNewLines()){ // if there were blank lines, then go again
             continue;
         }
 
-        // If we see a variable declaration, treat it as a protected attribute.
         if (currentToken().type == TokenType::VarDeclaration) {
             auto attr = parseProtectedClassAttributes();
             classBody->addChild(std::move(attr));
         }
-        // If we see a method definition.
+
         else if (currentToken().type == TokenType::ClassMethodDef) {
         //  ||      currentToken().type == TokenType::FunctionDef) {
             // The first method must be the constructor.

@@ -46,65 +46,8 @@ public:
     AstType getAstType() const override { return AstType::ClassMethodBlock;}
     // UniquePtr<BaseAST> clone() const override;
 };
-// class ClassBody;
-
-class AttributeHandler {
-
-// AttributeHandler::AttributeHandler(String name);
-private:
-    String accessor;
-    String delimeter;
-    String varName;
-    String fullName;
-public:
-    AttributeHandler() {}
-    String getFullName() const;  // {return fullName;}
-    String getDelimiter() const; // {return delimeter;}
-    String getAccessor() const; // {return accessor;}
-    String getVarName() const; // {return varName;}
-    void setAccessor(String accessorVal); // {accessor = accessorVal;}
-    void setDelimiter(String delimiterVal); // {delimeter = delimiterVal;}
-    void setVarName(String varNameVal); //  {varName = varNameVal;}
-    void setFullName(String fullName);
-};
 
 
-class AttributeDeclaration : public VariableDeclaration, public AttributeHandler {
-public:
-    AttributeDeclaration(UniquePtr<VariableDeclaration> varDec);
-    AstType getAstType() const override {return AstType::AttributeDeclaration;}
-
-    String toString() const override;    
-    Node evaluate(SharedPtr<Scope> scope) const override;
-    void printAST(std::ostream& os, int indent = 0) const override;
-    UniquePtr<BaseAST> clone() const override;
-
-};
-
-
-class AttributeReference : public VariableReference, public AttributeHandler {
-public:
-    AttributeReference(UniquePtr<VariableReference> varRef);
-    AstType getAstType() const override {return AstType::AttributeReference;}
-
-    String toString() const override;    
-    Node evaluate(SharedPtr<Scope> scope) const override;
-    void printAST(std::ostream& os, int indent = 0) const override;
-    UniquePtr<BaseAST> clone() const override;
-
-};
-
-
-class AttributeAssignment : public VariableAssignment, public AttributeHandler {
-public:
-    AttributeAssignment(UniquePtr<VariableAssignment> varAssign);
-    AstType getAstType() const override {return AstType::AttributeAssignment;}
-
-    String toString() const override;    
-    Node evaluate(SharedPtr<Scope> scope) const override;
-    void printAST(std::ostream& os, int indent = 0) const override;
-    UniquePtr<BaseAST> clone() const override;
-};
 
 
 // Class Definition AST Node
@@ -123,11 +66,12 @@ public:
     // Print the AST for debugging.
     void printAST(std::ostream& os, int indent = 0) const override;
     // String toString() const override;
-
+    Vector<String> removeMethodAccessors(UniquePtr<ClassBody>& clsBody) const;
     AstType getAstType() const override {return AstType::ClassDefinition;}
     void setClassAccessor(String accessorName);
     String getClassAccessor();
-};
+    ParamList& getParameters();
+}; 
 
 class ClassCall : public CallableCall {
     String accessor; 
@@ -162,6 +106,7 @@ class MethodDef : public CallableDef {
 protected:
     String accessor;
     CallableType methodType = CallableType::DEF;
+    SharedPtr<Scope> classScope;
 public:
     // Constructor: Force the FunctionType to METHOD.
     MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, SharedPtr<Scope> scope);
@@ -173,12 +118,15 @@ public:
     UniquePtr<BaseAST> clone() const override;
 
     String toString() const override;
-    void printAST(std::ostream& os, int indent = 0) const override;
-
     AstType getAstType() const override { return AstType::ClassMethodDef;}
     void setMethodAccessor(String& accessorName);
     String getMethodAccessor() const;
     Node evaluate(SharedPtr<Scope> scope) const override;
+    ParamList& getParameters();
+    const ParamList& getParameters() const;   // For inspection
+
+    void setClassScope(SharedPtr<Scope> scope);
+
 };
     
 
@@ -187,7 +135,6 @@ public:
     MethodCall(String methodName, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
     // Node evaluate(SharedPtr<Scope> scope) const override;
     AstType getAstType() const override { return AstType::ClassMethodCall;}
-    // void printAST(std::ostream& os, int indent = 0) const override;
     // UniquePtr<BaseAST> clone() const override;
     // String toString() const override;
 
@@ -202,22 +149,77 @@ public:
     MethodRef(String name, SharedPtr<Scope> scope);
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-    // void printAST(std::ostream& os, int indent = 0) const override;
 
-    // Override clone() to produce a deep copy.
-    // UniquePtr<BaseAST> clone() const override;
-
-    // String toString() const override;
     AstType getAstType() const override {return AstType::ClassMethodRef;}
 };
 
 
 
-    
-
-
-    
-
 
 
 #endif // AST_CLASS_H
+
+
+
+
+
+
+
+
+// class AttributeHandler {
+
+// // AttributeHandler::AttributeHandler(String name);
+// private:
+//     String accessor;
+//     String delimeter;
+//     String varName;
+//     String fullName;
+// public:
+//     AttributeHandler() {}
+//     String getFullName() const;  // {return fullName;}
+//     String getDelimiter() const; // {return delimeter;}
+//     String getAccessor() const; // {return accessor;}
+//     String getVarName() const; // {return varName;}
+//     void setAccessor(String accessorVal); // {accessor = accessorVal;}
+//     void setDelimiter(String delimiterVal); // {delimeter = delimiterVal;}
+//     void setVarName(String varNameVal); //  {varName = varNameVal;}
+//     void setFullName(String fullName);
+// };
+
+
+// class AttributeDeclaration : public VariableDeclaration, public AttributeHandler {
+// public:
+//     AttributeDeclaration(UniquePtr<VariableDeclaration> varDec);
+//     AstType getAstType() const override {return AstType::AttributeDeclaration;}
+
+//     String toString() const override;    
+//     Node evaluate(SharedPtr<Scope> scope) const override;
+//     void printAST(std::ostream& os, int indent = 0) const override;
+//     UniquePtr<BaseAST> clone() const override;
+
+// };
+
+
+// class AttributeReference : public VariableReference, public AttributeHandler {
+// public:
+//     AttributeReference(UniquePtr<VariableReference> varRef);
+//     AstType getAstType() const override {return AstType::AttributeReference;}
+
+//     String toString() const override;    
+//     Node evaluate(SharedPtr<Scope> scope) const override;
+//     void printAST(std::ostream& os, int indent = 0) const override;
+//     UniquePtr<BaseAST> clone() const override;
+
+// };
+
+
+// class AttributeAssignment : public VariableAssignment, public AttributeHandler {
+// public:
+//     AttributeAssignment(UniquePtr<VariableAssignment> varAssign);
+//     AstType getAstType() const override {return AstType::AttributeAssignment;}
+
+//     String toString() const override;    
+//     Node evaluate(SharedPtr<Scope> scope) const override;
+//     void printAST(std::ostream& os, int indent = 0) const override;
+//     UniquePtr<BaseAST> clone() const override;
+// };

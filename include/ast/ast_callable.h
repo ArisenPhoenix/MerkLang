@@ -33,6 +33,10 @@ public:
     
     // Return the stored callable.
     SharedPtr<Callable> getCallable() const;
+
+    // template<typename T>
+    // SharedPtr<T> getCallableClonedAs() const;
+
     void setParameterTypes(Vector<NodeValueType> paramTypes) {parameterTypes = paramTypes;} 
     const Vector<NodeValueType>& getParameterTypes() const;
     CallableType getCallableType() { return callType; }
@@ -88,7 +92,7 @@ public:
 class CallableDef : public ASTStatement {
 public:
     String name;
-    ParamList parameters;
+    mutable ParamList parameters;
     UniquePtr<CallableBody> body;
 
     CallableType callType;
@@ -97,8 +101,6 @@ public:
     CallableDef(String name, ParamList parameters, UniquePtr<CallableBody> body, CallableType funcType, SharedPtr<Scope> scope);
     ~CallableDef() = default;
     virtual AstType getAstType() const override { return AstType::CallableDefinition;}
-
-    // Node evaluate() {return evaluate(getScope());}
     virtual Node evaluate(SharedPtr<Scope> scope) const override;
     virtual UniquePtr<BaseAST> clone() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
@@ -108,12 +110,11 @@ public:
     CallableBody* getBody() const {return body.get();}
     String getName() {return name;}
     ParamList getParameters() {return parameters;}
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    
 };
 
-
-// FunctionCall: evaluates arguments, retrieves a function, and executes it.
 class CallableCall : public ASTStatement {
-// private:
 
 public:
     String name;
@@ -129,61 +130,26 @@ public:
 
     String toString() const override {return "<" + astTypeToString(getAstType()) + "name" + getName() + ">";}
     String getName() const {return name;}
-
+    // virtual UniquePtr<CallableBody> getBody() const = 0;
     Vector<Node> handleArgs(SharedPtr<Scope> scope) const;
-    
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// FunctionRef: returns a reference to a function as a value.
-// Not yet fully implemented as it will require a Node class which stores a reference to the vector of functions to accomodate overloads
-// So, it hasn't been completed YET.
 class CallableRef : public ASTStatement {
-// private:
-//     String name;
+
 public:
     String name;
 
     CallableRef(String name, SharedPtr<Scope> scope);
-    // Node evaluate() const override { return evaluate(getScope()); }
     AstType getAstType() const override { return AstType::CallableReference;}
-    // String getAstTypeAsString() const override {return astTypeToString(getAstType());}
     String toString() const override {return astTypeToString(getAstType());}
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-    // virtual void printAST(std::ostream& os, int indent = 0) const override;
-    // UniquePtr<BaseAST> clone() const override;
+
     String getName() {return name;}
     virtual UniquePtr<BaseAST> clone() const override;
+    // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
     
 
@@ -194,4 +160,4 @@ public:
 
 
 
-#endif // AST_CALLABLE_H
+#endif // AST_CALLABLE_H 

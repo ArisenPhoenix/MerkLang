@@ -1,5 +1,5 @@
 #include <unordered_set>
-
+#include <ostream>
 #include "core/types.h"
 #include "core/node.h"
 #include "core/errors.h"
@@ -109,7 +109,6 @@ CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
 
 
 
-
 CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType callTypeAdded)
     : callable(std::move(callable)), callType(callTypeAdded)
 {
@@ -199,19 +198,6 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
     return evaluatedArgs;
 }
 
-
-void CallableBody::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, astTypeToString(getAstType()), "()");
-    for (auto& child : children){
-        child->printAST(os, indent);
-    }
-}
-
-
-
-
-
 Node CallableBody::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     auto val = Evaluator::evaluateBlock(children, scope);
@@ -238,10 +224,18 @@ Node CallableRef::evaluate(SharedPtr<Scope> scope) const {
 }
 
 
+void CallableBody::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), "(scopeLevel " + std::to_string(getScope()->getScopeLevel()) + ")");
+    for (auto& child : children){
+        child->printAST(os, indent);
+    }
+}
 
 void CallableDef::printAST(std::ostream& os, int indent) const {
+    auto paramStr = !parameters.empty() ?  parameters.toShortString() : "";
     indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), name, "(scope",getScope(), ")");
+    debugLog(true, getAstTypeAsString(), name, "(" + paramStr + ")", "| scope", getScope()->getScopeLevel());
     body->printAST(os, indent);
 };
 
@@ -250,3 +244,19 @@ void CallableCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString(), "()");
 }
+
+
+
+
+
+
+// template<typename T>
+// SharedPtr<T> CallableSignature::getCallableClonedAs() const {
+//     static_assert(std::is_base_of<Callable, T>::value, "T must derive from Callable");
+//     auto casted = std::dynamic_pointer_cast<T>(callable);
+//     if (!casted) {
+//         throw MerkError("CallableSignature::getCallableAsClone() failed: Type mismatch or null callable.");
+//     }
+//     // Perform a deep copy of the Callable object
+//     return makeShared<T>(*casted);
+// }

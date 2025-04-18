@@ -32,9 +32,9 @@ public:
     Node evaluate(SharedPtr<Scope> scope) const override;
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::Literal;}
-    UniquePtr<BaseAST> clone() const override {
-        return std::make_unique<LiteralValue>(value, getScope(), _isString, _isBool);
-    }
+    UniquePtr<BaseAST> clone() const override;
+    // virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+
 
 private:
     LitNode value;
@@ -49,11 +49,8 @@ private:
     VarNode variable;
     std::optional<std::type_index> typeTag;
     UniquePtr<ASTStatement> valueExpression;
-    // void setName(String newName) {name = newName;}
-
 
 public:
-    // VariableDeclaration(SharedPtr<Scope> scope) : ASTStatement(scope) {}
     VariableDeclaration(
         String name,
         VarNode variable,
@@ -69,12 +66,15 @@ public:
     VarNode getVariable() {return variable;}
     std::optional<std::type_index> getTypeTag() {return typeTag;}
     const UniquePtr<ASTStatement>& getExpression() {return valueExpression;}
+    const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
     void setScope(SharedPtr<Scope> newScope) override;
 
     virtual Node evaluate(SharedPtr<Scope> scope) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual AstType getAstType() const override {return AstType::VariableDeclaration;}
-    virtual UniquePtr<BaseAST> clone() const override;  
+    virtual UniquePtr<BaseAST> clone() const override;
+    virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+
 };
 
 class VariableReference : public ASTStatement {
@@ -92,6 +92,7 @@ public:
     virtual Node evaluate(SharedPtr<Scope> scope) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
+    
 
 };
 
@@ -109,8 +110,6 @@ public:
     String toString() const override;
     
     friend class ParameterAssignment;
-    // const UniquePtr<ASTStatement>& getValue() const {return valueExpression;}
-    // const UniquePtr<ASTStatement> getFullValue() {return std::move(valueExpression);}
     const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
 
     const String& getName() const { return name; }
@@ -120,6 +119,8 @@ public:
     virtual Node evaluate(SharedPtr<Scope> scope) const override;
     virtual AstType getAstType() const override {return AstType::VariableAssignment;}
     virtual UniquePtr<BaseAST> clone() const override;
+    virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+
 
 };
 
@@ -145,6 +146,8 @@ public:
 
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+
 
 };
 
@@ -160,6 +163,7 @@ public:
     void printAST(std::ostream& os, int indent = 0) const override;
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 
 private:
@@ -201,10 +205,13 @@ public:
     AstType getAstType() const override { return AstType::Return; }
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
+    UniquePtr<ASTStatement>& getValue() {return returnValue;}
+    // UniquePtr<ASTStatement> getReturnValue() const {return returnValue;}
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 };
 
-
+ 
 
 class Continue : public ASTStatement {
 public:
@@ -217,6 +224,8 @@ public:
 
     AstType getAstType() const override { return AstType::Continue; }
     UniquePtr<BaseAST> clone() const override;
+    // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+
 };
         
 

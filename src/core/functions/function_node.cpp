@@ -85,7 +85,7 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
     DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(this->subType));
 
-    SharedPtr<CallableSignature> funcSig = std::make_shared<CallableSignature>(
+    SharedPtr<CallableSignature> funcSig = makeShared<CallableSignature>(
         shared_from_this(), getCallableType()
     );
 
