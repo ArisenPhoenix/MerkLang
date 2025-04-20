@@ -19,6 +19,6 @@ int printIndent(std::ostream& os, int indent);
 
 bool validateScope(SharedPtr<Scope> scope, String methodName, String forWhat = "", bool debug = false);
 
-
+String generateScopeOwner(String userName, String itemName);
 
 #endif // HELPER_FUNCTIONS_H

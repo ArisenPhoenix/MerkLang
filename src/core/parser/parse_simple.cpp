@@ -32,14 +32,13 @@
 
 
 UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    DEBUG_LOG(LogLevel::DEBUG, "Parser::parseVariableDeclaration with token: ", currentToken().toString());
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_LOG(LogLevel::TRACE, "Parser::parseVariableDeclaration with token: ", currentToken().toString());
 
     // Determine reassignability
     bool isConst = false;
     Token startToken = currentToken(); // should be var / const
 
-    // DEBUG_LOG(LogLevel::ERROR, "VariableDeclaration <Starting Token>: ", startToken.toColoredString());
 
     if (startToken.value == "var" || startToken.value == "const") {
         if (peek().type == TokenType::ChainEntryPoint) {
@@ -52,17 +51,13 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
         throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
     }
 
-    // UniquePtr<BaseAST> lhs;
     Token variableToken = currentToken();
-    // DEBUG_LOG(LogLevel::ERROR, "VariableDeclaration <VariableToken>: ", variableToken.toColoredString());
 
     advance(); //consume variable name
 
 
     Token assignment = currentToken();
-    // DEBUG_LOG(LogLevel::ERROR, "VariableDeclaration <Variable AssignmentToken>: ", assignment.toColoredString());
 
-    // DEBUG_LOG(LogLevel::ERROR, "VariableDeclaration <Following AssignmentToken>: ", peek().toColoredString());
 
     // Expects an assignment operator
     if (assignment.type != TokenType::VarAssignment) {
@@ -79,10 +74,6 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
         throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);
     }
 
-    // DEBUG_LOG(LogLevel::INFO, highlight("[Parsed ValueNode]: ", Colors::cyan), valueNode->getAstTypeAsString());
-
-    // DEBUG_LOG(LogLevel::INFO, highlight("[Value for VarNode]: ", Colors::yellow), valueNode->toString());
-
     // Implementation placeholder for when making Merk ALSO statically typed.
     // It hasn't been done in the Tokenizer yet, values are currently inferred
     const bool isStatic = false;  
@@ -90,12 +81,6 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
         throw std::logic_error("Invalid: ChainEntryPoint token passed into VarNode logic.");
     }
     auto varNode = VarNode(variableToken.value, variableToken.typeAsString(), isConst, isMutable, isStatic);
-
-    // DEBUG_LOG(LogLevel::INFO, "[VarNode created]: ", varNode);
-    // DEBUG_LOG(LogLevel::INFO, "[VarNode Type]: ", nodeTypeToString(varNode.getType()));
-    // DEBUG_LOG(LogLevel::INFO, "[VarNode Value]: ", varNode.toString());
-
-
     
     auto varDec = makeUnique<VariableDeclaration>(
         variableToken.value,
@@ -110,7 +95,7 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
 }
 
 UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     Token startToken = currentToken();
 
     DEBUG_LOG(LogLevel::DEBUG, "DEBUG Parser: Entering parseVariableAssignment with token: ", startToken.toString());
@@ -153,15 +138,14 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
 }
 
 UniquePtr<ASTStatement> Parser::parseExpression() {
-    DEBUG_LOG(LogLevel::ERROR, "Parser: Entering parseExpression with token: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::TRACE, "Parser: Entering parseExpression with token: ", currentToken().toString());
     return parseBinaryExpression(0);
 }
 
 // Though a bit of a misnomer, it was named BinaryExpression or BinaryOperation due to how it only handles two values at a time (or one)
 UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    DEBUG_LOG(LogLevel::DEBUG, highlight("=============================== Entering parseBinaryExpression ===============================", Colors::yellow), "\n\n\n");
-    // DEBUG_LOG(LogLevel::ERROR, "DEBUG Parser: Entering parseExpression with token: ", currentToken().toString());
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser: Entering parseExpression with token: ", currentToken().toString());
     auto left = parsePrimaryExpression();
     if (!left) {
         throw SyntaxError("Expected a valid left-hand side expression.", currentToken());
@@ -202,15 +186,14 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
         DEBUG_LOG(LogLevel::INFO, "Created BinaryOperation node for ", op.value);
 
     }
-    DEBUG_LOG(LogLevel::DEBUG, "\n\n\n", highlight("=============================== Exiting parseBinaryExpression ===============================", Colors::yellow), "\n\n\n");
     DEBUG_FLOW_EXIT();
     return left;
 }
 
 UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
-    DEBUG_LOG(LogLevel::ERROR, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toString());
     
     Token token = currentToken();
     
@@ -307,9 +290,9 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 }
 
 UniquePtr<BaseAST> Parser::parseStatement() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
-    DEBUG_LOG(LogLevel::ERROR, "Parser::parseStatement: Entering with token: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::TRACE, "Parser::parseStatement: Entering with token: ", currentToken().toString());
 
     processNewLines();
 
@@ -378,7 +361,7 @@ UniquePtr<BaseAST> Parser::parseStatement() {
             }
             
         case TokenType::ChainEntryPoint:
-            DEBUG_LOG(LogLevel::ERROR, "ChainEntryPoint accessed in parseStatement, returning parseChain()");
+            DEBUG_LOG(LogLevel::INFO, "ChainEntryPoint accessed in parseStatement, returning parseChain()");
             DEBUG_FLOW_EXIT();
 
             return parseChain();
@@ -460,7 +443,7 @@ UniquePtr<BaseAST> Parser::parseStatement() {
 UniquePtr<ASTStatement> Parser::parseBreakStatement() {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::ERROR, "Parser: parseBreakStatement with token: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::TRACE, "Parser: parseBreakStatement with token: ", currentToken().toString());
 
     if (!isInsideLoop()) {
         throw MerkError("Break statement not allowed outside of a loop.");
@@ -486,7 +469,7 @@ UniquePtr<ASTStatement> Parser::parseBreakStatement() {
 UniquePtr<ASTStatement> Parser::parseContinueStatement() {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::INFO, "Parser: parseContinueStatement with token: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::TRACE, "Parser: parseContinueStatement with token: ", currentToken().toString());
 
     if (!isInsideLoop()) {
         throw MerkError("Continue statement not allowed outside of a loop.");

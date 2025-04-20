@@ -23,8 +23,8 @@ void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSi
     const CallableType callType = signature->getCallableType();
     const CallableType subType = signature->getSubType();
 
-    DEBUG_LOG(LogLevel::ERROR, "Registering Function: ", name);
-    DEBUG_LOG(LogLevel::ERROR, "CallType: ", callableTypeAsString(callType), "SubType: ", callableTypeAsString(subType));
+    DEBUG_LOG(LogLevel::TRACE, "Registering Function: ", name);
+    DEBUG_LOG(LogLevel::TRACE, "CallType: ", callableTypeAsString(callType), "SubType: ", callableTypeAsString(subType));
     auto& overloads = functions[name];
     if (callType != CallableType::FUNCTION && callType != CallableType::METHOD) {
         throw MerkError("Unsupported callable type in function registry: " + callableTypeAsString(callType));

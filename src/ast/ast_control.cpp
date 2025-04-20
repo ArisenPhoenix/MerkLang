@@ -86,7 +86,7 @@ CodeBlock::~CodeBlock() {
 
 void CodeBlock::addChild(UniquePtr<BaseAST> child) {
     String childType = child->getAstTypeAsString();
-    DEBUG_LOG(LogLevel::ERROR, "Adding", childType, "to CodeBlock. Child address: ", child.get(), 
+    DEBUG_LOG(LogLevel::TRACE, "Adding", childType, "to CodeBlock. Child address: ", child.get(), 
              ", CodeBlock address: ", this, ", Scope address: ", getScope());
              
     if (!child) {

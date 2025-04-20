@@ -25,6 +25,7 @@ UniquePtr<Chain> Parser::parseChain() {
     DEBUG_LOG(LogLevel::ERROR, "parseChain initiated by: ", parentToken.toColoredString());
 
 
+
     if (!(parentToken.type == TokenType::VarDeclaration || parentToken.type == TokenType::ChainEntryPoint)) {  
         throw UnexpectedTokenError(parentToken, "VarDeclaration, ChainEntryPoint");
     }
@@ -49,7 +50,7 @@ UniquePtr<Chain> Parser::parseChain() {
         chainStartToken.type = TokenType::Variable;
         tokens[position] = chainStartToken;
 
-        DEBUG_LOG(LogLevel::ERROR, "After mutation, token at position: ", tokens[position].toColoredString());
+        DEBUG_LOG(LogLevel::DEBUG, "After mutation, token at position: ", tokens[position].toColoredString());
 
 
         if (currentToken().type != TokenType::Variable){
@@ -124,7 +125,7 @@ UniquePtr<Chain> Parser::parseChain() {
         finalElem.type = targetToken.type;
         chain->replaceLastElementWith(std::move(finalElem));
     }
-    DEBUG_LOG(LogLevel::ERROR, "Chain parsing complete. Returning Chain: ", chain->toString());
+    DEBUG_LOG(LogLevel::DEBUG, "Chain parsing complete. Returning Chain: ", chain->toString());
 
     return chain;
 }
@@ -368,6 +369,9 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
 
     // Create a new ClassBody node in the current scope.
     auto classBody = makeUnique<ClassBody>(currentScope);
+    if (!classBody->getScope()){
+        throw MerkError("ClassBody Was Not provided a valid Scope around line 371 in Parser::parseClassDefinition");
+    }
     // In the class body, we might have protected attribute declarations first,
     // then method definitions. We also need to ensure the first method is 'construct'.
     bool foundConstructor = false;
@@ -412,7 +416,6 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
                 auto constructor = parseClassInitializer();
                 classBody->addChild(static_unique_ptr_cast<BaseAST>(std::move(constructor)));
 
-                // constructors.emplace_back(constructor);
             }
             
             else {
@@ -438,6 +441,9 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     // Process dedent to exit the class body.
     processDedent();
 
+    if (!currentScope){
+        throw MerkError("No viable scope present in Parser::parseClassDefinition");
+    }
     UniquePtr<ASTStatement> classDefNode = makeUnique<ClassDef>(className, std::move(classParams), std::move(classBody), accessor, currentScope);
 
     DEBUG_FLOW_EXIT();

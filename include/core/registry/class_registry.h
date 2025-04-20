@@ -21,7 +21,8 @@ public:
     bool hasClass(const String& name) const;
     
     std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getClass(const String& name);
-    
+    const std::unordered_map<String, SharedPtr<CallableSignature>>& getClasses() const {return classMap;};
+
     void debugPrint() const;
 };
 

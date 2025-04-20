@@ -60,7 +60,7 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
     // Create a new scope that is not attached where: (no parent, or parent = nullptr).
     auto detached = std::make_shared<Scope>(0, this->interpretMode);
     detached->isDetached = true;
-    
+    includeMetaData(detached, true);
     // For each free variable name, if it exists in this scope, or parent, get it and add to the vector
     for (const auto& name : freeVarNames) {
         if (this->hasVariable(name)) {
@@ -88,6 +88,14 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
     return detached;
 }
 
+void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) const {
+    newScope->isDetached = thisIsDetached;
+    newScope->isClonedScope = newScope->isClonedScope ? newScope->isClonedScope : isClonedScope;
+    newScope->isCallableScope = newScope->isCallableScope ? newScope->isCallableScope : isCallableScope;
+    newScope->owner = newScope->isDetached ? "detached" : owner;
+}
+
+
 SharedPtr<Scope> Scope::clone() const {
     DEBUG_FLOW(FlowLevel::MED);
     auto newScope = std::make_shared<Scope>(this->scopeLevel, this->interpretMode);
@@ -98,11 +106,10 @@ SharedPtr<Scope> Scope::clone() const {
     }
     
     newScope->functionRegistry = this->functionRegistry.clone();
-    
-    DEBUG_FLOW_EXIT();
-    newScope->isDetached = isDetached;
     newScope->isClonedScope = true;
-    newScope->isCallableScope = isCallableScope;
+    includeMetaData(newScope, isDetached);
+    DEBUG_FLOW_EXIT();
+    
     return newScope;
 }
 
@@ -145,7 +152,13 @@ void Scope::debugPrint() const {
         debugLog(true, highlight("\n\n======================== Start Scope::debugPrint ======================== ", Colors::cyan));
     }
 
-    debugLog(true, "Scope Level: ", scopeLevel, "isDetached:", isDetached ? "true" : "false", "isCloned:", isClonedScope ? "true" : "false", "isCallableScope:", isCallableScope ? "true" : "false");
+    debugLog(true, 
+        "Scope Level: ", scopeLevel, 
+        "isDetached:", isDetached ? "true" : "false", 
+        "isCloned:", isClonedScope ? "true" : "false", 
+        "isCallableScope:", isCallableScope ? "true" : "false",
+        "Owner:", !owner.empty() ? owner : "None" 
+    );
     context.debugPrint();
     functionRegistry.debugPrint();
     
@@ -175,7 +188,10 @@ void Scope::printChildScopes(int indentLevel) const {
         "| Memory Loc:", this, 
         "| Parent Loc:", parentScope.lock() ? parentScope.lock() : nullptr,
         "| Number of Variabls:", context.getVariables().size(),
-        "| Number of Children:", childScopes.size()
+        "| Number of Children:", childScopes.size(),
+        "| Num Functions:", functionRegistry.getFunctions().size(),
+        "| Num Classes:", classRegistry.getClasses().size(),
+        "| Owner:", !owner.empty() ? owner : "None"
         );
 
     // Recursively print each child scope
@@ -229,6 +245,15 @@ std::optional<CallableType> Scope::getCallableType(const String& name) const {
     return std::nullopt;
 }
 
+void Scope::setScopeLevel(int newLevel) {
+    scopeLevel = newLevel;
+}
+void Scope::updateChildLevelsRecursively() {
+    for (auto& child : childScopes){
+        child->setScopeLevel(scopeLevel+1);
+        child->updateChildLevelsRecursively();
+    }
+}
 
 Node Scope::resolveCallable(const String& name, const Vector<Node>& args) {
     auto typeOpt = getCallableType(name);

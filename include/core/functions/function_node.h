@@ -57,10 +57,14 @@ public:
 
     // Optionally, return a pointer to the function body (if applicable).
     virtual FunctionBody* getBody() const { return nullptr; }
+    // virtual UniquePtr<CallableBody> getBody() const = 0;
+
     virtual String toString() const override = 0;
 
     virtual void setCapturedScope(SharedPtr<Scope> scope) = 0;
     virtual SharedPtr<Scope> getCapturedScope() const = 0;
+    virtual void setScope(SharedPtr<Scope> newScope) const override = 0;
+
 
 };
     
@@ -83,9 +87,12 @@ public:
 
     SharedPtr<CallableSignature> toCallableSignature() override;
     
-    FunctionBody* getBody() const override {return body.get();}
+    FunctionBody* getBody() const override;
+    // UniquePtr<CallableBody> getBody() const override {return body;}
 
     String toString() const override {return "<Function: " + getName() + ">";}
+    void setScope(SharedPtr<Scope> newScope) const override;
+
 };
 
 

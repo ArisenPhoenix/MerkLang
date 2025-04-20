@@ -78,4 +78,6 @@ public:
     
     virtual UniquePtr<BaseAST> clone() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf) const override;
+    void setScope(SharedPtr<Scope> scope) override;
+
 };

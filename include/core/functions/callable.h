@@ -39,7 +39,11 @@ public:
     
     // Produce a FunctionSignature for registration.
     virtual SharedPtr<class CallableSignature> toCallableSignature() = 0;
-    virtual String toString() const = 0;
+    virtual String toString() const = 0; 
+    // virtual UniquePtr<CallableBody> getBody() const = 0;
+    // virtual CallableBody* getBody() const = 0;
+
+    virtual void setScope(SharedPtr<Scope> newScope) const = 0;
     
     String getName() const;
 

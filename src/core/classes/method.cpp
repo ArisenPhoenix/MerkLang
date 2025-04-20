@@ -17,7 +17,7 @@
 Method::Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn)
     : Callable(std::move(name), std::move(params), CallableType::METHOD, requiresReturn), body(std::move(body)), capturedScope(scope)
 {
-    DEBUG_LOG(LogLevel::DEBUG, "Method created: ", getName());
+    DEBUG_LOG(LogLevel::TRACE, "Method created: ", getName());
     setSubType(callType);
 }
 
@@ -37,6 +37,7 @@ Method::Method(Function&& function)
 Method::Method(Method& method) : Callable(method) {
     body = std::move(method.body);
     capturedScope = method.capturedScope;
+    capturedScope->owner = "Method(" + method.getName() + ")";
     setCallableType(CallableType::METHOD);
     setSubType(method.getSubType());
 }
@@ -46,10 +47,15 @@ SharedPtr<CallableSignature> Method::toCallableSignature(SharedPtr<Method> metho
     sig->setSubType(method->getSubType());
     return sig;
 }
+
+void Method::setScope(SharedPtr<Scope> newScope) const {
+    getBody()->setScope(newScope);
+}
+
 SharedPtr<CallableSignature> Method::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
-    DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(this->subType));
+    DEBUG_LOG(LogLevel::TRACE, "Callable Type: ", callableTypeAsString(this->callType));
+    DEBUG_LOG(LogLevel::TRACE, "subType: ", callableTypeAsString(this->subType));
 
     SharedPtr<CallableSignature> methodSig = std::make_shared<CallableSignature>(
         shared_from_this(), getCallableType()
@@ -86,6 +92,7 @@ void Method::setCapturedScope(SharedPtr<Scope> scope) {
         throw MerkError("Cannot set a null scope in Method::setCapturedScope.");
     }
     capturedScope = scope;
+    capturedScope->owner = "Method(" + name + ")";
     body->setScope(capturedScope);
 }
 
@@ -93,6 +100,9 @@ void Method::setCapturedScope(SharedPtr<Scope> scope) {
 SharedPtr<Scope> Method::getCapturedScope() const {
     return capturedScope;
 }
+
+
+
 
 
 String Method::getAccessor() {return accessor;}
@@ -105,5 +115,5 @@ String Method::toString() const {return "Method";}
 
 MethodBody* Method::getBody() {return body.get();}
 
-
+MethodBody* Method::getBody() const {return body.get();}
 

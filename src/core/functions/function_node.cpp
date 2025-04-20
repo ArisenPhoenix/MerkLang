@@ -44,7 +44,7 @@ UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList 
         DEBUG_FLOW_EXIT();
 }
 
-
+FunctionBody* UserFunction::getBody() const {return body.get();}
 
 void UserFunction::setCapturedScope(SharedPtr<Scope> scope) {
     if (!scope) {
@@ -98,3 +98,7 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     return funcSig;
 }
 
+void UserFunction::setScope(SharedPtr<Scope> newScope) const {
+    newScope->owner = "UserFunction(" + name + ")";
+    getBody()->setScope(newScope);
+}

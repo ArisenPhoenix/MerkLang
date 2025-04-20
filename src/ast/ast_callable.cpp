@@ -207,8 +207,8 @@ Node CallableBody::evaluate(SharedPtr<Scope> scope) const {
 
 Node CallableDef::evaluate(SharedPtr<Scope> scope) const {
     (void)scope;
-    std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
-    std::cerr << "Type: " << getAstTypeAsString() << std::endl;
+    // std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
+    // std::cerr << "Type: " << getAstTypeAsString() << std::endl;
     throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 

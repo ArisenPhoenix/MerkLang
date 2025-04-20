@@ -54,24 +54,24 @@ Scope::Scope(std::weak_ptr<Scope> parentScope, bool interpretMode)
         DEBUG_FLOW(FlowLevel::LOW);
     // Lock the parent scope to determine the current scope level
     if (auto parent = this->parentScope.lock()) {
-        DEBUG_LOG(LogLevel::DEBUG, "Parent scope locked at level ", parent->scopeLevel);
+        DEBUG_LOG(LogLevel::TRACE, "Parent scope locked at level ", parent->scopeLevel);
 
         scopeLevel = parent->scopeLevel + 1; // Correctly increment scope level
-        // DEBUG_LOG(LogLevel::INFO, "Child Scope Initialized with Parent Scope Level: ", parent->scopeLevel,
-        //          " | Parent Memory Loc: ", parent.get(), 
-        //          " | Child Memory Loc: ", this);
+        DEBUG_LOG(LogLevel::TRACE, "Child Scope Initialized with Parent Scope Level: ", parent->scopeLevel,
+                 " | Parent Memory Loc: ", parent.get(), 
+                 " | Child Memory Loc: ", this);
         globalCallables = parent->globalCallables;  // Share the same registry!
-        DEBUG_LOG(LogLevel::DEBUG, "Inherited globalCallables from parent.");
+        DEBUG_LOG(LogLevel::TRACE, "Inherited globalCallables from parent.");
 
 
     } else {
         // If no parent is found, this becomes the root scope
-        DEBUG_LOG(LogLevel::DEBUG, "Parent scope locked at level ", parent->scopeLevel);
+        DEBUG_LOG(LogLevel::TRACE, "Parent scope locked at level ", parent->scopeLevel);
 
         scopeLevel = 0; 
         DEBUG_LOG(LogLevel::TRACE, "Root Scope Initialized | Memory Loc: ", this);
         globalCallables = std::make_shared<std::unordered_map<String, CallableType>>(); // Fallback
-        DEBUG_LOG(LogLevel::DEBUG, "Inherited globalCallables from parent.");
+        DEBUG_LOG(LogLevel::TRACE, "Inherited globalCallables from parent.");
 
     }
 
@@ -189,12 +189,31 @@ const FunctionRegistry& Scope::getAllFunctions(FunctionRegistry& callingRegister
     }
 }
 
-void Scope::appendChildScope(SharedPtr<Scope> childScope) {
+void Scope::appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool update) {
+    if (!child) {
+        DEBUG_LOG(LogLevel::WARNING, "appendChildScope called from [", callerLabel, "] with null scope.");
+        return;
+    }
+
+    DEBUG_LOG(LogLevel::ERROR, "appendChildScope called from [", callerLabel, "] | Parent Addr: ", this, " | Appending Child Addr: ", child.get());
+
+    // Delegate to the original
+    appendChildScope(child, update);
+
+}
+
+
+void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
     DEBUG_FLOW(FlowLevel::LOW);
     childScope->parentScope = shared_from_this();
     childScope->scopeLevel = getScopeLevel() + 1;
-    // childScope->isDetached = true;
+    childScope->isDetached = false;
+    childScope->owner = owner;
+    includeMetaData(childScope, false);
     childScopes.push_back(childScope);
+    if (update) {
+        childScope->updateChildLevelsRecursively();
+    }
     DEBUG_FLOW_EXIT();
 }
 // In Scope.cpp
@@ -202,7 +221,6 @@ void Scope::attachToInstanceScope(SharedPtr<Scope> instanceScope) {
     // Set the parent to the instance's scope
     setParent(instanceScope);
     scopeLevel = instanceScope->getScopeLevel() + 1;
-
     // Optionally append this to the instanceScope's children
     instanceScope->appendChildScope(shared_from_this());
 }
@@ -217,6 +235,7 @@ SharedPtr<Scope> Scope::createChildScope() {
         "Creating child scope with level:", childScope->getScopeLevel(), 
         "| Parent scope level: ", scopeLevel);
 
+    includeMetaData(childScope, isDetached);
     childScopes.push_back(childScope); // Track child scopes
 
     DEBUG_LOG(LogLevel::TRACE, "Created child scope:", childScope.get(), "| Parent:", this);
@@ -231,9 +250,6 @@ SharedPtr<Scope> Scope::createChildScope() {
             childScope->getScopeLevel(), " | Child Scope Loc: ", childScope.get(), 
             " | Parent Scope Loc: ", this);
     DEBUG_FLOW_EXIT();
-    childScope->isDetached = isDetached;
-    childScope->isCallableScope = isCallableScope;
-    childScope->isClonedScope = isClonedScope;
     return childScope;
 
     

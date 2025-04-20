@@ -60,7 +60,7 @@ VariableDeclaration::VariableDeclaration(String name, VarNode value, SharedPtr<S
     : ASTStatement(scope), name(std::move(name)), variable(std::move(value)),
         typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
         validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
-        DEBUG_LOG(LogLevel::DEBUG, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
+        DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
 }
 
 VariableDeclaration::VariableDeclaration(UniquePtr<VariableDeclaration> varDec) : ASTStatement(varDec->getScope()) {
@@ -88,9 +88,9 @@ VariableAssignment::VariableAssignment(UniquePtr<VariableAssignment> varAssign) 
 
 VariableReference::VariableReference(const String& name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
-        DEBUG_LOG(LogLevel::DEBUG, "-------------------- VariableReference: ", "Name: ", name);
+        DEBUG_LOG(LogLevel::TRACE, "-------------------- VariableReference: ", "Name: ", name);
         if (scope){
-            DEBUG_LOG(LogLevel::DEBUG, "Scope: ", scope->getScopeLevel(), "Valid: ");
+            DEBUG_LOG(LogLevel::TRACE, "Scope: ", scope->getScopeLevel(), "Valid: ");
         }
         // validateScope(scope, "VariableReference::VariableReference", name);
     }

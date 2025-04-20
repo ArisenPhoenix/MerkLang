@@ -15,7 +15,7 @@
 
 
 // const bool debugNodeC = false;
-
+// getIsCallable
 
 bool validateSingleNode(Node node, String methodName, bool debug){
     if (debug){
@@ -149,7 +149,9 @@ std::ostream& operator<<(std::ostream& os, const VarNode& node) {
 }
 
 
-
+void Node::setIsCallable(bool callable) {
+    isCallable = callable;
+}
 
 
 // Overload to accept value and type as strings
@@ -264,7 +266,23 @@ bool Node::isBool() const { return isType(NodeValueType::Bool);}
 bool Node::isChar() const { return isType(NodeValueType::Char);}
 bool Node::isString() const { return isType(NodeValueType::String);}
 
-bool Node::getIsCallable() const { return isCallable; }
+bool Node::getIsCallable() const { 
+    if (!isCallable){
+        switch (data.type)
+        {
+        case NodeValueType::Function:
+        case NodeValueType::ClassInstance:
+        case NodeValueType::Method:
+        case NodeValueType::Callable:
+        case NodeValueType::Class:
+        return true;
+        default:
+            break;
+        }
+    }
+    return isCallable; 
+
+}
 
 bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInstance;}
 

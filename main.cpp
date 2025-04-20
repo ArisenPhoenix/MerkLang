@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 
         
     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode);
-
+    globalScope->owner = "=========GLOBAL=========";
     
     try {
         // Step 4: Initialize Tokenizer

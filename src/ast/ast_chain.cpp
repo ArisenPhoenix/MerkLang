@@ -62,6 +62,9 @@ SharedPtr<Scope> tryExtractScopeFromNode(const Node& node) {
     if (std::holds_alternative<SharedPtr<Method>>(variantVal)) {
         return MethodNode(std::get<SharedPtr<Method>>(variantVal)).getInternalScope();
     }
+    if (std::holds_alternative<SharedPtr<ClassInstance>>(variantVal)) {
+        return ClassInstanceNode(std::get<SharedPtr<ClassInstance>>(variantVal)).getInternalScope();
+    }
 
     return nullptr;
 }
@@ -86,6 +89,201 @@ SharedPtr<Scope> getAssociatedScope(const Node& node) {
             return nullptr;  // Caller should handle this case
     }
 }
+
+void Chain::setScope(SharedPtr<Scope> scope) {
+    this->scope = scope;
+    for (auto& elem : elements) {
+        if (elem.object) elem.object->setScope(scope);
+    }
+}
+
+
+// Node Chain::evaluate(SharedPtr<Scope> scope) const {
+//     DEBUG_FLOW(FlowLevel::HIGH);
+//     Node current;
+//     SharedPtr<Scope> currentScope = classScope ? classScope : scope ? scope : getScope();
+//     DEBUG_LOG(LogLevel::ERROR, "Chain::evaluate was called with scope level: ", currentScope->getScopeLevel());
+//     DEBUG_LOG(LogLevel::ERROR, "Has Class Scope: ", classScope ? "true" : "false", "Has Provided Scope: ", scope ? "true": "false", "Has InternalScope: ", getScope() ? "true" : "false");
+//     DEBUG_LOG(LogLevel::ERROR, "Has Finalized Scope: ", currentScope ? "true" : "false");
+//     DEBUG_LOG(LogLevel::ERROR, "Has clsScope: ", classScope ? "true" : "false", "Resolution Start Index: ", resolutionStartIndex, "Num Entries: ", elements.size());
+    
+//     if (!currentScope){
+//         currentScope = getScope();
+//     }
+//     // Start from the resolutionStartIndex (default 0)
+//     for (size_t i = resolutionStartIndex; i < elements.size(); ++i) {
+//         const auto& elem = elements[i];
+
+//         DEBUG_LOG(LogLevel::ERROR, "Current elem in Chain is: ");
+//         elem.printAST(std::cout, currentScope->getScopeLevel());
+
+//         // Evaluate the object within the current scope
+//         Node result = elem.object->evaluate(currentScope);
+//         if (!result.isValid()) {
+//             throw MerkError("Invalid resolution at chain element: " + elem.name);
+//         }
+
+//         current = result;
+//         DEBUG_LOG(LogLevel::ERROR, "NODE DATA IN Chain::evaluate |", nodeTypeToString(current.getType()));
+//         // Advance the scope based on the result
+//         DEBUG_LOG(LogLevel::ERROR, "Is Callable: ", current.getIsCallable());
+//         if (current.getIsCallable()) {
+//             NodeValueType type = current.getType();
+            
+
+//             if (type == NodeValueType::ClassInstance) {
+//                 // If the next element is accessed via `.`, try to resolve an attribute/method
+//                 if (i + 1 < elements.size() && elements[i + 1].delimiter == ".") {
+//                     auto nextName = elements[i + 1].name;
+//                     Node field = current.getField(nextName);
+
+//                     if (!field.isValid()) {
+//                         throw MerkError("Field '" + nextName + "' not found in class instance.");
+//                     }
+
+//                     current = field;
+//                     if (i > 0 && elements[i - 1].delimiter == "." && current.getType() == NodeValueType::ClassInstance) {
+//                         currentScope = getAssociatedScope(current);  // <-- instanceScope (for self)
+//                     }
+//                     // currentScope = getAssociatedScope(current); // in case it's a method or scoped field
+//                     continue;
+//                 }
+//             } else if (type == NodeValueType::Callable){
+//                 // Invalid Virtual CallableNode
+//             } else if (type == NodeValueType::Function) {
+//                 // Function Specific Log --- if Needed
+//             } else if (type == NodeValueType::Class) {
+//                 // Class Specific Logic
+//             } else if (type == NodeValueType::ClassInstance) {
+//                 // Class Instance Specific Logic
+//             } else if (type == NodeValueType::Method){
+//                 // Method Specific Logic
+//             } else {
+//                 DEBUG_LOG(LogLevel::ERROR, "No Conditions Were Met When Finding NodeValueType in Chain::evaluate");
+                
+//                 // handle raw values such as Int
+//             }
+//             // Optionally add logic for other callable types (e.g., static, methods)
+//         }
+
+//         if (mode == ResolutionMode::ClassInstance) {
+//             if (classScope){
+//                 current = elem.object->evaluate(classScope);
+//             }
+//             throw MerkError("Resolution Mode was set to ClassInstance, yet no Class Scope Was Apparent");
+//         }
+//         if (classScope){
+//         } else {
+//             current = elem.object->evaluate(currentScope);
+//         }
+       
+
+
+//         currentScope = getAssociatedScope(current);  // Advance scope if applicable
+//     }
+//     DEBUG_FLOW_EXIT();
+//     return current;
+// }
+
+
+Node Chain::evaluate(SharedPtr<Scope> scope) const {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_LOG(LogLevel::ERROR, "Chain::evaluate", "Num Elements:", elements.size());
+    SharedPtr<Scope> currentScope = classScope ? classScope : (scope ? scope : getScope());
+    if (!currentScope) throw MerkError("Chain::evaluate: no valid scope");
+    Node currentVal;
+    for (size_t i = resolutionStartIndex; i < elements.size(); ++i) {
+        const auto& elem = elements[i];
+
+        if (mode == ResolutionMode::ClassInstance) {
+            if (!classScope){
+                throw MerkError("No Class Scope Was Provided for ResolutionMode::ClassInstance");
+            }
+            DEBUG_LOG(LogLevel::ERROR, "Evaluating Class Instance");
+            Node currentVal = elem.object->evaluate(classScope);
+
+        } else {
+            DEBUG_LOG(LogLevel::ERROR, "Evaluating Normal Instance");
+
+            currentVal = elem.object->evaluate(currentScope);
+
+        }
+        // elem.printAST(std::cout, currentScope->getScopeLevel());
+
+        if (!currentVal.isValid()) {
+            throw MerkError("Invalid resolution at chain element: " + elem.name);
+        }
+        DEBUG_LOG(LogLevel::ERROR, "Current Val: ", currentVal);
+
+
+        // // Special behavior for class instances
+        // if (currentVal.getIsCallable() && currentVal.getType() == NodeValueType::ClassInstance) {
+        //     if (i + 1 < elements.size() && elements[i + 1].delimiter == ".") {
+        //         auto nextName = elements[i + 1].name;
+        //         Node field = currentVal.getField(nextName);
+        //         if (!field.isValid()) {
+        //             throw MerkError("Field '" + nextName + "' not found in class instance.");
+        //         }
+        //         currentVal = field;
+        //         currentScope = getAssociatedScope(currentVal);
+        //         continue;
+        //     }
+        // }
+
+        currentScope = getAssociatedScope(currentVal);
+    }
+    DEBUG_LOG(LogLevel::ERROR, "Final Chain Evaluation Val: ", currentVal);
+    DEBUG_FLOW_EXIT();
+    return currentVal;
+}
+
+
+
+
+void Chain::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString());
+    for (const auto& elem : elements) {
+        elem.printAST(os, indent);
+    }
+}
+
+
+
+String Chain::toString() const {
+    std::ostringstream oss;
+    for (const auto& elem : elements) {
+        oss << elem.name;
+        oss << ".";
+    }
+    return oss.str();
+}
+
+
+UniquePtr<BaseAST> Chain::clone() const {
+    auto copy = std::make_unique<Chain>(getScope());
+    for (const auto& element : elements) {
+        ChainElement elem;
+        elem.delimiter = element.delimiter;
+        elem.name = element.name;
+        elem.object = element.object->clone();  // don't move from original
+        elem.type = element.type;
+
+        copy->addElement(std::move(elem));
+    }
+    return copy;
+}
+
+
+
+void Chain::replaceLastElementWith(ChainElement&& elem) {
+    elements.back() = std::move(elem);
+}
+
+
+
+
+
 
 // Node Chain::evaluate(SharedPtr<Scope> scope) const {
 //     Node current;
@@ -140,102 +338,3 @@ SharedPtr<Scope> getAssociatedScope(const Node& node) {
 
 //     return current;
 // }
-Node Chain::evaluate(SharedPtr<Scope> scope) const {
-    Node current;
-    // SharedPtr<Scope> currentScope = this->scope ? this->scope : scope;
-    SharedPtr<Scope> currentScope = classScope ? classScope : scope;
-    if (!currentScope){
-        currentScope = getScope();
-    }
-    // Start from the resolutionStartIndex (default 0)
-    for (size_t i = resolutionStartIndex; i < elements.size(); ++i) {
-        const auto& elem = elements[i];
-
-        // Evaluate the object within the current scope
-        Node result = elem.object->evaluate(currentScope);
-        if (!result.isValid()) {
-            throw MerkError("Invalid resolution at chain element: " + elem.name);
-        }
-
-        current = result;
-
-        // Advance the scope based on the result
-        if (current.getIsCallable()) {
-            NodeValueType type = current.getType();
-
-            if (type == NodeValueType::ClassInstance) {
-                // If the next element is accessed via `.`, try to resolve an attribute/method
-                if (i + 1 < elements.size() && elements[i + 1].delimiter == ".") {
-                    auto nextName = elements[i + 1].name;
-                    Node field = current.getField(nextName);
-
-                    if (!field.isValid()) {
-                        throw MerkError("Field '" + nextName + "' not found in class instance.");
-                    }
-
-                    current = field;
-                    currentScope = getAssociatedScope(current); // in case it's a method or scoped field
-                    continue;
-                }
-            } else if (type == NodeValueType::Callable){
-                // Invalid Virtual CallableNode
-            } else if (type == NodeValueType::Function) {
-                // Function Specific Log --- if Needed
-            } else if (type == NodeValueType::Class) {
-                // Class Specific Logic
-            } else if (type == NodeValueType::ClassInstance) {
-                // Class Instance Specific Logic
-            } else if (type == NodeValueType::Method){
-                // Method Specific Logic
-            } else {
-                // handle raw values such as Int
-            }
-
-            // Optionally add logic for other callable types (e.g., static, methods)
-        }
-
-        currentScope = getAssociatedScope(current);  // Advance scope if applicable
-    }
-
-    return current;
-}
-
-
-
-void Chain::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString());
-    for (const auto& elem : elements) {
-        elem.printAST(os, indent);
-    }
-}
-
-
-
-String Chain::toString() const {
-    std::ostringstream oss;
-    for (const auto& elem : elements) {
-        oss << elem.name;
-        oss << ".";
-    }
-    return oss.str();
-}
-
-
-UniquePtr<BaseAST> Chain::clone() const {
-    auto copy = std::make_unique<Chain>(getScope());
-    for (auto& element: elements){
-        ChainElement elem;
-        elem.delimiter = element.delimiter;
-        elem.name = element.name;
-        elem.object = std::move(element.object->clone());
-        elem.type = element.type;
-    }
-    // copy->elements = elements; // assuming a copyable vector
-    return copy;
-}
-
-
-void Chain::replaceLastElementWith(ChainElement&& elem) {
-    elements.back() = std::move(elem);
-}

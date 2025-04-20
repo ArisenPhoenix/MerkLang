@@ -15,8 +15,6 @@
 
 String ParameterAssignment::toString() const {
     return "ParameterAssignment(variable=" + getName() + ")";
-
-    
 }
 
 
@@ -104,6 +102,7 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope) const {
   
     SharedPtr<Scope> defScope = scope->detachScope(freeVarNames);
     defScope->isCallableScope = true;
+    defScope->owner = "FunctionDef (" + name + ")";
     
     // Create a new UserFunction instance
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
@@ -167,6 +166,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope) const {
 
     // SharedPtr<Function> func = optSig->get().getCallable();
     SharedPtr<Scope> callScope = func->getCapturedScope()->clone()->createChildScope();
+    callScope->owner = "FunctionCall:evaluate (" + name + ")";
 
     if (!callScope){
         throw MerkError("Scope Is Not Valid In UserFunction::execute->function");
@@ -181,7 +181,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope) const {
         callScope->declareVariable(func->parameters[i].getName(), makeUnique<VarNode>(paramVar));
     }
 
-    scope->appendChildScope(callScope);
+    scope->appendChildScope(callScope, "FunctionCall::evaluate");
     
     func->setCapturedScope(callScope);
     

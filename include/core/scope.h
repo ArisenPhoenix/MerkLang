@@ -27,13 +27,15 @@ public:
     SharedPtr<Scope> getParent() const;  // Get the parent scope
     int currentLine;
     int currentColumn;
-    void exitScope();                    // Exit the current scope -> moving back to parent, not really used
     int getScopeLevel() const;           // Get the current scope level
 
     // Created For Debugging Scope when developing functions. Will keep until such time as deemed unnecessary
     bool isDetached = false;
     bool isCallableScope = false;
     bool isClonedScope = false;
+    String owner = "";
+
+    void includeMetaData(SharedPtr<Scope> newScope, bool isDetached = false) const;
 
     // Context Management
     const Context& getContext() const { return context; }
@@ -85,9 +87,12 @@ public:
 
     void setParent(SharedPtr<Scope> scope);
 
-    void appendChildScope(SharedPtr<Scope> childScope);
+  
     SharedPtr<Scope> detachScope(const std::unordered_set<String>& freeVarNames);
     SharedPtr<Scope> mergeScope(SharedPtr<Scope> newScope);
+
+    void updateChildLevelsRecursively();
+    void setScopeLevel(int newLevel);
 
     SharedPtr<Scope> clone() const;
 
@@ -100,7 +105,8 @@ public:
     void attachToInstanceScope(SharedPtr<Scope> instanceScope);
     
     bool removeChildScope(const SharedPtr<Scope>& target);
-
+    void appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool recursive = true);
+    void appendChildScope(SharedPtr<Scope> childScope, bool recursive = true);
 
 private:
     void setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration);

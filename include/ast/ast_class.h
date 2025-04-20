@@ -38,7 +38,7 @@ public:
     MethodBody(UniquePtr<CodeBlock>&& body);
     MethodBody(UniquePtr<CallableBody>* body);
     ~MethodBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying MethodBody", Colors::orange));}
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    // Node evaluate(SharedPtr<Scope> scope) const override;
     // void printAST(std::ostream& os, int indent = 0) const;
     Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
     UniquePtr<BaseAST> clone() const override;
@@ -126,6 +126,7 @@ public:
     const ParamList& getParameters() const;   // For inspection
 
     void setClassScope(SharedPtr<Scope> scope);
+    bool isConstructor() const;
 
 };
     

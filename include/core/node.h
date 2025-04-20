@@ -117,6 +117,7 @@ public:
     bool isValid() const;
     bool isLong() const;
     bool getIsCallable() const;
+    void setIsCallable(bool isCallable);
 
     Node negate() const;
     VariantType getValue() const;

@@ -110,3 +110,6 @@ String normalizeFileName(const String& filePath) {
 
 
 
+String generateScopeOwner(String userName, String itemName) {
+    return userName + "(" + itemName + ")";
+}

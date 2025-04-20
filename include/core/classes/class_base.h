@@ -48,22 +48,23 @@ public:
 
     void setCapturedScope(SharedPtr<Scope> scope) override;
     void setClassScope(SharedPtr<Scope> scope);
-    // void setScope(SharedPtr<Scope> scope);
 
     SharedPtr<Scope> getCapturedScope() const override;
     SharedPtr<Scope> getClassScope() const;
     SharedPtr<Scope> getScope() {return scope;}
+    void setScope(SharedPtr<Scope> newScope) const;
 
     String toString() const override;
 
     void setBody(UniquePtr<ClassBody> updatedBody);
     UniquePtr<ClassBody>& getBody();
+    ClassBody* getBody() const;
     void setParameters(ParamList params) {parameters = params;}
     ParamList getParameters() {return parameters;}
     String getAccessor() {return accessor;}
 
     // Produce a ClassSignature for this class definition.
-    SharedPtr<CallableSignature> toCallableSignature() override;
+    SharedPtr<CallableSignature> toCallableSignature() override; 
     
 };
 
@@ -90,7 +91,7 @@ class ClassInstance : public Callable {
 private:
 
     SharedPtr<Scope> capturedScope;
-    SharedPtr<Scope> startingScope;
+    mutable SharedPtr<Scope> startingScope;
     SharedPtr<Scope> instanceScope; // reference to definition (optional)
     String accessor;
 
@@ -118,6 +119,8 @@ public:
 
     SharedPtr<Scope> getInstanceScope();
     void setInstanceScope(SharedPtr<Scope> scope);
+    void setScope(SharedPtr<Scope> newScope) const override;
+
 
 };
 
@@ -141,7 +144,7 @@ private:
     UniquePtr<ClassBody> classBody;
 
 public:
-    explicit ClassSignature(SharedPtr<ClassBase> classDef);
+    explicit ClassSignature(SharedPtr<ClassBase> classBase);
 
     String getAccessor() const;
 
@@ -150,7 +153,7 @@ public:
     SharedPtr<ClassInstance> instantiate(const Vector<Node>& args) const;
 
     // Optional: override call() to auto-instantiate when the class is "called"
-    Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;
+    Node call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 
     // UniquePtr<ClassBody>& getBody() {return classBody;}
 };

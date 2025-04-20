@@ -40,9 +40,14 @@ public:
     String getAccessor();
     void setAccessor(String access);
 
+    void setScope(SharedPtr<Scope> newScope) const override;
+    // CallableBody* getBody() const override {return body.get();}
+
     SharedPtr<Scope> getClassScope();
     void setClassScope(SharedPtr<Scope> newClassScope);
     MethodBody* getBody();
+    MethodBody* getBody() const;
+
 protected:
     SharedPtr<Scope> capturedScope;
 };

@@ -102,6 +102,8 @@ namespace Evaluator {
 
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, SharedPtr<Scope> scope){
         DEBUG_FLOW(FlowLevel::LOW);
+        DEBUG_LOG(LogLevel::ERROR, "Evaluating Variable Declaration, Scope Follows: ");
+        // scope->debugPrint();
         VarNode resolvedVariable = VarNode(valueNode->evaluate(scope)); // Use the current scope
         scope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, var.isStatic)); // Declare variable in scope
 
@@ -119,13 +121,7 @@ namespace Evaluator {
             DEBUG_FLOW_EXIT();
             throw UndefinedVariableError(name, "VariableAssignmentNode::evaluate");
         }
-
-        auto& var = scope->getVariable(name);
-        // (void)var;
-        DEBUG_LOG(LogLevel::INFO, "VariableAssignmentNode: Retrieved variable '", name, 
-                "' with current value: ", var.getValue());
-
-        // Evaluate the right-hand side
+        
         auto newValue = value->evaluate(scope); // Evaluate the RHS
         DEBUG_LOG(LogLevel::INFO, "VariableAssignmentNode: New value for '", name, "': ", newValue);
 
@@ -202,7 +198,7 @@ namespace Evaluator {
     }
 
     Node evaluateBlock(const Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope){
-        DEBUG_FLOW(FlowLevel::LOW);
+        DEBUG_FLOW(FlowLevel::HIGH);
         Node lastValue;
 
         for (const auto& child : children) {

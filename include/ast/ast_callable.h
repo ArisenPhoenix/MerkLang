@@ -34,6 +34,9 @@ public:
     // Return the stored callable.
     SharedPtr<Callable> getCallable() const;
 
+    // CallableBody* getBody() const {return callable->getBody();}
+    
+
     // template<typename T>
     // SharedPtr<T> getCallableClonedAs() const;
 
