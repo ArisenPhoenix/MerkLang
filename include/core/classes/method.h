@@ -55,19 +55,10 @@ protected:
 
 class MethodNode : public CallableNode {
 public:
-    MethodNode(SharedPtr<Method> method) : CallableNode(method, "Method") {
-        data.type = NodeValueType::Method;
-    }
+    MethodNode(SharedPtr<Method> method);
 
-    MethodNode(SharedPtr<Callable> method) : CallableNode(method, "Method") {
-        data.type = NodeValueType::Method;
-    }
+    MethodNode(SharedPtr<Callable> method);
 
-
-
-
-    SharedPtr<Callable> getCallable() const override {
-        return std::get<SharedPtr<Method>>(data.value);
-    }
+    SharedPtr<Callable> getCallable() const override;
 };
 #endif // METHOD_H

@@ -25,7 +25,7 @@ private:
 
 public:
     explicit CallableSignature(SharedPtr<Callable> callable, CallableType callType);
-    virtual ~CallableSignature() = default;  // <-- Add this line
+    virtual ~CallableSignature();
 
     Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;
 
@@ -65,9 +65,7 @@ public:
 
     CallableBody(UniquePtr<CallableBody>&& block);
     CallableBody(UniquePtr<CallableBody>* body);
-    ~CallableBody(){
-        DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange));
-    } 
+    ~CallableBody();
 
 
     virtual AstType getAstType() const override { return AstType::CallableBody;}
@@ -97,12 +95,13 @@ public:
     String name;
     mutable ParamList parameters;
     UniquePtr<CallableBody> body;
+    ~CallableDef();
 
     CallableType callType;
     friend class MethodDef;
 
     CallableDef(String name, ParamList parameters, UniquePtr<CallableBody> body, CallableType funcType, SharedPtr<Scope> scope);
-    ~CallableDef() = default;
+
     virtual AstType getAstType() const override { return AstType::CallableDefinition;}
     virtual Node evaluate(SharedPtr<Scope> scope) const override;
     virtual UniquePtr<BaseAST> clone() const override;
@@ -123,7 +122,7 @@ public:
     String name;
     Vector<UniquePtr<ASTStatement>> arguments;
     CallableCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope);
-
+    ~CallableCall();
     virtual AstType getAstType() const override { return AstType::CallableCall;}
     
 

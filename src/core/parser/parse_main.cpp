@@ -29,6 +29,10 @@ Parser::Parser(Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpret
             throw MerkError("Root scope must not be null when initializing the parser.");
         }
         rootBlock = makeUnique<CodeBlock>(rootScope);
+        currentScope = rootScope->createChildScope();
+        if (!currentScope){
+            throw MerkError("Initial Scope is null");
+        }
         // nativeFunctionNames = rootScope->functionNames;
         // DEBUG_LOG(LogLevel::INFO, "Parser initialized with root scope at level: ", rootScope->getScopeLevel(),
         //         " | Memory Loc: ", rootScope.get());
@@ -173,6 +177,9 @@ UniquePtr<CodeBlock> Parser::parse() {
     // DEBUG_FLOW(FlowLevel::HIGH);
 
     // DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
+    if (!currentScope){
+        throw MerkError("Initial Scope is null");
+    }
     try {
         while (currentToken().type != TokenType::EOF_Token) {
             // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parse: with token:", currentToken().toString());

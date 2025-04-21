@@ -33,7 +33,7 @@ struct NodeData {
     NodeData& operator=(const NodeData&) = default; // Copy assignment operator
     NodeData& operator=(NodeData&&) noexcept = default; // Move assignment operator
     explicit NodeData(NodeValueType t) : type(t), value(Null) {}
-    ~NodeData() = default; // Destructor
+    ~NodeData(); // Destructor
 };
 
 class Node {
@@ -52,6 +52,7 @@ public:
     void setValue(const VariantType& newValue);
     NodeValueType determineResultType(const Node& left, const Node& right) const;
     String nodeType = "DataNode";
+    String name = "";
 
     virtual Node getField(const String& name) const;
     virtual Node getField(const String& name, TokenType type) const;
@@ -176,22 +177,10 @@ public:
     LitNode(LitNode&& other) noexcept;
 
     // Copy assignment operator
-    LitNode& operator=(const LitNode& other) {
-        if (this != &other) {
-            Node::operator=(other);
-            // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-assigned.");
-        }
-        return *this;
-    }
+    LitNode& operator=(const LitNode& other);
 
     // Move assignment operator
-    LitNode& operator=(LitNode&& other) noexcept {
-        if (this != &other) {
-            Node::operator=(std::move(other));
-            // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-assigned.");
-        }
-        return *this;
-    } 
+    LitNode& operator=(LitNode&& other) noexcept; 
 
     String toString() const override;
 
@@ -230,22 +219,6 @@ public:
     void setValue(VariantType newValue){Node::setValue(newValue);}
     virtual VarNode* clone() const;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

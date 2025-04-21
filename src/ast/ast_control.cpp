@@ -25,6 +25,15 @@
 #include "core/scope.h"
 
 
+FreeVarCollection::~FreeVarCollection() {
+    freeVars.clear();
+    localAssign.clear();
+}
+
+AstCollector::~AstCollector() {
+    collectedNodes.clear();
+}
+
 const Vector<BaseAST*>& AstCollector::collectChildrenOfType(const Vector<UniquePtr<BaseAST>>& children, AstType type) const {
     collectedNodes.clear();
     for (const auto& child : children) {
@@ -46,7 +55,7 @@ const Vector<BaseAST*>& AstCollector::collectChildrenOfType(const Vector<UniqueP
 }
 
 // Control Constructors
-CodeBlock::CodeBlock(SharedPtr<Scope> scope) : BaseAST(scope) {
+CodeBlock::CodeBlock(SharedPtr<Scope> scope): scope(scope) {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     if (!getScope()) {
@@ -61,7 +70,7 @@ CodeBlock::CodeBlock(SharedPtr<Scope> scope) : BaseAST(scope) {
 }
 
 
-CodeBlock::CodeBlock(Vector<UniquePtr<BaseAST>> otherChildren, SharedPtr<Scope> scope) : BaseAST(scope) {
+CodeBlock::CodeBlock(Vector<UniquePtr<BaseAST>> otherChildren, SharedPtr<Scope> scope) : BaseAST(), scope(scope) {
     children = std::move(otherChildren);
 }
 
@@ -78,9 +87,13 @@ CodeBlock::~CodeBlock() {
              getScope() ? getScope()->getScopeLevel() : -1);
 
     for (auto it = children.rbegin(); it != children.rend(); ++it) {
+        it->get()->getScope().reset();
         it->reset();
     }
     children.clear();
+    if (getScope().use_count() <= 1) {
+        getScope().reset();
+    }
     DEBUG_FLOW_EXIT();
 }
 
@@ -306,7 +319,9 @@ Node IfStatement::evaluate(SharedPtr<Scope> scope) const {
 
 void CodeBlock::setScope(SharedPtr<Scope> newScope) {
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting CodeBlock Scope", Colors::blue));
-   
+    if (!newScope){
+        throw MerkError("CodeBlock's updated Scope is null");
+    }
     scope = newScope;
 
     Vector<SharedPtr<Scope>> childScopes = getScope()->getChildren();
@@ -315,6 +330,10 @@ void CodeBlock::setScope(SharedPtr<Scope> newScope) {
         child->setScope(newScope);
     }
     
+}
+
+SharedPtr<Scope> CodeBlock::getScope() const {
+    return scope;
 }
 
 

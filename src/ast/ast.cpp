@@ -23,6 +23,18 @@
 #include "core/scope.h"
 
 
+// BaseAST::~BaseAST() {
+//     getScope().reset();
+// }
+
+BaseAST::~BaseAST() = default;
+
+void ASTStatement::setScope(SharedPtr<Scope> newScope) {
+    scope = newScope;
+}
+
+ASTStatement::ASTStatement(SharedPtr<Scope> scope) : scope(scope) {branch = "AST";}
+
 bool validateLeftAndRightAST(const UniquePtr<ASTStatement>& left, const UniquePtr<ASTStatement>& right, const String& methodName, String op = "") {
     (void)op;
     if (!left) {
@@ -35,17 +47,17 @@ bool validateLeftAndRightAST(const UniquePtr<ASTStatement>& left, const UniquePt
     return true;
 }
 
-BaseAST::BaseAST(SharedPtr<Scope> scope) : scope(scope) {}
+BaseAST::BaseAST(SharedPtr<Scope> scope) {(void)scope;}
 
-void BaseAST::setScope(SharedPtr<Scope> newScope) {
-    DEBUG_FLOW(FlowLevel::LOW);
+// void BaseAST::setScope(SharedPtr<Scope> newScope) {
+//     DEBUG_FLOW(FlowLevel::LOW);
 
-    if (!newScope){
-        throw MerkError("Trying to set a null scope in BaseAST.");
-    }
-    scope = newScope;
-    DEBUG_FLOW_EXIT();
-}
+//     if (!newScope){
+//         throw MerkError("Trying to set a null scope in BaseAST.");
+//     }
+//     scope = newScope;
+//     DEBUG_FLOW_EXIT();
+// }
 
 
 
@@ -114,7 +126,7 @@ BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left,
 Node LiteralValue::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::LOW);
 
-    validateScope(scope, "LiteralValue", this->toString());
+    validateScope(scope, "LiteralValue", toString());
     Node val =  Evaluator::evaluateLiteral(value, _isString, _isBool);
 
     DEBUG_FLOW_EXIT();

@@ -98,12 +98,10 @@ public:
 
 class FunctionNode : public CallableNode {
 public:
-    FunctionNode(SharedPtr<Function> function) : CallableNode(function , "Function") {data.type = NodeValueType::Function;}
+    FunctionNode(SharedPtr<Function> function);
 
-    FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {
-        data.type = NodeValueType::Function;
-    }
-    SharedPtr<Callable> getCallable() const override {return std::get<SharedPtr<Function>>(data.value);}
+    FunctionNode(SharedPtr<Callable> function);
+    SharedPtr<Callable> getCallable() const override;
 };
 
 

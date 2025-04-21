@@ -107,6 +107,15 @@ void Context::debugPrint() const {
     // DEBUG_FLOW_EXIT();
 }
 
+void Context::clear() {
+    for (auto& [varName, var] : variables) {
+        var.reset();
+        var.release();
+    }
+    variables.clear();
+
+}
+
 
 
 

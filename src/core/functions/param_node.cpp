@@ -283,3 +283,6 @@ bool ParamList::eraseByName(const String& name) {
 
 bool ParamList::empty() const { return parameters.empty(); }
 
+ParamList::~ParamList() {
+    parameters.clear();
+}

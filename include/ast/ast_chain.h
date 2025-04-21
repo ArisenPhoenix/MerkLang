@@ -30,7 +30,8 @@ struct ChainElement {
     ChainElement();
     // Move constructor
     ChainElement(ChainElement&& other) noexcept;
-
+    ~ChainElement();
+    void clear();
     // Move assignment operator
     ChainElement& operator=(ChainElement&& other) noexcept;
 
@@ -54,13 +55,13 @@ private:
 
 public:
     explicit Chain(SharedPtr<Scope> scope);
-    
+    ~Chain();
+    void clear();
     // void addElement(const ChainElement& element);
     void addElement(ChainElement&& elem);
     void replaceLastElementWith(ChainElement&& elem);
     void setResolutionStartIndex(int index);
 
-    void setSecondaryScope(SharedPtr<Scope> secondary) {classScope = secondary;}
     const Vector<ChainElement>& getElements() const;
 
     AstType getAstType() const override {return AstType::Chain;}
@@ -70,11 +71,17 @@ public:
     // Node resolve(SharedPtr<Scope> scope) const;
     // void assign(SharedPtr<Scope> scope, const Node& value) const;
 
+    int getResolutionStartIndex() const;
+    ResolutionMode getResolutionMode() const;
+    SharedPtr<Scope> getSecondaryScope() const;
+
     virtual String toString() const override;
     
     virtual Node evaluate(SharedPtr<Scope> scope) const override;
     Node evaluate() const {return evaluate(getScope());}
-    void setResolutionMode(ResolutionMode newMode) {mode = newMode;}
+
+    void setSecondaryScope(SharedPtr<Scope> secondary);
+    void setResolutionMode(ResolutionMode newMode);
     
     virtual UniquePtr<BaseAST> clone() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf) const override;

@@ -37,7 +37,7 @@ public:
     MethodBody(SharedPtr<Scope> scope);
     MethodBody(UniquePtr<CodeBlock>&& body);
     MethodBody(UniquePtr<CallableBody>* body);
-    ~MethodBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying MethodBody", Colors::orange));}
+    ~MethodBody();
     // Node evaluate(SharedPtr<Scope> scope) const override;
     // void printAST(std::ostream& os, int indent = 0) const;
     Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
@@ -59,7 +59,7 @@ private:
 public:
     // Constructor: capture the class name and the defining scope.
     ClassDef(String name, ParamList parameters, UniquePtr<ClassBody> body, String accessor, SharedPtr<Scope> scope);
-    ~ClassDef() = default;
+    ~ClassDef();
 
     Node evaluate(SharedPtr<Scope> scope) const override;
 
@@ -78,6 +78,7 @@ class ClassCall : public CallableCall {
 
 public:
     ClassCall(String className, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
+    ~ClassCall();
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::ClassCall;}
     Node evaluate(SharedPtr<Scope> scope) const override;
@@ -112,7 +113,7 @@ public:
     MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, SharedPtr<Scope> scope);
     MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, CallableType methodType, SharedPtr<Scope> scope);
     MethodDef(UniquePtr<FunctionDef> funcDef);
-    ~MethodDef() = default;
+    ~MethodDef();
 
     // Node evaluate(SharedPtr<Scope> scope) const override;
     UniquePtr<BaseAST> clone() const override;
@@ -134,6 +135,7 @@ public:
 class MethodCall : public CallableCall {
 public:
     MethodCall(String methodName, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
+    ~MethodCall();
     // Node evaluate(SharedPtr<Scope> scope) const override;
     AstType getAstType() const override { return AstType::ClassMethodCall;}
     // UniquePtr<BaseAST> clone() const override;

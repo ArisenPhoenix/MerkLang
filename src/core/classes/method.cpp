@@ -109,7 +109,11 @@ String Method::getAccessor() {return accessor;}
 void Method::setAccessor(String access) {accessor = access;}
 
 SharedPtr<Scope> Method::getClassScope() {return classScope;}
-void Method::setClassScope(SharedPtr<Scope> newClassScope) {classScope = newClassScope;} 
+void Method::setClassScope(SharedPtr<Scope> newClassScope) {
+    if (!newClassScope) {
+        throw MerkError("Cannot Set newClassScope to a null Scope");
+    }
+    classScope = newClassScope;} 
 
 String Method::toString() const {return "Method";}
 
@@ -117,3 +121,26 @@ MethodBody* Method::getBody() {return body.get();}
 
 MethodBody* Method::getBody() const {return body.get();}
 
+
+
+
+
+
+
+
+
+
+MethodNode::MethodNode(SharedPtr<Method> method) : CallableNode(method, "Method") {
+    data.type = NodeValueType::Method;
+}
+
+MethodNode::MethodNode(SharedPtr<Callable> method) : CallableNode(method, "Method") {
+    data.type = NodeValueType::Method;
+}
+
+
+
+
+SharedPtr<Callable> MethodNode::getCallable() const {
+    return std::get<SharedPtr<Method>>(data.value);
+}

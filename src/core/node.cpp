@@ -17,6 +17,10 @@
 // const bool debugNodeC = false;
 // getIsCallable
 
+NodeData::~NodeData() {
+    value = 0;
+}
+
 bool validateSingleNode(Node node, String methodName, bool debug){
     if (debug){
         MARK_UNUSED_MULTI(node, methodName);
@@ -94,64 +98,50 @@ std::ostream& operator<<(std::ostream& os, const Node& node) {
     }
 
     // Display the type
-    os << ", Type: ";
-    switch (node.getType()) {
-        case NodeValueType::Int: os << "Int"; break;
-        case NodeValueType::Float: os << "Float"; break;
-        case NodeValueType::Double: os << "Double"; break;
-        case NodeValueType::String: os << "String"; break;
-        case NodeValueType::Bool: os << "Bool"; break;
-        case NodeValueType::Long: os << "Long"; break;
-        case NodeValueType::Null: os << "Null"; break;
-        default: os << "Unknown"; break;
-    }
-
+    os << ", Type: " << (node.name.empty() ? nodeTypeToString(node.getType()) : nodeTypeToString(node.getType()) + "(" + node.name + ")");
     // Display metadata
     os << ", isConst: " << (node.isConst ? "true" : "false");
     os << ", isMutable: " << (node.isMutable ? "true" : "false");
     os << ", isStatic: " << (node.isStatic ? "true" : "false");
 
-    os << ")";
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const VarNode& node) {
-    os << "VarNode(";
-    os << "Value: ";
-
-    // Display the value
-    try {
-        os << node.toString();
-    } catch (const std::exception& e) {
-        os << "<Error retrieving value>";
-    }
-
-    // Display the type
-    os << ", Type: ";
-    switch (node.getType()) {
-        case NodeValueType::Int: os << "Int"; break;
-        case NodeValueType::Float: os << "Float"; break;
-        case NodeValueType::Double: os << "Double"; break;
-        case NodeValueType::String: os << "String"; break;
-        case NodeValueType::Bool: os << "Bool"; break;
-        case NodeValueType::Long: os << "Long"; break;
-        case NodeValueType::Null: os << "Null"; break;
-        default: os << "Unknown"; break;
-    }
-
-    // Display metadata
-    os << ", isConst: " << (node.isConst ? "true" : "false");
-    os << ", isMutable: " << (node.isMutable ? "true" : "false");
-    os << ", isStatic: " << (node.isStatic ? "true" : "false");
+    os << ", isCallable: " << (node.isCallable ? "true" : "false");
+    
 
     os << ")";
     return os;
 }
 
+// std::ostream& operator<<(std::ostream& os, const VarNode& node) {
+//     os << "VarNode(";
+//     os << "Value: ";
 
-void Node::setIsCallable(bool callable) {
-    isCallable = callable;
-}
+//     // Display the value
+//     try {
+//         os << node.toString();
+//     } catch (const std::exception& e) {
+//         os << "<Error retrieving value>";
+//     }
+
+//     // Display the type
+//     os << ", Type: ";
+//     os << (node.name.empty() ? nodeTypeToString(node.getType()) : nodeTypeToString(node.getType()) + "(" + node.name + ")");
+
+//     // Display metadata
+//     os << ", isConst: " << (node.isConst ? "true" : "false");
+//     os << ", isMutable: " << (node.isMutable ? "true" : "false");
+//     os << ", isStatic: " << (node.isStatic ? "true" : "false");
+//     if (node.isCallable){
+//         os << "isCallable: " << "true";
+//     }
+
+//     os << ")";
+//     return os;
+// }
+
+
+// void Node::setIsCallable(bool callable) {
+//     isCallable = callable;
+// }
 
 
 // Overload to accept value and type as strings
@@ -855,6 +845,8 @@ Node::Node(Node&& other) noexcept {
     isConst = other.isConst;
     isMutable = other.isMutable;
     isStatic = other.isStatic;
+    isCallable = other.isCallable;
+    name = other.name;
     // DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-constructed.");
 }
 
@@ -868,6 +860,8 @@ Node& Node::operator=(const Node& other) {
             isConst = other.isConst;
             isMutable = other.isMutable;
             isStatic = other.isStatic;
+            isCallable = other.isCallable;
+            name = other.name;
             DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-assigned.");
         }
     }
@@ -881,6 +875,8 @@ Node& Node::operator=(Node&& other) noexcept {
         isConst = other.isConst;
         isMutable = other.isMutable;
         isStatic = other.isStatic;
+        isCallable = other.isCallable;
+        name = other.name;
         DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-assigned.");
     }
     return *this;
@@ -901,6 +897,7 @@ Node::Node(const String& value, const String& typeStr) {
 // Destructor
 Node::~Node() {
     DEBUG_LOG(LogLevel::DEBUG, "===== Node was destroyed.");
+    // data.value._M_reset();
 }
 
 // Clone Method
@@ -958,7 +955,22 @@ LitNode::LitNode(LitNode&& other) noexcept : Node(std::move(other)) {
     DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-constructed.");
 }
 
+LitNode& LitNode::operator=(const LitNode& other) {
+    if (this != &other) {
+        Node::operator=(other);
+        // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-assigned.");
+    }
+    return *this;
+}
 
+// Move assignment operator
+LitNode& LitNode::operator=(LitNode&& other) noexcept {
+    if (this != &other) {
+        Node::operator=(std::move(other));
+        // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-assigned.");
+    }
+    return *this;
+}
 
 
 
@@ -997,9 +1009,12 @@ VarNode::VarNode(const Node& parentNode, bool isConst, bool isMutable, bool isSt
     if (parentNode.getType() == NodeValueType::Null) {
         throw MerkError("Cannot create a VarNode from an untyped (Null) parent Node.");
     }
-    this->isConst = isConst;
-    this->isMutable = isMutable;
-    this->isStatic = isStatic;
+    this->isConst = parentNode.isConst || isConst;
+    this->isMutable = parentNode.isMutable || isMutable;
+    this->isStatic = parentNode.isStatic || isStatic;
+    this->isCallable = parentNode.isCallable;
+    this->name = parentNode.name;
+    this->nodeType = parentNode.nodeType;
 }
 
 // VarNode Copy Constructor
@@ -1007,6 +1022,9 @@ VarNode::VarNode(const VarNode& other) : Node(other) {
     this->isConst = other.isConst;
     this->isMutable = other.isMutable;
     this->isStatic = other.isStatic;
+    this->isCallable = other.isCallable;
+    this->name = other.name;
+    this->nodeType = other.nodeType;
 }
 
 // VarNode Move Constructor
@@ -1014,6 +1032,9 @@ VarNode::VarNode(VarNode&& other) noexcept : Node(std::move(other)) {
     this->isConst = other.isConst;
     this->isMutable = other.isMutable;
     this->isStatic = other.isStatic;
+    this->isCallable = other.isCallable;
+    this->name = other.name;
+    this->nodeType = other.nodeType;
 }
 
 // Copy Assignment Operator

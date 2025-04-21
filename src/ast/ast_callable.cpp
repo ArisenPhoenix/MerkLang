@@ -72,7 +72,35 @@ UniquePtr<BaseAST> CallableRef::clone() const {
     return calRef;
 }
 
+// CallableDef::~CallableDef() {
+//     getBody().release();
+// }
+CallableDef::~CallableDef() = default;
+CallableCall::~CallableCall() = default;
+// CallableCall::~CallableCall() {
+//     getScope().reset();
+//     arguments.clear();
+// }
 
+CallableBody::~CallableBody() {
+    DEBUG_LOG(LogLevel::INFO, 
+        getScope() && getScope()->getScopeLevel() == 0 
+            ? "Destroying Root CodeBlock." 
+            : "Destroying CodeBlock", 
+        "Scope address: ", 
+             getScope() ? getScope().get() : nullptr, 
+        ", Scope level: ", 
+             getScope() ? getScope()->getScopeLevel() : -1);
+
+    for (auto it = children.rbegin(); it != children.rend(); ++it) {
+        it->get()->getScope().reset();
+        it->reset();
+    }
+    children.clear();
+    if (getScope().use_count() <= 1) {
+        getScope().reset();
+    }
+}
 
 CallableBody::CallableBody(UniquePtr<CallableBody>&& oldBody)
   : CodeBlock(std::move(oldBody->getChildren()), oldBody->getScope()) {
@@ -246,7 +274,9 @@ void CallableCall::printAST(std::ostream& os, int indent) const {
 }
 
 
-
+CallableSignature::~CallableSignature() {
+    parameterTypes.clear();
+}
 
 
 

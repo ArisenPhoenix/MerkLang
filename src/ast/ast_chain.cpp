@@ -19,22 +19,45 @@ ChainElement::ChainElement() {
     delimiter = "";
 }
 
+// ChainElement& ChainElement::operator=(ChainElement&& other) noexcept {
+//     name = other.name;
+//     type = other.type;
+//     object = std::move(other.object->clone());
+//     delimiter = other.delimiter;
+//     return *this;
+// }
+
+ChainElement::ChainElement(ChainElement&& other) noexcept
+  : name(std::move(other.name))
+  , object(std::move(other.object))        // just steal the pointer
+  , delimiter(std::move(other.delimiter))
+  , type(other.type)
+{}
+
+// ChainElement::ChainElement(ChainElement&& other) noexcept {
+//     name = other.name;
+//     type = other.type;
+//     object = std::move(other.object->clone());
+//     delimiter = other.delimiter;
+// }
+
 ChainElement& ChainElement::operator=(ChainElement&& other) noexcept {
-    name = other.name;
-    type = other.type;
-    object = std::move(other.object->clone());
-    delimiter = other.delimiter;
+    if (this != &other) {
+      name      = std::move(other.name);
+      object    = std::move(other.object);    // DON’T clone!
+      delimiter = std::move(other.delimiter);
+      type      = other.type;
+    }
     return *this;
-}
-ChainElement::ChainElement(ChainElement&& other) noexcept {
-    name = other.name;
-    type = other.type;
-    object = std::move(other.object->clone());
-    delimiter = other.delimiter;
-}
+  }
 
 // Chain::Chain() : ASTStatement() {}
-
+ChainElement::~ChainElement() {
+    // clear();
+}
+void ChainElement::clear() {
+    object.reset();   // deletes the AST, then sets the ptr to null
+}
 
 Chain::Chain(SharedPtr<Scope> scope) : ASTStatement(scope) { branch = "Chain"; }
 void Chain::addElement(ChainElement&& elem) {
@@ -42,8 +65,26 @@ void Chain::addElement(ChainElement&& elem) {
 
 }
 
-void Chain::setResolutionStartIndex(int index) {resolutionStartIndex = index;}
 
+void Chain::clear() {
+    for (auto& elem : elements){
+        elem.clear();
+    } 
+
+}
+Chain::~Chain() {
+    if (classScope){
+        classScope.reset();
+    }
+    clear();
+}
+void Chain::setResolutionStartIndex(int index) {resolutionStartIndex = index;}
+void Chain::setSecondaryScope(SharedPtr<Scope> secondary) {classScope = secondary;}
+void Chain::setResolutionMode(ResolutionMode newMode) {mode = newMode;}
+
+int Chain::getResolutionStartIndex() const {return resolutionStartIndex;}
+ResolutionMode Chain::getResolutionMode() const {return mode;}
+SharedPtr<Scope> Chain::getSecondaryScope() const {return classScope;}
 
 const Vector<ChainElement>& Chain::getElements() const {
     return elements;
@@ -186,12 +227,66 @@ void Chain::setScope(SharedPtr<Scope> scope) {
 // }
 
 
+// Node Chain::evaluate(SharedPtr<Scope> scope) const {
+//     DEBUG_FLOW(FlowLevel::HIGH);
+//     DEBUG_LOG(LogLevel::ERROR, "Chain::evaluate", "Num Elements:", elements.size());
+//     SharedPtr<Scope> currentScope = classScope ? classScope : (scope ? scope : getScope());
+//     if (!currentScope) throw MerkError("Chain::evaluate: no valid scope");
+//     Node currentVal;
+//     for (size_t i = resolutionStartIndex; i < elements.size(); ++i) {
+//         const auto& elem = elements[i];
+
+//         if (mode == ResolutionMode::ClassInstance) {
+//             if (!classScope){
+//                 throw MerkError("No Class Scope Was Provided for ResolutionMode::ClassInstance");
+//             }
+//             DEBUG_LOG(LogLevel::ERROR, "Evaluating Class Instance");
+//             currentVal = elem.object->evaluate(classScope);
+
+//         } else {
+//             DEBUG_LOG(LogLevel::ERROR, "Evaluating Normal Instance");
+
+//             currentVal = elem.object->evaluate(currentScope);
+
+//         }
+//         // elem.printAST(std::cout, currentScope->getScopeLevel());
+
+//         if (!currentVal.isValid()) {
+//             throw MerkError("Invalid resolution at chain element: " + elem.name);
+//         }
+//         DEBUG_LOG(LogLevel::ERROR, "Current Val: ", currentVal);
+
+
+//         // // Special behavior for class instances
+//         // if (currentVal.getIsCallable() && currentVal.getType() == NodeValueType::ClassInstance) {
+//         //     if (i + 1 < elements.size() && elements[i + 1].delimiter == ".") {
+//         //         auto nextName = elements[i + 1].name;
+//         //         Node field = currentVal.getField(nextName);
+//         //         if (!field.isValid()) {
+//         //             throw MerkError("Field '" + nextName + "' not found in class instance.");
+//         //         }
+//         //         currentVal = field;
+//         //         currentScope = getAssociatedScope(currentVal);
+//         //         continue;
+//         //     }
+//         // }
+
+//         currentScope = getAssociatedScope(currentVal);
+//     }
+//     DEBUG_LOG(LogLevel::ERROR, "Final Chain Evaluation Val: ", currentVal);
+//     DEBUG_FLOW_EXIT();
+//     return currentVal;
+// }
+
 Node Chain::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     DEBUG_LOG(LogLevel::ERROR, "Chain::evaluate", "Num Elements:", elements.size());
+    
     SharedPtr<Scope> currentScope = classScope ? classScope : (scope ? scope : getScope());
     if (!currentScope) throw MerkError("Chain::evaluate: no valid scope");
+
     Node currentVal;
+
     for (size_t i = resolutionStartIndex; i < elements.size(); ++i) {
         const auto& elem = elements[i];
 
@@ -200,42 +295,25 @@ Node Chain::evaluate(SharedPtr<Scope> scope) const {
                 throw MerkError("No Class Scope Was Provided for ResolutionMode::ClassInstance");
             }
             DEBUG_LOG(LogLevel::ERROR, "Evaluating Class Instance");
-            Node currentVal = elem.object->evaluate(classScope);
-
+            currentVal = elem.object->evaluate(classScope);  // FIXED
         } else {
             DEBUG_LOG(LogLevel::ERROR, "Evaluating Normal Instance");
-
             currentVal = elem.object->evaluate(currentScope);
-
         }
-        // elem.printAST(std::cout, currentScope->getScopeLevel());
 
         if (!currentVal.isValid()) {
             throw MerkError("Invalid resolution at chain element: " + elem.name);
         }
+
         DEBUG_LOG(LogLevel::ERROR, "Current Val: ", currentVal);
-
-
-        // // Special behavior for class instances
-        // if (currentVal.getIsCallable() && currentVal.getType() == NodeValueType::ClassInstance) {
-        //     if (i + 1 < elements.size() && elements[i + 1].delimiter == ".") {
-        //         auto nextName = elements[i + 1].name;
-        //         Node field = currentVal.getField(nextName);
-        //         if (!field.isValid()) {
-        //             throw MerkError("Field '" + nextName + "' not found in class instance.");
-        //         }
-        //         currentVal = field;
-        //         currentScope = getAssociatedScope(currentVal);
-        //         continue;
-        //     }
-        // }
-
         currentScope = getAssociatedScope(currentVal);
     }
+
     DEBUG_LOG(LogLevel::ERROR, "Final Chain Evaluation Val: ", currentVal);
     DEBUG_FLOW_EXIT();
     return currentVal;
 }
+
 
 
 
@@ -271,6 +349,12 @@ UniquePtr<BaseAST> Chain::clone() const {
 
         copy->addElement(std::move(elem));
     }
+    // copy->setResolutionMode()
+    copy->setResolutionStartIndex(getResolutionStartIndex());
+    // if (mode == ResolutionMode::ClassInstance && classScope){
+    //     copy->setSecondaryScope(getSecondaryScope());
+    // }
+    copy->setResolutionMode(getResolutionMode());
     return copy;
 }
 

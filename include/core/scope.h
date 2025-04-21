@@ -15,12 +15,25 @@ class ClassSignature;
 
 
 class Scope : public std::enable_shared_from_this<Scope> {
+private:
+    WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
+    int scopeLevel;                            // The level of the scope in the hierarchy
+
 public:
 
     // Constructor
-    explicit Scope(int scopeLevel, bool interpretMode);
-    explicit Scope(std::weak_ptr<Scope> parentScope = std::weak_ptr<Scope>(), bool interpretMode = false);
+    explicit Scope(int scopeLevel, bool interpretMode, bool isRoot = false);
+    explicit Scope(WeakPtr<Scope> parentScope = WeakPtr<Scope>(), bool interpretMode = false);
+    explicit Scope(SharedPtr<Scope> parentScope, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpreMode);
+
     ~Scope();
+
+    SharedPtr<FunctionRegistry>  globalFunctions;
+    SharedPtr<ClassRegistry>     globalClasses;
+  
+    // …you only ever stash local deltas here:
+    std::unordered_map<String,SharedPtr<CallableSignature>>  localFunctions;
+    std::unordered_map<String,SharedPtr<ClassSignature>>     localClasses;
 
     // Scope Management
     SharedPtr<Scope> createChildScope(); // Create a child scope
@@ -34,7 +47,7 @@ public:
     bool isCallableScope = false;
     bool isClonedScope = false;
     String owner = "";
-
+    SharedPtr<Scope> makeCallScope();
     void includeMetaData(SharedPtr<Scope> newScope, bool isDetached = false) const;
 
     // Context Management
@@ -49,34 +62,48 @@ public:
     VarNode& getVariable(const String& name);
     void printContext(int depth = 0) const;
 
+    // lookup a function: first in your local overlay
+    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const Vector<Node>& args) const;
+    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name) const;
+    // std::optional<std::reference_wrapper<SharedPtr<ClassSignature>>> lookupClass(const String& name, const Vector<Node>& args) const;
+    std::optional<SharedPtr<ClassSignature>> lookupClass(const String& name) const;
 
+// registering in *this* scope now only writes into your overlay:
+    void registerFunctionHere(const String& name,SharedPtr<CallableSignature> f);
     
     // Registry Management
-    const FunctionRegistry& getFunctionRegistry() const;
-    FunctionRegistry& getFunctionRegistry();
+    // const FunctionRegistry& getFunctionRegistry() const;
+    // FunctionRegistry& getFunctionRegistry();
+
+    const SharedPtr<FunctionRegistry> getFunctionRegistry() const;
+    SharedPtr<FunctionRegistry> getFunctionRegistry();
+
     const FunctionRegistry& getAllFunctions(FunctionRegistry& callingRegister) const;
     bool hasFunction(const String& name) const;
 
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
 
-    std::optional<std::reference_wrapper<CallableSignature>> getFunction(const String& name, const Vector<Node>& args);
-    std::optional<std::reference_wrapper<CallableSignature>> getFunction(const String& name);
+    // std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getFunction(const String& name, const Vector<Node>& args);
+    std::optional<SharedPtr<CallableSignature>>  getFunction(const String& name, const Vector<Node>& args);
+    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name);
 
 
     // Class Management
-    const ClassRegistry& getClassRegistry() const;
-    ClassRegistry& getClassRegistry();
+    // const ClassRegistry& getClassRegistry() const;
+    SharedPtr<ClassRegistry> getClassRegistry();
+
+    // ClassRegistry& getClassRegistry();
     bool hasClass(const String& name) const;
     // void registerClass();
     void registerClass(const String& name, SharedPtr<ClassBase> cls);
     void registerClass(const String& name, SharedPtr<ClassSignature> classSig);
-    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getClass(const String& name);
+    std::optional<SharedPtr<ClassSignature>> getClass(const String& name);
 
     // for dynamic resolution of chains
-    Node lookup(const String& name, IdentifierType type);
+    // Node lookup(const String& name, IdentifierType type);
     
-
+    // SharedPtr<std::unordered_map<String, CallableType>> globalCallables;
 
     // Scope Other
     Vector<SharedPtr<Scope>> getChildren();
@@ -89,17 +116,15 @@ public:
 
   
     SharedPtr<Scope> detachScope(const std::unordered_set<String>& freeVarNames);
-    SharedPtr<Scope> mergeScope(SharedPtr<Scope> newScope);
 
     void updateChildLevelsRecursively();
     void setScopeLevel(int newLevel);
 
-    SharedPtr<Scope> clone() const;
+    SharedPtr<Scope> clone(bool strict = false) const;
 
     bool parentIsValid();
 
     void registerCallableType(const String& name, CallableType type);
-    SharedPtr<std::unordered_map<String, CallableType>> globalCallables;
     std::optional<CallableType> getCallableType(const String& name) const;
     Node resolveCallable(const String& name, const Vector<Node>& args = {});
     void attachToInstanceScope(SharedPtr<Scope> instanceScope);
@@ -108,16 +133,17 @@ public:
     void appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool recursive = true);
     void appendChildScope(SharedPtr<Scope> childScope, bool recursive = true);
 
+    void clear();
+
 private:
     void setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration);
-    std::weak_ptr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
     Vector<SharedPtr<Scope>> childScopes;      // List containing child scopes of (this) scope
-    int scopeLevel;                            // The level of the scope in the hierarchy
     Context context;                           // The context for variable management
-    FunctionRegistry functionRegistry;         // Registry for function management
-    ClassRegistry classRegistry;               // Add class registry
+    // FunctionRegistry functionRegistry;         // Registry for function management
+    // ClassRegistry classRegistry;               // Add class registry
 
     bool interpretMode;
+    bool isRoot;
 };
 
 #endif // SCOPE_H

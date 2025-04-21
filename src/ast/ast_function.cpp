@@ -158,14 +158,20 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope) const {
     
     auto optSig = scope->getFunction(name, evaluatedArgs);
 
-    if (!optSig){
+    if (!optSig || !optSig.value()){
         throw FunctionNotFoundError(name);
     }
-
-    SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->get().getCallable());
+    SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig.value().get()->getCallable());
+    // SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->get().getCallable());
 
     // SharedPtr<Function> func = optSig->get().getCallable();
-    SharedPtr<Scope> callScope = func->getCapturedScope()->clone()->createChildScope();
+    SharedPtr<Scope> callScope = func->getCapturedScope();
+    callScope->debugPrint();
+
+    callScope = callScope->makeCallScope();
+    callScope->debugPrint();
+
+    
     callScope->owner = "FunctionCall:evaluate (" + name + ")";
 
     if (!callScope){
@@ -200,15 +206,17 @@ Node FunctionRef::evaluate(SharedPtr<Scope> scope) const {
     // DEBUG_FLOW(FlowLevel::HIGH);
     
     auto optSig = scope->getFunction(name);
-    if (!optSig) {
+    if (!optSig || !optSig.value()) {
         throw RunTimeError("Function '" + name + "' not found.");
     }
     // SharedPtr<Function> func = static_shared_ptr_cast<Function>(optSig->get().getCallable());
 
-    // SharedPtr<Function> func = optSig->get().getCallable();
-    SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->get().getCallable());
+    // This will be a vector
+    // SharedPtr<Function> funcs = std::static_pointer_cast<Function>(optSig.value());
+    SharedPtr<Function> funcs = std::static_pointer_cast<Function>(optSig.value().get()->getCallable());
+
 
     // DEBUG_FLOW_EXIT();
-    return FunctionNode(func);
+    return FunctionNode(funcs);
 }
 

@@ -35,7 +35,10 @@ Callable::Callable(Callable& callable)
 }
 
 
-
+String& Callable::getQualifiedName() {
+    String& newName = name;
+    return newName;
+}
 
 Callable::Callable(String name, ParamList params, CallableType callType)
     : name(std::move(name)), parameters(std::move(params)), callType(callType) {
@@ -62,3 +65,24 @@ void Callable::setSubType(CallableType subClassification) {subType = subClassifi
 CallableType Callable::getSubType() const {return subType;}
 
 
+
+        
+CallableNode::CallableNode(SharedPtr<Callable> callable, String callableType ) {
+    data.type = NodeValueType::Callable;
+    data.value = callable; // Stored as SharedPtr<Callable>
+    nodeType = callableType + "(" + callable->name + ")";
+    isCallable = true;
+    isConst = true;
+    name = callable->name;
+}
+
+SharedPtr<Callable> CallableNode::getCallable() const {
+    return std::get<SharedPtr<Callable>>(data.value);
+}
+
+void CallableNode::setInternalScope(SharedPtr<Scope> scope) { internalScope = scope; }
+SharedPtr<Scope> CallableNode::getInternalScope() const { return internalScope; }
+
+String CallableNode::toString() const {
+    return "<" + nodeType + ": " + getCallable()->toString() + ">";
+}

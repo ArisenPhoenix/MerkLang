@@ -30,6 +30,8 @@ String nodeTypeToString(NodeValueType type) {
         
         case NodeValueType::Uninitialized: return highlight("Uninitialized", Colors::red);
         case NodeValueType::UNKNOWN: return highlight("Unknown", Colors::bold_red);
+        case NodeValueType::Callable: return highlight("Callable", Colors::red);
+        case NodeValueType::ClassInstance: return highlight("ClassInstance", Colors::red);
 
         default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
 

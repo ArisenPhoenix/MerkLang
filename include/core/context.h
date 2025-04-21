@@ -44,6 +44,8 @@ public:
         return newContext;
 }
 
+    void clear();
+
     // Get a const reference to all variables in the current context
     const std::unordered_map<String, UniquePtr<VarNode>>& getVariables() const;
 
@@ -61,6 +63,9 @@ private:
     std::unordered_map<String, UniquePtr<VarNode>> variables; // Variables for the current context
     Vector<VarNode> arguments;                                // Function arguments
 };
+
+
+
 
 #endif // CONTEXT_H
 

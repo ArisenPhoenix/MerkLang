@@ -17,7 +17,6 @@ inline std::ostream& operator<<(std::ostream& os, const std::type_index& type) {
         {typeid(long double), "long double"},
         {typeid(char), "char"},
         {typeid(bool), "bool"},
-        {typeid(double), "double"}, // Add double
         {typeid(std::string), "string"},
         {typeid(std::vector<int>), "vector<int>"},
         {typeid(std::vector<std::any>), "vector<any>"},

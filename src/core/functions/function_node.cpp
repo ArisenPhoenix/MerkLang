@@ -102,3 +102,13 @@ void UserFunction::setScope(SharedPtr<Scope> newScope) const {
     newScope->owner = "UserFunction(" + name + ")";
     getBody()->setScope(newScope);
 }
+
+
+
+
+FunctionNode::FunctionNode(SharedPtr<Function> function) : CallableNode(function , "Function") {data.type = NodeValueType::Function;}
+
+FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {
+    data.type = NodeValueType::Function;
+}
+SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr<Function>>(data.value);}

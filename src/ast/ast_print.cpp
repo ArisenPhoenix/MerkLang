@@ -22,7 +22,7 @@ String LiteralValue::toString() const {
     return getAstTypeAsString() + "(value=" + value.toString() +
         ", isString=" + (_isString ? "true" : "false") +
         ", isBool=" + (_isBool ? "true" : "false") +
-        ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";;
+        ", scope=" + std::to_string(getScope() ? getScope()->getScopeLevel() : 0) + ")";;
 }
 
 String VariableDeclaration::toString() const {
@@ -58,11 +58,11 @@ void LiteralValue::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::blue), "(value =", value,  ", scope =", getScope()->getScopeLevel(), ")");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::blue), "(value =", value,  ", scope =", getScope() ? getScope()->getScopeLevel() : 0, ")");
 
     DEBUG_FLOW_EXIT();
 };
-
+// LiteralValue
 void VariableDeclaration::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 

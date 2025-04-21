@@ -26,6 +26,7 @@ class FreeVarCollection {
         mutable FreeVars freeVars;
         mutable FreeVars localAssign;
         virtual FreeVars collectFreeVariables() const = 0;
+        ~FreeVarCollection();
     };
 
  // ast_collector.h
@@ -44,6 +45,7 @@ public:
     const Vector<BaseAST*>& collectChildrenOfType(const Vector<UniquePtr<BaseAST>>& children, AstType type) const;
 
     const Vector<BaseAST*>& collectChildrenOfType(const Vector<UniquePtr<BaseAST>>& children, const Vector<AstType>& types) const;
+    ~AstCollector();
 };
 
 // #endif // AST_COLLECTOR_H
@@ -53,6 +55,7 @@ public:
 class CodeBlock : public BaseAST, public FreeVarCollection, AstCollector {
 
 protected:
+    SharedPtr<Scope> scope;
     Vector<UniquePtr<BaseAST>> children;
     bool containsReturn = false;
 public:
@@ -78,7 +81,7 @@ public:
 
     Node evaluate(SharedPtr<Scope> scope) const override;
     Node evaluate() const override {return evaluate(getScope());}
-
+    SharedPtr<Scope> getScope() const override;
     bool containsReturnStatement() const;
     void setContainsReturnStatement(bool val) {containsReturn = val;}
     friend class CallableBody;

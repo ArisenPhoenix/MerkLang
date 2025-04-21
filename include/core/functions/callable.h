@@ -46,6 +46,7 @@ public:
     virtual void setScope(SharedPtr<Scope> newScope) const = 0;
     
     String getName() const;
+    String& getQualifiedName();
 
     CallableType getCallableType() const;
     CallableType getSubType() const;
@@ -59,24 +60,15 @@ protected:
     SharedPtr<Scope> internalScope; // Optional — used for chained resolution
 
 public:
-    
-    explicit CallableNode(SharedPtr<Callable> callable, String callableType = "Callable") {
-        data.type = NodeValueType::Callable;
-        data.value = callable; // Stored as SharedPtr<Callable>
-        nodeType = callableType+"Node";
-        isCallable = true;
-    }
+    // virtual ~CallableNode();
+    explicit CallableNode(SharedPtr<Callable> callable, String callableType = "Callable");
 
-    virtual SharedPtr<Callable> getCallable() const {
-        return std::get<SharedPtr<Callable>>(data.value);
-    }
+    virtual SharedPtr<Callable> getCallable() const;
 
-    void setInternalScope(SharedPtr<Scope> scope) { internalScope = scope; }
-    SharedPtr<Scope> getInternalScope() const { return internalScope; }
+    void setInternalScope(SharedPtr<Scope> scope);
+    SharedPtr<Scope> getInternalScope() const;
 
-    virtual String toString() const {
-        return "<" + nodeType + ": " + getCallable()->toString() + ">";
-    }
+    virtual String toString() const;
 };
 
 

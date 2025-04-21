@@ -112,7 +112,7 @@ private:
 public:
     // Default Constructor
     ParamList() = default;
-
+    ~ParamList();
     // Add a parameter to the list
     void addParameter(const ParamNode& param);
 

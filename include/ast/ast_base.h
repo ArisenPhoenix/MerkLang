@@ -37,12 +37,12 @@ UniquePtr<T> static_shared_ptr_cast(SharedPtr<U>&& ptr) {
 
 class BaseAST {
 protected:
-    WeakPtr<Scope> scope;
+    // WeakPtr<Scope> scope;
     String branch = "Base";
 
 public:
     BaseAST(SharedPtr<Scope> scope = nullptr);
-    virtual ~BaseAST() = default;
+    virtual ~BaseAST();
 
     // virtual String toString() const {return "BaseAST";}
     virtual String toString() const = 0;
@@ -61,12 +61,13 @@ public:
     virtual AstType getAstType() const {return AstType::Base;}
     String getAstTypeAsString() const {return astTypeToString(getAstType());}
     
-    virtual void setScope(SharedPtr<Scope> newScope);
+    virtual void setScope(SharedPtr<Scope> newScope) = 0;
 
-    SharedPtr<Scope> getScope() const {
-        auto locked = scope.lock();
-        return locked;
-    }
+    // virtual SharedPtr<Scope> getScope() const {
+    //     auto locked = scope.lock();
+    //     return locked;
+    // }
+    virtual SharedPtr<Scope> getScope() const = 0;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const;
     virtual Node evaluate(SharedPtr<Scope> scope) const = 0;
     virtual Node evaluate() const = 0;
@@ -96,7 +97,8 @@ public:
 
 class ASTStatement : public BaseAST {
 public:
-    explicit ASTStatement(SharedPtr<Scope> scope) : BaseAST(scope) {branch = "AST";}
+    SharedPtr<Scope> scope;
+    explicit ASTStatement(SharedPtr<Scope> scope);
     ~ASTStatement() override = default;
 
     virtual void printAST(std::ostream& os, int indent = 0) const {
@@ -108,7 +110,10 @@ public:
     }
     virtual AstType getAstType() const override {return AstType::AST;}
     virtual String toString() const override {return getAstTypeAsString();}
-
+    SharedPtr<Scope> getScope() const override {
+        return scope;
+    }
+    virtual void setScope(SharedPtr<Scope> newScope) override;
     virtual Node evaluate(SharedPtr<Scope> scope) const override= 0;
 
     virtual Node evaluate() const override {return evaluate(getScope());}

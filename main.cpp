@@ -40,10 +40,11 @@ int main(int argc, char* argv[]) {
     // Step 3: Initialize Global Scope
     const bool interpretMode = true;
     const bool byBlock = true;
+    const bool isRoot = true;
 
         
-    SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode);
-    globalScope->owner = "=========GLOBAL=========";
+    SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, isRoot);
+    globalScope->owner = "GLOBAL";
     
     try {
         // Step 4: Initialize Tokenizer
@@ -92,6 +93,7 @@ int main(int argc, char* argv[]) {
 
     // DEBUG_LOG(LogLevel::DEBUG, "==================== PROGRAM TERMINATION ====================");
     // nativeFunctions.clear();
+    globalScope->clear();
     globalScope.reset();
     
     return 0;
