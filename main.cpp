@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
         ast->printAST(std::cout);
         globalScope->debugPrint();
-        globalScope->printChildScopes();
+        // globalScope->printChildScopes();
 
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
