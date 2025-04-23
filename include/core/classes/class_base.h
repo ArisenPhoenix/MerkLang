@@ -19,19 +19,23 @@ class ClassBody;
 class ClassBase : public Callable {
 protected:
     // The class scope that holds method definitions and member variable declarations.
-    SharedPtr<Scope> scope;
-    SharedPtr<Scope> classScope;
-    SharedPtr<Scope> capturedScope;
-
-    UniquePtr<ClassBody> body;
-    ParamList parameters;
+    // SharedPtr<Scope> scope;
     String accessor;
+    SharedPtr<Scope> classScope;
+    WeakPtr<Scope> capturedScope;
+    SharedPtr<Scope> initialCapturedScope;
 
-public:
+    // UniquePtr<ClassBody> body;
+    // ParamList parameters;
+
+
+public: 
     // Constructor: Given a class name and a parent (defining) scope,
     // a new class scope is created.
     // ClassBase(String name, SharedPtr<Scope> parentScope);
-    ClassBase(String name, String accessor, UniquePtr<ClassBody> body, SharedPtr<Scope> parentScope);
+    // ClassBase(String name, String accessor, UniquePtr<ClassBody> body, SharedPtr<Scope> parentScope);
+    ClassBase(String name, String accessor, SharedPtr<Scope> classScope);
+
     ~ClassBase();
     // Add a method to the class by storing its function pointer in the class scope.
     void addMethod(const String& name, SharedPtr<Method> methodSignature);
@@ -51,17 +55,19 @@ public:
 
     SharedPtr<Scope> getCapturedScope() const override;
     SharedPtr<Scope> getClassScope() const;
-    SharedPtr<Scope> getScope() {return scope;}
+    // SharedPtr<Scope> getScope();
+    String getAccessor();
+    String& getQualifiedAccessor();
     void setScope(SharedPtr<Scope> newScope) const;
-    String& getQualifiedAccessor() {return accessor;}
+
     String toString() const override;
 
-    void setBody(UniquePtr<ClassBody> updatedBody);
-    UniquePtr<ClassBody>& getBody();
-    ClassBody* getBody() const;
-    void setParameters(ParamList params) {parameters = params;}
+    // void setBody(UniquePtr<ClassBody> updatedBody);
+    // UniquePtr<ClassBody>& getBody();
+    // ClassBody* getBody() const;
+    void setParameters(ParamList params);
     ParamList getParameters() {return parameters;}
-    String getAccessor() {return accessor;}
+
 
     // Produce a ClassSignature for this class definition.
     SharedPtr<CallableSignature> toCallableSignature() override; 
@@ -139,7 +145,7 @@ public:
 class ClassSignature : public CallableSignature {
 private:
     String accessor;
-    UniquePtr<ClassBody> classBody;
+    // UniquePtr<ClassBody> classBody;
 
 public:
     explicit ClassSignature(SharedPtr<ClassBase> classBase);

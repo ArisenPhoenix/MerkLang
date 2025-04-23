@@ -22,7 +22,7 @@ void ClassRegistry::registerClass(const String& name, SharedPtr<ClassBase> class
     }
     // Create a ClassSignature from the given ClassBase and store it.
     // classMap[name] = std::make_shared<CallableSignature>(classDef->toCallableSignature());
-    if (!classDef->getScope()) {
+    if (!classDef->getClassScope()) {
         throw MerkError("ClassRegistry::registerClass(): Classdef contains no scope");
     }
     auto classSig = std::static_pointer_cast<ClassSignature>(classDef->toCallableSignature());

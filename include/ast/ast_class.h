@@ -17,7 +17,9 @@ class Method;
 
 
 class ClassBody : public CallableBody {
-    
+    SharedPtr<Scope> classScope = nullptr;
+    String accessor;
+    SharedPtr<Scope> classCapturedScope = nullptr;
     public:
         explicit ClassBody(SharedPtr<Scope> scope);
         
@@ -30,6 +32,10 @@ class ClassBody : public CallableBody {
     
         UniquePtr<BaseAST> clone() const override;    
         AstType getAstType() const override {return AstType::ClassBlock;}
+        void setClassScope(SharedPtr<Scope> classScope);
+        void setAccessor(String& classAccessor);
+        void setCapturedScope(SharedPtr<Scope> capturedScope);
+
     };
 
 class MethodBody : public CallableBody {
@@ -127,6 +133,7 @@ public:
     const ParamList& getParameters() const;   // For inspection
 
     void setClassScope(SharedPtr<Scope> scope);
+    SharedPtr<Scope> getClassScope() const;
     bool isConstructor() const;
 
 };

@@ -11,9 +11,11 @@
 #include "ast/ast_callable.h"
 #include "ast/ast_chain.h"
 #include "core/classes/method.h" 
+#include "core/classes/class_base.h"
 #include "ast/ast_class.h"
 #include "ast/exceptions.h"
 #include "ast/ast_validate.h"
+
 
 
 
@@ -160,19 +162,30 @@ Vector<String> ClassDef::removeMethodAccessors(UniquePtr<ClassBody>& clonedBody)
     return removed;
 }
 
+
 void applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> classScope, const String& accessor) {
     if (!classScope) {
         throw MerkError("ApplyAccessorFix classScope is null");
     }
+
     const auto& bodyChildren = methodDef->getBody()->getChildren();
+
     ASTUtils::traverse(bodyChildren, [&](BaseAST* node) {
-        if (node->getAstType() == AstType::Chain) {
-            Chain* chain = static_cast<Chain*>(node);
-            const auto& elems = chain->getElements();
-            if (!elems.empty() && elems[0].name == accessor) {
-                chain->setResolutionStartIndex(1);
-                chain->setResolutionMode(ResolutionMode::ClassInstance);
+        if (node->getAstType() != AstType::Chain) return;
+        auto& params = methodDef->getParameters();
+        Chain* chain = static_cast<Chain*>(node);
+        const auto& elems = chain->getElements();
+        bool isAccessorDeclared = !params.empty() && params[0].getName() == accessor;
+        if (!elems.empty() && elems[0].name == accessor) {
+            if (!isAccessorDeclared){
+                // Validate: is accessor declared explicitly as a parameter
+
+                throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
+                "' via a chain but does not declare it as a parameter.");
             }
+            chain->setResolutionStartIndex(1);
+            chain->setResolutionMode(ResolutionMode::ClassInstance);
+
         }
     }, true, false);
 }
@@ -202,6 +215,22 @@ void fixupClassChains(SharedPtr<Scope> classScope) {
     }
 }
 
+void stripImplicitAccessor(MethodDef* methodDef, const String& accessor) {
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    ParamList& params = methodDef->getParameters();
+
+    if (!params.empty() && params[0].getName() == accessor) {
+        params.eraseByName(accessor);
+        DEBUG_LOG(LogLevel::ERROR, highlight("Stripped implicit accessor from method: " + methodDef->getName(), Colors::orange));
+        methodDef->parameters = params;
+
+        return;
+    }
+
+    DEBUG_LOG(LogLevel::ERROR, highlight("Could Not Stript the implicit acccessor from method: " + methodDef->getName(), Colors::orange));
+    DEBUG_FLOW_EXIT();
+    
+}
 
 
 Node ClassDef::evaluate(SharedPtr<Scope> defScope) const {
@@ -214,6 +243,7 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope) const {
     if (!body->getScope()){
         throw MerkError("scope not present in ClassDef::evaluate in body");
     }
+    // body->getScope()->owner = generateScopeOwner("ClassDefBody", name);
 
     // scope->owner = "ClassDef::evaluate(" + name + ")";
 
@@ -229,75 +259,24 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope) const {
     classDefCapturedScope->isCallableScope = true;
     classDefCapturedScope->owner = generateScopeOwner("ClassDef", name); //"ClassDef(" + name + ")";
 
-    auto classScope = classDefCapturedScope->createChildScope();
+    // auto classScope = classDefCapturedScope->createChildScope();
+    auto classScope = classDefCapturedScope->makeCallScope();
     if (!classScope){
         throw MerkError("classScope was not created correctly on the ClassBase.");
     }
-    classScope->owner = generateScopeOwner("ClassMainScopeClass", name); 
+    classScope->owner = generateScopeOwner("ClassMainScopeClass", name);
+    classScope->isCallableScope = true;
+    classScope->isDetached = true;
     DEBUG_LOG(LogLevel::ERROR, highlight("Attempting captured setting on cls", Colors::yellow));
     classScope->debugPrint();
-    // Clone the class body AST
-    UniquePtr<BaseAST> clonedBodyBase = body->clone();
-    DEBUG_LOG(LogLevel::ERROR, highlight("clonedBodyBase Cloned", Colors::yellow));
 
-    if (!clonedBodyBase){
-        throw MerkError("ClassDef::evaluate(): Cloned Body Base is null");
-    }
-
-    if (!clonedBodyBase->getScope()){
-        throw MerkError("ClassDef::evaluate(): Cloned Body Base Scope is null");
-    }
-
-    // DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), clonedBodyBase is good");
-
-    
-    auto clonedBody = static_unique_ptr_cast<ClassBody>(std::move(clonedBodyBase));
-
-    if (!clonedBody) {
-        throw MerkError("ClassDef::evaluate(): clonedBody is null");
-    }
-    // DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), clonedBody 'ClassBody' is good");
-    DEBUG_LOG(LogLevel::ERROR, highlight("Removing Method Accessors", Colors::yellow));
-    // removeMethodAccessors(clonedBody);
-    // DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), accessor removal was successful");
-
-
-    if (!clonedBody->getScope()) {
-        DEBUG_FLOW_EXIT();
-        throw MerkError("Scope not present in ClassDef::evaluate");
-    }
-    
-    // DEBUG_LOG(LogLevel::ERROR, "ClassDef::evaluate(), clonedBody has scope");
-    DEBUG_LOG(LogLevel::ERROR, highlight("Attempting ClassBase Creation", Colors::yellow));
-
-
-
-
-    clonedBody->setScope(classDefCapturedScope);
-    
-
-
-
-    // Create the ClassBase object
-    SharedPtr<ClassBase> cls = makeShared<ClassBase>(
-        name,
-        accessor,
-        std::move(clonedBody),
-        // defScope->makeCallScope()
-        classDefCapturedScope
-    );
+    SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
 
 
     DEBUG_LOG(LogLevel::ERROR, "Created cls");
 
-    if (!cls->getBody()->getScope()){
-        throw MerkError("cls body did not receive a valid scope");
-    }
-
-
     cls->setParameters(parameters.clone());
     DEBUG_LOG(LogLevel::ERROR, "Parameters set on cls");
-    // Capture Free Variables
 
     DEBUG_LOG(LogLevel::ERROR, highlight("Created classScope", Colors::yellow));
 
@@ -306,13 +285,6 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope) const {
     if (!cls->getCapturedScope()) {
         throw MerkError("CapturedScope was not set correctly on the ClassBase.");
     }
-
-    // Create the inner class scope
-    // auto classScope = classDefScope->createChildScope();
-    
-    // if (!classScope) {
-    //     throw MerkError("createChildScope returned null");
-    // }
 
     DEBUG_LOG(LogLevel::ERROR, highlight("Attempting classScope setting on cls", Colors::yellow));
 
@@ -323,80 +295,122 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope) const {
     DEBUG_LOG(LogLevel::ERROR, "ClassScope Below: ");
     cls->getClassScope()->debugPrint();
 
-    if (!cls->getBody()->getScope()){
-        throw MerkError("cls body did not receive a valid scope");
-    }
-    // DEBUG_LOG(LogLevel::TRACE, "Class Scope level: ", cls->getClassScope()->getScopeLevel());
-    // DEBUG_LOG(LogLevel::TRACE, "ClassDef::evaluate(), set the class Scope");
-
-    // for (const auto& methodNode : getBody()->getChildren()) {
-    //     if (methodNode->getAstType() == AstType::ClassMethodDef){
-    //         auto* methodDef = static_cast<MethodDef*>(methodNode.get());
-    //         applyAccessorScopeFix(methodDef, cls->getClassScope(), accessor);
-    //         // DEBUG_LOG(LogLevel::TRACE, "Temporarily Skipping Accessor Scope Fix");
-    //     }
-    // }
-
-    // Evaluate class body children (methods, attributes, etc.)
-    DEBUG_LOG(LogLevel::ERROR, highlight("Moving to Apply Accessor Scope Fix", Colors::yellow));
-
-    for (const auto& child : cls->getBody()->getChildren()) {
-        // DEBUG_LOG(LogLevel::TRACE, "Evaluating AST Child: ", child->getAstTypeAsString());
-
-        switch (child->getAstType()) {
-            case AstType::ClassMethodDef:
-            case AstType::VariableDeclaration:
-            case AstType::VariableAssignment:
-            case AstType::ParameterAssignment:
-            case AstType::ClassDefinition:
-                if (child->getAstType() == AstType::ClassMethodDef){
-                    auto* methodDef = static_cast<MethodDef*>(child.get());
-                    auto methodscope = cls->getClassScope()->createChildScope();
-                    
-                    if (!methodscope){
-                        throw MerkError("generated methodscope is null for method in ClassDef::evaluate");
-                    }
-                    methodDef->setScope(methodscope);
-                    methodDef->setClassScope(cls->getClassScope());
-                    applyAccessorScopeFix(methodDef, cls->getClassScope(), accessor);
-                    DEBUG_LOG(LogLevel::ERROR, highlight("Setting methodDef's classScope: ", Colors::red));                    
-                    child->evaluate();
-                    
-                } 
-                break;
-
-            default:
-                DEBUG_LOG(LogLevel::ERROR, "Unhandled AST type in ClassBody:", child->getAstTypeAsString());
-                throw MerkError("Unexpected AST statement in ClassBody: " + child->getAstTypeAsString());
-        }
-    }
-
-    DEBUG_LOG(LogLevel::ERROR, highlight("Finished Applying Accessor Scope Fix", Colors::yellow));
-
+    auto classBody = static_cast<ClassBody*>(getBody());
+    String bodyAccess = accessor;
+    classBody->setAccessor(bodyAccess);
+    classBody->setCapturedScope(classDefCapturedScope);
+    classBody->setClassScope(cls->getClassScope());
+    // getBody()->evaluate(cls->getClassScope());
+    classBody->evaluate(cls->getClassScope());
     // Ensure the class has a construct method
     if (!cls->getClassScope()->hasFunction("construct")) {
         cls->getClassScope()->debugPrint();
         cls->getClassScope()->printChildScopes();
         throw MerkError("Class '" + name + "' must implement a 'construct' method.");
     }
-
-    
+    classBody->setCapturedScope(nullptr);
+    classBody->setClassScope(nullptr);
 
     defScope->appendChildScope(classDefCapturedScope, "ClassDef::evaluate");
-    // classDefCapturedScope->owner = generateScopeOwner("ClassDefClass", name); // "ClassDefCaptured(" + name + ")";
-
     defScope->registerClass(name, cls);
-    // classDefCapturedScope->removeChildScope(classScope);
-    // classDefCapturedScope->appendChildScope(classScope);
+    
+    DEBUG_LOG(LogLevel::ERROR, "ClassDef::classScope created: ");
 
+    cls->getClassScope()->debugPrint();
+    cls->getClassScope()->printChildScopes();
+    classDefCapturedScope->appendChildScope(cls->getClassScope());
+    
     DEBUG_FLOW_EXIT();
     return ClassNode(cls);
 }
- 
 
-Node ClassBody::evaluate(SharedPtr<Scope> scope) const {
-    (void)scope;
+SharedPtr<Scope> MethodDef::getClassScope() const {return classScope;}
+
+
+void ClassBody::setClassScope(SharedPtr<Scope> newScope) {classScope = newScope;}
+void ClassBody::setAccessor(String& classAccessor) {accessor = classAccessor;}
+void ClassBody::setCapturedScope(SharedPtr<Scope> capturedScope) {classCapturedScope = capturedScope;}
+
+Node ClassBody::evaluate(SharedPtr<Scope> classScope) const {
     DEBUG_FLOW();
+    if (!classCapturedScope) {
+        throw MerkError("Class Captured Scope Was Not Set On Body");
+    }
+
+    if (!classScope) {
+        throw MerkError("Class Scope Was Not Set On Body");
+    }
+
+    if (accessor.empty()) {
+        throw MerkError("Accessor Was Not Set On Body");
+    }
+
+
+    getScope()->owner = generateScopeOwner("Class", "Body");
+    DEBUG_LOG(LogLevel::ERROR, highlight("Moving to Apply Accessor Scope Fix", Colors::yellow));
+    Vector<String> methods;
+    for (const auto& child : getMutableChildren()) {
+        DEBUG_LOG(LogLevel::ERROR, "Evaluating AST Child: ", child->getAstTypeAsString());
+
+        switch (child->getAstType()) {
+            case AstType::VariableDeclaration:                // protected variables stored in captured scope, 
+                child->evaluate(classScope);
+            break;
+            case AstType::ClassMethodDef:
+                if (child->getAstType() == AstType::ClassMethodDef){
+                    auto* methodDef = static_cast<MethodDef*>(child.get());
+                    DEBUG_LOG(LogLevel::ERROR, highlight("Handling Method: " + methodDef->getName(), Colors::yellow));
+
+                    auto methodScope = classScope->createChildScope();
+                    if (!methodScope){
+                        throw MerkError("generated methodscope is null for method in ClassDef::evaluate");
+                    }
+                                    // for providing its own classScope from which to work with
+                    methodDef->setClassScope(classScope); 
+
+                    // methodClassScope->owner = generateScopeOwner("Method", methodDef->getName());
+                    // methodDef->setScope(methodscope);
+                    // methodDef->setClassScope(classScope);        // for registering itself into the class registry
+                    if (methodDef->getClassScope().get() != classScope.get()) {
+                        throw MerkError("method class Scope is not the same as cls->classScope");
+                    } else {
+                        DEBUG_LOG(LogLevel::ERROR, highlight("Method class scope and class's scope match", Colors::yellow));
+                    }
+                    applyAccessorScopeFix(methodDef, classScope, accessor);
+                    stripImplicitAccessor(methodDef, accessor);
+                    methods.emplace_back(methodDef->getName());
+                    methodDef->evaluate(methodScope);
+                    // methodDef->getBody()->getScope()->owner = generateScopeOwner("Method", methodDef->getName());
+                    // methodDef->getClassScope()->owner = generateScopeOwner("METHOD", methodDef->getName());
+                    // cls->getClassScope()->appendChildScope(methodscope);     // for ensuring continuity
+                    // auto methodNode = val.getValue();
+                    
+                    DEBUG_LOG(LogLevel::ERROR, highlight("Setting methodDef's classScope: ", Colors::red));                    
+                    
+                } 
+                break;
+
+            // case AstType::VariableAssignment:
+            // case AstType::ParameterAssignment:
+            case AstType::ClassDefinition:
+                break;
+
+            default:
+                // child->evaluate(classScope);
+                DEBUG_LOG(LogLevel::ERROR, "Unhandled AST type in ClassBody:", child->getAstTypeAsString());
+                throw MerkError("Unexpected AST statement in ClassBody: " + child->getAstTypeAsString());
+        }
+    }
+
+
+    for (auto& method : methods){
+        DEBUG_LOG(LogLevel::ERROR, "Assuming Method ", highlight(method, Colors::blue), "Was Registered");
+        if (!classScope->hasFunction(method)){
+            throw MerkError("Method: " + method + " Was Not Registered To Class Scope");
+        }
+    }
+
+    DEBUG_LOG(LogLevel::ERROR, highlight("Finished Applying Accessor Scope Fix", Colors::yellow));
     // Possibly validate the structure but do nothing
     DEBUG_FLOW_EXIT();
     return Node();  // or nullptr
@@ -405,7 +419,7 @@ Node ClassBody::evaluate(SharedPtr<Scope> scope) const {
 Node ClassCall::evaluate(SharedPtr<Scope> callScope) const {
     // The provided scope is the scope calling for the class instance
 
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     if (!callScope){
         throw MerkError("Initial Scope Failed in ClassCall::evaluate()");
     }
@@ -414,37 +428,37 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope) const {
         throw MerkError("CallCall::evaluate(): getScope() is null");
     }
 
-    // DEBUG_LOG(LogLevel::ERROR, "ClassCall::evaluate() instances scope worked");
-
     Vector<Node> argValues = handleArgs(callScope);
+    DEBUG_LOG(LogLevel::ERROR, highlight("ClassCall Args:", Colors::yellow));
+
+    for (auto& arg : argValues){
+        DEBUG_LOG(LogLevel::ERROR, arg);
+    }
 
     auto classOpt = callScope->getClass(name);
     if (!classOpt.has_value()) {
         throw MerkError("Class not found: " + name);
     }
 
+    auto classSig = classOpt.value();
 
-    SharedPtr<ClassSignature> classSig = std::dynamic_pointer_cast<ClassSignature>(classOpt.value());
-    auto classDef = classSig->getClassDef();
-    if (!classSig) {
-        throw MerkError("Could not cast CallableSignature to ClassSignature.");
+    DEBUG_LOG(LogLevel::ERROR, "Getting Class");
+    auto classTemplate = classSig->getClassDef();
+    DEBUG_LOG(LogLevel::ERROR, "Got Class");
+    auto params = classTemplate->getParameters();
+    // auto params = classSig->getParameterTypes();
+    if (!classTemplate){
+        throw MerkError("ClassBase <classTemplate> could not be pulled from ClassSignature for Class: " + name);
     }
-
-
-
-    if (!classDef->getBody()->getScope()) {
-        throw MerkError("ClassSig's Body contains no scope");
-    }
-    
-    auto capturedScope = classDef->getCapturedScope()->clone();
+    auto capturedScope = classTemplate->getCapturedScope();
     if (!capturedScope){
         throw MerkError("capturedScope Failed in ClassCall::evaluate()");
     } 
     DEBUG_LOG(LogLevel::ERROR, "Class capturedScope Below:");
     capturedScope->debugPrint();
 
-    auto classScope = classDef->getClassScope()->makeCallScope();
-
+    auto classScope = classTemplate->getClassScope()->makeCallScope();
+    // classScope->owner = generateScopeOwner("ClassCall", name);
 
     if (!classScope){
         throw MerkError("classScope Failed in ClassCall::evaluate()");
@@ -452,39 +466,45 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope) const {
 
     DEBUG_LOG(LogLevel::ERROR, "ClassCallScope Below:");
     classScope->debugPrint();
-    // setChainScope(classDef.get(), classScope);
     fixupClassChains(classScope);
 
+    SharedPtr<Scope> clonedCaptured = classTemplate->getCapturedScope()->clone();
+    // clonedCaptured->owner = generateScopeOwner("CapturedClone", name);
+    // Use shared classScope for method access
+    SharedPtr<Scope> sharedClassScope = classTemplate->getClassScope();
 
-    auto originalDefScope = classDef->getScope()->makeCallScope();
-    if (!originalDefScope){
+    // Create private instance scope for 'self.x', 'self.y', etc.
+    SharedPtr<Scope> privateInstanceScope = sharedClassScope->createChildScope();
+    privateInstanceScope->owner = generateScopeOwner("PrivateInstanceData", classTemplate->getName());
+
+    // Create the resolution stack
+    clonedCaptured->appendChildScope(sharedClassScope, "ClassMethods");
+    sharedClassScope->appendChildScope(privateInstanceScope, "InstancePrivateVars");
+
+    if (!privateInstanceScope){
         throw MerkError("originalDefScope Failed in ClassCall::evaluate()");
-    } 
-    // DEBUG_LOG(LogLevel::ERROR, "originalDefScope Scope Worked");
-    DEBUG_LOG(LogLevel::ERROR, "Class originalDefScope Below:");
-    originalDefScope->debugPrint();
-
-    auto capturedChildren = capturedScope->getChildren();
-    for (auto& child : capturedChildren){
-        capturedScope->removeChildScope(child);
     }
 
+    DEBUG_LOG(LogLevel::ERROR, "Class originalDefScope Below:");
+    privateInstanceScope->debugPrint();
 
-    capturedScope->appendChildScope(classScope, "ClassCall::evaluate");
-    callScope->appendChildScope(capturedScope, "ClassCall::evaluate");
-    capturedScope->owner = generateScopeOwner("ClassCapturedScope", name); //"ClassCapturedScope(" + name + ")";
-    classScope->owner = generateScopeOwner("ClassInstanceScope", name); // "ClassInstanceScope(" + name + ")";
+    SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(
+        classTemplate->getQualifiedName(),
+        clonedCaptured,
+        privateInstanceScope,
+        // classTemplate->getParameters(),
+        params,
+        classTemplate->getQualifiedAccessor()
+    );
 
-    // Let call() handle body fixup, instantiation, and constructor invocation
-    Node instanceNode = classSig->call(argValues, callScope, classScope);
-    // capturedScope->appendChildScope(classScope);
+    instance->getInstanceScope()->owner = generateScopeOwner("ClassInstance", name);
     
-    // Inject into current runtime scope
-    // capturedScope->appendChildScope(classScope, "ClassCall::evaluate");
-    // scope->appendChildScope(capturedScope, "ClassCall::evaluate");
+    instance->construct(argValues);
 
-
-
+    // Node instanceNode = classSig->call(argValues, callScope, classScope);
+    DEBUG_LOG(LogLevel::ERROR, highlight("Instance CallScope Owner", Colors::bold_green), highlight(callScope->owner, Colors::yellow));
+    // InstanceNode()
+    Node instanceNode = classSig->call(argValues, callScope, classScope);
     DEBUG_FLOW_EXIT();
     return instanceNode;
 }
@@ -499,19 +519,19 @@ Node MethodDef::evaluate(SharedPtr<Scope> scope) const {
     if (!scope){
         throw MerkError("Provided Scope to MethodDef::evaluate is null");
     }
+
     if (!getScope()){
         throw MerkError("MethodDef::evaluate, scope is null");
     }
-    getScope()->owner = generateScopeOwner("MethodDef", name); // "MethodDef::evaluate(" + name + ")";
 
-    auto freeVarNames = body->collectFreeVariables();
-    DEBUG_LOG(LogLevel::ERROR,"MethodDef::evaluate | ", "CallType: ", callableTypeAsString(callType), "SubType: ", callableTypeAsString(methodType));
-    
-    if (!classScope) {
+    if (!getClassScope()) {
         throw MerkError("Class Scope was not supplied to Method: " + name);
     }
 
 
+    auto freeVarNames = body->collectFreeVariables();
+    DEBUG_LOG(LogLevel::ERROR,"MethodDef::evaluate | ", "CallType: ", callableTypeAsString(callType), "SubType: ", callableTypeAsString(methodType));
+    
     if (callType == CallableType::FUNCTION){
         FreeVars tempFreeVars = freeVarNames;
         for (auto& param : parameters){
@@ -524,23 +544,21 @@ Node MethodDef::evaluate(SharedPtr<Scope> scope) const {
         if (tempFreeVars.size() > 0){
             std::ostringstream oss;
             for (auto& var : tempFreeVars){
-                oss << highlight("'", Colors::yellow) << highlight(var, Colors::purple) << highlight("'", Colors::yellow) << " ";
+                DEBUG_LOG(LogLevel::ERROR, highlight("'", Colors::yellow), highlight(var, Colors::purple), highlight("'", Colors::yellow), " ");
             }
             throw MerkError("The Following Vars: " + oss.str() + "; were defined outside of function defined using function");
         }
     } 
     
-    // SharedPtr<Scope> defScope = isConstructor()
-    // ? scope->detachScope({}) 
-    // : scope->detachScope(freeVarNames); 
+
     SharedPtr<Scope> defScope = scope->detachScope(freeVarNames);
+
     if (!defScope){
         throw MerkError("defScope created in MethodDef::evaluate is null");
     }
-    // DEBUG_LOG(LogLevel::ERROR, "Evaluated: ", isConstructor() ? "constructor" : name);
-    // defScope->debugPrint();
+
     defScope->isCallableScope = true;
-    defScope->owner = generateScopeOwner("MethodDef", name); // "MethodDef::evaluate(" + name + ")";
+    defScope->owner = generateScopeOwner("MethodDef", name); 
 
     if (!body->getScope()){
         DEBUG_LOG(LogLevel::ERROR, "Body's Scope is null in FunctionDef::evaluate()");
@@ -571,10 +589,12 @@ Node MethodDef::evaluate(SharedPtr<Scope> scope) const {
 
     auto methodSig = method->toCallableSignature();
 
-    classScope->registerFunction(name, methodSig);
+    getClassScope()->registerFunction(name, methodSig);
+
+    DEBUG_LOG(LogLevel::ERROR, highlight("Registered Method: " + name, Colors::yellow), "into: ", getClassScope().get(), "Owner: ", getClassScope()->owner);
 
     DEBUG_LOG(LogLevel::ERROR, "Method", name, "registered to ", classScope->owner);
-    classScope->debugPrint();
+    // classScope->debugPrint();
 
     if (!defScope){
         DEBUG_FLOW_EXIT();

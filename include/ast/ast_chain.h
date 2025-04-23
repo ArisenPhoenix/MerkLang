@@ -48,7 +48,7 @@ struct ChainElement {
 class Chain : public ASTStatement {
 private:
     Vector<ChainElement> elements;
-    SharedPtr<Scope> classScope = nullptr; // ← set when evaluating in class
+    WeakPtr<Scope> classScope; // ← set when evaluating in class
     int resolutionStartIndex = 0;  // default is 0, resolve from the beginning
     ResolutionMode mode = ResolutionMode::Normal;
 
@@ -86,5 +86,6 @@ public:
     virtual UniquePtr<BaseAST> clone() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf) const override;
     void setScope(SharedPtr<Scope> scope) override;
+    // SharedPtr<Scope> getClassScope();
 
 };

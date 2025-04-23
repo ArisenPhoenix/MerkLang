@@ -118,13 +118,12 @@ std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegi
 }
 
 
-std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name) {
+std::optional<Vector<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name) {
     DEBUG_FLOW(FlowLevel::MED);
     auto it = functions.find(name);
     if (it != functions.end() && !it->second.empty()) {
-        
         DEBUG_FLOW_EXIT();
-        return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(it->second.front());
+        return it->second;
     }
 
     DEBUG_FLOW_EXIT();

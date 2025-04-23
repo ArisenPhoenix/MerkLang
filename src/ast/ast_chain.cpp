@@ -73,8 +73,8 @@ void Chain::clear() {
 
 }
 Chain::~Chain() {
-    if (classScope){
-        classScope.reset();
+    if (getSecondaryScope()){
+        getSecondaryScope().reset();
     }
     clear();
 }
@@ -84,7 +84,16 @@ void Chain::setResolutionMode(ResolutionMode newMode) {mode = newMode;}
 
 int Chain::getResolutionStartIndex() const {return resolutionStartIndex;}
 ResolutionMode Chain::getResolutionMode() const {return mode;}
-SharedPtr<Scope> Chain::getSecondaryScope() const {return classScope;}
+SharedPtr<Scope> Chain::getSecondaryScope() const {
+    if (classScope.expired()){
+        return nullptr;
+    }
+    if (auto scope = classScope.lock()){
+        return scope;
+    } else {
+        return nullptr;
+    }
+}
 
 const Vector<ChainElement>& Chain::getElements() const {
     return elements;
@@ -282,7 +291,7 @@ Node Chain::evaluate(SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     DEBUG_LOG(LogLevel::ERROR, "Chain::evaluate", "Num Elements:", elements.size());
     
-    SharedPtr<Scope> currentScope = classScope ? classScope : (scope ? scope : getScope());
+    SharedPtr<Scope> currentScope = getSecondaryScope() ? getSecondaryScope() : (scope ? scope : getScope());
     if (!currentScope) throw MerkError("Chain::evaluate: no valid scope");
 
     Node currentVal;
@@ -291,11 +300,11 @@ Node Chain::evaluate(SharedPtr<Scope> scope) const {
         const auto& elem = elements[i];
 
         if (mode == ResolutionMode::ClassInstance) {
-            if (!classScope){
+            if (!getSecondaryScope()){
                 throw MerkError("No Class Scope Was Provided for ResolutionMode::ClassInstance");
             }
             DEBUG_LOG(LogLevel::ERROR, "Evaluating Class Instance");
-            currentVal = elem.object->evaluate(classScope);  // FIXED
+            currentVal = elem.object->evaluate(getSecondaryScope());  // FIXED
         } else {
             DEBUG_LOG(LogLevel::ERROR, "Evaluating Normal Instance");
             currentVal = elem.object->evaluate(currentScope);

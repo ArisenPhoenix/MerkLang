@@ -2,6 +2,7 @@
 #include <unordered_set>
 
 #include "core/types.h"
+#include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
 
@@ -320,40 +321,34 @@ SharedPtr<Scope> Scope::createChildScope() {
 
 
 SharedPtr<Scope> Scope::makeCallScope() {
-    return makeShared<Scope>(shared_from_this(),
+    auto c = makeShared<Scope>(shared_from_this(),
                                 globalFunctions,
                                 globalClasses,
                                 interpretMode);
+    c->isCallableScope = true;
+    c->isDetached = true;
+    c->isClonedScope = true;
+    c->isRoot = false;
+    return c;
+}
+
+SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
+    auto instanceScope = makeCallScope(); // inherits captured env
+
+    // This is essential: hook up the actual class scope (vars, methods)
+    instanceScope->appendChildScope(classScope, "InstanceScope.attachClassScope");
+    includeMetaData(instanceScope, true);
+    // Optional: mark that this scope is a class instance
+    instanceScope->owner = generateScopeOwner("ClassInstance", classScope->owner);
+    
+    return instanceScope;
 }
 
 
-// lookup a function: first in your local overlay
-std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const Vector<Node>& args) const {
-  auto it = localFunctions.find(name);
-  if (it != localFunctions.end())
-    return it->second;
-  if (auto p = parentScope.lock()){
-    if (auto r = p->lookupFunction(name, args)){
-      return r;
-    }
-
-  }
-
-    return nullptr;
-}
 
 
-std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name) const {
-    auto it = localFunctions.find(name);
-    if (it != localFunctions.end())
-      return it->second;
-    if (auto p = parentScope.lock()){
-        if (auto r = p->lookupFunction(name))
-            return r;
-    }
-
-      return nullptr;
-  }
+// void Scope::setProtectedMembers(Vector<String> protectedMems) {protectedMembers = protectedMems;}
+// Vector<String> Scope::getProtectedMembers() const {return protectedMembers;}
 
 
 std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) const {
@@ -381,9 +376,9 @@ std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) 
 // similarly for lookupClass, lookupVariable, etc…
 
 // registering in *this* scope now only writes into your overlay:
-void Scope::registerFunctionHere(const String& name, SharedPtr<CallableSignature> f) {
-  localFunctions[name] = std::move(f);
-}
+// void Scope::registerFunctionHere(const String& name, SharedPtr<CallableSignature> f) {
+//   localFunctions[name] = std::move(f);
+// }
 
 // Get the parent scope
 SharedPtr<Scope> Scope::getParent() const {
@@ -530,20 +525,7 @@ int Scope::getScopeLevel() const {
 
 const SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() const {return globalFunctions;}
 SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() {return globalFunctions;}
-bool Scope::hasFunction(const String& name) const {
-    if (auto func = lookupFunction(name)){
-        // if (func.value()){
-        //     return true;
-        // }
-        return true;
 
-    }
-    if (auto parent = getParent()){
-        return getParent()->hasFunction(name);
-    }
-
-    return false;
-}
 
 void Scope::registerFunction(const String& name, SharedPtr<UserFunction> function) {
     DEBUG_FLOW(FlowLevel::MED);
@@ -551,7 +533,7 @@ void Scope::registerFunction(const String& name, SharedPtr<UserFunction> functio
     auto signature = function->toCallableSignature();
 
     // functionRegistry.registerFunction(name, std::move(signature));
-    localFunctions[name] = std::move(signature);
+    localFunctions[name].emplace_back(signature);
 
     DEBUG_FLOW_EXIT();
 }
@@ -560,38 +542,115 @@ void Scope::registerFunction(const String& name, SharedPtr<CallableSignature> si
     DEBUG_FLOW(FlowLevel::MED);
 
     // functionRegistry.registerFunction(name, signature);
-    localFunctions[name] = std::move(signature);
+    localFunctions[name].emplace_back(signature);
     DEBUG_FLOW_EXIT();
 }
 
+bool Scope::hasFunction(const String& name) const {
+    if (auto func = lookupFunction(name)){
+        DEBUG_LOG(LogLevel::ERROR, "FOUND FUNCTION THROUGH Lookup");
+        return true;
 
-std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name, const Vector<Node>& args) {
-    // SharedPtr<FunctionSignature> Scope::getFunction(const String& name, const Vector<Node>& args) {
-    // DEBUG_FLOW(FlowLevel::MED);
-    if (auto func = lookupFunction(name, args)){
-        return func;
     }
-    if (auto function = globalFunctions->getFunction(name, args)){
-        return function;
+    if (auto parent = getParent()){
+        DEBUG_LOG(LogLevel::ERROR, "FOUND FUNCTION THROUGH Parent Lookup");
+
+        return getParent()->hasFunction(name);
+    }
+
+    return false;
+}
+
+
+std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const String& name) const {
+    DEBUG_FLOW(FlowLevel::MED);
+    auto it = localFunctions.find(name);
+    if (it != localFunctions.end() && !it->second.empty()) {
+        
+        DEBUG_FLOW_EXIT();
+        return std::optional<Vector<SharedPtr<CallableSignature>>>(it->second);
+    }
+
+    DEBUG_FLOW_EXIT();
+    return std::nullopt;
+  }
+
+
+// lookup a function: first in your local overlay
+std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const Vector<Node>& args) const {
+    DEBUG_FLOW(FlowLevel::HIGH);
+    auto it = localFunctions.find(name);
+    Vector<NodeValueType> argTypes;
+
+    if (it != localFunctions.end()) {
+        DEBUG_LOG(LogLevel::ERROR, "FOUND FUNCTION In lookupFunction, args not checked yet");
+        for (const auto &arg : args) {
+            argTypes.push_back(arg.getType());
+            DEBUG_LOG(LogLevel::ERROR, "ArgType: ", nodeTypeToString(arg.getType()));
+        }
+
+        for (auto candidate : it->second) {
+            // DEBUG_LOG(LogLevel::ERROR, "Checking Function Candidate", name, candidate->getCallable()->parameters.toString());
+            // DEBUG_LOG(LogLevel::ERROR, "Function Sub-Type: ", callableTypeAsString(candidate->getSubType()));
+            if (candidate->getSubType() == CallableType::DEF) {
+                if (candidate->matches(argTypes)){
+                    // return std::optional<SharedPtr<CallableSignature>>(candidate);
+                    return candidate;
+                } else {
+                    // DEBUG_LOG(LogLevel::ERROR, "This is actually an Argument mismatch error");
+                    throw FunctionNotFoundError(name);
+                }
+            } 
+
+            else if (candidate->getSubType() == CallableType::FUNCTION) {
+                if (candidate->matches(argTypes)){
+                    // DEBUG_LOG(LogLevel::ERROR, "FOUND AND RETURNING MATCHING FUNCTION");
+                    DEBUG_FLOW_EXIT();
+                    return candidate;
+                } else {
+                    DEBUG_LOG(LogLevel::ERROR, "This is actually an Argument mismatch error");
+                    throw FunctionNotFoundError(name);
+                }
+                // DEBUG_LOG(LogLevel::DEBUG, highlight("Function:", Colors::bold_blue), name, "args didn't match");
+            }
+        }
     }
 
     if (auto parent = parentScope.lock()){
+        return parent->lookupFunction(name, args);
+    }
+
+
+    return nullptr;
+}
+
+SharedPtr<CallableSignature> Scope::getFunction(const String& name, const Vector<Node>& args) {
+    DEBUG_FLOW(FlowLevel::MED);
+    if (auto func = lookupFunction(name, args)) {
+        return func.value();
+    }
+
+    if (auto parent = parentScope.lock()) {
         // DEBUG_FLOW_EXIT();
         return parent->getFunction(name, args);
     }
 
-    // DEBUG_FLOW_EXIT();
-    // debugPrint();
+    if (auto function = globalFunctions->getFunction(name, args)) { // returns std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>
+        return function.value();
+    }
+
+    DEBUG_FLOW_EXIT();
     throw FunctionNotFoundError(name);
 }
 
 // For Function Reference
-std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name) {
+Vector<SharedPtr<CallableSignature>> Scope::getFunction(const String& name) {
     if (auto func = lookupFunction(name)){
-        return func;
+        return func.value();
     }
-    if (auto function = globalFunctions->getFunction(name)){
-        return function;
+    if (auto functions = globalFunctions->getFunction(name)){
+        // return functions;
+        return functions.value();
     }
 
     if (auto parent = parentScope.lock()){

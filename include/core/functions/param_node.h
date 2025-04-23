@@ -6,7 +6,7 @@
 #include <string>
 
 
-const bool debugParam = true;
+// const bool debugParam = true;
 
 
 // ParamNode inherits from VarNode

@@ -1,8 +1,12 @@
 // In parse_classes.cpp (or wherever you put your class-parsing methods)
+
 #include "ast/ast_class.h"       // For ClassDef and ClassBody
 #include "core/errors.h"
+#include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
+
 #include "core/tokenizer.h"      // For token types
+#include "core/scope.h"
 #include "ast/ast_callable.h"
 #include "core/parser.h"
 
@@ -248,6 +252,7 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
     }
 
     UniquePtr<MethodBody> methodBlock = makeUnique<MethodBody>(std::move(bodyBlock));
+    // methodBlock->getScope()->owner = generateScopeOwner("Method", methodName);
 
     DEBUG_LOG(LogLevel::INFO, "MethodBody type: ", typeid(*methodBlock).name());
     
@@ -414,6 +419,8 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
                     throw MerkError("Attempting to reassign the constructor using the def keyword");
                 }
                 auto constructor = parseClassInitializer();
+                constructor->getScope()->owner = generateScopeOwner("constructor", className);
+                constructor->getBody()->getScope()->owner = generateScopeOwner("constructor", className);
                 classBody->addChild(static_unique_ptr_cast<BaseAST>(std::move(constructor)));
 
             }
@@ -422,6 +429,8 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
                 // Parse subsequent methods normally.
                 auto method = parseClassMethod();
                 if (method) {
+                    method->getBody()->getScope()->owner = generateScopeOwner("Method", method->getName());
+                    method->getScope()->owner = generateScopeOwner("Method", method->getName());
                     classBody->addChild(static_unique_ptr_cast<BaseAST>(std::move(method)));
                 }
             }

@@ -1,6 +1,7 @@
 // class_base.cpp
 #include "core/types.h"
 #include "core/errors.h"
+#include "utilities/helper_functions.h"
 #include "utilities/debugger.h"
 #include "core/node.h"
 #include "ast/ast_class.h"
@@ -15,35 +16,15 @@
 
 
 
-// Constructor: Given a class name and a parent scope,
-// create a new child scope to serve as the class's own scope.
-// ClassBase::ClassBase(String name, SharedPtr<Scope> parentScope)
-//     : Callable(name, ParamList(), CallableType::CLASS)  // Assuming no parameters for a class definition.
-// {
-//     if (!parentScope) {
-//         throw MerkError("Parent scope cannot be null for ClassBase.");
-//     }
-//     // Create a new child scope from the parent for this class.
-//     classScope = parentScope->createChildScope();
-//     DEBUG_LOG(LogLevel::DEBUG, "ClassBase created with name: ", name, " in parent scope: ", parentScope.get());
-// }
 
-ClassBase::ClassBase(String otherName, String otherAccessor, UniquePtr<ClassBody> otherBody, SharedPtr<Scope> parentScope)
-    : Callable(otherName, ParamList(), CallableType::CLASS) {
-    if (!otherBody){
-        throw MerkError("ClassBase::ClassBase: newBody is null");
-    }
-    // name = otherName;
-    accessor = otherAccessor;
-    // classScope = OtherClassScope;
-    scope = parentScope;
-    // UniquePtr<ClassBody> newBody = static_unique_ptr_cast<ClassBody>(body->clone());
-    body = std::move(otherBody);
 
-    if (!body){
-        throw MerkError("ClassBase::ClassBase: body is null");
-    }
-    
+// SharedPtr<Scope> ClassBase::getScope() {return scope;}
+String ClassBase::getAccessor() {return accessor;}
+String& ClassBase::getQualifiedAccessor() {return accessor;}
+void ClassBase::setParameters(ParamList params) {parameters = params;}
+
+ClassBase::ClassBase(String otherName, String otherAccessor, SharedPtr<Scope> templateScope)
+    : Callable(otherName, ParamList(), CallableType::CLASS), accessor(otherAccessor), classScope(templateScope){    
 }
 
 ClassBase::~ClassBase() {
@@ -57,13 +38,6 @@ ClassBase::~ClassBase() {
         getCapturedScope().reset();
 
     }
-    if (getScope()){
-        // DEBUG_LOG(LogLevel::ERROR, highlight("Still Holding Onto original scope", Colors::yellow));
-        getScope().reset();
-    }
-    body.reset();
-
-    // body.release();
 }
 // Add a method to the class by storing its signature in the class scope.
 // Here we assume that setVariable will store a Node that wraps the method signature.
@@ -75,7 +49,12 @@ void ClassBase::addMethod(const String& name, SharedPtr<Method> method) {
 
 // Retrieve a method's signature from the class scope.
 SharedPtr<Callable> ClassBase::getMethod(const String& name) {
-    return classScope->getFunction(name).value()->getCallable();
+    auto methods = classScope->getFunction(name);
+    auto method = methods.front();
+    if (method){
+        return method->getCallable();
+    }
+    throw FunctionNotFoundError(name);
 }
 
 // Update (or set) a member variable's value in the class scope.
@@ -94,7 +73,7 @@ void ClassBase::setCapturedScope(SharedPtr<Scope> scope) {
         throw MerkError("New Scope provided to ClassBase is null");
     }
     capturedScope = scope;
-    capturedScope->owner = "ClassBaseCaptured(" + name + ")";
+    // getCapturedScope()->owner = "ClassBaseCaptured(" + name + ")";
 }
 
 void ClassBase::setClassScope(SharedPtr<Scope> scope) {
@@ -102,11 +81,25 @@ void ClassBase::setClassScope(SharedPtr<Scope> scope) {
         throw MerkError("New ClassScope provided to ClassBase is null");
     }
     classScope = scope;
-    classScope->owner = generateScopeOwner("ClassBase", name);
+    // classScope->owner = generateScopeOwner("ClassBase", name);
 
 }
 
-SharedPtr<Scope> ClassBase::getCapturedScope() const {return capturedScope;}
+SharedPtr<Scope> ClassBase::getCapturedScope() const {
+    if (initialCapturedScope) {
+        return initialCapturedScope;
+    }
+
+    else if (capturedScope.expired()){
+        return nullptr;
+    }
+
+    if (auto captured = capturedScope.lock()) {
+        return captured;
+    }
+
+    return nullptr;
+}
 SharedPtr<Scope> ClassBase::getClassScope() const {return classScope;}
 
 String ClassBase::toString() const {
@@ -124,28 +117,30 @@ Node ClassBase::execute(Vector<Node> args, SharedPtr<Scope> scope) const {
 
 
 void ClassBase::setScope(SharedPtr<Scope> newScope) const {
+    (void)newScope;
     // scope = newScope;
-    if (!newScope){
-        throw MerkError("New Scope provided to ClassBase is null");
-    }
-    scope->owner = "ClassBase(" + name + ")";
-    getBody()->setScope(newScope);
+    // if (!newScope){
+    //     throw MerkError("New Scope provided to ClassBase is null");
+    // }
+    // scope->owner = "ClassBase(" + name + ")";
+    // getBody()->setScope(newScope);
+
 }
 
 
-void ClassBase::setBody(UniquePtr<ClassBody> updatedBody) {body = std::move(updatedBody);}
-UniquePtr<ClassBody>& ClassBase::getBody() {return body;}
-ClassBody* ClassBase::getBody() const {return body.get();};
+// void ClassBase::setBody(UniquePtr<ClassBody> updatedBody) {body = std::move(updatedBody);}
+// UniquePtr<ClassBody>& ClassBase::getBody() {return body;}
+// ClassBody* ClassBase::getBody() const {return body.get();};
 
 SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
-    if (!body) {
-        throw MerkError("The Body in ClassBase::toCallableSignature() is null");
-    }
-    if (!body->getScope()){
-        throw MerkError("The Body in ClassBase::toCallableSignature() has a null scope");
-    }
+    // if (!body) {
+    //     throw MerkError("The Body in ClassBase::toCallableSignature() is null");
+    // }
+    // if (!body->getScope()){
+    //     throw MerkError("The Body in ClassBase::toCallableSignature() has a null scope");
+    // }
 
     if (!getCapturedScope()) {
         throw MerkError("Captured Scope in ClassBase::toCallableSignature is null");
@@ -156,50 +151,58 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     }
 
     // Clone the body
-    auto clonedBodyBase = body->clone();
-    auto clonedClassBody = static_unique_ptr_cast<ClassBody>(std::move(clonedBodyBase));
+    // auto clonedBodyBase = body->clone();
+    // auto clonedClassBody = static_unique_ptr_cast<ClassBody>(std::move(clonedBodyBase));
 
     // Clone captured scope (the one with free variables)
-    SharedPtr<Scope> clonedCapturedScope = getCapturedScope()->clone();
-    clonedCapturedScope->owner = "ClassBaseCaptured(" + name + ")";
-    clonedClassBody->setScope(clonedCapturedScope);
+    SharedPtr<Scope> clonedCapturedScope = getCapturedScope();
+    // clonedCapturedScope->owner = generateScopeOwner("ClassBaseCaptured", name);
+    // clonedClassBody->setScope(clonedCapturedScope);
 
     // Create ClassBase using the cloned captured scope as parent
-    SharedPtr<ClassBase> classBase = makeShared<ClassBase>(
-        getName(),
-        accessor,
-        std::move(clonedClassBody),
-        clonedCapturedScope // parentScope
-    );
+    // SharedPtr<ClassBase> classBase = makeShared<ClassBase>(
+    //     getName(),
+    //     accessor,
+    //     // std::move(clonedClassBody),
+    //     clonedCapturedScope // parentScope
+    // );
+
+
 
     // Clone parameters
     ParamList clonedParams;
     for (const auto& param : parameters) {
         clonedParams.addParameter(param.copy());
     }
-    classBase->setParameters(clonedParams);
 
-    if (!getClassScope()){
-        throw MerkError("ClassScope was not set before toCallableSignature()");
-
+    this->setParameters(clonedParams);
+    // setCapturedScope
+    if (!initialCapturedScope){
+        if (getCapturedScope()){
+            initialCapturedScope = getCapturedScope();
+        }
     }
 
     // Clone the classScope (member scope)
-    SharedPtr<Scope> clonedClassScope = getClassScope()->clone();
-    clonedClassScope->owner = "Class(" + name + ")";
+    // SharedPtr<Scope> clonedClassScope = ;
+    getClassScope()->owner = "Class(" + name + ")";
 
     // Attach classScope to clonedCapturedScope
-    clonedCapturedScope->appendChildScope(clonedClassScope, "ClassBase::toCallableSignature");
+    // clonedCapturedScope->appendChildScope(getClassScope(), "ClassBase::toCallableSignature");
 
     // Set both scopes on class
-    classBase->setCapturedScope(clonedCapturedScope);
+    // classBase->setCapturedScope(clonedCapturedScope);
 
-    classBase->setClassScope(getClassScope()->clone());
+    // classBase->setClassScope(getClassScope());
 
 
     // DEBUG_LOG(LogLevel::ERROR, "ClassBase::toCallableSignature()", "Scopes cloned and linked");
-
+    // ClassSignature()
     // Wrap into ClassSignature
+    // ClassSignature(shared_from_this());
+    auto classBase = std::static_pointer_cast<ClassBase>(shared_from_this());
+    // auto sig = makeShared<ClassSignature>(classBase);
+    // SharedPtr<CallableSignature> classSig = makeShared<ClassSignature>(shared_from_this());
     SharedPtr<CallableSignature> classSig = makeShared<ClassSignature>(classBase);
     DEBUG_FLOW_EXIT();
     return classSig;
@@ -252,21 +255,23 @@ SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
 void ClassInstance::construct(const Vector<Node>& args) {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
-    if (!getInstanceScope()->hasFunction("construct")) {
+    if (!getInstanceScope()->lookupFunction("construct") && !getInstanceScope()->hasFunction("construct")) {
+        getInstanceScope()->debugPrint();
+        getInstanceScope()->printChildScopes();
         throw MerkError("A construct method must be implemented in class: " + getName());
     }
     auto sigOpt = getInstanceScope()->getFunction("construct", args);
-    if (!sigOpt || !sigOpt.value()){
+    if (!sigOpt){
         throw FunctionNotFoundError("construct");
     }
     // auto sigOpt = getInstanceScope()->getFunction("construct", args);
     getInstanceScope()->debugPrint();
-    getInstanceScope()->owner = "ClassInstance(" + name + ")";
-    if (!sigOpt.has_value()) {
+    // getInstanceScope()->owner = generateScopeOwner("ClassInstance", name);
+    if (!sigOpt) {
         throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");
     }
 
-    sigOpt.value()->call(args, getInstanceScope());
+    sigOpt->call(args, getInstanceScope());
     DEBUG_FLOW_EXIT();
 }
 
@@ -292,11 +297,11 @@ Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope) con
     }
 
     auto sigOpt = classScope->getFunction("__call__", args);
-    if (!sigOpt.has_value()) {
+    if (!sigOpt) {
         throw MerkError("No matching '__call__' overload found.");
     }
     DEBUG_FLOW_EXIT();
-    return sigOpt.value()->call(args, classScope);
+    return sigOpt->call(args, classScope);
 }
 
 
@@ -305,7 +310,9 @@ Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope) con
 
 
 ClassSignature::ClassSignature(SharedPtr<ClassBase> classBaseData)
-: CallableSignature(classBaseData, CallableType::CLASS), accessor(classBaseData->getAccessor()), classBody(static_unique_ptr_cast<ClassBody>(classBaseData->getBody()->clone())) {
+: CallableSignature(classBaseData, CallableType::CLASS), accessor(classBaseData->getAccessor())
+// , classBody(static_unique_ptr_cast<ClassBody>(classBaseData->getBody()->clone()))
+ {
     // , classBody(std::move(classDef->getBody()->clone()))
     // classBody = classBodyData->getBody()->clone();
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
@@ -333,12 +340,6 @@ SharedPtr<ClassInstance> ClassSignature::instantiate(const Vector<Node>& args) c
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
     SharedPtr<ClassBase> classBase = std::static_pointer_cast<ClassBase>(getCallable());
-
-
-    // Pass the classBase directly into the ClassInstance constructor (it clones internally)
-    // String& className = ;
-    // ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, String& accessor)
-    // ClassInstance(classBase->getQualifiedName(), classBase->getCapturedScope(), classBase->getClassScope(), classBase->getParameters(), classBase->getAccessor());
 
     auto captured = classBase->getCapturedScope()->clone();
     if (!captured){
@@ -401,64 +402,23 @@ Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, Shar
         throw MerkError("Classbase Created Unsuccessfully");
     } 
     
-    // DEBUG_LOG(LogLevel::ERROR, "ClassBase created");
-    // Clone body and attach scope
-    if (!classBody){
-        throw MerkError("ClassBody doesn't exist");
-    }
-    auto body = classBody->clone();
-    if (!body) {
-        throw MerkError("body Created Unsuccessfully");
-    }
-    // DEBUG_LOG(LogLevel::ERROR, "body created");
-
-    auto clonedBody = static_unique_ptr_cast<ClassBody>(std::move(body));
-    if (!clonedBody) {
-        throw MerkError("clonedBody Created Unsuccessfully");
-    }
-
-    // DEBUG_LOG(LogLevel::ERROR, "clonedBody created");
-    // scope->owner = "ClassSig(" + classBase->getName() + ")";
-    clonedBody->setScope(scope);
-    // classScope->owner = "ClassInstance(" + classBase->getName() + ")";
-    // Fix classScope for methods
-    auto& children = clonedBody->getChildren();
-    for (auto& child : children) {
-        if (child->getAstType() == AstType::ClassMethodDef) {
-            auto* methodDef = static_cast<MethodDef*>(child.get());
-
-            methodDef->setClassScope(classScope);
-            methodDef->setScope(scope);
-            // methodDef->getScope()->owner = "Method(" + methodDef->getName() + ")";
-
-            applyMethodAccessorScopeFix(methodDef, classScope, getAccessor());
-        }
-    }
-
-    // DEBUG_LOG(LogLevel::ERROR, "ChildScopes updated");
-
-    // Inject updated body back into base
-    classBase->setBody(std::move(clonedBody));
-    // classBody->setScope(scope);
-    // classBase->setCapturedScope()`
-    // DEBUG_LOG(LogLevel::ERROR, "Body reset");
-
-    // Instantiate
-    // SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classBase);
-    auto captured = classBase->getCapturedScope()->clone();
+    
+    // auto captured = classBase->getCapturedScope()->clone();
+    auto captured = classScope->getParent();
     if (!captured){
         throw MerkError("Captured Scope Does Not Exist When Instantiating class: " + classBase->getName());
     }
-    auto instanced = classBase->getClassScope()->clone();
+    // auto instanced = classBase->getClassScope()->clone();
+    auto instanced = classScope->makeCallScope();
     if (!instanced){
         throw MerkError("Instance Scope Does Not Exist When Instantiating class: " + classBase->getName());
-
     }
     auto params = classBase->getParameters().clone();
     SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classBase->getQualifiedName(), captured, instanced, params, classBase->getQualifiedAccessor());
 
     // DEBUG_LOG(LogLevel::ERROR, "Instance Created");
     // instance->getScope()->owner = "ClassInstance(" + instance->getName() + ")";
+    // ClassInstance(classBase->getQualifiedName(), captured, )
     instance->construct(args);
     DEBUG_FLOW_EXIT();
     return ClassInstanceNode(instance);
@@ -478,9 +438,8 @@ Node ClassInstance::getField(const String& name, TokenType type) const {
         case TokenType::FunctionCall:
         if (instanceScope->hasFunction(name)) {
             auto sig = instanceScope->getFunction(name);
-
-
-            return MethodNode(sig.value()->getCallable());
+            auto instance = sig.front();  // Temp logic, leter need to decide based on args.
+            return MethodNode(instance->getCallable());
         }
             break;
 
@@ -519,6 +478,36 @@ SharedPtr<Callable> ClassInstanceNode::getCallable() const {
 
 
 
+// Constructor: Given a class name and a parent scope,
+// create a new child scope to serve as the class's own scope.
+// ClassBase::ClassBase(String name, SharedPtr<Scope> parentScope)
+//     : Callable(name, ParamList(), CallableType::CLASS)  // Assuming no parameters for a class definition.
+// {
+//     if (!parentScope) {
+//         throw MerkError("Parent scope cannot be null for ClassBase.");
+//     }
+//     // Create a new child scope from the parent for this class.
+//     classScope = parentScope->createChildScope();
+//     DEBUG_LOG(LogLevel::DEBUG, "ClassBase created with name: ", name, " in parent scope: ", parentScope.get());
+// }
+
+// ClassBase::ClassBase(String otherName, String otherAccessor, UniquePtr<ClassBody> otherBody, SharedPtr<Scope> parentScope)
+//     : Callable(otherName, ParamList(), CallableType::CLASS) {
+//     if (!otherBody){
+//         throw MerkError("ClassBase::ClassBase: newBody is null");
+//     }
+//     // name = otherName;
+//     accessor = otherAccessor;
+//     // classScope = OtherClassScope;
+//     scope = parentScope;
+//     // UniquePtr<ClassBody> newBody = static_unique_ptr_cast<ClassBody>(body->clone());
+//     // body = std::move(otherBody);
+
+//     // if (!body){
+//     //     throw MerkError("ClassBase::ClassBase: body is null");
+//     // }
+    
+// }
 
 
 

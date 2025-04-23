@@ -167,54 +167,54 @@ Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) c
 SharedPtr<Callable> CallableSignature::getCallable() const { return callable;}
 
 const Vector<NodeValueType>& CallableSignature::getParameterTypes() const {
-if (parameterTypes.size() == 0) {
-    parameterTypes = callable->parameters.getParameterTypes();
-}
-return parameterTypes;
+    if (parameterTypes.size() == 0) {
+        parameterTypes = callable->parameters.getParameterTypes();
+    }
+    return parameterTypes;
 }
 
 bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
-DEBUG_FLOW(FlowLevel::LOW);
-debugLog(true, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
-// First, check that the number of arguments matches.
-if (parameterTypes.size() != argTypes.size()) {
-    
-    DEBUG_LOG(LogLevel::INFO, "Parameter count does not match. Expected: ", parameterTypes.size(),
-                ", got: ", argTypes.size());
-    DEBUG_FLOW_EXIT();
-    return false;
-}
-
-// Now check each parameter type.
-for (size_t i = 0; i < parameterTypes.size(); ++i) {
-    NodeValueType expected = parameterTypes[i];
-    NodeValueType provided = argTypes[i];
-    DEBUG_LOG(LogLevel::DEBUG, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
-
-    // Allow a parameter declared as "Any" to match any argument.
-    if (expected == NodeValueType::Any) {
-        continue;
-    }
-    // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
-    if (provided == NodeValueType::Uninitialized) {
-        continue;
-    }
-
-    // Otherwise, they must match exactly.
-    if (expected != provided) {
-        DEBUG_LOG(LogLevel::DEBUG, "Type mismatch on parameter ", i, ": expected ",
-        nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
-        DEBUG_LOG(LogLevel::DEBUG, "Parameter Failed Expected Type Criteria, returning false");
-
+    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_LOG(LogLevel::ERROR, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
+    // First, check that the number of arguments matches.
+    if (getParameterTypes().size() != argTypes.size()) {
+        
+        DEBUG_LOG(LogLevel::ERROR, "Parameter count does not match. Expected: ", parameterTypes.size(),
+                    ", got: ", argTypes.size());
         DEBUG_FLOW_EXIT();
         return false;
     }
-}
 
-DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
+    // Now check each parameter type.
+    for (size_t i = 0; i < parameterTypes.size(); ++i) {
+        NodeValueType expected = parameterTypes[i];
+        NodeValueType provided = argTypes[i];
+        DEBUG_LOG(LogLevel::ERROR, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
 
-DEBUG_FLOW_EXIT();
-return true;
+        // Allow a parameter declared as "Any" to match any argument.
+        if (expected == NodeValueType::Any) {
+            continue;
+        }
+        // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
+        if (provided == NodeValueType::Uninitialized) {
+            continue;
+        }
+
+        // Otherwise, they must match exactly.
+        if (expected != provided) {
+            DEBUG_LOG(LogLevel::ERROR, "Type mismatch on parameter ", i, ": expected ",
+            nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
+            DEBUG_LOG(LogLevel::ERROR, "Parameter Failed Expected Type Criteria, returning false");
+
+            DEBUG_FLOW_EXIT();
+            return false;
+        }
+    }
+
+    DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
+
+    DEBUG_FLOW_EXIT();
+    return true;
 }
 
 Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {

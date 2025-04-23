@@ -147,8 +147,8 @@ SharedPtr<Scope> Scope::clone(bool strict) const {
     for (auto& [name,var] : this->context.getVariables())
         newScope->context.setVariable(name, UniquePtr<VarNode>(var->clone()));
 
-    // newScope->functionRegistry = this->functionRegistry.clone();
-    // newScope->classRegistry    = this->classRegistry.clone();
+    newScope->localFunctions = this->localFunctions;
+    newScope->localClasses = this->localClasses;
     newScope->isClonedScope    = true;
     includeMetaData(newScope, isDetached);
 
@@ -191,7 +191,14 @@ void Scope::debugPrint() const {
         "Owner:", !owner.empty() ? owner : "None" 
     );
     context.debugPrint();
-    globalFunctions->debugPrint();
+    // globalFunctions->debugPrint();
+    for (auto& funcVec : localFunctions){
+        auto& funcName = funcVec.first;
+        debugLog(true, funcName, funcVec);
+        // for(auto& func : funcVec.second) {
+
+        // }
+    }
     
     for (const auto& child : childScopes) {
         child->debugPrint();
@@ -273,6 +280,7 @@ void Scope::setScopeLevel(int newLevel) {
 void Scope::updateChildLevelsRecursively() {
     for (auto& child : childScopes){
         child->setScopeLevel(scopeLevel+1);
+        includeMetaData(child);
         child->updateChildLevelsRecursively();
     }
 }

@@ -24,7 +24,7 @@ public:
     
     bool hasFunction(const String& name) const;
 
-    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getFunction(const String& name);
+    std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name);
 
     std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getFunction(const String& name, const Vector<Node>& args);
 

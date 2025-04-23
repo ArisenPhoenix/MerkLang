@@ -17,7 +17,7 @@ class ClassSignature;
 class Scope : public std::enable_shared_from_this<Scope> {
 private:
     WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
-    int scopeLevel;                            // The level of the scope in the hierarchy
+    int scopeLevel;                      // The level of the scope in the hierarchy
 
 public:
 
@@ -26,29 +26,43 @@ public:
     explicit Scope(WeakPtr<Scope> parentScope = WeakPtr<Scope>(), bool interpretMode = false);
     explicit Scope(SharedPtr<Scope> parentScope, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpreMode);
 
+    // // DESTRUCTOR
     ~Scope();
+    void clear();
+    // // Attributes
 
     SharedPtr<FunctionRegistry>  globalFunctions;
     SharedPtr<ClassRegistry>     globalClasses;
-  
-    // …you only ever stash local deltas here:
-    std::unordered_map<String,SharedPtr<CallableSignature>>  localFunctions;
-    std::unordered_map<String,SharedPtr<ClassSignature>>     localClasses;
+    
+    // Local Storage
+    std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
+    std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
 
-    // Scope Management
-    SharedPtr<Scope> createChildScope(); // Create a child scope
-    SharedPtr<Scope> getParent() const;  // Get the parent scope
     int currentLine;
     int currentColumn;
-    int getScopeLevel() const;           // Get the current scope level
 
-    // Created For Debugging Scope when developing functions. Will keep until such time as deemed unnecessary
     bool isDetached = false;
     bool isCallableScope = false;
     bool isClonedScope = false;
     String owner = "";
-    SharedPtr<Scope> makeCallScope();
+
+    // Vector<String> protectedMembers;
+    // void setProtectedMembers(Vector<String> protectedMems);
+    // Vector<String> Scope::getProtectedMembers() const;
+    // Scope Manipulation
+    void attachToInstanceScope(SharedPtr<Scope> instanceScope);
+    bool removeChildScope(const SharedPtr<Scope>& target);
+    void appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool recursive = true);
+    void appendChildScope(SharedPtr<Scope> childScope, bool recursive = true);
+    SharedPtr<Scope> createChildScope(); // Create a child scope
     void includeMetaData(SharedPtr<Scope> newScope, bool isDetached = false) const;
+    SharedPtr<Scope> makeInstanceScope(SharedPtr<Scope> classScope);
+
+    // Scope Management
+    SharedPtr<Scope> getParent() const;  // Get the parent scope
+    int getScopeLevel() const;           // Get the current scope level
+    SharedPtr<Scope> makeCallScope();
+    SharedPtr<Scope> detachScope(const std::unordered_set<String>& freeVarNames);
 
     // Context Management
     const Context& getContext() const { return context; }
@@ -62,18 +76,11 @@ public:
     VarNode& getVariable(const String& name);
     void printContext(int depth = 0) const;
 
-    // lookup a function: first in your local overlay
-    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const Vector<Node>& args) const;
-    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name) const;
-    // std::optional<std::reference_wrapper<SharedPtr<ClassSignature>>> lookupClass(const String& name, const Vector<Node>& args) const;
-    std::optional<SharedPtr<ClassSignature>> lookupClass(const String& name) const;
-
-// registering in *this* scope now only writes into your overlay:
-    void registerFunctionHere(const String& name,SharedPtr<CallableSignature> f);
     
-    // Registry Management
-    // const FunctionRegistry& getFunctionRegistry() const;
-    // FunctionRegistry& getFunctionRegistry();
+    //// Registry Management
+    //// Function Management
+    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const Vector<Node>& args) const;
+    std::optional<Vector<SharedPtr<CallableSignature>>> lookupFunction(const String& name) const;
 
     const SharedPtr<FunctionRegistry> getFunctionRegistry() const;
     SharedPtr<FunctionRegistry> getFunctionRegistry();
@@ -84,38 +91,27 @@ public:
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
 
-    // std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getFunction(const String& name, const Vector<Node>& args);
-    std::optional<SharedPtr<CallableSignature>>  getFunction(const String& name, const Vector<Node>& args);
-    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name);
+    SharedPtr<CallableSignature> getFunction(const String& name, const Vector<Node>& args);
+    Vector<SharedPtr<CallableSignature>> getFunction(const String& name);
 
 
-    // Class Management
-    // const ClassRegistry& getClassRegistry() const;
+    //// Class Management
+    std::optional<SharedPtr<ClassSignature>> lookupClass(const String& name) const;
+
     SharedPtr<ClassRegistry> getClassRegistry();
 
-    // ClassRegistry& getClassRegistry();
     bool hasClass(const String& name) const;
-    // void registerClass();
     void registerClass(const String& name, SharedPtr<ClassBase> cls);
     void registerClass(const String& name, SharedPtr<ClassSignature> classSig);
     std::optional<SharedPtr<ClassSignature>> getClass(const String& name);
-
-    // for dynamic resolution of chains
-    // Node lookup(const String& name, IdentifierType type);
-    
-    // SharedPtr<std::unordered_map<String, CallableType>> globalCallables;
 
     // Scope Other
     Vector<SharedPtr<Scope>> getChildren();
     bool hasChildren();
     void debugPrint() const;
-    void printChildScopes(int indentLevel = 0) const;
-
-
     void setParent(SharedPtr<Scope> scope);
 
   
-    SharedPtr<Scope> detachScope(const std::unordered_set<String>& freeVarNames);
 
     void updateChildLevelsRecursively();
     void setScopeLevel(int newLevel);
@@ -124,16 +120,15 @@ public:
 
     bool parentIsValid();
 
-    void registerCallableType(const String& name, CallableType type);
-    std::optional<CallableType> getCallableType(const String& name) const;
-    Node resolveCallable(const String& name, const Vector<Node>& args = {});
-    void attachToInstanceScope(SharedPtr<Scope> instanceScope);
-    
-    bool removeChildScope(const SharedPtr<Scope>& target);
-    void appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool recursive = true);
-    void appendChildScope(SharedPtr<Scope> childScope, bool recursive = true);
+    // // DEBUGGING
+    void printChildScopes(int indentLevel = 0) const;
 
-    void clear();
+    // // Probably Not Needed Anymore
+    // void registerCallableType(const String& name, CallableType type);
+    // std::optional<CallableType> getCallableType(const String& name) const;
+    // Node resolveCallable(const String& name, const Vector<Node>& args = {});
+    
+
 
 private:
     void setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration);

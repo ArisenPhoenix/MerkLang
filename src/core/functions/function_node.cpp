@@ -25,7 +25,7 @@ FunctionBody::FunctionBody(SharedPtr<Scope> scope) : CallableBody(scope) {
 }
 
 Function::Function(String name, ParamList params, CallableType funcType)
-    : Callable(name, std::move(params), CallableType::FUNCTION)
+    : Callable(name, params, CallableType::FUNCTION)
 {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     
@@ -35,9 +35,9 @@ Function::Function(String name, ParamList params, CallableType funcType)
 }
 
 UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType)
-    : Function(name, std::move(parameters), CallableType::FUNCTION), body(std::move(body)) {
+    : Function(name, parameters, CallableType::FUNCTION), body(std::move(body)) {
         DEBUG_FLOW(FlowLevel::LOW);
-
+        
         setSubType(funcType);
             
         setCallableType(CallableType::FUNCTION);
@@ -82,8 +82,8 @@ Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope) const {
 
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
-    DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(this->subType));
+    // DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
+    // DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(getSubType()));
 
     SharedPtr<CallableSignature> funcSig = makeShared<CallableSignature>(
         shared_from_this(), getCallableType()
@@ -94,6 +94,8 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     if (funcSig->getCallableType() == CallableType::DEF) {
         throw MerkError("Primary Callable Type is: " + callableTypeAsString(funcSig->getCallableType()));
     }
+
+    // DEBUG_LOG(LogLevel::ERROR, funcSig->getParameterTypes());
     DEBUG_FLOW_EXIT();
     return funcSig;
 }

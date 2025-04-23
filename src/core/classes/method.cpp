@@ -45,11 +45,13 @@ Method::Method(Method& method) : Callable(method) {
 SharedPtr<CallableSignature> Method::toCallableSignature(SharedPtr<Method> method) {
     auto sig = makeShared<CallableSignature>(method, CallableType::METHOD);
     sig->setSubType(method->getSubType());
+    getCapturedScope()->owner = generateScopeOwner("MethodSignature", name);
     return sig;
 }
 
 void Method::setScope(SharedPtr<Scope> newScope) const {
     getBody()->setScope(newScope);
+    // getBody()->getScope()->owner = generateScopeOwner("Method", name);
 }
 
 SharedPtr<CallableSignature> Method::toCallableSignature() {
@@ -92,7 +94,7 @@ void Method::setCapturedScope(SharedPtr<Scope> scope) {
         throw MerkError("Cannot set a null scope in Method::setCapturedScope.");
     }
     capturedScope = scope;
-    capturedScope->owner = "Method(" + name + ")";
+    capturedScope->owner = generateScopeOwner("MethodCapturedScope", name);
     body->setScope(capturedScope);
 }
 
