@@ -50,6 +50,7 @@ public:
     UniquePtr<BaseAST> clone() const override;
 
     AstType getAstType() const override { return AstType::ClassMethodBlock;}
+
     // UniquePtr<BaseAST> clone() const override;
 };
 

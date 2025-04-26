@@ -75,17 +75,28 @@ SharedPtr<CallableSignature> Method::toCallableSignature() {
 
 // Execute: Create a new method activation scope from the captured scope, bind parameters, and evaluate the body.
 Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope) const {
-    (void) callScope;
-    SharedPtr<Scope> methodScope = capturedScope->createChildScope();
+    // (void) callScope;
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Executing Method with below scope");
+
+    SharedPtr<Scope> methodScope = callScope->makeCallScope();
+    // callScope->appendChildScope(methodScope);
+    // setClassScope(callScope);
+    methodScope->debugPrint();
+    methodScope->printChildScopes();
     parameters.verifyArguments(args);
     for (size_t i = 0; i < parameters.size(); ++i) {
         methodScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(args[i]));
     }
     try {
-        return body->clone()->evaluate(methodScope);
+        DEBUG_FLOW_EXIT();
+        // body->setScope(methodScope);
+        return body->evaluate();
     } catch (const ReturnException& e) {
+        DEBUG_FLOW_EXIT();
         return e.getValue();
     }
+
 }
 
 // setCapturedScope: Updates the captured scope and updates the method body's scope accordingly.
@@ -110,12 +121,20 @@ SharedPtr<Scope> Method::getCapturedScope() const {
 String Method::getAccessor() {return accessor;}
 void Method::setAccessor(String access) {accessor = access;}
 
-SharedPtr<Scope> Method::getClassScope() {return classScope;}
+SharedPtr<Scope> Method::getClassScope() const {return classScope;}
 void Method::setClassScope(SharedPtr<Scope> newClassScope) {
     if (!newClassScope) {
         throw MerkError("Cannot Set newClassScope to a null Scope");
     }
-    classScope = newClassScope;} 
+    classScope = newClassScope;
+}
+
+// void Method::setClassScope(SharedPtr<Scope> newClassScope) const {
+//     if (!newClassScope) {
+//         throw MerkError("Cannot Set newClassScope to a null Scope");
+//     }
+//     classScope = newClassScope;
+// } 
 
 String Method::toString() const {return "Method";}
 

@@ -57,12 +57,14 @@ Operator stringToOperator(const String& op) {
     return (it != operatorMap.end()) ? it->second : Operator::Invalid;
 }
 
+bool isDebug = Debugger::getInstance().getLogLevel() == LogLevel::DEBUG;
+
 void evaluatingFor(const String& value, const String& methodName, int scopeLevel = -2) {
     #if !ENABLE_DEBUG_LOGGING
         MARK_UNUSED_MULTI(value, methodName);
     #endif
     
-    if (Debugger::getInstance().getLevel() == LogLevel::DEBUG){
+    if (isDebug){
         String level;
         if (scopeLevel > -2){
             level = std::to_string(scopeLevel);
@@ -78,7 +80,7 @@ void evaluatingFor(const Node& value, const String& methodName, int scopeLevel =
         MARK_UNUSED_MULTI(value, methodName);
     #endif
     (void)value;
-    if (Debugger::getInstance().getLevel() == LogLevel::DEBUG){
+    if (isDebug){
         String level;
         if (scopeLevel > -2){
             level = std::to_string(scopeLevel);
@@ -91,18 +93,16 @@ void evaluatingFor(const Node& value, const String& methodName, int scopeLevel =
 
 namespace Evaluator {
 
-
     Node evaluateLiteral(Node value, bool isString, bool isBool){
         (void)isString;
         (void)isBool;
         DEBUG_FLOW(FlowLevel::LOW);
         return value;
-        
     }
 
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, SharedPtr<Scope> scope){
         DEBUG_FLOW(FlowLevel::LOW);
-        DEBUG_LOG(LogLevel::ERROR, "Evaluating Variable Declaration, Scope Follows: ");
+        DEBUG_LOG(LogLevel::TRACE, "Evaluating Variable Declaration");
         // scope->debugPrint();
         VarNode resolvedVariable = VarNode(valueNode->evaluate(scope)); // Use the current scope
         scope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, var.isStatic)); // Declare variable in scope
@@ -123,21 +123,20 @@ namespace Evaluator {
         }
         
         auto newValue = value->evaluate(scope); // Evaluate the RHS
-        DEBUG_LOG(LogLevel::INFO, "VariableAssignmentNode: New value for '", name, "': ", newValue);
+        DEBUG_LOG(LogLevel::TRACE, "VariableAssignmentNode: New value for '", name, "': ", newValue);
 
         if (!newValue.isValid()){
             throw NullVariableError(name);
         }
 
-        DEBUG_LOG(LogLevel::INFO, "========================");
-        DEBUG_LOG(LogLevel::INFO, "Assigning: ", newValue, "To scope");
-        DEBUG_LOG(LogLevel::INFO, "========================");
+        DEBUG_LOG(LogLevel::TRACE, "========================");
+        DEBUG_LOG(LogLevel::TRACE, "Assigning: ", newValue, "To scope");
+        DEBUG_LOG(LogLevel::TRACE, "========================");
 
         // Update the variable in the scope
         scope->updateVariable(name, newValue);
 
-        DEBUG_LOG(LogLevel::INFO, "VariableAssignmentNode updated: Name =", name,
-                ", New Value =", newValue);
+        DEBUG_LOG(LogLevel::TRACE, "VariableAssignmentNode updated: Name =", name, ", New Value =", newValue);
 
         DEBUG_FLOW_EXIT();
         return newValue; // Return the new value for debugging or chaining
@@ -171,7 +170,7 @@ namespace Evaluator {
         // try {
             for (const auto& child : children) {
 
-                DEBUG_LOG(LogLevel::INFO, 
+                DEBUG_LOG(LogLevel::TRACE, 
                     highlight("Evaluating FunctionBody child:", Colors::orange), 
                     highlight(child->getAstTypeAsString(), Colors::green), 
                     "in CodeBlock scope:", 
@@ -183,7 +182,7 @@ namespace Evaluator {
     
                
                 if (!lastValue.isValid()){
-                    DEBUG_LOG(LogLevel::INFO, "Invalid value returned from child node evaluation: ", highlight(lastValue.toString(), Colors::orange));
+                    DEBUG_LOG(LogLevel::TRACE, "Invalid value returned from child node evaluation: ", highlight(lastValue.toString(), Colors::orange));
                     continue;
                 }
             }
@@ -205,19 +204,19 @@ namespace Evaluator {
             // DEBUG_LOG(LogLevel::INFO, "Evaluating child node in CodeBlock: ", child->getAstTypeAsString());
             if (child.get()) {
 
-                DEBUG_LOG(LogLevel::ERROR, "Found Child: ", child->getAstTypeAsString());
+                DEBUG_LOG(LogLevel::TRACE, "Found Child: ", child->getAstTypeAsString());
                 lastValue = child.get()->evaluate(scope);
                 DEBUG_LOG(LogLevel::DEBUG, "Child Evaluated To: ", lastValue.toString());
                 if (!lastValue.isValid()){
                     
-                    DEBUG_LOG(LogLevel::INFO, "Invalid value returned from child node evaluation: ", lastValue.toString());
-                    DEBUG_LOG(LogLevel::INFO, "Container for invalid child: ", child->getAstTypeAsString());
+                    DEBUG_LOG(LogLevel::TRACE, "Invalid value returned from child node evaluation: ", lastValue.toString());
+                    DEBUG_LOG(LogLevel::TRACE, "Container for invalid child: ", child->getAstTypeAsString());
                     continue;
                 }
 
             } else {
-                DEBUG_LOG(LogLevel::INFO, highlight("Null child node encountered in CodeBlock.", Colors::red));
-                DEBUG_LOG(LogLevel::INFO, "Null child: ", child->getAstTypeAsString());
+                DEBUG_LOG(LogLevel::TRACE, highlight("Null child node encountered in CodeBlock.", Colors::red));
+                DEBUG_LOG(LogLevel::TRACE, "Null child: ", child->getAstTypeAsString());
             }
         }
 
@@ -227,7 +226,7 @@ namespace Evaluator {
 
     Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> scope) {
         DEBUG_FLOW(FlowLevel::LOW);
-        DEBUG_LOG(LogLevel::ERROR, "evaluateIf");
+        DEBUG_LOG(LogLevel::TRACE, "evaluateIf");
         if (ifStatement.getCondition()->evaluate(scope).toBool()) {
             DEBUG_FLOW_EXIT();
             return ifStatement.getBody()->evaluate(scope);
@@ -297,30 +296,28 @@ namespace Evaluator {
         }
         while (true) {
             // Evaluate the condition
-            DEBUG_LOG(LogLevel::DEBUG, "About To Evaluate While Loop Condition Result");
+            DEBUG_LOG(LogLevel::TRACE, "About To Evaluate While Loop Condition Result");
  
             Node conditionResult = condition.evaluate();
             DEBUG_LOG(LogLevel::INFO, "While Loop Condition Result: ", conditionResult);
             if (!conditionResult.toBool()) {
-                DEBUG_LOG(LogLevel::INFO, "Condition evaluated to false. Exiting loop.");
+                DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to false. Exiting loop.");
                 break;  // Exit the loop if condition is false
             }
 
-            DEBUG_LOG(LogLevel::INFO, "Condition evaluated to true. Executing body.");
+            DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to true. Executing body.");
 
             try {
                 // Evaluate the body
                 body->evaluate();
             } catch (const ContinueException&){
-                DEBUG_LOG(LogLevel::INFO, "Continue statement encountered. Skipping to next iteration.");
+                DEBUG_LOG(LogLevel::TRACE, "Continue statement encountered. Skipping to next iteration.");
                 continue;
             } catch (const BreakException&) {
-                DEBUG_LOG(LogLevel::INFO, "Break statement encountered. Exiting loop.");
+                DEBUG_LOG(LogLevel::TRACE, "Break statement encountered. Exiting loop.");
                 break;  // Exit the loop if a break statement is encountered
             }
         }
-
-        DEBUG_LOG(LogLevel::INFO, "Finished evaluating WhileLoopNode.");
         DEBUG_FLOW_EXIT();
         return Node();  // Return a default Node, as WhileLoop doesn't produce a value
     }
@@ -392,8 +389,8 @@ namespace Evaluator {
     [[noreturn]] Node evaluateBreak(SharedPtr<Scope> scope) {
         DEBUG_FLOW(FlowLevel::LOW);
         MARK_UNUSED_MULTI(scope);
-        DEBUG_LOG(LogLevel::INFO, "Evaluating break statement in scope level: ", scope->getScopeLevel());
-        DEBUG_LOG(LogLevel::INFO, "Throwing A Break for ", "scope level: ", scope->getScopeLevel());
+        DEBUG_LOG(LogLevel::TRACE, "Evaluating break statement in scope level: ", scope->getScopeLevel());
+        DEBUG_LOG(LogLevel::TRACE, "Throwing A Break for ", "scope level: ", scope->getScopeLevel());
         DEBUG_FLOW_EXIT();
         throw BreakException();
     }

@@ -18,7 +18,13 @@
 #include "core/scope.h"
  
 
-
+// void debugRefCount(const String& message = "") const {
+//     DEBUG_LOG(LogLevel::INFO, 
+//               message.empty() ? "" : (highlight(message, Colors::pink) + " "),
+//               "Scope at ", this, 
+//               " | Scope Level: ", scopeLevel, 
+//               " | SharedPtr use_count = ", shared_from_this().use_count());
+// }
 
 // this was the original idea for function scoping, but a better one was made, namely detaching, filling, then reattaching the scope using appendChildScope
 // The idea may still be useful in the future so keeping the idea and its implementation in-tact
@@ -101,7 +107,16 @@ void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) cons
     newScope->isDetached = thisIsDetached;
     newScope->isClonedScope = newScope->isClonedScope ? newScope->isClonedScope : isClonedScope;
     newScope->isCallableScope = newScope->isCallableScope ? newScope->isCallableScope : isCallableScope;
-    newScope->owner = newScope->isDetached ? "detached" : owner;
+    if (newScope->isDetached) {
+        if (newScope->owner.empty()) {
+            newScope->owner = owner;
+        } else {
+            newScope->owner = owner + "(detached)";
+        }
+    } else {
+        newScope->owner = owner;
+    }
+    // newScope->owner = newScope->isDetached ? newScope->owner.empty() ? owner + "(detached)" : owner : newScope->owner == "None" ? owner : owner;
 }
 
 
@@ -188,7 +203,7 @@ void Scope::debugPrint() const {
         "isDetached:", isDetached ? "true" : "false", 
         "isCloned:", isClonedScope ? "true" : "false", 
         "isCallableScope:", isCallableScope ? "true" : "false",
-        "Owner:", !owner.empty() ? owner : "None" 
+        "Owner:", !owner.empty() ? owner : "<None Provided>>" 
     );
     context.debugPrint();
     // globalFunctions->debugPrint();
@@ -218,7 +233,15 @@ void Scope::printChildScopes(int indentLevel) const {
     if (scopeLevel == 0){
         debugLog(true, highlight("\n\n======================== Start Scope::printChildScopes ========================", Colors::cyan));
     }
-    auto indent = String(indentLevel * 2, ' ');
+    auto parent = parentScope.lock();
+    // auto newIndent = indentLevel * 2;
+    auto indent = String(indentLevel+2, ' ');
+    int numInstances = 0;
+    for (auto& [varName, var] : context.getVariables()) {
+        if (var->isClassInstance()) {
+            numInstances += 1;
+        }
+    }
 
     // Print information about the current scope
     debugLog(true, indent,
@@ -227,14 +250,28 @@ void Scope::printChildScopes(int indentLevel) const {
         "| Parent Loc:", parentScope.lock() ? parentScope.lock() : nullptr,
         "| Number of Variabls:", context.getVariables().size(),
         "| Number of Children:", childScopes.size(),
-        "| Num Functions:", globalFunctions ? globalFunctions->getFunctions().size() : 0,
-        "| Num Classes:", globalClasses ? globalClasses->getClasses().size() : 0,
-        "| Owner:", !owner.empty() ? owner : "None"
+        "| Num Functions:", localFunctions.size(),
+        "| Num Classes:", localClasses.size(),
+        "| Num Instance: ", numInstances,
+        "| Owner:", !owner.empty() ? owner : "<None Provided>>"
         );
+    
+    if (numInstances > 0) {
+        debugLog(true, indent, "=================== GO INSTANCE LOG ===================");
+        for (auto& [varName, var] : context.getVariables()) {
+            if (var->isClassInstance()) {
+                auto callable = std::get<SharedPtr<Callable>>(var->getValue());
+                auto instance = std::static_pointer_cast<ClassInstance>(callable);
+                instance->getInstanceScope()->printChildScopes(indentLevel+2);
+                instance->getCapturedScope()->printChildScopes(indentLevel+2);
+            }
+        }
+        debugLog(true, indent, "=================== END INSTANCE LOG ===================");
 
+    }
     // Recursively print each child scope
     for (const auto& child : childScopes) {
-        child->printChildScopes(indentLevel + 1); // Increase indentation for child
+        child->printChildScopes(indentLevel+2); // Increase indentation for child
     }
     if (scopeLevel == 0){
         debugLog(true, highlight("======================== End Scope::printChildScopes ========================\n", Colors::cyan));
@@ -300,6 +337,13 @@ bool Scope::removeChildScope(const SharedPtr<Scope>& target) {
     return false;
 }
 
+
+
+void Scope::setParent(SharedPtr<Scope> scope) {
+    scope->appendChildScope(shared_from_this());
+    parentScope = scope;
+    scopeLevel = scope->getScopeLevel() + 1;
+}
 
 
 // std::optional<CallableType> Scope::getCallableType(const String& name) const {

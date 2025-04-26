@@ -97,7 +97,7 @@ class ClassInstance : public Callable {
 private:
 
     // SharedPtr<Scope> capturedScope;
-    std::weak_ptr<Scope> capturedScope;
+    SharedPtr<Scope> capturedScope;
     // mutable SharedPtr<Scope> startingScope;
     SharedPtr<Scope> instanceScope; // reference to definition (optional)
     String accessor;
@@ -119,12 +119,21 @@ public:
     SharedPtr<CallableSignature> toCallableSignature() override;
 
     String toString() const override;
-    String getAccessor() {return accessor;}
+    String getAccessor() {return accessor;} 
 
     void construct(const Vector<Node>& args);
+    Node call(String name, Vector<Node> args);
     // SharedPtr<Scope> getScope() {return startingScope;}
+
+    virtual Node getField(const String& name) const;                     // assumes a variable
+    virtual Node getField(const String& name, TokenType type) const;     // specific to what kind of member i.e var/method
+
+    virtual void declareField(const String& name, const Node& val);             // probably only used in dynamic construction of a class
+    virtual void declareField(const String& name, const VarNode& val);             // probably only used in dynamic construction of a class
+
+    virtual void updateField(const String& name, Node val) const;                 // most commonly used
     
-    Node getField(const String& name, TokenType type) const;
+    // Node getField(const String& name, TokenType type) const;
 
     SharedPtr<Scope> getInstanceScope();
     void setInstanceScope(SharedPtr<Scope> scope);
@@ -138,6 +147,9 @@ public:
     ClassInstanceNode(SharedPtr<ClassInstance> callable);
 
     SharedPtr<Callable> getCallable() const override;
+
+
+
 
 };
 

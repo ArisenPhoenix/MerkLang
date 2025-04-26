@@ -278,30 +278,30 @@ bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInst
 
 bool Node::isClassInstance() {return data.type == NodeValueType::ClassInstance;}
 
-Node Node::getField(const String& name) const {
-    (void)name;
-    // if (!isClassInstance()) {
-    //     throw MerkError("Tried to access field '" + name + "' on non-instance Node.");
-    // }
+// Node Node::getField(const String& name) const {
+//     (void)name;
+//     // if (!isClassInstance()) {
+//     //     throw MerkError("Tried to access field '" + name + "' on non-instance Node.");
+//     // }
 
-    // auto instance = std::get<SharedPtr<ClassInstance>>(data.value);
-    // SharedPtr<Scope> scope = instance->getCapturedScope(); // or getInstanceScope()
+//     // auto instance = std::get<SharedPtr<ClassInstance>>(data.value);
+//     // SharedPtr<Scope> scope = instance->getCapturedScope(); // or getInstanceScope()
 
-    // if (scope->hasVariable(name)) {
-    //     return scope->getVariable(name);
-    // } else if (scope->hasFunction(name)) {
-    //     auto sig = scope->getFunction(name).value().get();
-    //     return MethodNode(sig->getMethod());
-    // }
+//     // if (scope->hasVariable(name)) {
+//     //     return scope->getVariable(name);
+//     // } else if (scope->hasFunction(name)) {
+//     //     auto sig = scope->getFunction(name).value().get();
+//     //     return MethodNode(sig->getMethod());
+//     // }
 
-    // throw MerkError("Field or method '" + name + "' not found.");
-    return Node();
-}
-Node Node::getField(const String& name, TokenType type) const {
-    (void)name;
-    (void)type;
-    return Node();
-}
+//     // throw MerkError("Field or method '" + name + "' not found.");
+//     return Node();
+// }
+// Node Node::getField(const String& name, TokenType type) const {
+//     (void)name;
+//     (void)type;
+//     return Node();
+// }
 
 bool Node::isNumeric() const { return isInt() || isFloat() || isDouble() || isLong(); }
 

@@ -79,6 +79,7 @@ String astTypeToString(AstType type) {
         case AstType::ClassMethodBlock: return highlight("ClassMethodBody", Colors::bold_purple);
         case AstType::ClassMethodDef: return highlight("ClassMethodDef", Colors::bold_red);
         case AstType::ClassMethodCall: return highlight("ClassMethodCall", Colors::bold_red);
+        // case AstType::
         case AstType::ClassMethodRef: return highlight("ClassMethodRef", Colors::bold_blue);
 
         case AstType::AttributeDeclaration: return highlight("AttributeDeclaration", Colors::bold_cyan);
@@ -90,6 +91,8 @@ String astTypeToString(AstType type) {
         case AstType::NoOp: return highlight("NoOp", Colors::light_gray);
 
         case AstType::ImportStatement: return highlight("ImportStatement", Colors::light_blue);
+
+        case AstType::AST: return highlight("AST", Colors::red);
 
         default: return "Unknown";
     }

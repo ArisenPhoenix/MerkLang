@@ -16,7 +16,9 @@ void ASTUtils::traverse(const Vector<UniquePtr<BaseAST>>& nodes, const std::func
     std::unordered_set<const BaseAST*> localSet;
     if (!visited) visited = &localSet;
     for (const auto& node : nodes) {
-
+        if (!node) {
+            throw MerkError("The Node Being Attempted TO traverse does not exist");
+        }
         fn(node.get());
         if (recursive) {
             for (const BaseAST* child : node->getAllAst(includeSelf)) {

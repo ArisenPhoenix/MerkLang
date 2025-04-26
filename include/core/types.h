@@ -198,6 +198,10 @@ enum class AstType {
     AttributeAssignment,
 
     Chain,
+    ChainOperation,
+    // ChainAssignment,
+    // ChainReference,
+    // ChainDeclaration,
 
     Unknown,
     NoOp,

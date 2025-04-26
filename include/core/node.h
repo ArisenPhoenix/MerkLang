@@ -54,8 +54,8 @@ public:
     String nodeType = "DataNode";
     String name = "";
 
-    virtual Node getField(const String& name) const;
-    virtual Node getField(const String& name, TokenType type) const;
+
+    
     bool isClassInstance();
     bool isClassInstance() const;
     

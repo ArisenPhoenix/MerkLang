@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
         auto tokens = tokenizer.tokenize();
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
 
-        tokenizer.printTokens((Debugger::getInstance().getLevel() >= LogLevel::ERROR));
+        tokenizer.printTokens((Debugger::getInstance().getLogLevel() >= LogLevel::ERROR));
 
         // Step 5: Parse tokens into an AST
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");

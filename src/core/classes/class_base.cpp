@@ -73,6 +73,7 @@ void ClassBase::setCapturedScope(SharedPtr<Scope> scope) {
         throw MerkError("New Scope provided to ClassBase is null");
     }
     capturedScope = scope;
+    initialCapturedScope = scope;
     // getCapturedScope()->owner = "ClassBaseCaptured(" + name + ")";
 }
 
@@ -86,18 +87,18 @@ void ClassBase::setClassScope(SharedPtr<Scope> scope) {
 }
 
 SharedPtr<Scope> ClassBase::getCapturedScope() const {
-    if (initialCapturedScope) {
-        return initialCapturedScope;
-    }
+    
 
-    else if (capturedScope.expired()){
-        return nullptr;
-    }
+    // else if (capturedScope.expired()){
+    //     return nullptr;
+    // }
 
     if (auto captured = capturedScope.lock()) {
         return captured;
     }
-
+    if (initialCapturedScope) {
+        return initialCapturedScope;
+    }
     return nullptr;
 }
 SharedPtr<Scope> ClassBase::getClassScope() const {return classScope;}
@@ -220,13 +221,29 @@ ClassInstance::ClassInstance(String& name, SharedPtr<Scope> capturedScope, Share
 
 SharedPtr<Scope> ClassInstance::getCapturedScope() const {
     // return capturedScope;
-    auto scope = capturedScope.lock();
-    if (!scope) {
-        throw MerkError("ClassInstance::getCapturedScope: scope is null");
-    }
-    // if (auto scope = capturedScope.lock()) {
-    return scope;
+    // auto scope = capturedScope.lock();
+    // if (!scope) {
+    //     if (!getInstanceScope()){
+    //         throw MerkError("While Retriveing capturedScope from ClassInstance " + name + ", InstanceScope Was ALSO No longer available");
+    //     } else {
+    //         auto parent = getInstanceScope()->getParent();
+    //         if (parent){
+    //             return parent;
+    //         } else {
+    //             throw MerkError("While Retrieving capturedScope from ClassInstance " + name + ", InstanceScope's parent was no longer available");
+    //         }
+    //     }
+    //     throw MerkError("ClassInstance::getCapturedScope: scope is null");
     // }
+    // // if (auto scope = capturedScope.lock()) {
+    // return scope;
+    // }
+
+    if (capturedScope) {
+        return capturedScope;
+    }
+
+    throw MerkError("CapturedScope No Longer Exists in ClassInstance " + name);
 }
 
 void ClassInstance::setCapturedScope(SharedPtr<Scope> scope) {
@@ -234,6 +251,7 @@ void ClassInstance::setCapturedScope(SharedPtr<Scope> scope) {
         throw MerkError("ClassInstance new Captured Scope is null");
     }
     capturedScope = scope;
+    
     // capturedScope->owner = "ClassInstanceScope(" + name + ")";
 }
 
@@ -254,23 +272,31 @@ SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
 
 void ClassInstance::construct(const Vector<Node>& args) {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
-
-    if (!getInstanceScope()->lookupFunction("construct") && !getInstanceScope()->hasFunction("construct")) {
-        getInstanceScope()->debugPrint();
-        getInstanceScope()->printChildScopes();
-        throw MerkError("A construct method must be implemented in class: " + getName());
-    }
+    // if (!getInstanceScope()->hasFunction("construct")) {
+    //     getInstanceScope()->debugPrint();
+    //     getInstanceScope()->printChildScopes();
+    //     throw MerkError("A construct method must be implemented in class: " + getName());
+    // }
     auto sigOpt = getInstanceScope()->getFunction("construct", args);
-    if (!sigOpt){
-        throw FunctionNotFoundError("construct");
-    }
-    // auto sigOpt = getInstanceScope()->getFunction("construct", args);
-    getInstanceScope()->debugPrint();
-    // getInstanceScope()->owner = generateScopeOwner("ClassInstance", name);
     if (!sigOpt) {
         throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");
     }
-
+    
+    // Now safe to use
+    auto method = std::static_pointer_cast<Method>(sigOpt->getCallable());
+    auto body = method->getBody();
+    body->getScope()->owner = generateScopeOwner("ClassInstanceMethod", name);
+    String accessor = method->getAccessor();
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Attempting to update methodScope");
+    
+    ASTUtils::traverse(body->getChildren(), [&](BaseAST* node) {
+        if (node->getAstType() == AstType::ChainOperation) {
+            // DEBUG_LOG(LogLevel::PERMISSIVE, "Updating Method...");
+            auto* chainOp = static_cast<ChainOperation*>(node);
+            chainOp->setResolutionMethod(1, ResolutionMode::ClassInstance, instanceScope, accessor);
+        }
+    }, true, false);
+    
     sigOpt->call(args, getInstanceScope());
     DEBUG_FLOW_EXIT();
 }
@@ -386,14 +412,14 @@ void applyMethodAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> classSco
 
 
 // Optional: override call() to auto-instantiate when the class is "called"
-Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
+Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
 
     if (!scope){
         throw MerkError("Scope passed is no longer valid");
     }
-    if (!classScope) {
+    if (!instanceScope) {
         throw MerkError("Class Scope passed is no longer valid");
     }
 
@@ -404,53 +430,105 @@ Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, Shar
     
     
     // auto captured = classBase->getCapturedScope()->clone();
-    auto captured = classScope->getParent();
+    // auto captured = classBase->getCapturedScope()->clone();
+    auto captured = instanceScope->getParent();
     if (!captured){
         throw MerkError("Captured Scope Does Not Exist When Instantiating class: " + classBase->getName());
     }
-    // auto instanced = classBase->getClassScope()->clone();
-    auto instanced = classScope->makeCallScope();
-    if (!instanced){
-        throw MerkError("Instance Scope Does Not Exist When Instantiating class: " + classBase->getName());
-    }
-    auto params = classBase->getParameters().clone();
-    SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classBase->getQualifiedName(), captured, instanced, params, classBase->getQualifiedAccessor());
 
-    // DEBUG_LOG(LogLevel::ERROR, "Instance Created");
-    // instance->getScope()->owner = "ClassInstance(" + instance->getName() + ")";
-    // ClassInstance(classBase->getQualifiedName(), captured, )
+    auto params = classBase->getParameters().clone();
+
+    captured->owner = generateScopeOwner("ClassInstanceCaptured", classBase->getName());
+    instanceScope->owner = generateScopeOwner("ClassInstance", classBase->getName());
+    SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classBase->getQualifiedName(), captured, instanceScope, params, classBase->getQualifiedAccessor());
+
     instance->construct(args);
     DEBUG_FLOW_EXIT();
     return ClassInstanceNode(instance);
 }
 
 
+Node ClassInstance::call(String name, Vector<Node> args) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    auto method = getInstanceScope()->getFunction(name, args);
+    Node val = method->getCallable()->execute(args, getInstanceScope());
+    DEBUG_FLOW_EXIT();
+    return val;
+}
 
-Node ClassInstance::getField(const String& name, TokenType type) const {
+
+
+Node ClassInstance::getField(const String& fieldName, TokenType type) const {    // specific to what kind of member i.e var/method
     switch (type) {
         case TokenType::Variable:
-            if (instanceScope->hasVariable(name)) {
-                return instanceScope->getVariable(name);
-            }
+            return getField(fieldName);
             break;
 
         case TokenType::ClassMethodCall:
         case TokenType::FunctionCall:
-        if (instanceScope->hasFunction(name)) {
-            auto sig = instanceScope->getFunction(name);
-            auto instance = sig.front();  // Temp logic, leter need to decide based on args.
-            return MethodNode(instance->getCallable());
-        }
             break;
 
         default:
-            throw MerkError("Unsupported field type for '" + name + "'");
+            throw MerkError("Unsupported field type for '" + fieldName + "'");
     }
 
-    throw MerkError("Field or method '" + name + "' not found in class instance.");
+
+    // return Node();
+    throw MerkError("Field or method '" + fieldName + "' not found in class instance. If a call was made that should take place in the ChainOperation");
+}
+
+Node ClassInstance::getField(const String& fieldName) const {                    // assumes a variable
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "ENTERING ClassInstance::getField for Variable");
+    // if (instanceScope->hasVariable(fieldName)) {
+    //     return instanceScope->getVariable(fieldName);
+    // } else {
+    //     throw VariableNotFoundError(fieldName);
+    // }
+    getInstanceScope()->debugPrint();
+    getInstanceScope()->printChildScopes();
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "++++++++++++++++++++++++++++++++++DONE WITH Instance::getField LOGGING+++++++++++++++++++++++++++++++++ ");
+    // if (getInstanceScope()->getParent()){
+    //     DEBUG_LOG(LogLevel::PERMISSIVE, "InstanceScope contains parent");
+    // } else {
+    //     DEBUG_LOG(LogLevel::PERMISSIVE, "InstanceScope does not contain parent");
+    // }
+    DEBUG_FLOW_EXIT();
+    return getInstanceScope()->getVariable(fieldName);
+}                     
+
+void ClassInstance::declareField(const String& fieldName, const Node& var) {             // probably only used in dynamic construction of a class
+    // (void)name;
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Declaring Field Node&: ", fieldName);
+
+    if (var.isValid()){ 
+        // auto var = makeUnique<VarNode>(val);
+        // auto val = VarNode(var);
+        UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
+
+        // auto variable = makeUnique<VarNode>(newVar, newVar->isConst, newVar->isMutable, newVar->isStatic);
+
+        instanceScope->declareVariable(fieldName, std::move(newVar));
+    }
+};
+
+
+void ClassInstance::declareField(const String& fieldName, const VarNode& var) {
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Declaring Field VarNode&: ", fieldName);
+    if (!instanceScope) {
+        throw MerkError("Cannot declare field: instanceScope is missing");
+    }
+    UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
+    instanceScope->declareVariable(fieldName, std::move(newVar));
 }
 
 
+void ClassInstance::updateField(const String& fieldName, Node val) const {                // most commonly used
+    if (val.isValid()){
+        instanceScope->updateVariable(fieldName, val);
+    }
+}                 
 
 
 

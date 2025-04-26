@@ -10,6 +10,10 @@
 #include "ast/ast_callable.h"
 #include "core/parser.h"
 
+
+
+
+
 IdentifierType inferIdentifierType(TokenType type) {
     switch (type) {
         case TokenType::Variable: return IdentifierType::Variable;
@@ -23,130 +27,155 @@ IdentifierType inferIdentifierType(TokenType type) {
 }
 
 
+std::tuple<bool, bool, String> Parser::handleIsVarDec() {
+    Token startToken = currentToken();
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "StartToken: ", startToken.toColoredString());
+    bool isDeclaration = startToken.type == TokenType::VarDeclaration;
+    bool isConst = false;
+    if (!(startToken.type == TokenType::VarDeclaration || startToken.type == TokenType::ChainEntryPoint)) {
+        return std::make_tuple(isDeclaration, isConst, "");
+    }
+
+    
+    isConst = startToken.value == "const";
+    if (isDeclaration) {
+        advance(); //consume (var/const)
+        auto nextToken = currentToken();
+        if (nextToken.type == TokenType::Variable || nextToken.type == TokenType::ChainEntryPoint){
+            // advance(); //consume (const/var)
+            return std::make_tuple(isDeclaration, isConst, String(startToken.value));
+        }
+    }
+
+    return std::make_tuple(isDeclaration, isConst, "");
+    
+}
+
 UniquePtr<Chain> Parser::parseChain() {
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    
     auto chain = makeUnique<Chain>(currentScope);
-    Token parentToken = currentToken();
-    DEBUG_LOG(LogLevel::ERROR, "parseChain initiated by: ", parentToken.toColoredString());
+    Token baseToken = currentToken();
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken: ", currentToken().toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 1: ", peek().toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 2: ", peek(2).toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 3: ", peek(3).toColoredString());
 
-
-
-    if (!(parentToken.type == TokenType::VarDeclaration || parentToken.type == TokenType::ChainEntryPoint)) {  
-        throw UnexpectedTokenError(parentToken, "VarDeclaration, ChainEntryPoint");
+    if (baseToken.type != TokenType::ChainEntryPoint && baseToken.type != TokenType::Variable) {
+        throw UnexpectedTokenError(baseToken, "Expected ChainEntryPoint or Variable");
     }
 
-    // The element to be declared, if in fact this is a declaration, is the last item to have a delimiter before it
-    bool isDeclaration = parentToken.type == TokenType::VarDeclaration;
-    Token declarationToken = currentToken();
-    Token chainStartToken = peek();
+    advance();  // consume base token (e.g., `self`, `this`, etc.)
 
-    Token targetToken = chainStartToken;
-    // Assuming if VarDeclaration, then the next will be ChainEntryPoint
-    // if only ChainEntryPoint then assuming VarAssignment
-    if (isDeclaration){
-        if (declarationToken.type != TokenType::VarDeclaration) {
-            throw UnexpectedTokenError(declarationToken, "VarDeclaration");
-        }
-        advance(); // consume var / const
-        if (chainStartToken.type != TokenType::ChainEntryPoint) {
-            throw UnexpectedTokenError(chainStartToken, "ChainEntryPoint");
-
-        } 
-        chainStartToken.type = TokenType::Variable;
-        tokens[position] = chainStartToken;
-
-        DEBUG_LOG(LogLevel::DEBUG, "After mutation, token at position: ", tokens[position].toColoredString());
-
-
-        if (currentToken().type != TokenType::Variable){
-            throw MerkError("Failed to Mutate ChainEntryPoint to Variable in parseChain");
-        }
-    } else {
-        // This is an assignment or access chain — mutate token
-        if (parentToken.type == TokenType::ChainEntryPoint) {
-            Token& current = tokens[position];
-            if (current.type != TokenType::ChainEntryPoint) {
-                throw MerkError("Expected ChainEntryPoint at start of parseChain.");
-            }
-            current.type = TokenType::Variable;
-            DEBUG_LOG(LogLevel::ERROR, "Mutated ChainEntryPoint to Variable for assignment chain. Token now: ", current.toColoredString());
-        }
-    }
-    // Handles Accessor/Variable
-    Token token = currentToken(); // should be a variable / accessor - modified form ChainEntryPoint.
-    if (token.type != TokenType::Variable){
-        throw UnexpectedTokenError(token, "Variable");
+    Token punct = currentToken();
+    if (punct.type != TokenType::Punctuation || (punct.value != "." && punct.value != "::")) {
+        throw UnexpectedTokenError(punct, "'.' or '::'");
     }
 
-    // Start parsing chain elements:
-    while (true) {
-        Token token = currentToken();  // Should be self, then x, etc.
-        
-        // Peek ahead for the delimiter **before** parsing the expression
-        String delimiter = peek().value;;
-        // String delimiter = next
-    
-        // If there is no valid delimiter, we stop before parsing the last piece
-        if (!(delimiter == "." || delimiter == "::")) {
-            break;
-        }
-    
-        auto ref = parsePrimaryExpression();  // Only parse if there's a valid chain continuation
-    
-        ChainElement elem;
-        elem.name = token.value;
-        elem.delimiter = delimiter;
-        elem.object = std::move(ref);
-        elem.type = token.type;
-    
-        chain->addElement(std::move(elem));
-        advance();  // consume delimiter
-    }
-    
-    if (isDeclaration || parentToken.type == TokenType::VarAssignment) {
-        UniquePtr<ASTStatement> lastElement;
+    // Add base element
+    ChainElement baseElem;
+    baseElem.name = baseToken.value;
+    baseElem.delimiter = punct.value;
+    baseElem.type = baseToken.type;
+    baseElem.object = makeUnique<VariableReference>(baseToken.value, currentScope);
+    // baseElem.object = std::move(parseStatement());
+    chain->addElement(std::move(baseElem));
 
-        targetToken = currentToken();
-        if (targetToken.type != TokenType::Variable){
-            throw UnexpectedTokenError(targetToken, "Variable");
+    // Parse the rest of the dotted chain
+    while (currentToken().type == TokenType::Punctuation && (currentToken().value == "." || currentToken().value == "::")) {
+
+        Token delim = currentToken();
+
+        advance();
+
+        Token nextToken = currentToken();
+        if (nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef) {
+            throw UnexpectedTokenError(nextToken, "variable after '.' or '::'");
         }
 
-        // tokens[position+1] = targetToken;
-        // tokens.insert(tokens.begin() + position + 1, targetToken);
-
-        if (isDeclaration) {
-            tokens.insert(tokens.begin() + position, declarationToken);
-            DEBUG_LOG(LogLevel::TRACE, "Inserted declarationToken: ", declarationToken.toColoredString());
-
-            lastElement = parseVariableDeclaration();
+        bool isFunctionCall = nextToken.type == TokenType::FunctionCall;
+        UniquePtr<BaseAST> currentObject;
+        if (!isFunctionCall){
+            currentObject = makeUnique<VariableReference>(nextToken.value, currentScope);
         } else {
-            lastElement = parseVariableAssignment();
+            currentObject = parseFunctionCall();
         }
+        // !isFunctionCall ?  : std::move()
 
-        ChainElement finalElem;
-        finalElem.name = targetToken.value;  // Can be refined later
-        finalElem.delimiter = "";  // Final element should not carry a delimiter
-        finalElem.object = std::move(lastElement);
-        finalElem.type = targetToken.type;
-        chain->replaceLastElementWith(std::move(finalElem));
+        ChainElement elem;
+        elem.name = nextToken.value;
+        elem.delimiter = delim.value;
+        elem.type = nextToken.type;
+        elem.object = std::move(currentObject);
+        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("GETTING elem.object from parsePrimaryExpression:", Colors::red));
+        // auto statement = parseStatement();
+        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("GOT STATEMENT OF TYPE: " + statement->getAstTypeAsString(), Colors::red));
+        // statement->printAST(std::cout, 0);
+        // elem.object = std::move(statement);
+        chain->addElement(std::move(elem));
+
+        advance();  // move to next delimiter or assignment
     }
-    DEBUG_LOG(LogLevel::DEBUG, "Chain parsing complete. Returning Chain: ", chain->toString());
 
+    DEBUG_FLOW_EXIT();
     return chain;
 }
 
-        // if (token.value == parentToken.value && token.type == parentToken.type && token.column == parentToken.column) {
-        //     if (token.type == TokenType::ChainEntryPoint){
-        //         token.type = TokenType::Variable;
-        //         tokens[position] = token;
-        //         if (currentToken().type != TokenType::Variable){
-        //             throw UnexpectedTokenError(token, "ChainEntryPoint Not Set To Variable");
-        //         }
-        //     } else {
-        //         throw UnexpectedTokenError(token, "ChainEntryPoint");
-        //     }
-            
-        // } 
+UniquePtr<ChainOperation> Parser::parseChainOp() {
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken: ", currentToken().toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 1: ", peek().toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 2: ", peek(2).toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 3: ", peek(3).toColoredString());
+    bool isDeclaration = currentToken().type == TokenType::VarDeclaration;
+    bool isConst = currentToken().value == "const";
+    if (isDeclaration) {
+        advance(); // consume declaration token. 
+    }
 
+    UniquePtr<Chain> chain = parseChain();  // Handles `a.b.c` chains
+    Token assign = currentToken();
+    bool isAssignment = assign.type == TokenType::VarAssignment;
+    bool isStatic = false;                  // placeholder for when static variables are included.
+    bool isMutable = assign.value == "=";
+    if (isAssignment){
+        advance(); // consume `=` or `:=`
+    }
+
+
+    if (isDeclaration || isAssignment) {
+
+        UniquePtr<ASTStatement> rhs = parseExpression();
+        DEBUG_FLOW_EXIT();
+        return makeUnique<ChainOperation>(
+            std::move(chain),
+            std::move(rhs),
+            isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
+            currentScope,
+            isDeclaration ? isConst : false,
+            isDeclaration ? isMutable : true,
+            isStatic
+        );
+    } else {
+        // Just a value reference
+        DEBUG_FLOW_EXIT();
+        return makeUnique<ChainOperation>(
+            std::move(chain),
+            nullptr,
+            ChainOpKind::Reference,
+            currentScope
+        );
+    }
+}
+
+
+struct ChainParseContext {
+    bool isDeclaration = false;
+    bool isConst = false;
+    String decString;
+    Token baseToken = Token(TokenType::Unknown, "NULL", 0, 0);
+    Vector<ChainElement> elements;
+};
 
 
 // Skeleton: Parse protected member declarations in the class.
@@ -459,3 +488,5 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     insideClass = false;
     return classDefNode;
 }
+
+

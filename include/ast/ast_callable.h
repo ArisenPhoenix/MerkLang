@@ -28,6 +28,7 @@ public:
     virtual ~CallableSignature();
 
     Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;
+    virtual Node call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 
     bool matches(const Vector<NodeValueType>& otherTypes) const;
     
@@ -73,7 +74,8 @@ public:
 
     virtual void printAST(std::ostream& os, int indent = 0) const;
     virtual Node evaluate(SharedPtr<Scope> scope) const override;
-    
+    Node evaluate() const override {return evaluate(getScope());}
+
     virtual UniquePtr<BaseAST> clone() const override;
 
     // For Calling Within A Method's Context
@@ -148,8 +150,8 @@ public:
     String toString() const override {return astTypeToString(getAstType());}
 
     Node evaluate(SharedPtr<Scope> scope) const override;
-
-    String getName() {return name;}
+ 
+    String getName() const {return name;}
     virtual UniquePtr<BaseAST> clone() const override;
     // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };

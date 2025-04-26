@@ -74,7 +74,7 @@ CodeBlock::CodeBlock(Vector<UniquePtr<BaseAST>> otherChildren, SharedPtr<Scope> 
     children = std::move(otherChildren);
 }
 
-CodeBlock::~CodeBlock() {
+void CodeBlock::clear() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     DEBUG_LOG(LogLevel::INFO, 
@@ -95,6 +95,10 @@ CodeBlock::~CodeBlock() {
         getScope().reset();
     }
     DEBUG_FLOW_EXIT();
+}
+
+CodeBlock::~CodeBlock() {
+    clear();
 }
 
 void CodeBlock::addChild(UniquePtr<BaseAST> child) {

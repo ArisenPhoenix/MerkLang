@@ -263,10 +263,12 @@ Token Parser::advance() {
     return currentToken();
 }
 
-Token Parser::peek(){
-    ++position;
+Token Parser::peek(int number){
+    // ++position;
+    position += number;
     Token nextToken = currentToken();
-    --position;
+    position -= number;
+    // --position;
     return nextToken;
 }
 

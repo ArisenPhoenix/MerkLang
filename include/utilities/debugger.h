@@ -56,7 +56,11 @@ enum class LogLevel {
     INFO = 2,
     DEBUG = 3,
     TRACE = 4,
-    FLOW  = 100  // Special value; will be treated separately.
+    PERMISSIVE = 99,
+    NONE = 100,
+    FLOW = 101,  // Special value; will be treated separately.
+
+
 };
 
 // Levels Describe Amount Of Detail in terms of Abstraction Level. High Would Be Higher Level Details, rather than smaller
@@ -69,6 +73,7 @@ enum class FlowLevel {
     PERMISSIVE = 99,
     NONE = 100,
     UNKNOWN = 101,
+    FLOW = 102,
 
 };
 
@@ -83,8 +88,9 @@ public:
     // Global log level.
     void setGlobalLogLevel(LogLevel level);
     void setGlobalFlowLevel(FlowLevel level);
+    void setGlobalLevels(LogLevel logLevel, FlowLevel flowLevel);
 
-    LogLevel getLevel() const;
+    LogLevel getLogLevel() const;
 
     // Optionally include a timestamp in output.
     void setIncludeTimestamp(bool include);
@@ -106,28 +112,51 @@ public:
     
 
     String handleTime();
-    String handleLevel(LogLevel level);
     String handleFileDisplay(String normFileName, int line);
-    String handleFlowLevelDisplay(FlowLevel level);
 
-    bool handleProceed(LogLevel level, const String& file);
+    String handleLevel(LogLevel level);
+    String handleLevel(FlowLevel level);
+
+    // String handleFlowLevelDisplay(FlowLevel level);
+
+    bool handleLogProceed(LogLevel level, const String& file);
     bool handleFlowProceed(FlowLevel level, const String& file);
     void printLog(String message);
 
     template<typename ... Args>
-    void log(LogLevel level, const String &file, int line, Args&& ... args) {
-        String fileName = normalizeFileName(file);
-        if (handleProceed(level, fileName)){
-            std::ostringstream oss;
-            oss << handleLevel(level);
-            oss << handleTime();
-            oss << handleFileDisplay(fileName, line);
-            oss << " ";
-            ((oss << stringify(std::forward<Args>(args)) << " "), ...);
-            
-            printLog(oss.str());
+    void logEnter(LogLevel level, const String &file, int line, Args&& ... args) {
+        std::ostringstream oss;
+        ((oss << stringify(std::forward<Args>(args)) << " "), ...);
+        String normFile = normalizeFileName(file);
+        if (handleLogProceed(level, normFile)) {
+            handleLogDisplay(level, normFile, line, oss.str());
         }
+        // return std::make_tuple(arguments, file, level, int)
+        // String fileName = normalizeFileName(file);
+        // if (handleProceed(level, fileName)){
+        //     std::ostringstream oss;
+        //     oss << handleLevel(level);
+        //     oss << handleTime();
+        //     oss << handleFileDisplay(fileName, line);
+        //     oss << " ";
+        //     ((oss << stringify(std::forward<Args>(args)) << " "), ...);
+            
+        //     printLog(oss.str());
+        // }
     }
+
+
+
+    void handleFlowDisplay(FlowLevel level, const String &file, int line, String methodName, bool entering = true);
+    void handleLogDisplay(LogLevel level, const String &file, int line, String args);
+
+    // template<typename ... Args>
+    // std::tuple<String, LogLevel, int> getArgs(LogLevel level, const String &file, int line, Args&& ... args) {
+    //     String arguments;
+    //     std::ostringstream oss;
+    //     arguments =  ((oss << stringify(std::forward<Args>(args)) << " "), ...);
+    //     return std::make_tuple(arguments, file, line);
+    // }
 
     std::function<void()> flowEnter(const String &methodName, FlowLevel level, const String &file, int line);
     
@@ -199,7 +228,7 @@ private:
 inline auto flowEnterHelper(const char* funcSig, const char* file, int line) {
     return Debugger::getInstance().flowEnter(
         highlight(funcSig, Colors::bold_blue),
-        FlowLevel::LOW, file, line);
+        FlowLevel::VERY_LOW, file, line);
 }
 
 // // When a FlowLevel is provided, use it instead of a default.
@@ -224,7 +253,7 @@ inline auto flowEnterHelper(const char* funcSig, FlowLevel level, const char* fi
 
 
 
-#define DEBUG_LOG(level, ...) Debugger::getInstance().log(level, __FILE__, __LINE__, __VA_ARGS__)
+#define DEBUG_LOG(level, ...) Debugger::getInstance().logEnter(level, __FILE__, __LINE__, __VA_ARGS__)
 #define DEBUG_FLOW(...) \
     auto __DEBUG_FLOW_EXIT__ = flowEnterHelper(FUNCTION_SIGNATURE, __VA_OPT__(__VA_ARGS__, ) __FILE__, __LINE__)
 #define DEBUG_FLOW_EXIT() __DEBUG_FLOW_EXIT__()
@@ -249,5 +278,8 @@ namespace Debug {
 
 
 
-#endif // DEBUGGER_H 
 
+
+
+#endif // DEBUGGER_H 
+ 

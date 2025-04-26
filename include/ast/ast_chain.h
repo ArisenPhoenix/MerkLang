@@ -1,6 +1,10 @@
+#ifndef AST_CHAIN_H
+#define AST_CHAIN_H
+
 #include "core/types.h"
 #include "ast/ast_base.h"
 
+#include "ast/ast_base.h"
 #include "utilities/helper_functions.h"
 class Scope;
 
@@ -12,15 +16,6 @@ enum class ResolutionMode {
     Module,
 };
 
-// struct ChainElement {
-//     String name;
-//     IdentifierType type;
-//     String delimiter;
-//     void printAST(std::ostream& os, int indent = 0) const {
-//         printIndent(os, indent);
-//         os << "Name: " + name + ", Type: " + identifierTypeToString(type) + ", Delimiter: " + delimiter << std::endl;
-//     };
-// };
 
 struct ChainElement {
     String name;
@@ -44,6 +39,7 @@ struct ChainElement {
         // os << "Name: " + name + ", Type: " + identifierTypeToString(type) + ", Delimiter: " + delimiter << std::endl;
     };
 };
+
 
 class Chain : public ASTStatement {
 private:
@@ -86,6 +82,68 @@ public:
     virtual UniquePtr<BaseAST> clone() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf) const override;
     void setScope(SharedPtr<Scope> scope) override;
+    Vector<ChainElement>& getMutableElements();
     // SharedPtr<Scope> getClassScope();
-
+    ChainElement& getLast();
+    ChainElement& getElement(int index);
+    
 };
+enum class ChainOpKind {
+    Reference,   // Just evaluates to a value (like a getter)
+    Assignment,  // Modifies an existing field
+    Declaration  // Defines a new field (possibly with const/static)
+};
+
+class ChainOperation : public ASTStatement {
+private:
+    UniquePtr<Chain> lhs;
+    UniquePtr<ASTStatement> rhs; // Nullable for Reference
+    ChainOpKind opKind;
+    bool isConst = false;
+    bool isMutable = true;
+    bool isStatic = false;
+    WeakPtr<Scope> classScope;
+    int resolutionStartIndex = 0;
+    ResolutionMode resolutionMode = ResolutionMode::Normal;
+    
+public:
+    ChainOperation(UniquePtr<Chain> lhs,
+                   UniquePtr<ASTStatement> rhs,
+                   ChainOpKind opKind,
+                   SharedPtr<Scope> scope,
+                   bool isConst = false,
+                   bool isMutable = true,
+                   bool isStatic = false
+                );
+ 
+    Node evaluate(SharedPtr<Scope> scope) const override;
+    AstType getAstType() const override { return AstType::ChainOperation; }
+    String toString() const override;
+    void printAST(std::ostream& os, int indent = 0) const override;
+    UniquePtr<BaseAST> clone() const override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = false) const override;
+
+    UniquePtr<Chain>& getLeft();
+    UniquePtr<ASTStatement>& getRight();
+    Chain* getLeftSide() const;
+    ASTStatement* getRightSide() const; 
+
+    ChainOpKind getOpKind() const { return opKind; }
+    bool getIsConst() const { return isConst; }
+    bool getIsMutable() const { return isMutable; }
+
+    SharedPtr<Scope> getSecondaryScope();
+    ResolutionMode getResolutionMode();
+
+    void setSecondaryScope(SharedPtr<Scope> scope); 
+
+    void setResolutionMode(ResolutionMode newMode, String accessor);
+    void setResolutionStartIndex(int index, String accessor);
+    void setResolutionMethod(int index, ResolutionMode newMode, SharedPtr<Scope> newScope, String accessor);
+};
+
+
+    
+    
+
+#endif // AST_CHAIN_H

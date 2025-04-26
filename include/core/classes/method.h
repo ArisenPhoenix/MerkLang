@@ -43,8 +43,9 @@ public:
     void setScope(SharedPtr<Scope> newScope) const override;
     // CallableBody* getBody() const override {return body.get();}
 
-    SharedPtr<Scope> getClassScope();
+    SharedPtr<Scope> getClassScope() const;
     void setClassScope(SharedPtr<Scope> newClassScope);
+    // void setClassScope(SharedPtr<Scope> newClassScope) const;
     MethodBody* getBody();
     MethodBody* getBody() const;
 

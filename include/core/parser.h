@@ -42,7 +42,7 @@ private:
     bool consume(TokenType type);
     bool consume(String value);
     bool consume(TokenType type, String val1, String val2 = "", String val3 = "");
-    Token peek();
+    Token peek(int number = 1);
     Token find(TokenType type, int limit);
     bool existing(TokenType type, int limit);
     Token previousToken() const;
@@ -50,6 +50,7 @@ private:
     bool match(TokenType type, const String& value = "");
     
     int getOperatorPrecedence(const String& op) const;
+    std::tuple<bool, bool, String> handleIsVarDec();
 
     // Scope Management
     void enterScope(SharedPtr<Scope> manualScope = nullptr);  // Enter a new child scope
@@ -88,7 +89,7 @@ private:
     UniquePtr<ASTStatement> parseProtectedClassAttributes();
     UniquePtr<ASTStatement> parseClassAttributes();
     UniquePtr<Chain> parseChain();
-
+    UniquePtr<ChainOperation> parseChainOp();
     String getCurrentClassAccessor();
 
     void addAccessor(String accessorName);

@@ -158,10 +158,20 @@ bool CallableSignature::getIsUserFunction() { return callType != CallableType::N
 
 Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
+    scope->debugPrint();
+    scope->printChildScopes();
     auto val = callable->execute(args, scope);
     DEBUG_FLOW_EXIT();
     return val;
-  }
+}
+
+Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
+    (void)args;
+    (void)scope;
+    (void)classScope;
+    throw MerkError("BaseClass CallableSignature has no implementation for CallableSignature::call");
+
+}
   
   
 SharedPtr<Callable> CallableSignature::getCallable() const { return callable;}

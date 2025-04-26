@@ -9,33 +9,48 @@
 #include <regex>
 #pragma GCC diagnostic pop
 
+
+
+
 String stripAnsi(const String& input) {
-    // #include <regex>  // lazy include here
     static const std::regex ansiPattern("\033\\[[0-9;]*m");
     return std::regex_replace(input, ansiPattern, "");
 }
+// Global log level.
+void Debugger::setGlobalLogLevel(LogLevel level) { currentLevel = level; }
+void Debugger::setGlobalFlowLevel(FlowLevel level) {flowLevel = level;}
 
+LogLevel Debugger::getLogLevel() const { return currentLevel; }
+FlowLevel Debugger::getFlowLevel() {return flowLevel;}
+void Debugger::setGlobalLevels(LogLevel logLevel, FlowLevel flowLevel){
+    setGlobalLogLevel(logLevel);
+    setGlobalFlowLevel(flowLevel);
+}
 
 String Debugger::logLevelToString(LogLevel level) const {
     switch(level) {
-        case LogLevel::ERROR:   return highlight("ERROR", Colors::red);
-        case LogLevel::WARNING: return highlight("WARNING", Colors::orange);
-        case LogLevel::INFO:    return highlight("INFO", Colors::bold_purple);
-        case LogLevel::DEBUG:   return highlight("DEBUG", Colors::light_blue);
-        case LogLevel::TRACE:   return highlight("TRACE", Colors::bg_magenta);
-        case LogLevel::FLOW:    return highlight("FLOW", Colors::bg_green);
-        default:                return highlight("UNKNOWN", Colors::bg_red);
+        case LogLevel::ERROR:      return highlight("ERROR", Colors::bg_red);
+        case LogLevel::WARNING:    return highlight("WARNING", Colors::orange);
+        case LogLevel::INFO:       return highlight("INFO", Colors::bold_purple);
+        case LogLevel::DEBUG:      return highlight("DEBUG", Colors::bold_yellow);
+        case LogLevel::TRACE:      return highlight("TRACE", Colors::red);
+        case LogLevel::FLOW:       return highlight("FLOW", Colors::bold_red);
+        case LogLevel::PERMISSIVE: return highlight("PERMISSIVE", Colors::bg_bright_yellow);
+        default:                   return highlight("UNKNOWN", Colors::bg_red);
     }
 }
 String Debugger::flowLevelToString(FlowLevel level) const {
     switch (level) {
-        case FlowLevel::VERY_HIGH: return "Very High";
-        case FlowLevel::HIGH: return "HIGH";
-        case FlowLevel::MED: return "MED";
-        case FlowLevel::LOW: return "LOW";
-        case FlowLevel::VERY_LOW: return "Very LOW";
-        case FlowLevel::NONE: return "NONE";
-        case FlowLevel::UNKNOWN: return "Unknown";
+        case FlowLevel::VERY_HIGH: return highlight("Very High", Colors::bold_blue);
+        case FlowLevel::HIGH:      return highlight("HIGH", Colors::cyan);
+        case FlowLevel::MED:       return highlight("MED", Colors::green);
+        case FlowLevel::LOW:       return highlight("LOW", Colors::yellow);
+        case FlowLevel::VERY_LOW:  return highlight("Very LOW", Colors::red);
+        case FlowLevel::FLOW:      return highlight("FLOW", Colors::bg_magenta);
+
+        case FlowLevel::NONE:      return highlight("NONE", Colors::bg_bright_red);
+        case FlowLevel::PERMISSIVE: return highlight("PERMISSIVE", Colors::bg_magenta);
+        case FlowLevel::UNKNOWN:   return highlight("Unknown", Colors::pink);
         
     
     default:
@@ -64,12 +79,7 @@ String Debugger::currentTime() const {
     return highlight(timeStream.str(), Colors::yellow);
 }
 
-// Global log level.
-void Debugger::setGlobalLogLevel(LogLevel level) { currentLevel = level; }
-void Debugger::setGlobalFlowLevel(FlowLevel level) {flowLevel = level;}
 
-LogLevel Debugger::getLevel() const { return currentLevel; }
-FlowLevel Debugger::getFlowLevel() {return flowLevel;}
 
 // Optionally include a timestamp.
 void Debugger::setIncludeTimestamp(bool include) { includeTimestamp = include; }
@@ -142,6 +152,12 @@ String Debugger::handleTime() {
 
 String Debugger::handleLevel(LogLevel level) {
     return "[" + logLevelToString(level) + "]";
+
+}
+
+String Debugger::handleLevel(FlowLevel level) {
+    return "[" + flowLevelToString(level) + "]";
+
 }
 
 String Debugger::handleFileDisplay(String filePath, int line) {
@@ -149,19 +165,19 @@ String Debugger::handleFileDisplay(String filePath, int line) {
 }
 
 FlowLevel Debugger::getFileFlowLevel(const String& file) {
-    if (fileLevels.contains(file)){ 
-        return fileFlowLevels[file];
-    } 
+    if (auto it = fileFlowLevels.find(file); it != fileFlowLevels.end()) {
+        return it->second;
+    }
     return flowLevel;
 }
 
 
-bool Debugger::handleProceed(LogLevel level, const String& file){
-
+bool Debugger::handleLogProceed(LogLevel level, const String& file){
+    if (level == LogLevel::PERMISSIVE){
+        return true;
+    }
     if (level == LogLevel::FLOW) {
-        // This block is used because FLOW and Log used to be treated as the same until creating macros
-        // Flow is left as another option for isolation effectively.
-        // Though it could be renamed, it offers a bit of an interacting interface with FLOW as well so left as is.
+        // USED FOR LOGGING EXTRA INFORMATION WITHIN THE NORMAL DEBUG_FLOW...flow
         if (flowLevel == FlowLevel::NONE){
             return false;
         } else {
@@ -185,7 +201,9 @@ bool Debugger::handleProceed(LogLevel level, const String& file){
 }
 
 bool Debugger::handleFlowProceed(FlowLevel methodFlowLevel, const String& file){
-    
+    if (methodFlowLevel == FlowLevel::PERMISSIVE){
+        return true;
+    }
     if (static_cast<int>(flowLevel) >= static_cast<int>(FlowLevel::NONE)){
         return false;
     }
@@ -212,50 +230,43 @@ bool Debugger::handleFlowProceed(FlowLevel methodFlowLevel, const String& file){
 }
 
 
-String Debugger::handleFlowLevelDisplay(FlowLevel level) {
-    return includeFlowLevel ? "[" + flowLevelToString(level) + "]" : "";
-};
 
-std::function<void()> Debugger::flowEnter(const String &methodName, FlowLevel level, const String &file, int line) {
+void Debugger::handleLogDisplay(LogLevel level, const String &normFile, int line, String args) {
+        std::ostringstream oss;
+        // String normFile = normalizeFileName(file);
+
+        oss << handleLevel(level);
+        oss << handleTime();
+        oss << handleFileDisplay(normFile, line);
+        oss << args << " ";
+        
+        printLog(oss.str());
+}
+
+void Debugger::handleFlowDisplay(FlowLevel level, const String &normFile, int line, String methodName, bool entering) {
+    // String normFile = normalizeFileName(file);
+
+    std::ostringstream oss;
+    oss << handleLevel(FlowLevel::FLOW) << handleLevel(level)
+    << handleTime()
+    << handleFileDisplay(normFile, line) 
+    << highlight(entering ? "Entering: " : "Exiting", Colors::orange)
+    << highlight(methodName, Colors::bold_blue);
+    printLog(oss.str());
+}
+
+
+std::function<void()> Debugger::flowEnter(const String &methodName, FlowLevel flowLevel, const String &file, int line) {
     String normFile = normalizeFileName(file);
-    if (!handleFlowProceed(level, normFile)){
+    if (!handleFlowProceed(flowLevel, normFile)){
         return [](){};
     }
-      
-    // Use existing helper methods to format the time, file, and level.
-    String timeStr = handleTime();
-    String fileDisplayStr = handleFileDisplay(normFile, line);
-    String levelDisplayStr = handleLevel(LogLevel::FLOW);
-    String flowLevelStr = handleFlowLevelDisplay(level);
+    handleFlowDisplay(flowLevel, normFile, line, methodName, true);
 
-
-    // Log the "entering" message.
-    std::ostringstream oss;
-    oss << timeStr 
-        << fileDisplayStr 
-        << levelDisplayStr
-        << flowLevelStr 
-        << highlight("Entering: ", Colors::orange)
-        << highlight(methodName, Colors::bold_blue) 
-        << " ";
-
-    printLog(oss.str());
 
     // Return a lambda that logs the "exiting" message using the same context.
-    return [this, normFile, line, methodName, level]() {
-        String timeStr = handleTime();
-        String fileDisplayStr = handleFileDisplay(normFile, line);
-        String levelDisplayStr = handleLevel(LogLevel::FLOW);
-        String flowLevelStr = handleFlowLevelDisplay(level);
- 
-        std::ostringstream oss;
-        oss << timeStr 
-            << fileDisplayStr 
-            << levelDisplayStr
-            << flowLevelStr
-            << highlight("Exiting: ", Colors::orange)
-            << highlight(methodName, Colors::bold_blue);
-        return printLog(oss.str());
+    return [this, normFile, line, methodName, flowLevel]() {
+        handleFlowDisplay(flowLevel, normFile, line, methodName, false);
     };
 }
 

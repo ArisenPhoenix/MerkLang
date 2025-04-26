@@ -64,6 +64,7 @@ public:
     CodeBlock(const CodeBlock&) = delete;
     CodeBlock(Vector<UniquePtr<BaseAST>> children, SharedPtr<Scope>);
     CodeBlock& operator=(const CodeBlock&) = delete;
+    void clear();
     ~CodeBlock() override;
 
     void addChild(UniquePtr<BaseAST> child);
