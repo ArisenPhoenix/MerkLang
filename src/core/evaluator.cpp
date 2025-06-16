@@ -6,21 +6,28 @@
 #include <unordered_set>
 
 #include "core/types.h"
+#include "core/errors.h"
+
 #include "core/node.h"
 #include "core/scope.h"
 #include "core/evaluator.h"
+#include "core/scope.h"
+#include "core/classes/method.h"
+#include "core/helpers/class_helpers.h"
+
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
-#include "core/scope.h"
-#include "ast/exceptions.h"
-#include "core/errors.h"
+
 #include "ast/ast_base.h"
 #include "ast/ast.h"
+
+#include "ast/exceptions.h"
 #include "ast/ast_control.h"
+#include "ast/ast_chain.h"
+#include "ast/ast_class.h"
+#include "ast/ast_validate.h"
 
-
-// const bool debugEvaluator = false;
 
 
 enum class Operator {
@@ -105,11 +112,21 @@ namespace Evaluator {
         DEBUG_LOG(LogLevel::TRACE, "Evaluating Variable Declaration");
         // scope->debugPrint();
         VarNode resolvedVariable = VarNode(valueNode->evaluate(scope)); // Use the current scope
+        size_t before = scope->getContext().getVariables().size();
         scope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, var.isStatic)); // Declare variable in scope
 
         if (!resolvedVariable.isValid()) {
             throw MerkError("Invalid node returned during VariableDeclaration evaluation.");
         }
+
+        if (scope->getContext().getVariables().size() == before) {
+            throw MerkError("No Varialbes Declared");
+        } 
+        // else {
+        //     DEBUG_LOG(LogLevel::PERMISSIVE, "Variable", var.toString(), "Was Declared In The Below Scope: ");
+        //     scope->debugPrint();
+        //     // scope->printChildScopes();
+        // }
         DEBUG_FLOW_EXIT();
         return resolvedVariable;
     }
@@ -160,7 +177,129 @@ namespace Evaluator {
         DEBUG_FLOW_EXIT();
         return variable;
     }
+
+    Node evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> classScope, SharedPtr<Scope> generatedScope, String accessor, Vector<UniquePtr<BaseAST>>& children) {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        if (!classCapturedScope) {
+            throw MerkError("Class Captured Scope Was Not Set On Body");
+        }
+
+        if (!classScope) {
+            throw MerkError("Class Scope Was Not Set On Body");
+        }
+
+        if (accessor.empty()) {
+            throw MerkError("Accessor Was Not Set On Body");
+        }
+
+
+        generatedScope->owner = generateScopeOwner("Class", "Body");
+        DEBUG_LOG(LogLevel::TRACE, highlight("Moving to Apply Accessor Scope Fix", Colors::yellow));
+        Vector<String> methods;
+        for (const auto& child : children) {
+            switch (child->getAstType()) {
+                case AstType::VariableDeclaration:                // protected variables stored in captured scope, 
+                    child->evaluate(classScope->getParent());
+                break;
+                case AstType::ClassMethodDef:
+                    if (child->getAstType() == AstType::ClassMethodDef){
+                        auto* methodDef = static_cast<MethodDef*>(child.get());
+                        DEBUG_LOG(LogLevel::TRACE, highlight("Handling Method: " + methodDef->getName(), Colors::yellow));
+
+                        auto methodScope = classScope->createChildScope();
+                        if (!methodScope){
+                            throw MerkError("generated methodscope is null for method in ClassDef::evaluate");
+                        }
+                                        // for providing its own classScope from which to work with
+                        methodDef->setClassScope(classScope);
+                        methodDef->getBody()->getScope()->owner = generateScopeOwner("MethodDefBody", methodDef->getName());
+                        methodDef->setScope(methodScope);
+                        if (methodDef->getClassScope().get() != classScope.get()) {
+                            throw MerkError("method class Scope is not the same as cls->classScope");
+                        }
+
+                        Vector<Chain*> nonStaticElements = applyAccessorScopeFix(methodDef, classScope, accessor);
+                        
+                        stripImplicitAccessor(methodDef, accessor);
+                        methods.emplace_back(methodDef->getName());
+                        // methodDef->setNonStaticElements(nonStaticElements);
+                        // setNonStaticElements(nonStaticElements);
+                        methodDef->evaluate(classScope);                    
+                    } 
+                    break;
+
+                // case AstType::VariableAssignment:
+                // case AstType::ParameterAssignment:
+                case AstType::ClassDefinition:
+                    break;
+
+                default:
+                    // child->evaluate(classScope);
+                    DEBUG_LOG(LogLevel::ERROR, "Unhandled AST type in ClassBody:", child->getAstTypeAsString());
+                    throw MerkError("Unexpected AST statement in ClassBody: " + child->getAstTypeAsString());
+            }
+        }
+
+
+        for (auto& method : methods){
+            DEBUG_LOG(LogLevel::TRACE, "Assuming Method ", highlight(method, Colors::blue), "Was Registered");
+            if (!classScope->hasFunction(method)){
+                throw MerkError("Method: " + method + " Was Not Registered To Class Scope");
+            }
+        }
+
+        DEBUG_LOG(LogLevel::TRACE, highlight("Finished Applying Accessor Scope Fix", Colors::yellow));
+        DEBUG_FLOW_EXIT();
+        return Node();
+    }
     
+    Node evaluateMethod(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> methodScope, SharedPtr<ClassInstanceNode> instanceNode){
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        if (!instanceNode){throw MerkError("Evaluator::evaluateMethod has no instanceNode");}
+
+        // MARK_UNUSED_MULTI(scope);
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Num Children in MethodBody: ", children.size());
+        auto spaces = String(10, '\n');
+        debugLog(true, spaces);
+
+        Node lastValue;
+        for (const auto& child : children) {
+            // DEBUG_LOG(LogLevel::PERMISSIVE, 
+            //     highlight("Evaluating MethodBody child:", Colors::orange), 
+            //     highlight(child->getAstTypeAsString(), Colors::green), 
+            //     "in CodeBlock scope:", 
+            //     highlight(std::to_string(scope->getScopeLevel()), Colors::blue)
+            // );
+
+            // if (child->getAstType() == AstType::ChainOperation) {
+            //     // child->printAST(std::cout, 10);
+            //     // for (auto& astChild : child->getAllAst(true)) {
+            //     //     auto currentScope = astChild->getScope();
+            //     //     // currentScope->debugPrint();
+            //     //     // currentScope->printChildScopes();
+            //     // }
+            //     auto thisChild = static_unique_ptr_cast<ChainOperation>(child);
+
+            // }
+                            
+            // child->getScope()->debugPrint();
+            lastValue = child->evaluate(methodScope, instanceNode);
+
+            // DEBUG_LOG(LogLevel::PERMISSIVE, "current LastValue: ", lastValue);
+            if (!lastValue.isValid()){
+                // DEBUG_LOG(LogLevel::PERMISSIVE, "Invalid value returned from child node evaluation: ", highlight(lastValue.toString(), Colors::orange));
+                continue;
+            }
+        }
+        
+        methodScope->debugPrint();
+        methodScope->printChildScopes();
+        debugLog(true, spaces);
+
+        DEBUG_FLOW_EXIT();
+
+        return lastValue; // Return the last evaluated value
+    }
 
     Node evaluateFunction(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope){
         DEBUG_FLOW(FlowLevel::LOW);
@@ -223,6 +362,9 @@ namespace Evaluator {
         DEBUG_FLOW_EXIT();
         return lastValue; // Return the last evaluated value
     }
+
+
+
 
     Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> scope) {
         DEBUG_FLOW(FlowLevel::LOW);
@@ -419,6 +561,154 @@ namespace Evaluator {
         return evaluatedArguments;
     }
 
+    Node evaluateClassCall(SharedPtr<Scope> callScope, String className, Vector<Node> argValues) {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        
 
+        auto classOpt = callScope->getClass(className);
+        if (!classOpt.has_value()) {throw MerkError("Class not found: " + className);}
+
+        auto classSig = classOpt.value();
+
+        auto classTemplate = classSig->getClassDef();
+        auto capturedScope = classTemplate->getCapturedScope();
+        auto capturedClone = capturedScope->clone(true);  // clone it safely
+        auto classScope = classTemplate->getClassScope();
+
+        SharedPtr<Scope> instanceScope = capturedClone->makeInstanceScope(classTemplate->getClassScope());
+        capturedClone->appendChildScope(instanceScope);
+        if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
+
+        
+        // callScope->appendChildScope(instanceScope);
+
+        auto captured = instanceScope->getParent();
+        capturedClone->owner = generateScopeOwner("InstanceCaptured", classTemplate->getName());
+        if (!captured){throw MerkError("Captured Scope Does Not Exist When Instantiating class: " + classTemplate->getName());}
+        if (!captured->has(instanceScope)){captured->printChildScopes();instanceScope->printChildScopes();throw MerkError("Instance Scope does not live in captured Scope");} 
+        else {DEBUG_LOG(LogLevel::PERMISSIVE, "Instance Scope Lives in Captured Scope");}
+        auto params = classTemplate->getParameters().clone();
+        DEBUG_LOG(LogLevel::PERMISSIVE, "PASSED PARAMS For ClassCall::evaluate");
+
+        instanceScope->owner = generateScopeOwner("ClassInstance", classTemplate->getName());
+        SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classTemplate->getQualifiedName(), captured, instanceScope, params, classTemplate->getQualifiedAccessor());
+        // SharedPtr<ClassInstanceNode> classInstance = makeShared<ClassInstanceNode>(instance)
+        DEBUG_LOG(LogLevel::PERMISSIVE, "ABOUT to construct instance");
+
+        instance->construct(argValues, instance); 
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Instance Constructed");
+
+        DEBUG_FLOW_EXIT();
+        return ClassInstanceNode(instance);
+    }
+    Node evaluateMethodDef(
+        SharedPtr<Scope> passedScope, 
+        SharedPtr<Scope> ownScope, 
+        SharedPtr<Scope> classScope, 
+        String methodName, 
+        CallableBody* body, 
+        ParamList parameters, 
+        CallableType callType, 
+        CallableType methodType) {
+        DEBUG_FLOW();
+        if (!passedScope){
+            throw MerkError("Provided Scope to MethodDef::evaluate is null");
+        }
+
+        if (!ownScope){
+            throw MerkError("MethodDef::evaluate, scope is null");
+        }
+
+        if (!classScope) {
+            throw MerkError("Class Scope was not supplied to Method: " + methodName);
+        }
+
+
+        auto freeVarNames = body->collectFreeVariables();
+        DEBUG_LOG(LogLevel::TRACE,"MethodDef::evaluate | ", "CallType: ", callableTypeAsString(callType), "SubType: ", callableTypeAsString(methodType));
+        
+        if (callType == CallableType::FUNCTION){
+            FreeVars tempFreeVars = freeVarNames;
+            for (auto& param : parameters){
+                auto it = tempFreeVars.find(param.getName()); // find a matching param name
+                if (it != tempFreeVars.end()){                // indicates a match
+                    tempFreeVars.erase(it);
+                }
+            }
+
+            
+            if (tempFreeVars.size() > 0){
+                std::ostringstream oss;
+                for (auto& var : tempFreeVars){
+                    DEBUG_LOG(LogLevel::TRACE, highlight("'", Colors::yellow), highlight(var, Colors::purple), highlight("'", Colors::yellow), " ");
+                }
+                throw MerkError("The Following Vars: " + oss.str() + "; were defined outside of function defined using function");
+            }
+        } 
+        
+
+        SharedPtr<Scope> defScope = passedScope->detachScope(freeVarNames);
+
+        if (!defScope){
+            throw MerkError("defScope created in MethodDef::evaluate is null");
+        }
+
+        defScope->isCallableScope = true;
+        defScope->owner = generateScopeOwner("MethodDef", methodName); 
+
+        if (!body->getScope()){
+            DEBUG_LOG(LogLevel::ERROR, "Body's Scope is null in FunctionDef::evaluate()");
+            throw MerkError("Scope not present in FunctionDef::evaluate(scope)");
+        }
+
+        UniquePtr<BaseAST> clonedBodyBase = body->clone();
+        auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
+        // clonedBody->setNonStaticElements(nonStaticElements);
+        
+        if (!clonedBody){
+            throw MerkError("ClonedBody in MethodDef::evaluate is null");
+        }
+    
+        if (!clonedBody->getScope()){
+            DEBUG_LOG(LogLevel::ERROR, "Body's Scope is null in FunctionDef::evaluate()");
+            throw MerkError("Scope not present in FunctionDef::evaluate(scope) of clonedBody");
+        }
+
+        DEBUG_LOG(LogLevel::TRACE, "FunctionDef Defining Scope: ", passedScope->getScopeLevel());
+        
+        SharedPtr<Method> method = makeShared<Method>(methodName, parameters, std::move(clonedBody), ownScope, callType);
+        
+        if (!method){
+            throw MerkError("Method created in MethodDef::evaluate is null");
+        }
+        
+        method->setSubType(methodType);
+        method->setScope(defScope);
+        method->setCapturedScope(defScope);
+
+        auto methodSig = method->toCallableSignature();
+
+        classScope->registerFunction(methodName, methodSig);
+
+        DEBUG_LOG(LogLevel::TRACE, highlight("Registered Method: " + methodName, Colors::yellow), "into: ", classScope.get(), "Owner: ", classScope->owner);
+
+        DEBUG_LOG(LogLevel::TRACE, "Method", methodName, "registered to ", classScope->owner);
+
+        if (!defScope){
+            DEBUG_FLOW_EXIT();
+            throw MerkError("Defining Scope for FunctionDef::evaluate is null");
+        }
+
+        if (!method->getBody()){
+            DEBUG_FLOW_EXIT();
+            throw MerkError("Function body is null in FunctionDef::evaluate");
+        }
+
+        // Wrap it in a FunctionNode (for returning it as a value)
+        MethodNode methodNode(method);
+
+        DEBUG_FLOW_EXIT();
+        return methodNode;
+    }
 
 } // namespace Evaluator

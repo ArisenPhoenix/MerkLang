@@ -28,7 +28,7 @@ class Method;
 class MethodNode;
 class InstanceNode;
 class ClassInstance;
-
+class Scope;
 
 // Aliases
 using String = std::string;
@@ -142,6 +142,7 @@ enum class NodeValueType {
     Uninitialized,
     Any,
     UNKNOWN,
+    Scope
 };
 
 
@@ -199,9 +200,7 @@ enum class AstType {
 
     Chain,
     ChainOperation,
-    // ChainAssignment,
-    // ChainReference,
-    // ChainDeclaration,
+    Accessor,
 
     Unknown,
     NoOp,
@@ -256,7 +255,8 @@ using VariantType = std::variant<
     SharedPtr<ClassBase>,
     SharedPtr<Method>,
     SharedPtr<Callable>,
-    SharedPtr<ClassInstance>
+    SharedPtr<ClassInstance>,
+    SharedPtr<Scope>
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
 

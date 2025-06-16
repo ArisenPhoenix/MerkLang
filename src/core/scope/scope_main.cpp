@@ -87,7 +87,17 @@ Scope::Scope(int scopeLevel, bool interpretMode, bool isRoot)
              "Initialized Root Scope with level: ", scopeLevel, 
              " | Memory Loc: ", this, 
              " | Parent Loc: ", formatPointer(nullptr));
+
+    ++liveScopeCount;
+    ++totalScopeCreated;
     DEBUG_FLOW_EXIT();
+}
+
+
+String Scope::formattedScope() {
+    std::ostringstream oss;
+    oss << this;
+    return oss.str();
 }
 
 // Constructor for child
@@ -128,7 +138,8 @@ Scope::Scope(WeakPtr<Scope> parentScope, bool interpretMode)
             "Finalized Scope Initialization with level: ", scopeLevel, 
             " | Memory Loc: ", static_cast<void*>(this), 
             " | Parent Loc: ", formatPointer(this->parentScope.lock().get()));
-    
+    ++liveScopeCount;
+    ++totalScopeCreated;
     DEBUG_FLOW_EXIT();
 }
 
@@ -137,75 +148,68 @@ Scope::Scope(SharedPtr<Scope> parent, SharedPtr<FunctionRegistry> globalF, Share
     globalFunctions(std::move(globalF)),
     globalClasses(std::move(globalC)),
     interpretMode(interpretMode)
-{}
+{
+    ++liveScopeCount;
+    ++totalScopeCreated;
+
+}
 
 Scope::~Scope() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     DEBUG_LOG(LogLevel::TRACE, "Entering Scope Destructor for Scope Level: ", scopeLevel, 
              " | Memory Loc: ", this);
-    if (scopeLevel == 0) {
+    if (scopeLevel == 0 && isRoot) {
         if (interpretMode) {
             DEBUG_LOG(LogLevel::TRACE, "Destroying Root Scope.");
         } else {
             DEBUG_LOG(LogLevel::TRACE, "Preserving Root Scope for compilation.");
+
             return; // Avoid clearing child scopes in compile mode
         }
     } else {
         DEBUG_LOG(LogLevel::TRACE, "Destroying Scope at level: ", scopeLevel, 
                  " | Memory Loc: ", this, 
                  " | Parent Loc: ", parentScope.lock().get());
-        // functionRegistry.clear();  // <--- Also needed if functions are stored in this scope
-        // 1. Explicitly destroy stored variables
-        // DEBUG_LOG(LogLevel::INFO, "Still Need to Handle Cleaning up variables in Context Scope Level: ", scopeLevel);
-
-        // 2. Explicitly destroy stored functions
-        // DEBUG_LOG(LogLevel::INFO, "Still Need To Handle Cleaning up functions in Registry in Scope Level: ", scopeLevel);
-
-        // Explicitly destroy child scopes in reverse order
  
-
+    
     clear();
-        
+    --liveScopeCount;
+    DEBUG_LOG(LogLevel::TRACE, "[Scope Destructor] Remaining Scopes: ", liveScopeCount);
     DEBUG_LOG(LogLevel::TRACE, "Exiting Scope Destructor for Scope Level: ", scopeLevel, 
              " | Memory Loc: ", this);
     }
+
+
 
 
     DEBUG_FLOW_EXIT();
 }
 
 void Scope::clear() {
-    for (auto it = childScopes.rbegin(); it != childScopes.rend(); ++it) {
-        DEBUG_LOG(LogLevel::TRACE,
-                  "  -> destroying child level ", (*it)->getScopeLevel(),
-                  " @", (*it).get());
-        it->reset();  
-    }
-    
+    // Clear contexts first (variables)
     context.clear();
+
+    // Clear localFunctions safely
+    localFunctions.clear();
+
+    // Clear localClasses safely
+    localClasses.clear();
+
+    // Clear children
+    for (auto& child : childScopes) {
+        if (child) {
+            child->clear();  // Recursively clear
+        }
+    }
     childScopes.clear();
-    if (isRoot){
-        // if (globalClasses->getClasses().size() > 0) {
-        //     globalClasses->clear();
-        // }
-        // if (globalFunctions->getFunctions().size() > 0){
-        //     globalFunctions->clear();
 
-        // }
-        // classRegistry.clear();          // Safe and sufficient
-        // functionRegistry.clear();       // Safe and sufficient
+    // Only for Root Scope
+    if (isRoot) {
+        if (globalFunctions) globalFunctions->clear();
+        if (globalClasses) globalClasses->clear();
     }
-
-    if (localClasses.size() > 0){
-        localClasses.clear();
-    }
-
-    if (localFunctions.size() > 0) {
-        localFunctions.clear();
-
-    }
-    
 }
+
 
 
 
@@ -329,6 +333,7 @@ SharedPtr<Scope> Scope::createChildScope() {
 
 
 SharedPtr<Scope> Scope::makeCallScope() {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto c = makeShared<Scope>(shared_from_this(),
                                 globalFunctions,
                                 globalClasses,
@@ -337,52 +342,46 @@ SharedPtr<Scope> Scope::makeCallScope() {
     c->isDetached = true;
     c->isClonedScope = true;
     c->isRoot = false;
+    DEBUG_FLOW_EXIT();
     return c;
 }
 
+UniquePtr<VarNode> cloneVar(VarNode* original) {
+    return UniquePtr<VarNode>(original);
+}
+
+
+
 SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
-    auto instanceScope = makeCallScope(); // inherits captured env
-
-    // instanceScope->appendChildScope(classScope->getParent(), "InstanceScope.attachClassScope");
-    instanceScope->isDetached = true;
+    auto instanceScope = makeCallScope();
     includeMetaData(instanceScope, true);
-
     instanceScope->owner = generateScopeOwner("ClassInstance", classScope->owner);
+    if (classScope->hasVariable("x")){throw MerkError("Scope::makeInstanceScope -> classScope provided Already Has Variable 'x' at instance construction time 1.");}
 
-    const auto& classVars = classScope->getContext().getVariables();
-
-    for (const auto& [varName, varNodePtr] : classVars) {
-        if (varNodePtr) {
-            // Clone the VarNode (you might want to make a proper clone method later)
-            auto clonedVar = makeUnique<VarNode>(*varNodePtr); 
-            instanceScope->declareVariable(varName, std::move(clonedVar));
+    for (const auto& [varName, varPtr] : classScope->getContext().getVariables()) {
+        if (varPtr) {
+            if (!instanceScope->getContext().hasVariable(varName)) {
+                instanceScope->getContext().setVariable(varName, cloneVar(varPtr->clone()));
+            } else {
+                DEBUG_LOG(LogLevel::WARNING, "Variable already exists in instanceScope: ", varName);
+            }
         }
     }
 
-    // New: Clone methods and patch chains
-    const auto& functionRegistry = classScope->getFunctionRegistry()->getFunctions();
+    const auto& functionRegistry = classScope->localFunctions;
     for (const auto& [methodName, methodVec] : functionRegistry) {
         for (const auto& methodSig : methodVec) {
             auto method = std::static_pointer_cast<Method>(methodSig->getCallable());
-            if (!method) {
-                throw MerkError("Method Not Found: " + methodName);
-            }
-
-            // Clone method
             SharedPtr<Method> clonedMethod = makeShared<Method>(*method);
             clonedMethod->setClassScope(instanceScope);
-
-            // Patch Chains
-            auto body = clonedMethod->getBody();
             String accessor = clonedMethod->getAccessor();
-            ASTUtils::traverse(body->getChildren(), [&](BaseAST* node) {
-                if (node->getAstType() == AstType::ChainOperation) {
-                    auto* chainOp = static_cast<ChainOperation*>(node);
-                    chainOp->setResolutionMethod(1, ResolutionMode::ClassInstance, instanceScope, accessor);
+            if (clonedMethod->getIsStatic()){
+                for (auto& elem: clonedMethod->getNonStaticElements()) {
+                    elem->setSecondaryScope(instanceScope);
                 }
-            }, true, false);
+            }
 
-            // Register into instanceScope
+
             instanceScope->registerFunction(methodName, clonedMethod->toCallableSignature());
         }
     }
@@ -391,22 +390,6 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
 }
 
 
-
-
-
-// void Scope::setProtectedMembers(Vector<String> protectedMems) {protectedMembers = protectedMems;}
-// Vector<String> Scope::getProtectedMembers() const {return protectedMembers;}
-
-
-
-// similarly for lookupClass, lookupVariable, etc…
-
-// registering in *this* scope now only writes into your overlay:
-// void Scope::registerFunctionHere(const String& name, SharedPtr<CallableSignature> f) {
-//   localFunctions[name] = std::move(f);
-// }
-
-// Get the parent scope
 SharedPtr<Scope> Scope::getParent() const {
     DEBUG_FLOW(FlowLevel::LOW);
     if (parentScope.expired()) {
@@ -452,6 +435,9 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
 
     // Set the variable in the current context (not parent or child)
     if (context.hasVariable(name)) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "SCOPE: ", owner, "SCOPE LEVEL: ", scopeLevel);
+        // debugPrint();
+
         throw VariableAlreadyDeclaredError(name);
     }
     context.setVariable(name, std::move(value));
@@ -557,12 +543,30 @@ SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() {return globalFunctions
 
 
 void Scope::registerFunction(const String& name, SharedPtr<UserFunction> function) {
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (function->getCallableType() == CallableType::CLASS) {
+        throw MerkError("Cannot Register A Class Into Function Registry");
+    }
     // auto signature = function->toFunctionSignature();
     auto signature = function->toCallableSignature();
 
     // functionRegistry.registerFunction(name, std::move(signature));
     localFunctions[name].emplace_back(signature);
+
+    DEBUG_FLOW_EXIT();
+}
+
+void Scope::registerFunction(const String& name, SharedPtr<Callable> anyCallable) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    // auto signature = function->toFunctionSignature();
+    if (anyCallable->getCallableType() == CallableType::CLASS) {
+        throw MerkError("Cannot Register A Class Into Function Registry");
+    }
+    auto signature = anyCallable->toCallableSignature();
+
+    // functionRegistry.registerFunction(name, std::move(signature));
+    localFunctions[name].emplace_back(signature);
+
 
     DEBUG_FLOW_EXIT();
 }
@@ -683,14 +687,16 @@ Vector<SharedPtr<CallableSignature>> Scope::getFunction(const String& name) {
     if (auto func = lookupFunction(name)){
         return func.value();
     }
-    if (auto functions = globalFunctions->getFunction(name)){
-        // return functions;
-        return functions.value();
-    }
+
 
     if (auto parent = parentScope.lock()){
         // DEBUG_FLOW_EXIT();
         return parent->getFunction(name);
+    }
+
+    if (auto functions = globalFunctions->getFunction(name)){
+        // return functions;
+        return functions.value();
     }
     throw FunctionNotFoundError(name);
     // return functionRegistry.getFunction(name);
@@ -723,63 +729,27 @@ std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) 
   }
 
 
-// void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
-//     DEBUG_FLOW(FlowLevel::LOW);
-//     if (auto cls = lookupClass(name)) {
-//         if (cls){
-//             DEBUG_LOG(LogLevel::ERROR, callableTypeAsString(cls.value()->getCallableType()), "is already defined");
-//             DEBUG_LOG(LogLevel::ERROR, "SharedPtr<ClassBase>");
-//             throw MerkError("Class '" + name + "' is already defined in this scope.");
-
-//         }
-
-
-//     }
-//     // classRegistry.registerClass(name, classBase);
-
-//     localClasses[name] = std::move(std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature()));
-//     DEBUG_FLOW_EXIT();
-// }
-
-
-// void Scope::registerClass(const String& name, SharedPtr<ClassSignature> classSignature) {
-//     DEBUG_FLOW(FlowLevel::LOW);
-//     if (auto cls = lookupClass(name)) {
-//         // DEBUG_LOG(LogLevel::ERROR, callableTypeAsString(cls->get()->getCallableType()), "is already defined");
-//         DEBUG_LOG(LogLevel::ERROR, "SharedPtr<ClassSignature>");
-//         throw MerkError("Class '" + name + "' is already defined in this scope.");
-//     }
-//     // classRegistry.registerClass(name, classSignature);
-//     localClasses[name] = std::move(classSignature);
-//     DEBUG_FLOW_EXIT();
-// }
-
-
-// void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
-//     DEBUG_FLOW(FlowLevel::LOW);
-//     auto clsOpt = lookupClass(name);
-//     if (clsOpt && clsOpt.value()) {
-//         auto& cls = clsOpt.value();
-//         DEBUG_LOG(LogLevel::ERROR, callableTypeAsString(cls->getCallableType()), "Class: ", name, "is already defined");
-//         throw MerkError("Class '" + name + "' is already defined in this scope.");
-//     }
-//     // classRegistry.registerClass(name, classBase);
-
-//     localClasses[name] = std::move(std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature()));
-//     DEBUG_FLOW_EXIT();
-// }
-
 void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
-    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     if (!classBase) {
         throw MerkError("registerClass called with null ClassBase for: " + name);
     }
 
+    // if (!classBase->getCapturedScope()->has(classBase->getClassScope())){
+    //     throw MerkError("Scope::registerClass -> Class Base Captured Scope Does Not Own Class Scope");
+    // }
+
     if (auto clsOpt = lookupClass(name); clsOpt && clsOpt.value()) {
         throw MerkError("Class '" + name + "' is already defined in this scope.");
     }
+
+    if (!classBase->getCapturedScope()->has(classBase->getClassScope())) {
+        throw MerkError("Class Scope is Not A CHILD OF CAPTURED SCOPE");
+    }
     auto sig = std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature());
+    
+
 
     if (!sig) {
         throw MerkError("ClassSignature is null when registering: " + name);
@@ -861,6 +831,103 @@ bool Scope::hasClass(const String& name) const {
 }
 
 SharedPtr<ClassRegistry> Scope::getClassRegistry() {return globalClasses;}
+
+
+
+
+
+// SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
+//     auto instanceScope = makeCallScope(); // inherits captured env already
+//     includeMetaData(instanceScope, true);
+//     generateScopeOwner("ClassInstance", classScope->owner);
+
+
+
+//     // instanceScope->context = classScope->getAllVariables(instanceScope->context);
+//     // New: Clone methods and patch chains
+//     // for (auto [funcName, funcSigs] : classScope->localFunctions) {
+//     //     for (auto funcSig : funcSigs) {
+//     //         instanceScope->registerFunction(funcName, funcSig);
+//     //     }
+//     // }
+//     const auto& functionRegistry = classScope->localFunctions;
+//     for (const auto& [methodName, methodVec] : functionRegistry) {
+//         DEBUG_LOG(LogLevel::PERMISSIVE, "Attempting To Handle Method: ", methodName);
+//         for (const auto& methodSig : methodVec) {
+//             auto method = std::static_pointer_cast<Method>(methodSig->getCallable());
+//             if (!method) {
+//                 throw MerkError("Method Not Found: " + methodName);
+//             }
+
+//             SharedPtr<Method> clonedMethod = makeShared<Method>(*method);
+//             clonedMethod->setClassScope(instanceScope);
+
+//             auto body = clonedMethod->getBody();
+//             String accessor = clonedMethod->getAccessor();
+//             ASTUtils::traverse(body->getChildren(), [&](BaseAST* node) {
+//                 if (node->getAstType() == AstType::ChainOperation) {
+//                     auto* chainOp = static_cast<ChainOperation*>(node);
+//                     auto left = chainOp->getLeftSide();
+//                     if (chainOp->getSecondaryScope() || left->getSecondaryScope() || left->getResolutionMode() == ResolutionMode::ClassInstance || left->getResolutionStartIndex() > 0){
+//                         chainOp->setResolutionMethod(1, ResolutionMode::ClassInstance, instanceScope, accessor);
+//                     }
+//                 }
+//             }, true, false);
+//             DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD: ", methodName, "ADDED");
+//             instanceScope->registerFunction(methodName, clonedMethod->toCallableSignature());
+//             clonedMethod.reset();
+//         }
+//     }
+
+//     return instanceScope;
+// }
+
+
+// void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
+//     DEBUG_FLOW(FlowLevel::LOW);
+//     if (auto cls = lookupClass(name)) {
+//         if (cls){
+//             DEBUG_LOG(LogLevel::ERROR, callableTypeAsString(cls.value()->getCallableType()), "is already defined");
+//             DEBUG_LOG(LogLevel::ERROR, "SharedPtr<ClassBase>");
+//             throw MerkError("Class '" + name + "' is already defined in this scope.");
+
+//         }
+
+
+//     }
+//     // classRegistry.registerClass(name, classBase);
+
+//     localClasses[name] = std::move(std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature()));
+//     DEBUG_FLOW_EXIT();
+// }
+
+
+// void Scope::registerClass(const String& name, SharedPtr<ClassSignature> classSignature) {
+//     DEBUG_FLOW(FlowLevel::LOW);
+//     if (auto cls = lookupClass(name)) {
+//         // DEBUG_LOG(LogLevel::ERROR, callableTypeAsString(cls->get()->getCallableType()), "is already defined");
+//         DEBUG_LOG(LogLevel::ERROR, "SharedPtr<ClassSignature>");
+//         throw MerkError("Class '" + name + "' is already defined in this scope.");
+//     }
+//     // classRegistry.registerClass(name, classSignature);
+//     localClasses[name] = std::move(classSignature);
+//     DEBUG_FLOW_EXIT();
+// }
+
+
+// void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
+//     DEBUG_FLOW(FlowLevel::LOW);
+//     auto clsOpt = lookupClass(name);
+//     if (clsOpt && clsOpt.value()) {
+//         auto& cls = clsOpt.value();
+//         DEBUG_LOG(LogLevel::ERROR, callableTypeAsString(cls->getCallableType()), "Class: ", name, "is already defined");
+//         throw MerkError("Class '" + name + "' is already defined in this scope.");
+//     }
+//     // classRegistry.registerClass(name, classBase);
+
+//     localClasses[name] = std::move(std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature()));
+//     DEBUG_FLOW_EXIT();
+// }
 
 
 // ClassRegistry& Scope::getClassRegistry() {return classRegistry;}

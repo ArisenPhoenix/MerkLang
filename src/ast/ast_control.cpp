@@ -233,11 +233,11 @@ Break::Break(SharedPtr<Scope> scope) : ASTStatement(scope) {
     DEBUG_FLOW_EXIT();
 }
 
-Node ConditionalBlock::evaluate(SharedPtr<Scope> scope) const {return condition.get()->evaluate(scope);}
+Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {return condition.get()->evaluate(scope);}
 Node ConditionalBlock::evaluate() const {return condition.get()->evaluate(getScope());}
 
 // Loop Evaluations
-Node LoopBlock::evaluate(SharedPtr<Scope> scope) const {
+Node LoopBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::MED);
 
     (void)scope;
@@ -247,7 +247,7 @@ Node LoopBlock::evaluate(SharedPtr<Scope> scope) const {
 
 }
 
-Node WhileLoop::evaluate(SharedPtr<Scope> scope) const {
+Node WhileLoop::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
 
     DEBUG_LOG(LogLevel::INFO, "Evaluating WhileLoop with scope level: ", scope->getScopeLevel());
@@ -259,7 +259,7 @@ Node WhileLoop::evaluate(SharedPtr<Scope> scope) const {
 
 
 // Control Flow Evaluations
-Node CodeBlock::evaluate(SharedPtr<Scope> scope) const {
+Node CodeBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
 
     validateScope(scope, "CodeBlock::evaluate(scope)");
@@ -269,18 +269,7 @@ Node CodeBlock::evaluate(SharedPtr<Scope> scope) const {
     return val;
 }
 
-// Node CodeBlock::evaluate() const {
-//     DEBUG_FLOW(FlowLevel::LOW);
-
-//     validateScope(getScope(), "CodeBlock::evaluate");
-
-//     Node val = evaluate(getScope());
-    
-//     DEBUG_FLOW_EXIT();
-//     return val;
-// }
-
-Node ElseStatement::evaluate(SharedPtr<Scope> scope) const {
+Node ElseStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
 
     validateScope(scope, "ElseStatement::evaluate");
@@ -291,7 +280,7 @@ Node ElseStatement::evaluate(SharedPtr<Scope> scope) const {
     return val;
 };
 
-Node ElifStatement::evaluate(SharedPtr<Scope> scope) const {
+Node ElifStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
 
     if (!condition){
@@ -307,7 +296,7 @@ Node ElifStatement::evaluate(SharedPtr<Scope> scope) const {
     return val;
 }
 
-Node IfStatement::evaluate(SharedPtr<Scope> scope) const {
+Node IfStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
     DEBUG_LOG(LogLevel::TRACE, highlight("Validating IfStatement", Colors::red));
     if (!condition){
@@ -390,14 +379,14 @@ void LoopBlock::setScope(SharedPtr<Scope> newScope) {
 
 
 // NoOp, perhaps will be used in the future. Still unsure, so keeping it.
-Node NoOpNode::evaluate([[maybe_unused]] SharedPtr<Scope> scope) const {
+Node NoOpNode::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope; // Not using it.
     DEBUG_LOG(LogLevel::DEBUG, "Evaluating NoOpNode (doing nothing).");
 
     return {};
 }
 
-[[noreturn]] Node Break::evaluate(SharedPtr<Scope> scope) const {
+[[noreturn]] Node Break::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW();
 
     validateScope(scope, "Break");

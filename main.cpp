@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
 
     // Step 3: Initialize Global Scope
     const bool interpretMode = true;
-    const bool byBlock = true;
+    const bool byBlock = false;
     const bool isRoot = true;
 
         
@@ -75,12 +75,13 @@ int main(int argc, char* argv[]) {
         ast->printAST(std::cout);
         globalScope->debugPrint();
         globalScope->printChildScopes();
-
+        globalScope->printScopeReport();
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
 
     } catch (MerkError& e){
         std::cerr << e.errorString() << std::endl;
+        
     } catch (const std::exception& ex) {
         std::cerr << "Error during execution: " << ex.what() << std::endl;
         return 1;
@@ -93,6 +94,7 @@ int main(int argc, char* argv[]) {
 
     // DEBUG_LOG(LogLevel::DEBUG, "==================== PROGRAM TERMINATION ====================");
     // nativeFunctions.clear();
+    globalScope->printScopeReport();
     globalScope->clear();
     globalScope.reset();
     

@@ -88,7 +88,7 @@ private:
 
     UniquePtr<ASTStatement> parseProtectedClassAttributes();
     UniquePtr<ASTStatement> parseClassAttributes();
-    UniquePtr<Chain> parseChain();
+    UniquePtr<Chain> parseChain(bool isDeclaration = false);
     UniquePtr<ChainOperation> parseChainOp();
     String getCurrentClassAccessor();
 

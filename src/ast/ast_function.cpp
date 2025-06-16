@@ -63,7 +63,7 @@ UniquePtr<BaseAST> FunctionDef::clone() const {
     return funcDef;
 }
 
-Node FunctionBody::evaluate(SharedPtr<Scope> scope) const {
+Node FunctionBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     // DEBUG_LOG(LogLevel::DEBUG, "debugPrint");
     Node val = Evaluator::evaluateFunction(getMutableChildren(), scope);
@@ -72,7 +72,7 @@ Node FunctionBody::evaluate(SharedPtr<Scope> scope) const {
     return val;
 }
 
-Node FunctionDef::evaluate(SharedPtr<Scope> scope) const {
+Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     auto freeVarNames = body->collectFreeVariables();
 
@@ -152,7 +152,7 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope) const {
     return funcNode;
 }
 
-Node FunctionCall::evaluate(SharedPtr<Scope> scope) const {
+Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     // DEBUG_FLOW(FlowLevel::HIGH); 
     scope->owner = generateScopeOwner("FuncCall", name);
     Vector<Node> evaluatedArgs = handleArgs(scope);
@@ -173,10 +173,10 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope) const {
     // SharedPtr<Function> func = optSig->get().getCallable();
     func->getCapturedScope()->owner = generateScopeOwner("FuncCall", name);
     SharedPtr<Scope> callScope = func->getCapturedScope();
-    callScope->debugPrint();
+    // callScope->debugPrint();
 
     callScope = callScope->makeCallScope();
-    callScope->debugPrint();
+    // callScope->debugPrint();
 
     
     callScope->owner = "FunctionCall:evaluate (" + name + ")";
@@ -208,7 +208,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope) const {
     return value; 
 }
 
-Node FunctionRef::evaluate(SharedPtr<Scope> scope) const {
+Node FunctionRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
 
     // DEBUG_FLOW(FlowLevel::HIGH);
     

@@ -78,6 +78,24 @@ std::optional<std::reference_wrapper<VarNode>> Context::getVariable(const String
     return std::nullopt; // Indicate variable not found
 }
 
+UniquePtr<Context> Context::clone() const {
+    auto newContext = std::make_unique<Context>();
+    // Deep copy logic for all members of Context
+    newContext->variables = deepCopyVariables();
+    newContext->arguments = arguments;  // Assuming this is copyable
+    return newContext;
+}
+
+std::unordered_map<String, UniquePtr<VarNode>> Context::deepCopyVariables() const {
+    std::unordered_map<String, UniquePtr<VarNode>> copy;
+    for (const auto& [key, value] : variables) {
+        if (value) {
+            copy[key] = std::make_unique<VarNode>(*value);  // Deep copy each VarNode
+        }
+    }
+    return copy;
+}
+
 const std::unordered_map<String, UniquePtr<VarNode>>& Context::getVariables() const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     DEBUG_FLOW_EXIT();
@@ -110,7 +128,6 @@ void Context::debugPrint() const {
 void Context::clear() {
     for (auto& [varName, var] : variables) {
         var.reset();
-        var.release();
     }
     variables.clear();
 

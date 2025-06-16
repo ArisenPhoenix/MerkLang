@@ -7,21 +7,6 @@
 #include <sstream>
 #include <variant>
 #include "core/types.h"
-// #include "utilities/debugging_functions.h"
-// #include "utilities/debugger.h"
-
-
-// namespace std {
-//     template <>
-//     struct hash<Node> {
-//         size_t operator()(const Node& node) const {
-//             return std::hash<std::string>{}(node.toString()); // Use string representation for hashing
-//         }
-//     };
-// }
-
-// class VarNode; // Forward Declare VarNode
-
 
 // Struct for NodeData using a union for efficient storage
 struct NodeData {
@@ -48,6 +33,7 @@ public:
     bool isMutable = true;
     bool isStatic = false;
     bool isCallable = false;
+
     void setValue(const Node& other);
     void setValue(const VariantType& newValue);
     NodeValueType determineResultType(const Node& left, const Node& right) const;
@@ -55,6 +41,9 @@ public:
     String name = "";
 
 
+
+    bool isInstanceScope();
+    bool isInstanceScope() const;
     
     bool isClassInstance();
     bool isClassInstance() const;
@@ -191,7 +180,6 @@ public:
 // Variable Node for variables
 class VarNode : public Node {
 public:
-    String nodeType = "VarNode";
     
     VarNode();
     explicit VarNode(const VariantType& value, bool isConst = false, bool isMutable = true, bool isStatic = false);

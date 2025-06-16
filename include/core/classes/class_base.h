@@ -4,10 +4,9 @@
 #include "core/types.h"
 #include "ast/ast_callable.h"
 #include "core/functions/callable.h"
-#include "core/node.h"
 #include "core/errors.h"
-// #include "core/functions/callable.h"
-// #include "core/classes/class_base.h"
+
+class Node;
 class Scope;
 class ClassSignature;
 class FunctionSignature;
@@ -19,21 +18,13 @@ class ClassBody;
 class ClassBase : public Callable {
 protected:
     // The class scope that holds method definitions and member variable declarations.
-    // SharedPtr<Scope> scope;
     String accessor;
     SharedPtr<Scope> classScope;
     WeakPtr<Scope> capturedScope;
     SharedPtr<Scope> initialCapturedScope;
 
-    // UniquePtr<ClassBody> body;
-    // ParamList parameters;
-
 
 public: 
-    // Constructor: Given a class name and a parent (defining) scope,
-    // a new class scope is created.
-    // ClassBase(String name, SharedPtr<Scope> parentScope);
-    // ClassBase(String name, String accessor, UniquePtr<ClassBody> body, SharedPtr<Scope> parentScope);
     ClassBase(String name, String accessor, SharedPtr<Scope> classScope);
 
     ~ClassBase();
@@ -48,23 +39,20 @@ public:
     // Retrieve a member variable's value.
     Node getMember(const String& name);
 
-    Node execute(Vector<Node> args, SharedPtr<Scope> scope) const override;
+    Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     void setCapturedScope(SharedPtr<Scope> scope) override;
     void setClassScope(SharedPtr<Scope> scope);
 
     SharedPtr<Scope> getCapturedScope() const override;
     SharedPtr<Scope> getClassScope() const;
-    // SharedPtr<Scope> getScope();
+
     String getAccessor();
     String& getQualifiedAccessor();
     void setScope(SharedPtr<Scope> newScope) const;
 
     String toString() const override;
 
-    // void setBody(UniquePtr<ClassBody> updatedBody);
-    // UniquePtr<ClassBody>& getBody();
-    // ClassBody* getBody() const;
     void setParameters(ParamList params);
     ParamList getParameters() {return parameters;}
 
@@ -93,7 +81,7 @@ public:
 
 
 
-class ClassInstance : public Callable {
+class ClassInstance : public Callable { 
 private:
 
     // SharedPtr<Scope> capturedScope;
@@ -103,14 +91,13 @@ private:
     String accessor;
 
 public:
-    // ClassInstance(SharedPtr<ClassBase> base);
+    bool isConstructed = false;
+
     ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, String& accessor);
 
-    // ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, String& accessor);
     ~ClassInstance() override;
     
-    // Node execute(const Vector<Node>& args, SharedPtr<Scope> callerScope) const;
-    Node execute(const Vector<Node> args, SharedPtr<Scope> scope) const;
+    Node execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
 
     SharedPtr<Scope> getCapturedScope() const override;
     void setCapturedScope(SharedPtr<Scope> scope) override;
@@ -121,7 +108,7 @@ public:
     String toString() const override;
     String getAccessor() {return accessor;} 
 
-    void construct(const Vector<Node>& args);
+    void construct(const Vector<Node>& args, SharedPtr<ClassInstance> classInstance);
     Node call(String name, Vector<Node> args);
     // SharedPtr<Scope> getScope() {return startingScope;}
 
@@ -133,10 +120,8 @@ public:
 
     virtual void updateField(const String& name, Node val) const;                 // most commonly used
     
-    // Node getField(const String& name, TokenType type) const;
-
     SharedPtr<Scope> getInstanceScope();
-    void setInstanceScope(SharedPtr<Scope> scope);
+    void setInstanceScope(SharedPtr<Scope> scope); 
     void setScope(SharedPtr<Scope> newScope) const override;
 
 
@@ -145,19 +130,28 @@ public:
 class ClassInstanceNode : public CallableNode {
 public:
     ClassInstanceNode(SharedPtr<ClassInstance> callable);
+    ClassInstanceNode(SharedPtr<CallableNode> callable);
 
+    ClassInstanceNode getInstanceNode() const;
+    SharedPtr<ClassInstance> getInstance() const; 
+    SharedPtr<Scope> getScope();
+    SharedPtr<Scope> getInstanceScope();
     SharedPtr<Callable> getCallable() const override;
+    static ClassInstanceNode from(const Node& node) {
+        if (!node.isClassInstance()) {
+            throw MerkError("Cannot create ClassInstanceNode from non-ClassInstance node.");
+        }
+        return ClassInstanceNode(std::get<SharedPtr<ClassInstance>>(node.getValue()));
+    };
 
-
-
-
+    String toString() const override;
 };
 
+    // ClassInstanceNode getInstanceNode();
 
 class ClassSignature : public CallableSignature {
 private:
     String accessor;
-    // UniquePtr<ClassBody> classBody;
 
 public:
     explicit ClassSignature(SharedPtr<ClassBase> classBase);
@@ -168,10 +162,7 @@ public:
 
     SharedPtr<ClassInstance> instantiate(const Vector<Node>& args) const;
 
-    // Optional: override call() to auto-instantiate when the class is "called"
     Node call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
-
-    // UniquePtr<ClassBody>& getBody() {return classBody;}
 };
 
 #endif // CLASS_BASE_H

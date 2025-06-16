@@ -10,6 +10,7 @@
 #include <variant>
 
 class Scope;
+class ClassInstanceNode;
 
 // These templates are specific to the AST structures, so it is reasonable to only include them here, rather than types.h
 
@@ -63,32 +64,13 @@ public:
     
     virtual void setScope(SharedPtr<Scope> newScope) = 0;
 
-    // virtual SharedPtr<Scope> getScope() const {
-    //     auto locked = scope.lock();
-    //     return locked;
-    // }
     virtual SharedPtr<Scope> getScope() const = 0;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const;
-    virtual Node evaluate(SharedPtr<Scope> scope) const = 0;
+    virtual Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
     virtual Node evaluate() const = 0;
 
     virtual UniquePtr<BaseAST> clone() const = 0;
     String getBranch() const {return branch;}
-
-    // Vector<const BaseAST*> BaseAST::getAllAst(std::function<bool(const BaseAST*)> filter, bool includeSelf) const {
-    //     Vector<const BaseAST*> result;
-    
-    //     if (includeSelf && filter(this)) {
-    //         result.push_back(this);
-    //     }
-    
-    //     for (const auto& child : getChildren()) {
-    //         auto subResults = child->getAllAst(filter, true);  // recurse
-    //         result.insert(result.end(), subResults.begin(), subResults.end());
-    //     }
-    
-    //     return result;
-    // }
 };
 
 
@@ -97,7 +79,7 @@ public:
 
 class ASTStatement : public BaseAST {
 public:
-    SharedPtr<Scope> scope;
+    WeakPtr<Scope> scope;
     explicit ASTStatement(SharedPtr<Scope> scope);
     ~ASTStatement() override = default;
 
@@ -111,10 +93,13 @@ public:
     virtual AstType getAstType() const override {return AstType::AST;}
     virtual String toString() const override {return getAstTypeAsString();}
     SharedPtr<Scope> getScope() const override {
-        return scope;
+        if (auto s = scope.lock()) {
+            return s;
+        }
+        return nullptr;
     }
     virtual void setScope(SharedPtr<Scope> newScope) override;
-    virtual Node evaluate(SharedPtr<Scope> scope) const override= 0;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override= 0;
 
     virtual Node evaluate() const override {return evaluate(getScope());}
 

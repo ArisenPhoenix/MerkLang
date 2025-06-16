@@ -1,8 +1,11 @@
 #include "core/node.h"
 #include "core/types.h"
+#include "core/functions/callable.h"
+#include "core/classes/class_base.h"
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "core/errors.h"
+#include "core/scope.h"
 
 #include <limits>
 #include <sstream>
@@ -87,7 +90,7 @@ bool compareNumericNodes(const Node& left, const Node& right, const std::functio
 
 // Overload operator<< for Node to display detailed information
 std::ostream& operator<<(std::ostream& os, const Node& node) {
-    os << "Node(";
+    os << node.nodeType << "(";
     os << "Value: ";
 
     // Display the value
@@ -97,8 +100,16 @@ std::ostream& operator<<(std::ostream& os, const Node& node) {
         os << "<Error retrieving value>";
     }
 
+    SharedPtr<Scope> scope = nullptr;
+
     // Display the type
     os << ", Type: " << (node.name.empty() ? nodeTypeToString(node.getType()) : nodeTypeToString(node.getType()) + "(" + node.name + ")");
+    if (node.getType() == NodeValueType::ClassInstance){
+        auto instance = std::get<SharedPtr<ClassInstance>>(node.getValue());
+        scope = instance->getInstanceScope();        
+    }
+
+    
     // Display metadata
     os << ", isConst: " << (node.isConst ? "true" : "false");
     os << ", isMutable: " << (node.isMutable ? "true" : "false");
@@ -108,6 +119,25 @@ std::ostream& operator<<(std::ostream& os, const Node& node) {
     
 
     os << ")";
+
+    if (scope){
+        os << "\n INSTANCE: " + node.name + " DATA START In Scope : " + "Scope(" + std::to_string(scope->getScopeLevel()) + ", " + scope->owner + ")\n";
+        // scope->debugPrint();
+        for (auto& [varName, var] : scope->getContext().getVariables()) {
+            os << varName << " = " << var->toString() << "\n";
+        }
+        for (auto& [funcName, funcVec] : scope->localFunctions) {
+            for (auto& func : funcVec) {
+                os << func->getCallable()->toString() << "\n";
+            }
+        }
+
+        for (auto& [className, cls] : scope->localClasses) {
+            os << cls->getCallable()->toString() << "\n";
+        }
+        
+        os << "\n INSTANCE DATA END\n\n";
+    }
     return os;
 }
 
@@ -271,37 +301,20 @@ bool Node::getIsCallable() const {
         }
     }
     return isCallable; 
-
 }
 
 bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInstance;}
 
 bool Node::isClassInstance() {return data.type == NodeValueType::ClassInstance;}
 
-// Node Node::getField(const String& name) const {
-//     (void)name;
-//     // if (!isClassInstance()) {
-//     //     throw MerkError("Tried to access field '" + name + "' on non-instance Node.");
-//     // }
+bool Node::isInstanceScope() {
+    return data.type == NodeValueType::Scope;
+}
 
-//     // auto instance = std::get<SharedPtr<ClassInstance>>(data.value);
-//     // SharedPtr<Scope> scope = instance->getCapturedScope(); // or getInstanceScope()
+bool Node::isInstanceScope() const {
+    return data.type == NodeValueType::Scope;
+}
 
-//     // if (scope->hasVariable(name)) {
-//     //     return scope->getVariable(name);
-//     // } else if (scope->hasFunction(name)) {
-//     //     auto sig = scope->getFunction(name).value().get();
-//     //     return MethodNode(sig->getMethod());
-//     // }
-
-//     // throw MerkError("Field or method '" + name + "' not found.");
-//     return Node();
-// }
-// Node Node::getField(const String& name, TokenType type) const {
-//     (void)name;
-//     (void)type;
-//     return Node();
-// }
 
 bool Node::isNumeric() const { return isInt() || isFloat() || isDouble() || isLong(); }
 
@@ -374,6 +387,8 @@ String Node::toString() const {
 
             case NodeValueType::ClassInstance:
                 return "<ClassInstance>";
+            case NodeValueType::Callable:
+                return "<Callable";
             default:
                 throw MerkError("Unsupported type for Node toString.");
         }
@@ -927,31 +942,37 @@ Node* Node::clone() const {
 
 // Default constructor
 LitNode::LitNode() : Node() {
+    nodeType = "LitNode";
     DEBUG_LOG(LogLevel::TRACE, "===== LitNode was created without initialization.");
 }
 
 // Constructor accepting a VariantType
 LitNode::LitNode(const VariantType& value) : Node(value) {
+    nodeType = "LitNode";
     DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized with VariantType.");
 }
 
 // Constructor accepting a string value and type
 LitNode::LitNode(const String& value, const String& typeStr) : Node(value, typeStr) {
+    nodeType = "LitNode";
     DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized with String and typeStr.");
 }
 
 // Constructor accepting another Node
 LitNode::LitNode(const Node& parentNode) : Node(parentNode) {
+    nodeType = "LitNode";
     DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized from another Node.");
 }
 
 // Copy constructor
 LitNode::LitNode(const LitNode& other) : Node(other) {
+    nodeType = "LitNode";
     DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-constructed.");
 }
 
 // Move constructor
 LitNode::LitNode(LitNode&& other) noexcept : Node(std::move(other)) {
+    nodeType = "LitNode";
     DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-constructed.");
 }
 
@@ -984,12 +1005,14 @@ LitNode& LitNode::operator=(LitNode&& other) noexcept {
 
 // VarNode Default Constructor
 VarNode::VarNode() : Node() {
+    nodeType = "VarNode";
     DEBUG_LOG(LogLevel::DEBUG, "===== VarNode was created without initialization.");
 }
 
 // VarNode Constructor accepting VariantType
 VarNode::VarNode(const VariantType& value, bool isConst, bool isMutable, bool isStatic)
     : Node(value) {
+    nodeType = "VarNode";
     this->isConst = isConst;
     this->isMutable = isMutable;
     this->isStatic = isStatic;
@@ -998,6 +1021,7 @@ VarNode::VarNode(const VariantType& value, bool isConst, bool isMutable, bool is
 // VarNode Constructor accepting String value and type
 VarNode::VarNode(const String& value, const String& typeStr, bool isConst, bool isMutable, bool isStatic)
     : Node(value, typeStr) {
+    nodeType = "VarNode";
     this->isConst = isConst;
     this->isMutable = isMutable;
     this->isStatic = isStatic;

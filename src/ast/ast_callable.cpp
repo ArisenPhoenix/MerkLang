@@ -83,28 +83,13 @@ CallableCall::~CallableCall() = default;
 // }
 
 CallableBody::~CallableBody() {
-    DEBUG_LOG(LogLevel::INFO, 
-        getScope() && getScope()->getScopeLevel() == 0 
-            ? "Destroying Root CodeBlock." 
-            : "Destroying CodeBlock", 
-        "Scope address: ", 
-             getScope() ? getScope().get() : nullptr, 
-        ", Scope level: ", 
-             getScope() ? getScope()->getScopeLevel() : -1);
-
-    for (auto it = children.rbegin(); it != children.rend(); ++it) {
-        it->get()->getScope().reset();
-        it->reset();
-    }
-    children.clear();
-    if (getScope().use_count() <= 1) {
-        getScope().reset();
-    }
+    clear();
+    getCurrentScope()->clear();
 }
 
 CallableBody::CallableBody(UniquePtr<CallableBody>&& oldBody)
   : CodeBlock(std::move(oldBody->getChildren()), oldBody->getScope()) {
-    oldBody.release();
+    oldBody.reset();
 }
 
 CallableBody::CallableBody(SharedPtr<Scope> scope)
@@ -113,7 +98,6 @@ CallableBody::CallableBody(SharedPtr<Scope> scope)
 CallableBody::CallableBody(UniquePtr<CallableBody>* block) : CodeBlock(std::move(block->get()->getChildren()), block->get()->getScope()) {
     block->release();
 }
-
 
 CallableDef::CallableDef(String name, ParamList parameters, UniquePtr<CallableBody> body, CallableType callType, SharedPtr<Scope> scope) 
     : ASTStatement(scope), name(name), parameters(parameters), body(std::move(body)), callType(callType){
@@ -132,10 +116,6 @@ CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
         branch = "Callable";
 }
-
-
-
-
 
 CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType callTypeAdded)
     : callable(std::move(callable)), callType(callTypeAdded)
@@ -158,8 +138,8 @@ bool CallableSignature::getIsUserFunction() { return callType != CallableType::N
 
 Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
-    scope->debugPrint();
-    scope->printChildScopes();
+    // scope->debugPrint();
+    // scope->printChildScopes();
     auto val = callable->execute(args, scope);
     DEBUG_FLOW_EXIT();
     return val;
@@ -236,27 +216,27 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
     return evaluatedArgs;
 }
 
-Node CallableBody::evaluate(SharedPtr<Scope> scope) const {
+Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     auto val = Evaluator::evaluateBlock(children, scope);
     DEBUG_FLOW_EXIT();
     return val;
 }
 
-Node CallableDef::evaluate(SharedPtr<Scope> scope) const {
+Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
     (void)scope;
     // std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
     // std::cerr << "Type: " << getAstTypeAsString() << std::endl;
     throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 
-Node CallableCall::evaluate(SharedPtr<Scope> scope) const {
+Node CallableCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
     (void)scope;
     return Node(scope->getVariable("var"));
 }
 
 
-Node CallableRef::evaluate(SharedPtr<Scope> scope) const {
+Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
     (void)scope;
     return Node(scope->getVariable("var"));
 }

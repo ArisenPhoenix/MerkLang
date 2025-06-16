@@ -79,13 +79,17 @@ String astTypeToString(AstType type) {
         case AstType::ClassMethodBlock: return highlight("ClassMethodBody", Colors::bold_purple);
         case AstType::ClassMethodDef: return highlight("ClassMethodDef", Colors::bold_red);
         case AstType::ClassMethodCall: return highlight("ClassMethodCall", Colors::bold_red);
-        // case AstType::
+        
+
         case AstType::ClassMethodRef: return highlight("ClassMethodRef", Colors::bold_blue);
 
         case AstType::AttributeDeclaration: return highlight("AttributeDeclaration", Colors::bold_cyan);
         case AstType::AttributeAssignment: return highlight("AttributeAssignment", Colors::bold_cyan);
         case AstType::AttributeReference: return highlight("AttributeReference", Colors::teal);
         case AstType::Chain: return highlight("Chain", Colors::yellow);
+        case AstType::ChainOperation: return highlight("ChainOperation", Colors::bg_green);
+        case AstType::Accessor: return highlight("Accessor", Colors::red);
+
 
         case AstType::Function: return "Function";
         case AstType::NoOp: return highlight("NoOp", Colors::light_gray);

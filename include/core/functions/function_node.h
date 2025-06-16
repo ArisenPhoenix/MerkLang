@@ -24,9 +24,9 @@ class FunctionBody : public CallableBody {
         // Steal Constructor
         FunctionBody(UniquePtr<CodeBlock>&& block);
     
-        ~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange));} 
+        ~FunctionBody();
     
-        virtual Node evaluate(SharedPtr<Scope> scope) const override;
+        virtual Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
         virtual UniquePtr<BaseAST> clone() const override;
         virtual AstType getAstType() const override { return AstType::FunctionBlock;}    
         void printAST(std::ostream& os, int indent = 0) const override;
@@ -50,7 +50,7 @@ public:
     virtual ~Function() = default;
 
     // Execute must be implemented by derived classes.
-    virtual Node execute(const Vector<Node> args, SharedPtr<Scope> scope) const = 0;
+    virtual Node execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
 
     // Return a FunctionSignature representing this callable.
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
@@ -79,7 +79,7 @@ public:
 public:
     UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType);
 
-    Node execute(Vector<Node> args, SharedPtr<Scope> scope) const override;
+    Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     void setCapturedScope(SharedPtr<Scope> scope);
 

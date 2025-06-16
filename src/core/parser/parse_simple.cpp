@@ -46,10 +46,6 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     // advance();  // Consume 'var' or 'const'
 
     if (startToken.value == "var" || startToken.value == "const") {
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Parser::parseVariableDeclaration: Entering with currentToken: ", currentToken().toString());
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Parser::parseVariableDeclaration: Entering with currentToken + 1: ", peek().toString());
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Parser::parseVariableDeclaration: Entering with currentToken + 2: ", peek(2).toString());
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Parser::parseVariableDeclaration: Entering with currentToken + 3: ", peek(3).toString());
         if (peek().type == TokenType::ChainEntryPoint) {
             return parseChainOp();  // this should end up as a variable declaration chain
         }
@@ -79,6 +75,7 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
 
 
     auto valueNode = parseExpression();
+    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ValueNode For parseVariableDeclaration: ", Colors::red), valueNode->toString());
     if (!valueNode) {
         throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);
     }

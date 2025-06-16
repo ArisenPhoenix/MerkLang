@@ -72,8 +72,15 @@ CallableNode::CallableNode(SharedPtr<Callable> callable, String callableType ) {
     data.value = callable; // Stored as SharedPtr<Callable>
     nodeType = callableType + "(" + callable->name + ")";
     isCallable = true;
-    isConst = true;
     name = callable->name;
+}
+
+CallableNode::CallableNode(SharedPtr<CallableNode> callableNode) {
+    data.type = callableNode->data.type;
+    data.value = callableNode->getValue(); // Stored as SharedPtr<Callable>
+    nodeType = callableNode->nodeType + "(" + callableNode->name + ")";
+    isCallable = true;
+    name = callableNode->name;
 }
 
 SharedPtr<Callable> CallableNode::getCallable() const {

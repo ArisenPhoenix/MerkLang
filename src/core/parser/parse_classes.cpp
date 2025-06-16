@@ -51,7 +51,8 @@ std::tuple<bool, bool, String> Parser::handleIsVarDec() {
     
 }
 
-UniquePtr<Chain> Parser::parseChain() {
+UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
+    (void)isDeclaration;
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
     
     auto chain = makeUnique<Chain>(currentScope);
@@ -114,8 +115,13 @@ UniquePtr<Chain> Parser::parseChain() {
         // elem.object = std::move(statement);
         chain->addElement(std::move(elem));
 
+        
+
         advance();  // move to next delimiter or assignment
     }
+
+    
+
 
     DEBUG_FLOW_EXIT();
     return chain;
@@ -123,17 +129,16 @@ UniquePtr<Chain> Parser::parseChain() {
 
 UniquePtr<ChainOperation> Parser::parseChainOp() {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken: ", currentToken().toColoredString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 1: ", peek().toColoredString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 2: ", peek(2).toColoredString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 3: ", peek(3).toColoredString());
+    
     bool isDeclaration = currentToken().type == TokenType::VarDeclaration;
-    bool isConst = currentToken().value == "const";
+    DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", currentToken().toColoredString());
+    bool isConst = false;
     if (isDeclaration) {
+        isConst = currentToken().value == "const";
         advance(); // consume declaration token. 
     }
 
-    UniquePtr<Chain> chain = parseChain();  // Handles `a.b.c` chains
+    UniquePtr<Chain> lhs = parseChain(isDeclaration);  // Handles `a.b.c` chains
     Token assign = currentToken();
     bool isAssignment = assign.type == TokenType::VarAssignment;
     bool isStatic = false;                  // placeholder for when static variables are included.
@@ -144,11 +149,37 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
 
 
     if (isDeclaration || isAssignment) {
-
+        
+        
         UniquePtr<ASTStatement> rhs = parseExpression();
+
+        auto& last = lhs->getLast();
+        DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", isDeclaration);
+        if (isDeclaration) {
+            if (last.type == TokenType::Variable) {
+                auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
+
+                // VariableDeclaration(last.name, varNode, currentScope, nullptr, lhs);
+                last.object = makeUnique<VariableDeclaration>(last.name, varNode, currentScope, std::nullopt, std::move(rhs));
+            }
+            DEBUG_FLOW_EXIT();
+
+            return makeUnique<ChainOperation>(
+                std::move(lhs),
+                nullptr,
+                isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
+                currentScope,
+                isDeclaration ? isConst : false,
+                isDeclaration ? isMutable : true,
+                isStatic
+            );
+        }
+        
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "NOT IS DECLARATION: ", isDeclaration);
+
         DEBUG_FLOW_EXIT();
         return makeUnique<ChainOperation>(
-            std::move(chain),
+            std::move(lhs),
             std::move(rhs),
             isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
             currentScope,
@@ -157,10 +188,12 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
             isStatic
         );
     } else {
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "NOT IS DECLARATION: ", isDeclaration);
+
         // Just a value reference
         DEBUG_FLOW_EXIT();
         return makeUnique<ChainOperation>(
-            std::move(chain),
+            std::move(lhs),
             nullptr,
             ChainOpKind::Reference,
             currentScope
@@ -169,13 +202,13 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
 }
 
 
-struct ChainParseContext {
-    bool isDeclaration = false;
-    bool isConst = false;
-    String decString;
-    Token baseToken = Token(TokenType::Unknown, "NULL", 0, 0);
-    Vector<ChainElement> elements;
-};
+// struct ChainParseContext {
+//     bool isDeclaration = false;
+//     bool isConst = false;
+//     String decString;
+//     Token baseToken = Token(TokenType::Unknown, "NULL", 0, 0);
+//     Vector<ChainElement> elements;
+// };
 
 
 // Skeleton: Parse protected member declarations in the class.

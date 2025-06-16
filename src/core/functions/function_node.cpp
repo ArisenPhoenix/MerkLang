@@ -59,7 +59,7 @@ SharedPtr<Scope> UserFunction::getCapturedScope() const {
     return capturedScope;
 }
 
-Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope) const {
+Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
     DEBUG_FLOW();
     if (!scope){
@@ -79,6 +79,8 @@ Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope) const {
     // return value;
     throw MerkError("Function did not return a value.");
 }
+
+FunctionBody::~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();} 
 
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::LOW);
@@ -106,11 +108,7 @@ void UserFunction::setScope(SharedPtr<Scope> newScope) const {
 }
 
 
+FunctionNode::FunctionNode(SharedPtr<Function> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
 
-
-FunctionNode::FunctionNode(SharedPtr<Function> function) : CallableNode(function , "Function") {data.type = NodeValueType::Function;}
-
-FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {
-    data.type = NodeValueType::Function;
-}
+FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
 SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr<Function>>(data.value);}

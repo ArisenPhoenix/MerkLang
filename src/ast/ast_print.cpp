@@ -7,6 +7,7 @@
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
 #include "ast/ast_callable.h"
+#include "ast/ast_class.h"
 #include "core/scope.h"
 
 
@@ -67,7 +68,7 @@ void VariableDeclaration::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", variable, ", scope =", getScope()->getScopeLevel(), ")");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", variable, ", scope =", getScope()->getScopeLevel(), "):");
     valueExpression->printAST(os, indent);
 
     DEBUG_FLOW_EXIT();
@@ -372,7 +373,27 @@ void ParameterAssignment::printAST(std::ostream& os, int indent) const {
 }
 
 
+String MethodDef::toString() const {return astTypeToString(getAstType());}
+
+
+void ClassDef::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, "ClassDef: ", name);
+    body->printAST(os, indent);
+}
+void ClassCall::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    std::ostringstream argString;
+    for (const auto& arg : arguments){
+        argString << arg->toString();
+    }
+    debugLog(true, getAstTypeAsString(), "(" + argString.str() + ")");
+}
 
 
 
 
+void Accessor::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString() + "(" + getAccessor() + ", ScopeLevel:", getScope()->getScopeLevel(), ")");
+}

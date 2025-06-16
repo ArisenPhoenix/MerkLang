@@ -47,6 +47,7 @@ private:
     WeakPtr<Scope> classScope; // ← set when evaluating in class
     int resolutionStartIndex = 0;  // default is 0, resolve from the beginning
     ResolutionMode mode = ResolutionMode::Normal;
+    mutable WeakPtr<Scope> lastScope;
 
 
 public:
@@ -73,7 +74,7 @@ public:
 
     virtual String toString() const override;
     
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     Node evaluate() const {return evaluate(getScope());}
 
     void setSecondaryScope(SharedPtr<Scope> secondary);
@@ -86,6 +87,11 @@ public:
     // SharedPtr<Scope> getClassScope();
     ChainElement& getLast();
     ChainElement& getElement(int index);
+
+    void setFirstElement(UniquePtr<ASTStatement> probablyScope, String name = "Scope");
+
+    SharedPtr<Scope> getLastScope();
+    void setLastScope(SharedPtr<Scope> mostRecentScope) const;
     
 };
 enum class ChainOpKind {
@@ -116,7 +122,7 @@ public:
                    bool isStatic = false
                 );
  
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     AstType getAstType() const override { return AstType::ChainOperation; }
     String toString() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
@@ -134,6 +140,7 @@ public:
 
     SharedPtr<Scope> getSecondaryScope();
     ResolutionMode getResolutionMode();
+    void setScope(SharedPtr<Scope> scope) override;
 
     void setSecondaryScope(SharedPtr<Scope> scope); 
 

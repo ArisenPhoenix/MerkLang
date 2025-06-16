@@ -15,7 +15,7 @@ class MethodBody;
 class FunctionBody;
 // class CodeBlock;
 
-
+ 
 class CallableSignature {
 private:
     SharedPtr<Callable> callable;
@@ -40,7 +40,7 @@ public:
 
     // template<typename T>
     // SharedPtr<T> getCallableClonedAs() const;
-
+ 
     void setParameterTypes(Vector<NodeValueType> paramTypes) {parameterTypes = paramTypes;} 
     const Vector<NodeValueType>& getParameterTypes() const;
     CallableType getCallableType() { return callType; }
@@ -66,14 +66,15 @@ public:
 
     CallableBody(UniquePtr<CallableBody>&& block);
     CallableBody(UniquePtr<CallableBody>* body);
-    ~CallableBody();
+    virtual ~CallableBody();
 
 
     virtual AstType getAstType() const override { return AstType::CallableBody;}
     virtual Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
+    virtual String toString() const override {return astTypeToString(getAstType());}
 
     virtual void printAST(std::ostream& os, int indent = 0) const;
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     Node evaluate() const override {return evaluate(getScope());}
 
     virtual UniquePtr<BaseAST> clone() const override;
@@ -82,7 +83,7 @@ public:
     MethodBody* toMethodBody();
     
     // For Calling Within A Function's Context
-    FunctionBody* toFunctionBody();
+    FunctionBody* toFunctionBody(); 
 
     // CatchAll
     CallableBody* toCallableBody();
@@ -105,7 +106,7 @@ public:
     CallableDef(String name, ParamList parameters, UniquePtr<CallableBody> body, CallableType funcType, SharedPtr<Scope> scope);
 
     virtual AstType getAstType() const override { return AstType::CallableDefinition;}
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const override;
     virtual UniquePtr<BaseAST> clone() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
     virtual String toString() const override {return astTypeToString(getAstType());}
@@ -128,7 +129,7 @@ public:
     virtual AstType getAstType() const override { return AstType::CallableCall;}
     
 
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
 
@@ -149,7 +150,7 @@ public:
     AstType getAstType() const override { return AstType::CallableReference;}
     String toString() const override {return astTypeToString(getAstType());}
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
  
     String getName() const {return name;}
     virtual UniquePtr<BaseAST> clone() const override;

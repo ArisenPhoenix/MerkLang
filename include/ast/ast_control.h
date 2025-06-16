@@ -4,8 +4,6 @@
 
 #include "core/types.h"
 #include "ast/ast_base.h"
-// #include "ast/ast_class.h"
-
 #include "core/errors.h"
 
 // This alias was used for clarity, when dealing with free variables specifically. 
@@ -22,20 +20,12 @@ public:
 
 // Used as sort of a mixin class for a common interface among only those classes needing it.
 class FreeVarCollection {
-    public:
-        mutable FreeVars freeVars;
-        mutable FreeVars localAssign;
-        virtual FreeVars collectFreeVariables() const = 0;
-        ~FreeVarCollection();
-    };
-
- // ast_collector.h
-// #ifndef AST_COLLECTOR_H
-// #define AST_COLLECTOR_H
-
-// #include "core/types.h"
-// #include "ast/ast_base.h"
-// #include "ast/ast_type_enum.h"
+public:
+    mutable FreeVars freeVars;
+    mutable FreeVars localAssign;
+    virtual FreeVars collectFreeVariables() const = 0;
+    ~FreeVarCollection();
+};
  
 class AstCollector {
 protected:
@@ -72,7 +62,7 @@ public:
     bool contains(const BaseAST* node) const;
     // Vector<UniquePtr<BaseAST>> getChildrenOfType(AstType astType, bool recurse = false);
     
-    SharedPtr<Scope> getCurrentScope(){return getScope();} 
+    virtual SharedPtr<Scope> getCurrentScope() const {return getScope();} 
 
     const Vector<UniquePtr<BaseAST>>& getChildren() const;
     void printAST(std::ostream& os, int indent = 0) const override;
@@ -80,12 +70,12 @@ public:
     AstType getAstType() const override { return AstType::CodeBlock; }
     String toString() const override;
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     Node evaluate() const override {return evaluate(getScope());}
     SharedPtr<Scope> getScope() const override;
     bool containsReturnStatement() const;
     void setContainsReturnStatement(bool val) {containsReturn = val;}
-    friend class CallableBody;
+    friend class CallableBody; 
     friend class FunctionBody;
     friend class ClassBody;
     friend class MethodBody;
@@ -113,7 +103,7 @@ public:
     const ASTStatement* getCondition() const {return condition.get();};
 
     void printAST(std::ostream& os, int indent = 0) const override;
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     Node evaluate() const override;
     AstType getAstType() const override {return AstType::Conditional;}
 
@@ -135,7 +125,7 @@ public:
     UniquePtr<CodeBlock>& getBody(){return body;}
     UniquePtr<CodeBlock>& getBody() const {return body;}
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     AstType getAstType() const override { return AstType::ElseStatement;}
     void printAST(std::ostream& os, int indent = 0) const override;
 
@@ -159,7 +149,7 @@ public:
     const ASTStatement* getCondition() const { return condition->getCondition(); }
 
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
     const UniquePtr<CodeBlock>& getBody() const { return body; }
     AstType getAstType() const override { return AstType::ElifStatement; }
@@ -197,7 +187,7 @@ public:
 
     void setElseNode(UniquePtr<ElseStatement> elseNode) {this->elseNode = std::move(elseNode);}
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
     const Vector<UniquePtr<ElifStatement>>& getElifs() const {return elifNodes;}
     const UniquePtr<ElseStatement>& getElse() const {return elseNode;}
@@ -218,7 +208,7 @@ class NoOpNode: public ASTStatement {
 public:
     NoOpNode(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 
-    Node evaluate([[maybe_unused]] SharedPtr<Scope> scope) const override;
+    Node evaluate([[maybe_unused]] SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     String toString() const override {return "NoOpNode";}
     
     AstType getAstType() const override {return AstType::NoOp;};
@@ -242,7 +232,7 @@ public:
 
     void printAST(std::ostream& os, int indent = 0) const override {(void)os; (void)indent; throw MerkError("Cannot Print a Base LoopBlock");};
  
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
     virtual AstType getAstType() const override {return AstType::LoopBlock;};
     virtual String toString() const override { return getAstTypeAsString();}
@@ -261,7 +251,7 @@ public:
     ~WhileLoop();
     String toString() const override;
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
     void printAST(std::ostream& os, int indent = 0) const override;
 

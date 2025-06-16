@@ -29,11 +29,10 @@ public:
 
     String toString() const override;
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::Literal;}
     UniquePtr<BaseAST> clone() const override;
-    // virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 
 private:
@@ -69,7 +68,7 @@ public:
     const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
     void setScope(SharedPtr<Scope> newScope) override;
 
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual AstType getAstType() const override {return AstType::VariableDeclaration;}
     virtual UniquePtr<BaseAST> clone() const override;
@@ -89,7 +88,7 @@ public:
     String toString() const override;
 
     virtual AstType getAstType() const override {return AstType::VariableReference;}
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
     
@@ -116,7 +115,7 @@ public:
     void setScope(SharedPtr<Scope> newScope);
 
     virtual void printAST(std::ostream& os, int indent = 0) const override;
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual AstType getAstType() const override {return AstType::VariableAssignment;}
     virtual UniquePtr<BaseAST> clone() const override;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
@@ -134,7 +133,7 @@ public:
 
     String toString() const override;
    
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
     AstType getAstType() const override {return AstType::BinaryOperation;}
     const String& getOperator() const { return op;}
@@ -159,7 +158,7 @@ public:
     const ASTStatement* getOperand() const { return operand.get(); }
     AstType getAstType() const override {return AstType::BinaryOperation;}
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     void printAST(std::ostream& os, int indent = 0) const override;
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
@@ -182,7 +181,7 @@ public:
     
     AstType getAstType() const override {return AstType::Break;}
 
-    [[noreturn]] Node evaluate(SharedPtr<Scope> scope) const override;
+    [[noreturn]] Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
     void printAST(std::ostream& os, int indent = 0) const override;
 
@@ -199,7 +198,7 @@ private:
 
 public:
     explicit Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value);
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     String toString() const;
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override { return AstType::Return; }
@@ -217,7 +216,7 @@ class Continue : public ASTStatement {
 public:
     explicit Continue(SharedPtr<Scope> scope);
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
     String toString() const override;
     void printAST(std::ostream& os, int indent = 0) const override;

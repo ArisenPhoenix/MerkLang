@@ -188,9 +188,7 @@ UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
         blockScope = controlScope;
     }
 
-    // DEBUG_LOG(LogLevel::INFO, "Parser::parseBlock: Entering parseBlock with token: ", currentToken().toString());
-
-    auto codeBlock = makeUnique<CodeBlock>(blockScope); // Use current scope here.
+    auto codeBlock = makeUnique<CodeBlock>(blockScope);
 
     processNewLines();
     

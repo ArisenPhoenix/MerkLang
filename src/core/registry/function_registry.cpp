@@ -135,10 +135,6 @@ std::optional<Vector<SharedPtr<CallableSignature>>> FunctionRegistry::getFunctio
 
 void FunctionRegistry::debugPrint() const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    if (!this){
-        debugLog(true, "FunctionRegistry is nullptr.");
-        return;
-    }
     if (functions.empty()) {
         debugLog(true, "No functions registered.");
     } else {

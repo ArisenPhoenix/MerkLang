@@ -18,8 +18,20 @@ class Scope : public std::enable_shared_from_this<Scope> {
 private:
     WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
     int scopeLevel;                      // The level of the scope in the hierarchy
-
+    static inline size_t liveScopeCount = 0;
+    static inline size_t totalScopeCreated = 0;
 public:
+    static void printScopeReport() {
+        std::cout << "----------------------------" << std::endl;
+        std::cout << "Total Scopes Created: " << totalScopeCreated << std::endl;
+        std::cout << "Live Scopes Remaining: " << liveScopeCount << std::endl;
+        if (liveScopeCount != 0) {
+            std::cout << "[Memory Leak Detected!] " << liveScopeCount << " Scope(s) were not destroyed!" << std::endl;
+        } else {
+            std::cout << "[Memory Clean] All scopes were properly freed." << std::endl;
+        }
+        std::cout << "----------------------------" << std::endl;
+    }
 
     // Constructor
     explicit Scope(int scopeLevel, bool interpretMode, bool isRoot = false);
@@ -30,7 +42,7 @@ public:
     ~Scope();
     void clear();
     // // Attributes
-
+    String formattedScope();
     SharedPtr<FunctionRegistry>  globalFunctions;
     SharedPtr<ClassRegistry>     globalClasses;
     
@@ -90,7 +102,7 @@ public:
 
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
-
+    void registerFunction(const String& name, SharedPtr<Callable> anyCallable);
     SharedPtr<CallableSignature> getFunction(const String& name, const Vector<Node>& args);
     Vector<SharedPtr<CallableSignature>> getFunction(const String& name);
 
@@ -111,7 +123,7 @@ public:
     void debugPrint() const;
     void setParent(SharedPtr<Scope> scope);
 
-  
+    bool has(const SharedPtr<Scope>& scope);
 
     void updateChildLevelsRecursively();
     void setScopeLevel(int newLevel);
@@ -122,8 +134,12 @@ public:
 
     // // DEBUGGING
     void printChildScopes(int indentLevel = 0) const;
+    void linkMethod(SharedPtr<Method> method, String methodName, SharedPtr<Scope> instanceScope);
+    void linkMethods(SharedPtr<CallableSignature>  methodSig, String methodName, SharedPtr<Scope> instanceScope);
+    void linkMethods(Vector<SharedPtr<MethodSignature>>& methodVec, String& methodName, SharedPtr<Scope> instanceScope);
 
-    // // Probably Not Needed Anymore
+    void linkInstanceMethods(SharedPtr<Scope> classTemplateScope, SharedPtr<Scope> instanceScope);
+        // // Probably Not Needed Anymore
     // void registerCallableType(const String& name, CallableType type);
     // std::optional<CallableType> getCallableType(const String& name) const;
     // Node resolveCallable(const String& name, const Vector<Node>& args = {});

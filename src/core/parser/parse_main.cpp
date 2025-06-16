@@ -39,6 +39,81 @@ Parser::Parser(Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpret
         // DEBUG_FLOW_EXIT();
 }
 
+UniquePtr<CodeBlock> Parser::parse() {
+    // DEBUG_FLOW(FlowLevel::HIGH);
+
+    // DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
+    if (!currentScope){
+        throw MerkError("Initial Scope is null");
+    }
+    try {
+        while (currentToken().type != TokenType::EOF_Token) {
+            // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parse: with token:", currentToken().toString());
+            // DEBUG_LOG(LogLevel::TRACE, "Scope use_count: ", currentScope.use_count(), ", Address: ", currentScope.get());
+    
+            if (currentToken().type == TokenType::Newline) {
+                advance(); // Skip blank lines
+                continue;
+            }
+    
+            auto statement = parseStatement();
+            if (!statement) {
+                throw MerkError("Parser::parse: Null statement returned during parsing. Token: " + currentToken().toString());
+            }
+    
+            // If interpretMode is enabled and interpretation is by block, evaluate each statement one-by-one, whether it is a control or variable
+            if (interpretMode && byBlock){
+                try {
+                    interpret(statement.get());
+                } catch(MerkError& e) {
+                    rootBlock->printAST(std::cout, 0);
+                    throw MerkError(e.what());
+                }
+                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting AST by Block ===========================", Colors::bg_red));
+                
+                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting AST by Block ===========================", Colors::bg_red));
+                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            }
+            
+            // Add the parsed statement to the block
+            rootBlock->addChild(std::move(statement));
+        }
+    
+    
+        // If interpretMode is enabled and interpretation is not by block, evaluate the entire AST in a batch.
+        if (interpretMode && !byBlock){
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting Full AST ===========================", Colors::bg_red));
+    
+    
+            // rootBlock->printAST(std::cout);
+            rootBlock->printAST(std::cout, 0);
+            interpret(rootBlock.get());
+            
+            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting Full AST ===========================", Colors::bg_red));
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            
+            // currentScope->printContext();
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n");
+            // currentScope->debugPrint();
+        }
+    
+        // DEBUG_LOG(LogLevel::INFO, "Returning CodeBlock from parse() with scope address: ", currentScope.get(), ", at block address: ", rootBlock.get());
+        
+        // rootBlock->printAST(std::cout);
+        // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+        // rootBlock->printAST(std::cout);
+        // DEBUG_FLOW_EXIT();
+        return std::move(rootBlock); // Return the parsed block node
+    } catch (MerkError& e) {
+        rootScope->printChildScopes();
+        throw MerkError(e.what());
+    }
+    
+}
+
+
 bool Parser::getAllowScopeCreation() const {return allowScopecreation;}
 
 // Enter a new scope
@@ -173,73 +248,6 @@ void Parser::interpret(BaseAST* block_or_ast) const {
     // DEBUG_FLOW_EXIT();
 }
 
-UniquePtr<CodeBlock> Parser::parse() {
-    // DEBUG_FLOW(FlowLevel::HIGH);
-
-    // DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
-    if (!currentScope){
-        throw MerkError("Initial Scope is null");
-    }
-    try {
-        while (currentToken().type != TokenType::EOF_Token) {
-            // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parse: with token:", currentToken().toString());
-            // DEBUG_LOG(LogLevel::TRACE, "Scope use_count: ", currentScope.use_count(), ", Address: ", currentScope.get());
-    
-            if (currentToken().type == TokenType::Newline) {
-                advance(); // Skip blank lines
-                continue;
-            }
-    
-            auto statement = parseStatement();
-            if (!statement) {
-                throw MerkError("Parser::parse: Null statement returned during parsing. Token: " + currentToken().toString());
-            }
-    
-            // If interpretMode is enabled and interpretation is by block, evaluate each statement one-by-one, whether it is a control or variable
-            if (interpretMode && byBlock){
-                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting AST by Block ===========================", Colors::bg_red));
-                interpret(statement.get());
-                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting AST by Block ===========================", Colors::bg_red));
-                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            }
-            
-            // Add the parsed statement to the block
-            rootBlock->addChild(std::move(statement));
-        }
-    
-    
-        // If interpretMode is enabled and interpretation is not by block, evaluate the entire AST in a batch.
-        if (interpretMode && !byBlock){
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting Full AST ===========================", Colors::bg_red));
-    
-    
-            // rootBlock->printAST(std::cout);
-            
-            interpret(rootBlock.get());
-            
-            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting Full AST ===========================", Colors::bg_red));
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            
-            // currentScope->printContext();
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n");
-            // currentScope->debugPrint();
-        }
-    
-        // DEBUG_LOG(LogLevel::INFO, "Returning CodeBlock from parse() with scope address: ", currentScope.get(), ", at block address: ", rootBlock.get());
-        
-        // rootBlock->printAST(std::cout);
-        // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-        // rootBlock->printAST(std::cout);
-        // DEBUG_FLOW_EXIT();
-        return std::move(rootBlock); // Return the parsed block node
-    } catch (MerkError& e) {
-        rootScope->printChildScopes();
-        throw MerkError(e.what());
-    }
-    
-}
 
 Token Parser::currentToken() const {
     if (position < tokens.size()) {

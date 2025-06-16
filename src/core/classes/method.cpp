@@ -4,6 +4,7 @@
 #include "core/evaluator.h"
 #include "ast/exceptions.h" 
 #include "ast/ast_class.h"
+#include "ast/ast_chain.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_callable.h"
 #include "core/classes/method.h"
@@ -35,7 +36,11 @@ Method::Method(Function&& function)
 }
 
 Method::Method(Method& method) : Callable(method) {
-    body = std::move(method.body);
+    // body = std::move(method.body);
+    // body = makeUnique<MethodBody>(*method.body); // Deep copy
+    body = static_unique_ptr_cast<MethodBody>(method.body->clone());
+
+
     capturedScope = method.capturedScope;
     capturedScope->owner = "Method(" + method.getName() + ")";
     setCallableType(CallableType::METHOD);
@@ -54,44 +59,101 @@ void Method::setScope(SharedPtr<Scope> newScope) const {
     // getBody()->getScope()->owner = generateScopeOwner("Method", name);
 }
 
-SharedPtr<CallableSignature> Method::toCallableSignature() {
-    DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::TRACE, "Callable Type: ", callableTypeAsString(this->callType));
-    DEBUG_LOG(LogLevel::TRACE, "subType: ", callableTypeAsString(this->subType));
+// SharedPtr<CallableSignature> Method::toCallableSignature() {
+//     DEBUG_FLOW(FlowLevel::LOW);
+//     DEBUG_LOG(LogLevel::TRACE, "Callable Type: ", callableTypeAsString(this->callType));
+//     DEBUG_LOG(LogLevel::TRACE, "subType: ", callableTypeAsString(this->subType));
 
-    SharedPtr<CallableSignature> methodSig = std::make_shared<CallableSignature>(
+//     SharedPtr<CallableSignature> methodSig = std::make_shared<CallableSignature>(
+//         shared_from_this(), getCallableType()
+//     );
+
+//     methodSig->setSubType(getSubType());
+
+//     if (methodSig->getCallableType() == CallableType::DEF) {
+//         throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));
+//     }
+//     DEBUG_FLOW_EXIT();
+//     return methodSig;
+// }
+
+// DEBUG_FLOW(FlowLevel::LOW);
+// DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
+// DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(getSubType()));
+
+
+SharedPtr<CallableSignature> Method::toCallableSignature() {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    // DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
+    // DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(getSubType()));
+    
+    SharedPtr<CallableSignature> methodSig = makeShared<CallableSignature>(
         shared_from_this(), getCallableType()
     );
-
+    
     methodSig->setSubType(getSubType());
-
+    
     if (methodSig->getCallableType() == CallableType::DEF) {
         throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));
     }
+    
+    // DEBUG_LOG(LogLevel::ERROR, funcSig->getParameterTypes());
     DEBUG_FLOW_EXIT();
     return methodSig;
 }
 
 
-// Execute: Create a new method activation scope from the captured scope, bind parameters, and evaluate the body.
-Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope) const {
-    // (void) callScope;
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Executing Method with below scope");
+    // Node execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<InstanceNode> instanceNode) const override;
 
-    SharedPtr<Scope> methodScope = callScope->makeCallScope();
-    // callScope->appendChildScope(methodScope);
-    // setClassScope(callScope);
-    methodScope->debugPrint();
-    methodScope->printChildScopes();
+// Execute: Create a new method activation scope from the captured scope, bind parameters, and evaluate the body.
+
+// Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<Callable> instanceNode) const {}
+Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided");}
+
+    
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Executing Method with below scope");
+    // SharedPtr<Scope> methodScope = classScope->makeCallScope();
+    // methodScope->appendChildScope(callScope->makeCallScope());
+    // SharedPtr<Scope> callScope = instanceNode->getInternalScope();
+
+    for (auto& notStatic : getBody()->getNonStaticElements()) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Setting a Chain's Class Scope");
+        notStatic->setSecondaryScope(callScope);
+    }
+
+    
+ 
     parameters.verifyArguments(args);
     for (size_t i = 0; i < parameters.size(); ++i) {
-        methodScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(args[i]));
+        callScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(args[i]));
     }
+
+    // SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(Node("Null"));
+
     try {
+
+        if (!callScope){throw MerkError("Method " + name +" Has No Captured Scope:");}
+
+        auto capturedScope = getCapturedScope();
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD " + name + " CAPTURED SCOPE");
+        // capturedScope->debugPrint();
+        // capturedScope->printChildScopes();
+
+        if (!callScope){throw MerkError("Method " + name +" Has No Call Scope:");}
+
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD " + name + " CALL SCOPE");
+        // callScope->debugPrint();
+        // callScope->printChildScopes();
+        if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided just before body->evaluate");}
+
+        Node val = body->evaluate(getCapturedScope(), instanceNode);
+        // if (callScope->getContext().getVariables().size() == 0) {
+        //     throw MerkError("Method::execute did not declare any variables");
+        // }
         DEBUG_FLOW_EXIT();
-        // body->setScope(methodScope);
-        return body->evaluate();
+        return val;
     } catch (const ReturnException& e) {
         DEBUG_FLOW_EXIT();
         return e.getValue();
@@ -129,14 +191,23 @@ void Method::setClassScope(SharedPtr<Scope> newClassScope) {
     classScope = newClassScope;
 }
 
-// void Method::setClassScope(SharedPtr<Scope> newClassScope) const {
-//     if (!newClassScope) {
-//         throw MerkError("Cannot Set newClassScope to a null Scope");
-//     }
-//     classScope = newClassScope;
-// } 
 
-String Method::toString() const {return "Method";}
+bool Method::getIsStatic() {return isStatic;}
+Vector<Chain*> Method::getNonStaticElements() {
+    return getBody()->getNonStaticElements();
+    
+}
+
+
+String Method::toString() const {
+    std::ostringstream params;
+    for (auto& param : parameters) {
+        params << param.toShortString();
+    }
+
+    return "Method<"+name+">(" + params.str() + ")" ;
+
+}
 
 MethodBody* Method::getBody() {return body.get();}
 
