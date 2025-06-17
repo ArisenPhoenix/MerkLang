@@ -107,26 +107,29 @@ namespace Evaluator {
         return value;
     }
 
-    Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, SharedPtr<Scope> scope){
+    Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::LOW);
         DEBUG_LOG(LogLevel::TRACE, "Evaluating Variable Declaration");
-        // scope->debugPrint();
-        VarNode resolvedVariable = VarNode(valueNode->evaluate(scope)); // Use the current scope
-        size_t before = scope->getContext().getVariables().size();
-        scope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, var.isStatic)); // Declare variable in scope
+        VarNode resolvedVariable;
+        SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+
+        AstType valueNodeType = valueNode->getAstType();
+        if (valueNodeType == AstType::VariableReference || valueNodeType == AstType::Literal){
+            resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
+        } else {
+            resolvedVariable = VarNode(valueNode->evaluate(instanceScope, instanceNode));
+        }
+        // VarNode  // Use the current scope
+        size_t before = instanceScope->getContext().getVariables().size();
+        instanceScope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, var.isStatic)); // Declare variable in scope
 
         if (!resolvedVariable.isValid()) {
             throw MerkError("Invalid node returned during VariableDeclaration evaluation.");
         }
 
-        if (scope->getContext().getVariables().size() == before) {
+        if (instanceScope->getContext().getVariables().size() == before) {
             throw MerkError("No Varialbes Declared");
         } 
-        // else {
-        //     DEBUG_LOG(LogLevel::PERMISSIVE, "Variable", var.toString(), "Was Declared In The Below Scope: ");
-        //     scope->debugPrint();
-        //     // scope->printChildScopes();
-        // }
         DEBUG_FLOW_EXIT();
         return resolvedVariable;
     }
@@ -256,38 +259,14 @@ namespace Evaluator {
     Node evaluateMethod(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> methodScope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!instanceNode){throw MerkError("Evaluator::evaluateMethod has no instanceNode");}
-
-        // MARK_UNUSED_MULTI(scope);
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Num Children in MethodBody: ", children.size());
         auto spaces = String(10, '\n');
         debugLog(true, spaces);
 
         Node lastValue;
         for (const auto& child : children) {
-            // DEBUG_LOG(LogLevel::PERMISSIVE, 
-            //     highlight("Evaluating MethodBody child:", Colors::orange), 
-            //     highlight(child->getAstTypeAsString(), Colors::green), 
-            //     "in CodeBlock scope:", 
-            //     highlight(std::to_string(scope->getScopeLevel()), Colors::blue)
-            // );
-
-            // if (child->getAstType() == AstType::ChainOperation) {
-            //     // child->printAST(std::cout, 10);
-            //     // for (auto& astChild : child->getAllAst(true)) {
-            //     //     auto currentScope = astChild->getScope();
-            //     //     // currentScope->debugPrint();
-            //     //     // currentScope->printChildScopes();
-            //     // }
-            //     auto thisChild = static_unique_ptr_cast<ChainOperation>(child);
-
-            // }
-                            
-            // child->getScope()->debugPrint();
             lastValue = child->evaluate(methodScope, instanceNode);
 
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "current LastValue: ", lastValue);
             if (!lastValue.isValid()){
-                // DEBUG_LOG(LogLevel::PERMISSIVE, "Invalid value returned from child node evaluation: ", highlight(lastValue.toString(), Colors::orange));
                 continue;
             }
         }
@@ -579,24 +558,20 @@ namespace Evaluator {
         capturedClone->appendChildScope(instanceScope);
         if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
 
-        
-        // callScope->appendChildScope(instanceScope);
-
         auto captured = instanceScope->getParent();
         capturedClone->owner = generateScopeOwner("InstanceCaptured", classTemplate->getName());
         if (!captured){throw MerkError("Captured Scope Does Not Exist When Instantiating class: " + classTemplate->getName());}
         if (!captured->has(instanceScope)){captured->printChildScopes();instanceScope->printChildScopes();throw MerkError("Instance Scope does not live in captured Scope");} 
-        else {DEBUG_LOG(LogLevel::PERMISSIVE, "Instance Scope Lives in Captured Scope");}
+        // else {DEBUG_LOG(LogLevel::PERMISSIVE, "Instance Scope Lives in Captured Scope");}
         auto params = classTemplate->getParameters().clone();
-        DEBUG_LOG(LogLevel::PERMISSIVE, "PASSED PARAMS For ClassCall::evaluate");
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "PASSED PARAMS For ClassCall::evaluate");
 
         instanceScope->owner = generateScopeOwner("ClassInstance", classTemplate->getName());
         SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classTemplate->getQualifiedName(), captured, instanceScope, params, classTemplate->getQualifiedAccessor());
-        // SharedPtr<ClassInstanceNode> classInstance = makeShared<ClassInstanceNode>(instance)
-        DEBUG_LOG(LogLevel::PERMISSIVE, "ABOUT to construct instance");
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "ABOUT to construct instance");
 
         instance->construct(argValues, instance); 
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Instance Constructed");
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Instance Constructed");
 
         DEBUG_FLOW_EXIT();
         return ClassInstanceNode(instance);

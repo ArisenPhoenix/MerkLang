@@ -166,17 +166,14 @@ void Chain::setLastScope(SharedPtr<Scope> mostRecentScope) const {
     lastScope = mostRecentScope;
 }
 
-Node Chain::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : scope;
+    SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
     DEBUG_LOG(LogLevel::PERMISSIVE, highlight("STARTING SCOPE FOR Chain::evaluate() is: " + std::to_string(currentScope->getScopeLevel()), Colors::bg_bright_green));
 
-
-    // SharedPtr<Scope> currentScope = getSecondaryScope() ? getSecondaryScope() : (scope ? scope : getScope());
-    int index = 0;
-    // int index = resolutionStartIndex;
-
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
+    int index = resolutionStartIndex;
+
     setLastScope(currentScope);
     Node currentVal;
 
@@ -185,28 +182,29 @@ Node Chain::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassIns
         DEBUG_LOG(LogLevel::PERMISSIVE, "Pre Evaluation of Accessor ");
         DEBUG_LOG(LogLevel::PERMISSIVE, "Working With: ", instanceNode->getTypeAsString());
 
-        currentVal = baseElem.object->evaluate(scope, instanceNode);
-        currentScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-        setLastScope(currentScope);
+        currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
+        // currentScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+        index ++;
+        // setLastScope(currentScope);
     }
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Exited Accessor Block");
-    // if ()
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Evaluating Base Element");
-    // Node currentVal = baseElem->evaluate(currentScope);
-    index ++;
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Evaluated Base Element");
-
-    // int index = 0;
-
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ABOUT TO ITERATE ELEMENTS");
     for (size_t i = index; i < elements.size(); ++i) {
         const auto& elem = elements[i];
-
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Current Val Is: ", currentVal);
+        DEBUG_LOG(LogLevel::PERMISSIVE, "CUrrent ELement IS: ");
+        elem.object->printAST(std::cout, i);
         if (currentVal.isClassInstance()) {
             auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
-            // auto instance = std::static_pointer_cast<ClassInstance>(callable);
-            currentScope = instance->getInstanceScope();  // You should not use instanceNode anymore here
+            currentScope = instance->getInstanceScope();
+            auto instanceNode = makeShared<ClassInstanceNode>(instance);  
+            DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ABOUT TO EVALUATE DECLARATION -> Scopes Below", Colors::bg_green));
+            methodScope->debugPrint();
+            currentScope->debugPrint();
+            currentVal = elem.object->evaluate(methodScope, instanceNode);
+            currentScope = elem.object->getScope();
             setLastScope(currentScope);
+            continue;
         }
 
         currentVal = elem.object->evaluate(currentScope);
@@ -330,8 +328,27 @@ ChainOperation::ChainOperation(UniquePtr<Chain> lhs,
     
 Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    String hasLeft = getLeftSide() ? "true" : "false";
+    String hasRight = getRightSide() ? "true" : "false";
+    String hasInstanceNode = instanceNode ? "true" : "false";
+    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("HAS LHS: " + hasLeft, Colors::bg_bright_blue));
+    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("HAS RHS: " + hasRight, Colors::bg_bright_blue));
+    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("HAS instanceNode: " + hasInstanceNode, Colors::bg_bright_blue));
+    if (getRightSide()){
+        DEBUG_LOG(LogLevel::PERMISSIVE, highlight("RHS IS: ", Colors::bg_red));
+        getRightSide()->printAST(std::cout);
+    }
+
+    if (getLeftSide()){
+        DEBUG_LOG(LogLevel::PERMISSIVE, highlight("LHS IS: ", Colors::bg_red));
+        getLeftSide()->printAST(std::cout);
+    }
+
+    DEBUG_LOG(LogLevel::PERMISSIVE, "OP KIND: ", opKindAsString(opKind));
+
 
     auto leftVal = lhs->evaluate(scope, instanceNode);
+    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("LEFT VAL IN ChainOperation::evaluate: " + leftVal.toString(), Colors::bg_bright_red));
     auto currentScope = lhs->getLastScope();
     auto& last = lhs->getElements().back();
 

@@ -140,7 +140,7 @@ Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shar
     validateScope(scope, "VariableDeclaration");
     DEBUG_LOG(LogLevel::TRACE, highlight("[VariableDeclaration::evaluate]", Colors::orange), valueExpression->toString());
 
-    Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, scope);
+    Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -158,14 +158,15 @@ Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Share
 }
 
 Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    // (void)scope;
     DEBUG_FLOW(FlowLevel::HIGH);
 
     validateScope(scope, "VariableReference::evluate", "Name = " + name);
 
-    VarNode& varRef = Evaluator::evaluateVariableReference(name, scope); // ✅ Preserve reference
-    Node val = Node(varRef);
+    VarNode& varRef = Evaluator::evaluateVariableReference(name, scope); 
+    // Node val = Node(varRef);
     DEBUG_FLOW_EXIT();
-    return val;
+    return varRef;
 };
 
 
@@ -204,8 +205,9 @@ void VariableDeclaration::setScope(SharedPtr<Scope> newScope) {
 }
 
 void VariableReference::setScope(SharedPtr<Scope> newScope) {
+    (void)newScope;
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
-    scope = newScope;
+    // scope = newScope;
 }
 
 void VariableAssignment::setScope(SharedPtr<Scope> newScope) {

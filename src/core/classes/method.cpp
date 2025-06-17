@@ -111,54 +111,42 @@ SharedPtr<CallableSignature> Method::toCallableSignature() {
 Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided");}
-
-    
     DEBUG_LOG(LogLevel::PERMISSIVE, "Executing Method with below scope");
-    // SharedPtr<Scope> methodScope = classScope->makeCallScope();
-    // methodScope->appendChildScope(callScope->makeCallScope());
-    // SharedPtr<Scope> callScope = instanceNode->getInternalScope();
 
-    for (auto& notStatic : getBody()->getNonStaticElements()) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Setting a Chain's Class Scope");
-        notStatic->setSecondaryScope(callScope);
-    }
+    // for (auto& notStatic : getBody()->getNonStaticElements()) {
+    //     DEBUG_LOG(LogLevel::PERMISSIVE, "Setting a Chain's Class Scope");
+    //     notStatic->setSecondaryScope(callScope);
+    // }
 
-    
+    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("CALLSCOPE FOR ADDING PARAMETERS: ", Colors::bg_blue));
+    callScope->owner = generateScopeOwner("MethodExecutor", name);
+    callScope->debugPrint();
+    callScope->printChildScopes();
  
     parameters.verifyArguments(args);
     for (size_t i = 0; i < parameters.size(); ++i) {
         callScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(args[i]));
     }
-
-    // SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(Node("Null"));
-
+    auto& vars = callScope->getContext();
+    vars.debugPrint();
     try {
 
         if (!callScope){throw MerkError("Method " + name +" Has No Captured Scope:");}
 
         auto capturedScope = getCapturedScope();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD " + name + " CAPTURED SCOPE");
-        // capturedScope->debugPrint();
-        // capturedScope->printChildScopes();
 
         if (!callScope){throw MerkError("Method " + name +" Has No Call Scope:");}
 
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD " + name + " CALL SCOPE");
-        // callScope->debugPrint();
-        // callScope->printChildScopes();
         if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided just before body->evaluate");}
+        String matches = callScope == capturedScope ? "true" : "false";
 
-        Node val = body->evaluate(getCapturedScope(), instanceNode);
-        // if (callScope->getContext().getVariables().size() == 0) {
-        //     throw MerkError("Method::execute did not declare any variables");
-        // }
+        Node val = body->evaluate(callScope, instanceNode);
         DEBUG_FLOW_EXIT();
         return val;
     } catch (const ReturnException& e) {
         DEBUG_FLOW_EXIT();
         return e.getValue();
     }
-
 }
 
 // setCapturedScope: Updates the captured scope and updates the method body's scope accordingly.

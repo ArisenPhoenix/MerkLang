@@ -376,10 +376,7 @@ Node ClassInstance::call(String name, Vector<Node> args) {
 
 Node ClassInstance::getField(const String& fieldName, TokenType type) const {    // specific to what kind of member i.e var/method
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // bool contains = getInstanceScope()->has(getCapturedScope());
-    // bool contains2 = getCapturedScope()->has(getInstanceScope());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "FieldName contains: ", contains);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "FieldName contains2: ", contains2);
+
     if (!isConstructed) {
         throw MerkError("Attempted to access field '" + fieldName + "' before construct() completed.");
 
@@ -405,22 +402,11 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
 
 Node ClassInstance::getField(const String& fieldName) const {                    // assumes a variable
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "ENTERING ClassInstance::getField for Variable");
-    // if (instanceScope->hasVariable(fieldName)) {
-    //     return instanceScope->getVariable(fieldName);
-    // } else {
-    //     throw VariableNotFoundError(fieldName);
-    // }
+    
     DEBUG_LOG(LogLevel::PERMISSIVE, "PRINTING OUT INSTANCE SCOPE DATA:");
     getInstanceScope()->debugPrint();
     getInstanceScope()->printChildScopes();
 
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "++++++++++++++++++++++++++++++++++DONE WITH Instance::getField LOGGING+++++++++++++++++++++++++++++++++ ");
-    // if (getInstanceScope()->getParent()){
-    //     DEBUG_LOG(LogLevel::PERMISSIVE, "InstanceScope contains parent");
-    // } else {
-    //     DEBUG_LOG(LogLevel::PERMISSIVE, "InstanceScope does not contain parent");
-    // }
     DEBUG_FLOW_EXIT();
     return getInstanceScope()->getVariable(fieldName);
 }                     
@@ -508,11 +494,6 @@ SharedPtr<ClassInstance> ClassInstanceNode::getInstance() const {
 
 ClassInstanceNode ClassInstanceNode::getInstanceNode() const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // auto callable = getCallable();
-
-    // DEBUG_LOG(LogLevel::PERMISSIVE, callable->toString());
-
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Instance Type: ", toString());
 
     SharedPtr<ClassInstance> raw = getInstance();
     auto val = ClassInstanceNode(raw);
@@ -523,19 +504,4 @@ ClassInstanceNode ClassInstanceNode::getInstanceNode() const {
 String ClassInstanceNode::toString() const {
     return "<" + nodeType + ": " + getInstance()->toString() + ">";
 }
-
-// ClassInstanceNode from(const Node& node) {
-//     if (!node.isClassInstance()) {
-//         throw MerkError("Cannot create ClassInstanceNode from non-ClassInstance node.");
-//     }
-//     return ClassInstanceNode(std::get<SharedPtr<ClassInstance>>(node.getValue()));
-// }
-
-// SharedPtr<ClassInstanceNode> ClassInstanceNode::from(const Node& val) {
-//     if (val.getType() != NodeValueType::ClassInstance) {
-//         throw MerkError("Node does not contain a ClassInstance");
-//     }
-//     auto instance = std::get<SharedPtr<ClassInstance>>(val.getValue());
-//     return makeShared<ClassInstanceNode>(instance);
-// }
 

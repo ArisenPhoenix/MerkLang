@@ -75,20 +75,12 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     if (!optSig){
         throw FunctionNotFoundError(name);
     }
-    SharedPtr<Function> method = std::static_pointer_cast<Function>(optSig->getCallable());
-    // SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->get().getCallable());
-
-    // SharedPtr<Function> func = optSig->get().getCallable();
+    SharedPtr<Method> method = std::static_pointer_cast<Method>(optSig->getCallable());
     SharedPtr<Scope> callScope = method->getCapturedScope();
     callScope->owner = generateScopeOwner("MethodCall", name);
 
-    // callScope->debugPrint();
-
     callScope = callScope->makeCallScope();
     callScope->owner = generateScopeOwner("MethodCall", name);
-
-    // callScope->debugPrint();
-
     
     callScope->owner = "MethodCall:evaluate (" + name + ")";
 
@@ -114,7 +106,7 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     }
    
 
-    Node value = method->execute(evaluatedArgs, callScope);
+    Node value = method->execute(evaluatedArgs, callScope, instanceNode);
     DEBUG_FLOW_EXIT();
     return value; 
 }
@@ -207,12 +199,11 @@ void MethodDef::setNonStaticElements(Vector<Chain*> nonStaticEls) {
 
 Node MethodBody::evaluate() const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("EVALUATING METHOD BODY WITH NO INSTANCE SCOPE: ", Colors::bg_bright_magenta));
-    auto val = Evaluator::evaluateMethod(getMutableChildren(), getScope(), nullptr);
+    throw MerkError(highlight("EVALUATING METHOD BODY WITH NO INSTANCE SCOPE: ", Colors::bg_bright_magenta));
     DEBUG_FLOW_EXIT();
-    return val;
+    return Node();
 }
+
 Vector<Chain*> MethodBody::getNonStaticElements() {
     return nonStaticElements;
 }
@@ -359,13 +350,8 @@ Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> ins
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     if (!instanceNode || !instanceNode->isClassInstance()) throw MerkError("No instance provided to Accessor");
-    DEBUG_LOG(LogLevel::PERMISSIVE, "INSTANCE NODE PROVIDED: ", instanceNode->getTypeAsString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Node: ", instanceNode->toString());
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Unshared ClassInstanceNode");
     ClassInstanceNode instance = instanceNode->getInstanceNode(); 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Got Unshared ClassInstanceNode");
-
 
     DEBUG_FLOW_EXIT();
     return instance;
