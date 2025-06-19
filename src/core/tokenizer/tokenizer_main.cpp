@@ -311,7 +311,7 @@ Token Tokenizer::readIdentifier() {
     }
     
     // Function Name (Immediately after `def`)
-    else if (tokens.size() > 0 && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef)){
+    else if (tokens.size() > 0 && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef) && (previousToken().value != "=" && previousToken().value != ":=")){
         type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
         functions.insert(value);
     }
@@ -328,7 +328,7 @@ Token Tokenizer::readIdentifier() {
         insideArgs = true;
     }
 
-    else if (isFunction(value)){
+    else if (isFunction(value) && previousToken().type != TokenType::VarDeclaration){
         type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
     }
 

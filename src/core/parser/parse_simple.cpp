@@ -33,7 +33,7 @@
 
 UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    DEBUG_LOG(LogLevel::TRACE, "Parser::parseVariableDeclaration with token: ", currentToken().toString());
+    // DEBUG_LOG(LogLevel::TRACE, "Parser::parseVariableDeclaration with token: ", currentToken().toString());
 
     // Determine reassignability
     bool isConst = false;
@@ -151,7 +151,7 @@ UniquePtr<ASTStatement> Parser::parseExpression() {
 // Though a bit of a misnomer, it was named BinaryExpression or BinaryOperation due to how it only handles two values at a time (or one)
 UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser: Entering parseExpression with token: ", currentToken().toString());
+    // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser: Entering parseExpression with token: ", currentToken().toString());
     auto left = parsePrimaryExpression();
     if (!left) {
         throw SyntaxError("Expected a valid left-hand side expression.", currentToken());
@@ -203,14 +203,6 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     // processNewLines();  // for chaining
 
     Token token = currentToken();
-    // if (token.type == TokenType::Punctuation && (token.value == "." || token.value == "::")){
-    //     advance(); // for chaining
-    //     token = currentToken();
-    // }
-
-    // if (token.type == TokenType::VarDeclaration){
-    //     return parseVariableDeclaration();
-    // }
 
     if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool) {
         LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
@@ -275,6 +267,14 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
         // return std::move(varRefNode);
         return varRefNode;
         // return variableToken.type == TokenType::Variable ? std::move(varRefNode) : makeUnique<AttributeReference>(AttributeReference(std::move(varRefNode)));
+    }
+
+    else if (token.type == TokenType::FunctionRef){
+        // FunctionRef(token.value, currentScope);
+        auto varRefNode = makeUnique<FunctionRef>(token.value, currentScope);
+        advance();
+        DEBUG_FLOW_EXIT();
+        return varRefNode;
     }
 
     else if (token.type == TokenType::Argument){

@@ -151,7 +151,7 @@ Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Share
 
     validateScope(scope, "VariableAssignment::evaluate", name);
 
-    Node val = Evaluator::evaluateVariableAssignment(name, valueExpression.get(), scope);
+    Node val = Evaluator::evaluateVariableAssignment(name, valueExpression.get(), scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -163,7 +163,7 @@ Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shared
 
     validateScope(scope, "VariableReference::evluate", "Name = " + name);
 
-    VarNode& varRef = Evaluator::evaluateVariableReference(name, scope); 
+    VarNode& varRef = Evaluator::evaluateVariableReference(name, scope, instanceNode); 
     // Node val = Node(varRef);
     DEBUG_FLOW_EXIT();
     return varRef;

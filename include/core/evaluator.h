@@ -27,8 +27,8 @@ namespace Evaluator {
    
     Node evaluateLiteral(Node value, bool isString, bool isBool);
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
-    Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope>);
-    VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope);
+    Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode);
+    VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode);
 
     Node evaluateBinaryOperation(const String& op, const Node& left, const Node& right, SharedPtr<Scope> scope);
     Node evaluateUnaryOperation(const String& op, const Node& operand);

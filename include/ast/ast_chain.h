@@ -8,6 +8,14 @@
 #include "utilities/helper_functions.h"
 class Scope;
 
+enum class ChainOpKind {
+    Reference,   // Just evaluates to a value (like a getter)
+    Assignment,  // Modifies an existing field
+    Declaration  // Defines a new field (possibly with const/static)
+};
+
+String opKindAsString(ChainOpKind opKind);
+
 enum class ResolutionMode {
     Normal,
     ClassInstance,
@@ -33,11 +41,7 @@ struct ChainElement {
     // Delete copy constructor (or default if you don't want accidental copies)
     ChainElement(const ChainElement&) = delete;
     ChainElement& operator=(const ChainElement&) = delete;
-    void printAST(std::ostream& os, int indent = 0) const {
-        // printIndent(os, indent);
-        object->printAST(os, indent);
-        // os << "Name: " + name + ", Type: " + identifierTypeToString(type) + ", Delimiter: " + delimiter << std::endl;
-    };
+    void printAST(std::ostream& os, int indent = 0) const;
 };
 
 
@@ -88,17 +92,13 @@ public:
     ChainElement& getLast();
     ChainElement& getElement(int index);
 
-    void setFirstElement(UniquePtr<ASTStatement> probablyScope, String name = "Scope");
+    void setFirstElement(UniquePtr<ASTStatement> probablyScope, String name);
 
     SharedPtr<Scope> getLastScope();
     void setLastScope(SharedPtr<Scope> mostRecentScope) const;
     
 };
-enum class ChainOpKind {
-    Reference,   // Just evaluates to a value (like a getter)
-    Assignment,  // Modifies an existing field
-    Declaration  // Defines a new field (possibly with const/static)
-};
+
 
 class ChainOperation : public ASTStatement {
 private:

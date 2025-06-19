@@ -14,17 +14,17 @@
 
 
 
-IdentifierType inferIdentifierType(TokenType type) {
-    switch (type) {
-        case TokenType::Variable: return IdentifierType::Variable;
-        case TokenType::FunctionRef: return IdentifierType::Function;
-        case TokenType::ClassMethodRef: return IdentifierType::Method;
-        case TokenType::ClassRef: return IdentifierType::Class;
-        case TokenType::Parameter: return IdentifierType::Variable;
-        // default: return IdentifierType::Variable;
-        default: throw MerkError("infereIdentifier found no matching tokens from " + tokenTypeToString(type));
-    }
-}
+// IdentifierType inferIdentifierType(TokenType type) {
+//     switch (type) {
+//         case TokenType::Variable: return IdentifierType::Variable;
+//         case TokenType::FunctionRef: return IdentifierType::Function;
+//         case TokenType::ClassMethodRef: return IdentifierType::Method;
+//         case TokenType::ClassRef: return IdentifierType::Class;
+//         case TokenType::Parameter: return IdentifierType::Variable;
+//         // default: return IdentifierType::Variable;
+//         default: throw MerkError("infereIdentifier found no matching tokens from " + tokenTypeToString(type));
+//     }
+// }
 
 
 std::tuple<bool, bool, String> Parser::handleIsVarDec() {
@@ -57,10 +57,6 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
     
     auto chain = makeUnique<Chain>(currentScope);
     Token baseToken = currentToken();
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken: ", currentToken().toColoredString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 1: ", peek().toColoredString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 2: ", peek(2).toColoredString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "parseChain: currentToken + 3: ", peek(3).toColoredString());
 
     if (baseToken.type != TokenType::ChainEntryPoint && baseToken.type != TokenType::Variable) {
         throw UnexpectedTokenError(baseToken, "Expected ChainEntryPoint or Variable");
@@ -73,21 +69,25 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
         throw UnexpectedTokenError(punct, "'.' or '::'");
     }
 
+    if (baseToken.value == "Scope") {
+        DEBUG_LOG(LogLevel::PERMISSIVE, baseToken.toColoredString());
+        throw MerkError("BaseToken.value is Scope");
+        }
+
     // Add base element
     ChainElement baseElem;
     baseElem.name = baseToken.value;
     baseElem.delimiter = punct.value;
     baseElem.type = baseToken.type;
     baseElem.object = makeUnique<VariableReference>(baseToken.value, currentScope);
-    // baseElem.object = std::move(parseStatement());
     chain->addElement(std::move(baseElem));
 
     // Parse the rest of the dotted chain
     while (currentToken().type == TokenType::Punctuation && (currentToken().value == "." || currentToken().value == "::")) {
 
-        Token delim = currentToken();
+        Token delim = currentToken(); // store for later
 
-        advance();
+        advance(); // move past punctuation token
 
         Token nextToken = currentToken();
         if (nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef) {
@@ -101,27 +101,18 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
         } else {
             currentObject = parseFunctionCall();
         }
-        // !isFunctionCall ?  : std::move()
 
         ChainElement elem;
         elem.name = nextToken.value;
         elem.delimiter = delim.value;
         elem.type = nextToken.type;
         elem.object = std::move(currentObject);
-        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("GETTING elem.object from parsePrimaryExpression:", Colors::red));
-        // auto statement = parseStatement();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("GOT STATEMENT OF TYPE: " + statement->getAstTypeAsString(), Colors::red));
-        // statement->printAST(std::cout, 0);
-        // elem.object = std::move(statement);
-        chain->addElement(std::move(elem));
-
         
-
+        chain->addElement(std::move(elem));
         advance();  // move to next delimiter or assignment
     }
 
     
-
 
     DEBUG_FLOW_EXIT();
     return chain;
@@ -131,7 +122,7 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
     
     bool isDeclaration = currentToken().type == TokenType::VarDeclaration;
-    DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", currentToken().toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", currentToken().toColoredString());
     bool isConst = false;
     if (isDeclaration) {
         isConst = currentToken().value == "const";
@@ -149,17 +140,13 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
 
 
     if (isDeclaration || isAssignment) {
-        
-        
         UniquePtr<ASTStatement> rhs = parseExpression();
 
         auto& last = lhs->getLast();
-        DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", isDeclaration);
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", isDeclaration);
         if (isDeclaration) {
             if (last.type == TokenType::Variable) {
                 auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
-
-                // VariableDeclaration(last.name, varNode, currentScope, nullptr, lhs);
                 last.object = makeUnique<VariableDeclaration>(last.name, varNode, currentScope, std::nullopt, std::move(rhs));
             }
             DEBUG_FLOW_EXIT();
@@ -173,10 +160,24 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
                 isDeclaration ? isMutable : true,
                 isStatic
             );
+        } else if (isAssignment) {
+            if (last.type == TokenType::Variable) {
+                    // auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
+                    last.object = makeUnique<VariableAssignment>(last.name, std::move(rhs), currentScope);
+                }
+                DEBUG_FLOW_EXIT();
+
+                return makeUnique<ChainOperation>(
+                    std::move(lhs),
+                    nullptr,
+                    isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
+                    currentScope,
+                    isDeclaration ? isConst : false,
+                    isDeclaration ? isMutable : true,
+                    isStatic
+                );
         }
         
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "NOT IS DECLARATION: ", isDeclaration);
-
         DEBUG_FLOW_EXIT();
         return makeUnique<ChainOperation>(
             std::move(lhs),
@@ -202,25 +203,11 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
 }
 
 
-// struct ChainParseContext {
-//     bool isDeclaration = false;
-//     bool isConst = false;
-//     String decString;
-//     Token baseToken = Token(TokenType::Unknown, "NULL", 0, 0);
-//     Vector<ChainElement> elements;
-// };
-
-
 // Skeleton: Parse protected member declarations in the class.
 UniquePtr<ASTStatement> Parser::parseClassAttributes() {
     DEBUG_FLOW(FlowLevel::LOW);
-    // For now, simply call parseVariableDeclaration() and return the resulting node.
-    // Later you might want to combine multiple declarations into a single ClassAttribute node.
     
     auto varDec = parsePrimaryExpression();
-    // if (varDec->getAstType() != AstType::Chain){
-    //     throw MerkError("Expected Chain")
-    // }
     DEBUG_FLOW_EXIT();
     return varDec;
 }
@@ -242,17 +229,8 @@ UniquePtr<MethodDef> Parser::parseClassInitializer() {
     if (token.type != TokenType::ClassMethodDef || methodName != "construct") {
         throw SyntaxError("Class constructor must be defined as 'construct'.", token);
     }
-    // // Consume the method keyword ("def" or "function")
-    // advance();
-
-    // Now the next token should be the method name.
-    // Parse the method parameters and body using your normal parseFunctionDefinition logic
-    // (or a specialized version if needed for classes).
 
     Token accessor = find(TokenType::Parameter, 6);
-
-    // String accessor = String("self");
-
     DEBUG_LOG(LogLevel::DEBUG, "accessor value: ", accessor.value);
     auto constructorMethod = parseClassMethod();
 

@@ -110,9 +110,9 @@ namespace Evaluator {
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::LOW);
         DEBUG_LOG(LogLevel::TRACE, "Evaluating Variable Declaration");
-        VarNode resolvedVariable;
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
 
+        VarNode resolvedVariable;
         AstType valueNodeType = valueNode->getAstType();
         if (valueNodeType == AstType::VariableReference || valueNodeType == AstType::Literal){
             resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
@@ -134,37 +134,50 @@ namespace Evaluator {
         return resolvedVariable;
     }
 
-    Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope){
-        // (void)scope;
-        DEBUG_FLOW(FlowLevel::LOW);
-        if (!scope->hasVariable(name)) {
+    Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
+        // (void)instanceNode;
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        
+        SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+
+        if (!instanceScope->hasVariable(name)) {
             DEBUG_FLOW_EXIT();
             throw UndefinedVariableError(name, "VariableAssignmentNode::evaluate");
         }
-        
-        auto newValue = value->evaluate(scope); // Evaluate the RHS
-        DEBUG_LOG(LogLevel::TRACE, "VariableAssignmentNode: New value for '", name, "': ", newValue);
 
-        if (!newValue.isValid()){
-            throw NullVariableError(name);
+        VarNode resolvedVariable;
+        AstType valueNodeType = value->getAstType();
+        if (valueNodeType == AstType::VariableReference || valueNodeType == AstType::Literal){
+            resolvedVariable = VarNode(value->evaluate(scope, instanceNode));
+        } else {
+            resolvedVariable = VarNode(value->evaluate(instanceScope, instanceNode));
         }
+        
+        // auto resolvedVariable = value->evaluate(scope); // Evaluate the RHS
+        // DEBUG_LOG(LogLevel::TRACE, "VariableAssignmentNode: New value for '", name, "': ", newValue);
+
+        // if (!newValue.isValid()){
+        //     throw NullVariableError(name);
+        // }
 
         DEBUG_LOG(LogLevel::TRACE, "========================");
-        DEBUG_LOG(LogLevel::TRACE, "Assigning: ", newValue, "To scope");
+        DEBUG_LOG(LogLevel::TRACE, "Assigning: ", resolvedVariable, "To scope");
         DEBUG_LOG(LogLevel::TRACE, "========================");
 
         // Update the variable in the scope
-        scope->updateVariable(name, newValue);
+        instanceScope->updateVariable(name, resolvedVariable);
 
-        DEBUG_LOG(LogLevel::TRACE, "VariableAssignmentNode updated: Name =", name, ", New Value =", newValue);
+        DEBUG_LOG(LogLevel::TRACE, "VariableAssignmentNode updated: Name =", name, ", New Value =", resolvedVariable);
 
         DEBUG_FLOW_EXIT();
-        return newValue; // Return the new value for debugging or chaining
+        return resolvedVariable; // Return the new value for debugging or chaining
     }
 
-    VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope){
+
+    VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
+        (void)instanceNode;
         DEBUG_FLOW();
-        
+
         // Retrieve the variable by reference
         auto& variable = scope->getVariable(name);  // Keep it as VarNode reference
 
@@ -216,6 +229,7 @@ namespace Evaluator {
                                         // for providing its own classScope from which to work with
                         methodDef->setClassScope(classScope);
                         methodDef->getBody()->getScope()->owner = generateScopeOwner("MethodDefBody", methodDef->getName());
+                        // throw MerkError("Just Checking the cloned Body");
                         methodDef->setScope(methodScope);
                         if (methodDef->getClassScope().get() != classScope.get()) {
                             throw MerkError("method class Scope is not the same as cls->classScope");
@@ -227,6 +241,8 @@ namespace Evaluator {
                         methods.emplace_back(methodDef->getName());
                         // methodDef->setNonStaticElements(nonStaticElements);
                         // setNonStaticElements(nonStaticElements);
+                        // methodDef->getBody()->printAST(std::cout);
+
                         methodDef->evaluate(classScope);                    
                     } 
                     break;
@@ -271,8 +287,8 @@ namespace Evaluator {
             }
         }
         
-        methodScope->debugPrint();
-        methodScope->printChildScopes();
+        // methodScope->debugPrint();
+        // methodScope->printChildScopes();
         debugLog(true, spaces);
 
         DEBUG_FLOW_EXIT();
@@ -547,6 +563,7 @@ namespace Evaluator {
         auto classOpt = callScope->getClass(className);
         if (!classOpt.has_value()) {throw MerkError("Class not found: " + className);}
 
+
         auto classSig = classOpt.value();
 
         auto classTemplate = classSig->getClassDef();
@@ -554,8 +571,8 @@ namespace Evaluator {
         auto capturedClone = capturedScope->clone(true);  // clone it safely
         auto classScope = classTemplate->getClassScope();
 
-        SharedPtr<Scope> instanceScope = capturedClone->makeInstanceScope(classTemplate->getClassScope());
-        capturedClone->appendChildScope(instanceScope);
+        SharedPtr<Scope> instanceScope = classScope->makeInstanceScope(classScope);
+        classScope->appendChildScope(instanceScope);
         if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
 
         auto captured = instanceScope->getParent();
@@ -637,6 +654,7 @@ namespace Evaluator {
         }
 
         UniquePtr<BaseAST> clonedBodyBase = body->clone();
+        
         auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
         // clonedBody->setNonStaticElements(nonStaticElements);
         

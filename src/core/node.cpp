@@ -378,18 +378,20 @@ String Node::toString() const {
                 return std::get<String>(data.value);
             case NodeValueType::Null:
                 return "null"; 
+            case NodeValueType::Function:
+                return "FunctionRef";
             case NodeValueType::Uninitialized:
                 return "<Uninitialized>";
             case NodeValueType::Any:
                 return "Any";
             case NodeValueType::Class:
                 return "Class";
-
             case NodeValueType::ClassInstance:
                 return "<ClassInstance>";
             case NodeValueType::Callable:
                 return "<Callable";
             default:
+                debugLog(true, "Unsupported Type: ", nodeTypeToString(data.type));
                 throw MerkError("Unsupported type for Node toString.");
         }
     } catch (const std::exception& e) {

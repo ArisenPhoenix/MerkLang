@@ -27,7 +27,6 @@ Vector<const BaseAST*> ASTStatement::getAllAst(bool includeSelf) const {
     }
     return {}; 
 }
-// VariableAssignment
 
 Vector<const BaseAST*> VariableAssignment::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all;
@@ -186,32 +185,6 @@ Vector<const BaseAST*> WhileLoop::getAllAst(bool includeSelf) const {
     return all;
 }
 
-
-
-Vector<const BaseAST*> BinaryOperation::getAllAst(bool includeSelf) const {
-    Vector<const BaseAST*> all = {};
-
-    if (includeSelf){
-        all.push_back(this);
-    }
-
-    if (left){
-        auto lefts = left->getAllAst(includeSelf);
-        mergeVectors(all, lefts);
-
-        // all.insert(all.end(), lefts.begin(), lefts.end());
-    }
-
-    if (right){
-        auto rights = right->getAllAst(includeSelf);
-        mergeVectors(all, rights);
-
-        // all.insert(all.end(), rights.begin(), rights.end());
-    }
-
-    return all;
-}
-
 Vector<const BaseAST*> UnaryOperation::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all = {};
 
@@ -228,26 +201,6 @@ Vector<const BaseAST*> UnaryOperation::getAllAst(bool includeSelf) const {
     }
     return all; 
 }
-
-
-Vector<const BaseAST*> Return::getAllAst(bool includeSelf) const {
-    Vector<const BaseAST*> all = {};
-
-    if (includeSelf){
-        // return {const_cast<Return*>(this)};
-        all.push_back(this);
-    }
-    if (returnValue){
-        auto returns = returnValue->getAllAst(includeSelf);
-        mergeVectors(all, returns);
-
-        // all.insert(all.end(), returns.begin(), returns.end());
-    }
-
-    return all; 
-}
-
-
 
 Vector<const BaseAST*> CallableDef::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all = {};
@@ -288,6 +241,45 @@ Vector<const BaseAST*> CallableCall::getAllAst(bool includeSelf) const {
 }
 
 
+Vector<const BaseAST*> BinaryOperation::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+    DEBUG_LOG(LogLevel::PERMISSIVE, "BinaryOperation left type: ", left->getAstTypeAsString());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "BinaryOperation right type: ", right->getAstTypeAsString());
+
+    if (includeSelf){
+        all.push_back(this);
+    }
+
+    if (left){
+        auto lefts = left->getAllAst(includeSelf);
+        mergeVectors(all, lefts);
+    }
+
+    if (right){
+        auto rights = right->getAllAst(includeSelf);
+        mergeVectors(all, rights);
+    }
+
+    return all;
+}
+
+
+Vector<const BaseAST*> Return::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Return AST type of returnValue: ", returnValue->getAstTypeAsString());
+
+    if (includeSelf){
+        all.push_back(this);
+    }
+    if (returnValue){
+        auto returns = returnValue->getAllAst(includeSelf);
+        mergeVectors(all, returns);
+
+    }
+
+    return all; 
+}
+
 
 Vector<const BaseAST*> Chain::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all;
@@ -297,10 +289,46 @@ Vector<const BaseAST*> Chain::getAllAst(bool includeSelf) const {
 
     for (const auto& element : elements) {
         if (element.object) {
-            auto sub = element.object->getAllAst();  // or false if you're wrapping a primitive
+            auto sub = element.object->getAllAst(includeSelf);  // or false if you're wrapping a primitive
             mergeVectors(all, sub);
         }
     }
 
     return all;
 }
+
+
+
+Vector<const BaseAST*> ChainOperation::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all;
+    
+    if (includeSelf)
+        all.push_back(this);
+
+    auto lhsNodes = lhs->getAllAst(includeSelf);
+    mergeVectors(all, lhsNodes);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation getAllAst: lhs type = ", lhs->getAstTypeAsString());
+
+    if (rhs) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation getAllAst: rhs type = ", rhs->getAstTypeAsString());
+
+        auto rhsNodes = rhs->getAllAst(includeSelf);
+        mergeVectors(all, rhsNodes);
+
+    }
+
+    return all;
+}
+
+
+
+
+// Vector<const BaseAST*> ChainOperation::getAllAst(bool includeSelf) const {
+//     Vector<const BaseAST*> result;
+//     if (includeSelf) result.push_back(this);
+//     auto lhsNodes = lhs->getAllAst(includeSelf);
+//     auto rhsNodes = rhs ? rhs->getAllAst(includeSelf) : Vector<const BaseAST*>();
+//     result.insert(result.end(), lhsNodes.begin(), lhsNodes.end());
+//     result.insert(result.end(), rhsNodes.begin(), rhsNodes.end());
+//     return result;
+// }

@@ -88,6 +88,9 @@ public:
     VarNode& getVariable(const String& name);
     void printContext(int depth = 0) const;
 
+
+    void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
+    SharedPtr<CallableSignature> handleLookupFunction(String& name, const Vector<Node>& args) const;
     
     //// Registry Management
     //// Function Management

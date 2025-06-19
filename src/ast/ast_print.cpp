@@ -4,6 +4,7 @@
 #include "utilities/helper_functions.h"
 #include "ast/ast_base.h"
 #include "ast/ast.h"
+#include "ast/ast_chain.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
 #include "ast/ast_callable.h"
@@ -396,4 +397,46 @@ void ClassCall::printAST(std::ostream& os, int indent) const {
 void Accessor::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString() + "(" + getAccessor() + ", ScopeLevel:", getScope()->getScopeLevel(), ")");
+}
+
+
+
+String ChainOperation::toString() const {
+    String kind = opKindAsString(opKind);
+    auto lhs = getLeftSide();
+    String scoping = lhs->getSecondaryScope() ? lhs->getSecondaryScope()->formattedScope() : "null";
+    return "ChainOperation(kind: " + kind + ", lhs: " + lhs->toString() + ", SECONDARY SCOPE: " + scoping + ")";
+}
+
+void ChainOperation::printAST(std::ostream& os, int indent) const {
+    printIndent(os, indent);
+    os << getAstTypeAsString() << ")\n";
+    lhs->printAST(os, indent + 2);
+    if (rhs) rhs->printAST(os, indent + 2);
+}
+
+
+
+void Chain::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString()+":");
+
+    for (const auto& elem : elements) {
+        // indent = printIndent(os, indent);
+        elem.printAST(os, indent);
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Added: ", elem.object->getAstTypeAsString(), "to AST");
+    }
+}
+
+String Chain::toString() const {
+    std::ostringstream oss;
+    int size = elements.size() - 1;
+    for (const auto& elem : elements) {
+        oss << elem.name;
+        if (elem.name != elements[size].name){
+            oss << ".";
+        }
+        
+    }
+    return oss.str();
 }

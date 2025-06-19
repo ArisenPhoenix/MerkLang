@@ -113,22 +113,15 @@ Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unus
     if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided");}
     DEBUG_LOG(LogLevel::PERMISSIVE, "Executing Method with below scope");
 
-    // for (auto& notStatic : getBody()->getNonStaticElements()) {
-    //     DEBUG_LOG(LogLevel::PERMISSIVE, "Setting a Chain's Class Scope");
-    //     notStatic->setSecondaryScope(callScope);
-    // }
-
     DEBUG_LOG(LogLevel::PERMISSIVE, highlight("CALLSCOPE FOR ADDING PARAMETERS: ", Colors::bg_blue));
     callScope->owner = generateScopeOwner("MethodExecutor", name);
-    callScope->debugPrint();
-    callScope->printChildScopes();
- 
-    parameters.verifyArguments(args);
-    for (size_t i = 0; i < parameters.size(); ++i) {
-        callScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(args[i]));
+
+    auto params = parameters.clone();
+    params.verifyArguments(args);
+    for (size_t i = 0; i < params.size(); ++i) {
+        callScope->declareVariable(params[i].getName(), makeUnique<VarNode>(args[i]));
     }
-    auto& vars = callScope->getContext();
-    vars.debugPrint();
+    
     try {
 
         if (!callScope){throw MerkError("Method " + name +" Has No Captured Scope:");}

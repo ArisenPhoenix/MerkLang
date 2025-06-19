@@ -206,18 +206,18 @@ public:
 };
 
 
-class ScopeNode : public Node {
-    String accessor;
-public:
-    ScopeNode(String accessor, SharedPtr<Scope> scope);
+// class ScopeNode : public Node {
+//     String accessor;
+// public:
+//     ScopeNode(String accessor, SharedPtr<Scope> scope);
     
-    SharedPtr<MethodNode> getMethod(String methodName, Vector<Node> args);
-    SharedPtr<FunctionNode> getFunction(String funcName, Vector<Node> args);
-    SharedPtr<Scope> getScope() const;
-    VarNode getAttribute(String varName);
-    String getAccessor() {return accessor;}
+//     SharedPtr<MethodNode> getMethod(String methodName, Vector<Node> args);
+//     SharedPtr<FunctionNode> getFunction(String funcName, Vector<Node> args);
+//     SharedPtr<Scope> getScope() const;
+//     VarNode getAttribute(String varName);
+//     String getAccessor() {return accessor;}
 
-};
+// };
 
 #endif // AST_CLASS_H
 

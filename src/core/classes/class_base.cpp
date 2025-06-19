@@ -355,16 +355,11 @@ Node ClassInstance::call(String name, Vector<Node> args) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto methodSig = getInstanceScope()->getFunction(name, args);
     auto method = methodSig->getCallable();
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Current Method", method->toString());
 
     SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
-    // ClassInstanceNode()
-    // SharedPtr<ClassInstanceNode> classInstance = makeShared<ClassInstanceNode>(this);
-    // auto instanceNode = ClassInstanceNode(shared_from_this());
-    // SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>();
     auto instance = std::static_pointer_cast<ClassInstance>(shared_from_this());
-    // ClassInstanceNode(instance);
     auto instanceNode = makeShared<ClassInstanceNode>(instance);
-
 
     Node val = method->execute(args, methodCallScope, instanceNode);
 
@@ -404,8 +399,8 @@ Node ClassInstance::getField(const String& fieldName) const {                   
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     
     DEBUG_LOG(LogLevel::PERMISSIVE, "PRINTING OUT INSTANCE SCOPE DATA:");
-    getInstanceScope()->debugPrint();
-    getInstanceScope()->printChildScopes();
+    // getInstanceScope()->debugPrint();
+    // getInstanceScope()->printChildScopes();
 
     DEBUG_FLOW_EXIT();
     return getInstanceScope()->getVariable(fieldName);

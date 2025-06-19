@@ -308,39 +308,6 @@ ClassBody::~ClassBody() {
     // DEBUG_LOG(LogLevel::DEBUG, "Destroying Class Body");
 }
 
-
-ScopeNode::ScopeNode(String accessor, SharedPtr<Scope> scope) {
-        data.type = NodeValueType::Scope;
-        data.value = scope;
-        nodeType = "InstanceScope";
-        name = "InstanceScope<" + accessor + ">";
-}
-
-SharedPtr<MethodNode> ScopeNode::getMethod(String methodName, Vector<Node> args) {
-    // auto callable = getScope()->lookupFunction(methodName, args).value()->getCallable();
-    // auto methodNode = std::static_pointer_cast<MethodNode>(callable);
-    auto callSig = getScope()->lookupFunction(methodName, args).value();
-    auto func = std::static_pointer_cast<Method>(callSig->getCallable());
-    auto methodNode = makeShared<MethodNode>(func);
-    return methodNode;
-}
-
-SharedPtr<Scope> ScopeNode::getScope() const {
-    return std::get<SharedPtr<Scope>>(data.value);
-}
-
-SharedPtr<FunctionNode> ScopeNode::getFunction(String funcName, Vector<Node> args) {
-    auto callSig = getScope()->lookupFunction(funcName, args).value();
-    auto func = std::static_pointer_cast<Function>(callSig->getCallable());
-    auto funcNode = makeShared<FunctionNode>(func);
-    return funcNode;
-}
-
-VarNode ScopeNode::getAttribute(String varName) {
-    auto var = getScope()->getVariable(varName);
-    return var;
-}
-
 Accessor::Accessor(String accessor, SharedPtr<Scope> scope)
     : ASTStatement(scope), accessor(std::move(accessor)) {
 }
