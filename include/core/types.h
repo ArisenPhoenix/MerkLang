@@ -68,6 +68,7 @@ using DependencyGraph = std::unordered_map<String, std::unordered_set<String>>;
 
 // Enum for Tokens and their types of the value held by the variant
 enum class TokenType {
+    Type,
     Keyword,
     Identifier,
     Number,

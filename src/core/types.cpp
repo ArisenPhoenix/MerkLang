@@ -106,6 +106,7 @@ String astTypeToString(AstType type) {
 
 String tokenTypeToString(TokenType type, bool colored) {
     switch (type) {
+        case TokenType::Type: return colored ? highlight("Type", Colors::red) : "Type";
         case TokenType::Keyword: return colored ? highlight("Keyword", Colors::bold_white) : "Keyword";
 
         case TokenType::Identifier: return colored ? highlight("Identifier", Colors::bg_yellow) :  "Identifier";
@@ -182,6 +183,7 @@ String callableTypeAsString(CallableType callableType){
 
 String getTokenDescription(TokenType type) {
     switch (type) {
+        case TokenType::Type: return "The Type To Be Held In The Node";
         case TokenType::Keyword: return "Keyword in the language.";
         case TokenType::Identifier: return "Variable or function name.";
         case TokenType::Number: return "Number of any type.";

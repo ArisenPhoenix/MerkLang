@@ -5,6 +5,7 @@
 #include "core/node.h"
 #include <string>
 #include <vector>
+#include <optional>
 
 // This acts as a separate module for evaluation logic - as its name implies
 // This is for future considerations when implementing compilation. 
@@ -26,7 +27,7 @@ class Scope;
 namespace Evaluator {
    
     Node evaluateLiteral(Node value, bool isString, bool isBool);
-    Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode containsMetaData, std::optional<NodeValueType> typeTag, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode);
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode);
 

@@ -429,14 +429,32 @@ std::optional<std::type_index> getType(Token token){
 
 }
 
+std::optional<NodeValueType> Parser::getTypeFromString(String typeStr) {
+    if (typeStr == "Int") return NodeValueType::Int;
+    if (typeStr == "Float") return NodeValueType::Float;
+    if (typeStr == "Double") return NodeValueType::Double;
+    if (typeStr == "Long") return NodeValueType::Long;
+    if (typeStr == "Bool") return NodeValueType::Bool;
+    if (typeStr == "Char") return NodeValueType::Char;
+    if (typeStr == "String") return NodeValueType::String;
+    if (typeStr == "Vector") return NodeValueType::Vector;
+    if (typeStr == "Function") return NodeValueType::Function;
+    if (typeStr == "Class") return NodeValueType::Class;
+    if (typeStr == "Method") return NodeValueType::Method;
+    if (typeStr == "Null") return NodeValueType::Null;
+    else {
+        return std::nullopt;
+    }
+}
+
 std::optional<NodeValueType> Parser::parseStaticType() {
-    if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
+    if (currentToken().value != ":") {
         return std::nullopt; // No type annotation found
     }
     advance(); // Consume ':'
 
     Token typeToken = currentToken();
-    if (typeToken.type != TokenType::Identifier) {
+    if (typeToken.type != TokenType::Type) {
         throw SyntaxError("Expected type name after ':'.", currentToken());
     }
 
@@ -444,20 +462,8 @@ std::optional<NodeValueType> Parser::parseStaticType() {
     advance(); // Consume type name
 
     // Convert string to NodeValueType
-    if (typeStr == "int") return NodeValueType::Int;
-    if (typeStr == "float") return NodeValueType::Float;
-    if (typeStr == "double") return NodeValueType::Double;
-    if (typeStr == "long") return NodeValueType::Long;
-    if (typeStr == "bool") return NodeValueType::Bool;
-    if (typeStr == "char") return NodeValueType::Char;
-    if (typeStr == "string") return NodeValueType::String;
-    if (typeStr == "vector") return NodeValueType::Vector;
-    if (typeStr == "function") return NodeValueType::Function;
-    if (typeStr == "class") return NodeValueType::Class;
-    if (typeStr == "method") return NodeValueType::Method;
-    if (typeStr == "null") return NodeValueType::Null;
-
-    throw SyntaxError("Unknown type annotation: " + typeStr, typeToken);
+    return getTypeFromString(typeStr);
+    // throw SyntaxError("Unknown type annotation: " + typeStr, typeToken);
 }
 
 void Parser::processIndent(SharedPtr<Scope> manualScope){

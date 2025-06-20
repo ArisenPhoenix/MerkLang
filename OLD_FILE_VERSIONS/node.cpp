@@ -20,72 +20,57 @@
 // const bool debugNodeC = false;
 // getIsCallable
 
-// 1. Infer from String
-std::pair<VariantType, NodeValueType> inferFromString(const String& value) {
-    if (value == "true" || value == "false") {
-        return { value == "true", NodeValueType::Bool };
-    }
+std::ostream& operator<<(std::ostream& os, const Node& node) {
+    os << node.nodeType << "(";
+    os << "Value: ";
 
+    // Display the value
     try {
-        if (value.find('.') != String::npos) {
-            return { std::stod(value), NodeValueType::Double };
-        } else {
-            return { std::stoi(value), NodeValueType::Int };
-        }
-    } catch (...) {}
-
-    if (value.size() == 3 && value.front() == '\'' && value.back() == '\'') {
-        return { value[1], NodeValueType::Char };
-    }
-
-    if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-        return { value.substr(1, value.size() - 2), NodeValueType::String };
-    }
-
-    throw MerkError("Could not infer type from string: " + value);
-}
-
-// 2. Coerce string to a given type
-std::pair<VariantType, NodeValueType> coerceStringToType(const String& value, NodeValueType type) {
-    try {
-        switch (type) {
-            case NodeValueType::Int: return { std::stoi(value), type };
-            case NodeValueType::Float: return { std::stof(value), type };
-            case NodeValueType::Double: return { std::stod(value), type };
-            case NodeValueType::Long: return { std::stol(value), type };
-            case NodeValueType::Bool:
-                if (value == "true") return { true, type };
-                if (value == "false") return { false, type };
-                throw MerkError("Invalid boolean: " + value);
-            case NodeValueType::Char:
-                if (value.size() == 3 && value.front() == '\'' && value.back() == '\'')
-                    return { value[1], type };
-                throw MerkError("Invalid char: " + value);
-            case NodeValueType::String:
-                return { value, type };
-            default:
-                throw MerkError("Unsupported coercion target type: " + nodeTypeToString(type));
-        }
+        os << node.toString();
     } catch (const std::exception& e) {
-        throw MerkError("Failed to coerce value '" + value + "' to type " + nodeTypeToString(type));
+        os << "<Error retrieving value>";
     }
-}
 
-// 3. Validate and Copy
-std::pair<VariantType, NodeValueType> validateAndCopy(const VariantType& value, NodeValueType type) {
-    auto visitor = [&](auto&& arg) -> std::pair<VariantType, NodeValueType> {
-        using T = std::decay_t<decltype(arg)>;
-        if (getNodeTypeFromType<T>() != type) {
-            throw MerkError("Value does not match declared NodeValueType: expected " + nodeTypeToString(type));
+    SharedPtr<Scope> scope = nullptr;
+
+    // Display the type
+    os << ", Type: " << (node.name.empty() ? nodeTypeToString(node.getType()) : nodeTypeToString(node.getType()) + "(" + node.name + ")");
+    if (node.getType() == NodeValueType::ClassInstance){
+        auto instance = std::get<SharedPtr<ClassInstance>>(node.getValue());
+        scope = instance->getInstanceScope();        
+    }
+
+    
+    // Display metadata
+    os << ", isConst: " << (node.isConst ? "true" : "false");
+    os << ", isMutable: " << (node.isMutable ? "true" : "false");
+    os << ", isStatic: " << (node.isStatic ? "true" : "false");
+
+    os << ", isCallable: " << (node.isCallable ? "true" : "false");
+    
+
+    os << ")";
+
+    if (scope){
+        os << "\n INSTANCE: " + node.name + " DATA START In Scope : " + "Scope(" + std::to_string(scope->getScopeLevel()) + ", " + scope->owner + ")\n";
+        // scope->debugPrint();
+        for (auto& [varName, var] : scope->getContext().getVariables()) {
+            os << varName << " = " << var->toString() << "\n";
         }
-        return { arg, type };
-    };
-    return std::visit(visitor, value);
+        for (auto& [funcName, funcVec] : scope->localFunctions) {
+            for (auto& func : funcVec) {
+                os << func->getCallable()->toString() << "\n";
+            }
+        }
+
+        for (auto& [className, cls] : scope->localClasses) {
+            os << cls->getCallable()->toString() << "\n";
+        }
+        
+        os << "\n INSTANCE DATA END\n\n";
+    }
+    return os;
 }
-
-
-
-
 
 
 NodeData::~NodeData() {
@@ -157,58 +142,6 @@ bool compareNumericNodes(const Node& left, const Node& right, const std::functio
 }
 
 // Overload operator<< for Node to display detailed information
-std::ostream& operator<<(std::ostream& os, const Node& node) {
-    os << node.nodeType << "(";
-    os << "Value: ";
-
-    // Display the value
-    try {
-        os << node.toString();
-    } catch (const std::exception& e) {
-        os << "<Error retrieving value>";
-    }
-
-    SharedPtr<Scope> scope = nullptr;
-
-    // Display the type
-    os << ", Type: " << (node.name.empty() ? nodeTypeToString(node.getType()) : nodeTypeToString(node.getType()) + "(" + node.name + ")");
-    if (node.getType() == NodeValueType::ClassInstance){
-        auto instance = std::get<SharedPtr<ClassInstance>>(node.getValue());
-        scope = instance->getInstanceScope();        
-    }
-
-    
-    // Display metadata
-    os << ", isConst: " << (node.isConst ? "true" : "false");
-    os << ", isMutable: " << (node.isMutable ? "true" : "false");
-    os << ", isStatic: " << (node.isStatic ? "true" : "false");
-
-    os << ", isCallable: " << (node.isCallable ? "true" : "false");
-    
-
-    os << ")";
-
-    if (scope){
-        os << "\n INSTANCE: " + node.name + " DATA START In Scope : " + "Scope(" + std::to_string(scope->getScopeLevel()) + ", " + scope->owner + ")\n";
-        // scope->debugPrint();
-        for (auto& [varName, var] : scope->getContext().getVariables()) {
-            os << varName << " = " << var->toString() << "\n";
-        }
-        for (auto& [funcName, funcVec] : scope->localFunctions) {
-            for (auto& func : funcVec) {
-                os << func->getCallable()->toString() << "\n";
-            }
-        }
-
-        for (auto& [className, cls] : scope->localClasses) {
-            os << cls->getCallable()->toString() << "\n";
-        }
-        
-        os << "\n INSTANCE DATA END\n\n";
-    }
-    return os;
-}
-
 
 // Overload to accept value and type as strings
 void Node::setInitialValue(const String& value, const String& typeStr) {
@@ -396,6 +329,8 @@ bool Node::toBool() const {
 }
 
 String Node::toString() const {
+    DEBUG_LOG(LogLevel::DEBUG, "DATA TYPE: ", nodeTypeToString(data.type));
+    DEBUG_LOG(LogLevel::PERMISSIVE, "DATA VALUE: ", getValue());
     try {
         switch (data.type) {
             case NodeValueType::Int:
@@ -507,13 +442,14 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
     if (std::holds_alternative<String>(value)) return NodeValueType::String;
     if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
     if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
+    if (std::holds_alternative<UninitializedType>(value)) return NodeValueType::Uninitialized;
     return NodeValueType::Any;  // Allow `Any` when the type is unknown
 }
 
 void Node::validateTypeAlignment() const {
-    if (data.type == NodeValueType::Null) {
-        throw MerkError("Invalid Node type: Null");
-    }
+    // if (data.type == NodeValueType::Null) {
+    //     throw MerkError("Invalid Node type: Null");
+    // }
     if (data.type == NodeValueType::Any) {
         return;  // Allow Any type without restriction
     }
@@ -533,9 +469,9 @@ void Node::setInitialValue(const VariantType& value) {
 
 // Getter for the value
 VariantType Node::getValue() const {
-    if (data.type == NodeValueType::Null) {
-        throw MerkError("Attempting to get value from a Node of type Null.");
-    }
+    // if (data.type == NodeValueType::Null) {
+    //     throw MerkError("Attempting to get value from a Node of type Null.");
+    // }
     return data.value; // Return the value stored in the NodeData
 }
 
@@ -613,8 +549,6 @@ NodeValueType determineNumericResultType(const Node& left, const Node& right) {
     return left.isStatic ? left.getType() : right.getType();
 }
 
-
-// Helper function to validate if a node can be modified
 void validateModifiability(const Node& node) {
     if (node.isConst) {
         std::cout << "validateModifiability: Attempting to modify a constant Node!" << std::endl;
@@ -930,6 +864,26 @@ Node* Node::clone() const {
     return new Node(*this);
 }
 
+
+
+
+// Node Node::resolveMember(const String& name, IdentifierType type) const {
+//     if (!isObject()) {
+//         throw std::runtime_error("Cannot resolve member on non-object");
+//     }
+
+//     // Example logic, assuming you have a class object or instance
+//     if (type == IdentifierType::Variable) {
+//         return objectValue->context->get(name);
+//     } else if (type == IdentifierType::Function) {
+//         return objectValue->functionRegistry->get(name);
+//     } else if (type == IdentifierType::Class) {
+//         return objectValue->classRegistry->get(name);
+//     }
+
+//     throw std::runtime_error("Unknown identifier type");
+// }
+
 // Default constructor
 LitNode::LitNode() : Node() {
     nodeType = "LitNode";
@@ -1006,6 +960,7 @@ VarNode::VarNode(const VariantType& value, bool isConst, bool isMutable, bool is
     this->isConst = isConst;
     this->isMutable = isMutable;
     this->isStatic = isStatic;
+    
 }
 
 // VarNode Constructor accepting String value and type
@@ -1072,43 +1027,6 @@ VarNode* VarNode::clone() const {
 }
 
 
-
-
-
-String LitNode::toString() const {
-    try {
-        switch (data.type) {
-            case NodeValueType::Int:
-                return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Float:
-                return std::to_string(std::get<float>(data.value));
-            case NodeValueType::Double:
-                return std::to_string(std::get<double>(data.value));
-            case NodeValueType::Long:
-                return std::to_string(std::get<long>(data.value));
-            case NodeValueType::Bool:
-                return std::get<bool>(data.value) ? "true" : "false";
-            case NodeValueType::Char:
-                return std::string(1, std::get<char>(data.value));
-            case NodeValueType::String:
-                return std::get<String>(data.value);
-            case NodeValueType::Null:
-                return "null"; 
-            case NodeValueType::Uninitialized:
-                return "[Uninitialized]";
-            case NodeValueType::Any:
-                return "[Any Type]";
-            default:
-                throw RunTimeError("Unsupported type for Node toString.");
-        }
-    } catch (const std::exception& e) {
-        debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());
-        return "[Error in LitNode::toString]";
-    }
-}
-
-
-
 // For Variable Name Part Construction
 VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic)
     : Node(value, typeStr) {
@@ -1119,10 +1037,6 @@ VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool i
     if (typeTag.has_value()){
         this->data.type = typeTag.value_or(NodeValueType::Any);
     }
-
-    // this->data.value = value;
-
-    validateTypeAlignment();
 }
 
 // For Variable Name Part and ResolvedVariable Construction
@@ -1140,3 +1054,36 @@ VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<No
 
     validateTypeAlignment();
 }
+
+
+// String LitNode::toString() const {
+//     try {
+//         switch (data.type) {
+//             case NodeValueType::Int:
+//                 return std::to_string(std::get<int>(data.value));
+//             case NodeValueType::Float:
+//                 return std::to_string(std::get<float>(data.value));
+//             case NodeValueType::Double:
+//                 return std::to_string(std::get<double>(data.value));
+//             case NodeValueType::Long:
+//                 return std::to_string(std::get<long>(data.value));
+//             case NodeValueType::Bool:
+//                 return std::get<bool>(data.value) ? "true" : "false";
+//             case NodeValueType::Char:
+//                 return std::string(1, std::get<char>(data.value));
+//             case NodeValueType::String:
+//                 return std::get<String>(data.value);
+//             case NodeValueType::Null:
+//                 return "null"; 
+//             case NodeValueType::Uninitialized:
+//                 return "[Uninitialized]";
+//             case NodeValueType::Any:
+//                 return "[Any Type]";
+//             default:
+//                 throw RunTimeError("Unsupported type for Node toString.");
+//         }
+//     } catch (const std::exception& e) {
+//         debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());
+//         return "[Error in LitNode::toString]";
+//     }
+// }

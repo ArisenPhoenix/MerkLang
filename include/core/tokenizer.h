@@ -65,8 +65,13 @@ private:
 
     void handleIndentation(Vector<Token>& tokens);
     void updateCurrentLineText();
+    bool isUpper(char c);
 
     char peek(size_t offset = 1) const;
+
+    bool isCapitalizedType(size_t pos) const;
+    bool handleOptionalType(Vector<Token>& tokens);
+
 
 public:
     Tokenizer(const String& sourceCode)
@@ -88,6 +93,9 @@ public:
     }
 
 };
+
+
+
 
 inline std::ostream& operator<<(std::ostream& os, TokenType type) {
     os << tokenTypeToString(type);

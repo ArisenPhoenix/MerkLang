@@ -46,7 +46,7 @@ class VariableDeclaration : public ASTStatement {
 private:
     String name;
     VarNode variable;
-    std::optional<std::type_index> typeTag;
+    std::optional<NodeValueType> typeTag;
     UniquePtr<ASTStatement> valueExpression;
 
 public:
@@ -54,7 +54,7 @@ public:
         String name,
         VarNode variable,
         SharedPtr<Scope> scope,
-        std::optional<std::type_index> typeTag = std::nullopt,
+        std::optional<NodeValueType> typeTag = std::nullopt,
         UniquePtr<ASTStatement> valueExpression = nullptr
     );
     VariableDeclaration(UniquePtr<VariableDeclaration> varDec);
@@ -63,7 +63,7 @@ public:
 
     String getName() const {return name;}
     VarNode getVariable() {return variable;}
-    std::optional<std::type_index> getTypeTag() {return typeTag;}
+    std::optional<NodeValueType> getTypeTag() {return typeTag;}
     const UniquePtr<ASTStatement>& getExpression() {return valueExpression;}
     const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
     void setScope(SharedPtr<Scope> newScope) override;

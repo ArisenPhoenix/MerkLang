@@ -9,11 +9,6 @@
 #include "ast/ast_callable.h"
 #include "core/classes/method.h"
 
-// Constructor implementation.
-
-
-
-
 
 Method::Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn)
     : Callable(std::move(name), std::move(params), CallableType::METHOD, requiresReturn), body(std::move(body)), capturedScope(scope)
@@ -56,30 +51,7 @@ SharedPtr<CallableSignature> Method::toCallableSignature(SharedPtr<Method> metho
 
 void Method::setScope(SharedPtr<Scope> newScope) const {
     getBody()->setScope(newScope);
-    // getBody()->getScope()->owner = generateScopeOwner("Method", name);
 }
-
-// SharedPtr<CallableSignature> Method::toCallableSignature() {
-//     DEBUG_FLOW(FlowLevel::LOW);
-//     DEBUG_LOG(LogLevel::TRACE, "Callable Type: ", callableTypeAsString(this->callType));
-//     DEBUG_LOG(LogLevel::TRACE, "subType: ", callableTypeAsString(this->subType));
-
-//     SharedPtr<CallableSignature> methodSig = std::make_shared<CallableSignature>(
-//         shared_from_this(), getCallableType()
-//     );
-
-//     methodSig->setSubType(getSubType());
-
-//     if (methodSig->getCallableType() == CallableType::DEF) {
-//         throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));
-//     }
-//     DEBUG_FLOW_EXIT();
-//     return methodSig;
-// }
-
-// DEBUG_FLOW(FlowLevel::LOW);
-// DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
-// DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(getSubType()));
 
 
 SharedPtr<CallableSignature> Method::toCallableSignature() {
@@ -102,12 +74,6 @@ SharedPtr<CallableSignature> Method::toCallableSignature() {
     return methodSig;
 }
 
-
-    // Node execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<InstanceNode> instanceNode) const override;
-
-// Execute: Create a new method activation scope from the captured scope, bind parameters, and evaluate the body.
-
-// Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<Callable> instanceNode) const {}
 Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided");}

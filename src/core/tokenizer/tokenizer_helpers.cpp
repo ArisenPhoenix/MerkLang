@@ -198,3 +198,27 @@ void Tokenizer::finalizeIndentation(Vector<Token>& tokens) {
         indentStack.pop_back();
     }
 }
+
+
+bool isUpper(char c) {
+    return std::isupper(static_cast<unsigned char>(c));
+}
+
+
+bool Tokenizer::isCapitalizedType(size_t pos) const {
+    if (pos >= sourceLength) return false;
+
+    if (!std::isupper(static_cast<unsigned char>(source[pos]))) return false;
+
+    // Continue checking for alphanumeric identifier
+    while (pos < sourceLength) {
+        char c = source[pos];
+        if (!(std::isalpha(static_cast<unsigned char>(c)) || std::isdigit(static_cast<unsigned char>(c)))) {
+            break;
+        }
+        pos++;
+    }
+
+    return true;
+}
+

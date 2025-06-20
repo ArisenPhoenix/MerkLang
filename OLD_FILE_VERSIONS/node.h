@@ -172,7 +172,7 @@ public:
     // Move assignment operator
     LitNode& operator=(LitNode&& other) noexcept; 
 
-    String toString() const override;
+    // String toString() const override;
 
 };
 
@@ -186,11 +186,8 @@ public:
     explicit VarNode(const VariantType& value, bool isConst = false, bool isMutable = true, bool isStatic = false);
     explicit VarNode(const String& value, const String& typeStr, bool isConst = false, bool isMutable = true, bool isStatic = false);
     explicit VarNode(const Node& parentNode, bool isConst = false, bool isMutable = true, bool isStatic = false);
-
-    // // For Static Typing
-    explicit VarNode(const String value, const String& type, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = false);
-    explicit VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = true);
-    
+    VarNode(const String value, const String& type, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag = std::nullopt, bool isStatic = false);
+    VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag = std::nullopt, bool isStatic = true);
     // Copy Constructor
     VarNode(const VarNode& other);
 
@@ -206,6 +203,7 @@ public:
     void setValueFromVariant(VariantType newValue) {
         setValue(newValue); // Calls the original setValue method in Node
     }
+
 
     // void setValue(const Node& other) override;
     void setValue(const Node& other);

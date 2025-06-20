@@ -68,7 +68,7 @@ LiteralValue::LiteralValue(LitNode value, SharedPtr<Scope> scope, bool isString,
     }
 
 // Variable Constructors
-VariableDeclaration::VariableDeclaration(String name, VarNode value, SharedPtr<Scope> scope, std::optional<std::type_index> typeTag, UniquePtr<ASTStatement> valueNode)
+VariableDeclaration::VariableDeclaration(String name, VarNode value, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
     : ASTStatement(scope), name(std::move(name)), variable(std::move(value)),
         typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
         validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
@@ -139,8 +139,7 @@ Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shar
 
     validateScope(scope, "VariableDeclaration");
     DEBUG_LOG(LogLevel::TRACE, highlight("[VariableDeclaration::evaluate]", Colors::orange), valueExpression->toString());
-
-    Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, scope, instanceNode);
+    Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, typeTag, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;

@@ -42,8 +42,6 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
         throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
 
     }
-    // isConst = startToken.value == "const";
-    // advance();  // Consume 'var' or 'const'
 
     if (startToken.value == "var" || startToken.value == "const") {
         if (peek().type == TokenType::ChainEntryPoint) {
@@ -61,8 +59,14 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     advance(); //consume variable name
 
 
+    std::optional<NodeValueType> typeTag = parseStaticType();
+    // auto stringType = (typeTag.has_value() ? nodeTypeToString(typeTag.value()) : "NONE");
+    DEBUG_LOG(LogLevel::PERMISSIVE, "TYPE: ", (typeTag.has_value() ? nodeTypeToString(typeTag.value()) : "NONE"));
+
     Token assignment = currentToken();
 
+    // if (assignment.type != TokenType::VarAssignment)
+    
 
     // Expects an assignment operator
     if (assignment.type != TokenType::VarAssignment) {
@@ -80,19 +84,17 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
         throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);
     }
 
-    // Implementation placeholder for when making Merk ALSO statically typed.
-    // It hasn't been done in the Tokenizer yet, values are currently inferred
     const bool isStatic = false;  
     if (variableToken.type == TokenType::ChainEntryPoint) {
         throw std::logic_error("Invalid: ChainEntryPoint token passed into VarNode logic.");
     }
-    auto varNode = VarNode(variableToken.value, variableToken.typeAsString(), isConst, isMutable, isStatic);
-    
+    auto varNode = VarNode(variableToken.value, isConst, isMutable, isStatic);
+    // auto varNode = VarNode(variableToken.value, variableToken.typeAsString(), isConst, isMutable, typeTag, isStatic);
     auto varDec = makeUnique<VariableDeclaration>(
         variableToken.value,
         varNode,
         currentScope,  // Use the currentScope at the time of declaration
-        std::nullopt,
+        typeTag,
         std::move(valueNode)
     );
     // return variableToken.type == TokenType::Variable ? std::move(varDec) : makeUnique<AttributeDeclaration>(AttributeDeclaration(std::move(varDec)));
@@ -205,14 +207,19 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     Token token = currentToken();
 
     if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool) {
-        LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Constructing LitNode");
 
+        LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
+        DEBUG_LOG(LogLevel::PERMISSIVE, "LitNode Constructed");
+
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Constructing LiteralValue");
         auto literalVal = makeUnique<LiteralValue>(
             nodeLiteral,
             currentScope,
             token.type == TokenType::String,
             token.type == TokenType::Bool
         );
+        DEBUG_LOG(LogLevel::PERMISSIVE, "LiteralValue Constructed");
 
         advance();  // Consume Literal Value
         DEBUG_FLOW_EXIT();

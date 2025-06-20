@@ -70,7 +70,7 @@ private:
     UniquePtr<CodeBlock> parseBlock(SharedPtr<Scope> = nullptr);
     UniquePtr<BaseAST> parseStatement();
     
-
+    std::optional<NodeValueType> getTypeFromString(String typeStr);
     std::optional<std::type_index> getStaticType();
     void interpret(CodeBlock* CodeBlockForEvaluation) const;
     void interpret(ASTStatement* CodeBlockForEvaluation) const;

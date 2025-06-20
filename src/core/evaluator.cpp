@@ -104,13 +104,15 @@ namespace Evaluator {
         (void)isString;
         (void)isBool;
         DEBUG_FLOW(FlowLevel::LOW);
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Literal Value: ", value);
         return value;
     }
 
-    Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
+    Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, std::optional<NodeValueType> typeTag, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::LOW);
         DEBUG_LOG(LogLevel::TRACE, "Evaluating Variable Declaration");
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+        DEBUG_LOG(LogLevel::PERMISSIVE, "TypeTag: ", typeTag.has_value() ? nodeTypeToString(typeTag.value()) : nodeTypeToString(NodeValueType::Null));
 
         VarNode resolvedVariable;
         AstType valueNodeType = valueNode->getAstType();
@@ -121,7 +123,12 @@ namespace Evaluator {
         }
         // VarNode  // Use the current scope
         size_t before = instanceScope->getContext().getVariables().size();
-        instanceScope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, var.isStatic)); // Declare variable in scope
+        // VarNode(resolvedVariable, var.isConst, var.isMutable);
+        // VarNode(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic);
+        // instanceScope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic));
+        
+        instanceScope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable));
+        // instanceScope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic));
 
         if (!resolvedVariable.isValid()) {
             throw MerkError("Invalid node returned during VariableDeclaration evaluation.");

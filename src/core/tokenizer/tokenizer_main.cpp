@@ -4,23 +4,6 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
 
-// bool Tokenizer::isLogicOperator() {
-//     size_t start = position;
-//     int startColumn = column;
-
-//     // Read identifier (letters, digits, underscores)
-//     while (position < sourceLength && (isLetter(source[position])) && (!isWhitespace(source[position]))) {
-//         start++;
-//         startColumn++;
-//     }
-
-//     String value = source.substr(start, position - start);
-//     if (value == "and" || value == "or" || value == "not"){
-//         return true;
-//     }
-//     return false;
-// }
-
 
 bool Tokenizer::isLogicOperator() {
     size_t lookahead = position;
@@ -87,14 +70,6 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
-        // else if (isLogicOperator()){
-        //     Token string = readString();
-        //     tokens.push_back(Token(TokenType::Operator, string.value, line, column));
-        //     position+=string.value.size();
-        //     column ++;
-        //     continue;
-        // }
-
         // Handle compound operators first
         if ((isOperator(source[position]) || isPunctuation(source[position])) &&
             (isOperator(peek()) || isPunctuation(peek()))) {
@@ -118,8 +93,6 @@ Vector<Token> Tokenizer::tokenize() {
             // size_t idStart = position;
             Token identifier = readIdentifier();  // advances past identifier
         
-            // Peek at the char immediately after the identifier
-            // char nextChar = position < sourceLength ? source[position] : '\0';
             char nextChar = position < sourceLength ? source[position] : '\0';
         
             char nextNextChar = peek();
@@ -130,6 +103,11 @@ Vector<Token> Tokenizer::tokenize() {
             }
         
             tokens.push_back(identifier);
+            skipWhitespace();
+            
+            if (handleOptionalType(tokens)) {
+                continue;  // We've already tokenized the type annotation
+            }
         } else if (isDigit(source[position])) {
             tokens.push_back(readNumber());
         } else if (source[position] == '"') {
@@ -465,3 +443,38 @@ bool Tokenizer::isPunctuation(char c) const {
 }
 
 
+bool Tokenizer::handleOptionalType(Vector<Token>& tokens) {
+    if (position < sourceLength && source[position] == ':') {
+        // size_t colonPos = position;
+        int colonCol = column;
+        
+
+        
+        
+        if (!isFunction(previousToken().value) && !isClass(previousToken().value)){
+            skipWhitespace();  // Allow optional space
+            position++;
+            column++;
+            skipWhitespace();
+            if (isCapitalizedType(position)) {
+            // Parse the type
+                size_t typeStart = position;
+                int typeCol = column;
+                while (position < sourceLength &&
+                    (isLetter(source[position]) || isDigit(source[position]))) {
+                    position++;
+                    column++;
+                }
+
+                String typeStr = source.substr(typeStart, position - typeStart);
+                tokens.emplace_back(TokenType::Punctuation, ":", line, colonCol);
+                tokens.emplace_back(TokenType::Type, typeStr, line, typeCol);
+                return true;
+            } else {
+                throw TokenizationError("Expected a capitalized type after ':'", line, column, currentLineText);
+            }
+        }
+        
+    }
+    return false;
+}
