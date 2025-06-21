@@ -101,9 +101,11 @@ Vector<Token> Tokenizer::tokenize() {
             }
         
             tokens.push_back(identifier);
-            skipWhitespace();
             
-            if (previousToken().type == TokenType::Variable && handleOptionalType(tokens)) {
+            nextChar = position + 2 < sourceLength ? source[position + 2] : '\0';
+            if (previousToken().type == TokenType::Variable && !isWhitespace(nextChar) && handleOptionalType(tokens)) {
+                skipWhitespace();
+
                 continue;  // already tokenized the type annotation
             }
         } else if (isDigit(source[position])) {
