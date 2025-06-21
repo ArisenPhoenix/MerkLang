@@ -404,8 +404,14 @@ namespace Evaluator {
     Node evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         // (void)scope;
         // (void)instanceNode;
-        auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         DEBUG_FLOW(FlowLevel::LOW);
+
+        auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+
+        DEBUG_LOG(LogLevel::PERMISSIVE, "WHILE LOOP SCOPE");
+        instanceScope->debugPrint();
+        instanceScope->printChildScopes();
+
         if (!body) {
             DEBUG_LOG(LogLevel::INFO, "Error: WhileLoop body is nullptr!");
             DEBUG_FLOW_EXIT();

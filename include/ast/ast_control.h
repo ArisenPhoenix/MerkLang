@@ -250,6 +250,8 @@ public:
 
     FreeVars collectFreeVariables() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    void setScope(SharedPtr<Scope> newScope) override;
+
 };
 
  

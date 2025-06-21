@@ -220,7 +220,7 @@ WhileLoop::WhileLoop(UniquePtr<ConditionalBlock> condition, UniquePtr<CodeBlock>
 WhileLoop::~WhileLoop(){
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
-    DEBUG_LOG(LogLevel::FLOW, "Destroyed WhileLoop with scope level: ", getScope()->getScopeLevel());
+    DEBUG_LOG(LogLevel::FLOW, "Destroyed WhileLoop with scope level: ");
 
     DEBUG_FLOW_EXIT();
 
@@ -253,6 +253,8 @@ Node WhileLoop::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
     DEBUG_FLOW(FlowLevel::LOW);
 
     DEBUG_LOG(LogLevel::INFO, "Evaluating WhileLoop with scope level: ", scope->getScopeLevel());
+    getScope()->debugPrint();
+    getScope()->printChildScopes();
     Node val = Evaluator::evaluateWhileLoop(*condition, body.get(), scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
@@ -371,7 +373,14 @@ void IfStatement::setScope(SharedPtr<Scope> newScope) {
     }
 }
 
+void WhileLoop::setScope(SharedPtr<Scope> newScope) {
+    scope = newScope;
+    condition->setScope(newScope);
+    body->setScope(newScope);
+}
+
 void LoopBlock::setScope(SharedPtr<Scope> newScope) {
+    scope = newScope;
     condition->setScope(newScope);
     body->setScope(newScope->createChildScope());
 }
