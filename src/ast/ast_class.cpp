@@ -63,15 +63,12 @@ MethodCall::MethodCall(String name, Vector<UniquePtr<ASTStatement>> arguments, S
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
-    // auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-
+    scope->owner = generateScopeOwner("MethodCall", name);
     Vector<Node> evaluatedArgs = handleArgs(scope);
 
     DEBUG_LOG(LogLevel::PERMISSIVE, "HANDLED ARGS IN METHOD CALL :: EVALUATE");
 
     if (!scope->hasFunction(name)){
-        scope->debugPrint();
-        scope->printChildScopes();
         throw MerkError("Method: " + name + " Couldn't Be Found");
     }
     DEBUG_LOG(LogLevel::ERROR, highlight("Found Function " + name, Colors::yellow));
@@ -139,7 +136,9 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 
     if (!classDefCapturedScope) {throw MerkError("Failed to create detachedScope in ClassDef::evaluate");}
 
-
+    if (!parameters.eraseByName(accessor)) {
+        throw MerkError("No Accessor Was Provided In Class Constructor");
+    }
 
     // auto classScope = classDefCapturedScope->createChildScope();
     // auto classScope = classDefCapturedScope->makeCallScope();
@@ -153,9 +152,6 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     // classScope->debugPrint();
 
     SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
-    if (!parameters.eraseByName(accessor)){
-        throw MerkError("Accessor Was Not Removed From The ClassDef parameters list");
-    };
     cls->setParameters(parameters.clone());
     cls->setCapturedScope(classDefCapturedScope);
     if (!cls->getCapturedScope()) {throw MerkError("CapturedScope was not set correctly on the ClassBase.");}
@@ -197,9 +193,6 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     DEBUG_LOG(LogLevel::TRACE, "ClassDef::classScope created: ");
     // if (cls->getClassScope()->hasVariable("x")){throw MerkError("ClassDef::evaluate -> cls Already Has Variable 'x' at instance construction time.");}
     auto classNode = ClassNode(cls);
-    
-
-
     
     DEBUG_FLOW_EXIT();
     return classNode;
@@ -261,7 +254,9 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
         DEBUG_LOG(LogLevel::PERMISSIVE, arg->toString());
     }
     Vector<Node> argValues = handleArgs(callScope);
-
+    if (argValues.size() < arguments.size()){
+        throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");
+    }
     if (argValues.size() == 0){
         throw MerkError("There Are No argValues in ClassCall::evaluate.");
     }

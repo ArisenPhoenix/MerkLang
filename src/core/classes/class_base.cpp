@@ -224,7 +224,6 @@ SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
 }
 
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!getInstanceScope()->hasFunction("construct")) {
         throw MerkError("A construct method must be implemented in class: " + getName());
     }
@@ -232,16 +231,16 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     auto methodOpt = getInstanceScope()->getFunction("construct", args);
     if (!methodOpt) {
         throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");
-    }    
+    }
+    
 
     SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
-    auto params = parameters.clone();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Got Construct Method");
 
-    params.verifyArguments(args);
-    for (size_t i = 0; i < params.size(); ++i) {
-        methodCallScope->declareVariable(params[i].getName(), makeUnique<VarNode>(args[i]));
-    }
+    auto params = parameters.clone();
+    // params.verifyArguments(args);
+    // for (size_t i = 0; i < params.size(); ++i) {
+    //     methodCallScope->declareVariable(params[i].getName(), makeUnique<VarNode>(args[i]));
+    // }
 
     SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(self);
 
@@ -249,7 +248,6 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     method->execute(args, methodCallScope, instanceNode); 
 
     isConstructed = true;
-    DEBUG_FLOW_EXIT();
 }
 
 
