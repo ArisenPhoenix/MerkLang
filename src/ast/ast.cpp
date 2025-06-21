@@ -23,9 +23,9 @@
 #include "core/scope.h"
 
 
-// BaseAST::~BaseAST() {
-//     getScope().reset();
-// }
+FreeVars FreeVarCollection::collectFreeVariables() const {
+    return {};
+}
 
 BaseAST::~BaseAST() = default;
 
@@ -48,17 +48,6 @@ bool validateLeftAndRightAST(const UniquePtr<ASTStatement>& left, const UniquePt
 }
 
 BaseAST::BaseAST(SharedPtr<Scope> scope) {(void)scope;}
-
-// void BaseAST::setScope(SharedPtr<Scope> newScope) {
-//     DEBUG_FLOW(FlowLevel::LOW);
-
-//     if (!newScope){
-//         throw MerkError("Trying to set a null scope in BaseAST.");
-//     }
-//     scope = newScope;
-//     DEBUG_FLOW_EXIT();
-// }
-
 
 
 // Basic Constructors
@@ -100,12 +89,11 @@ VariableAssignment::VariableAssignment(UniquePtr<VariableAssignment> varAssign) 
 
 VariableReference::VariableReference(const String& name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
-        DEBUG_LOG(LogLevel::TRACE, "-------------------- VariableReference: ", "Name: ", name);
-        if (scope){
-            DEBUG_LOG(LogLevel::TRACE, "Scope: ", scope->getScopeLevel(), "Valid: ");
-        }
-        // validateScope(scope, "VariableReference::VariableReference", name);
+    DEBUG_LOG(LogLevel::TRACE, "-------------------- VariableReference: ", "Name: ", name);
+    if (scope){
+        DEBUG_LOG(LogLevel::TRACE, "Scope: ", scope->getScopeLevel(), "Valid: ");
     }
+}
 
 UnaryOperation::UnaryOperation(const String& op, UniquePtr<ASTStatement> operand, SharedPtr<Scope> scope)
     : ASTStatement(scope), op(op), operand(std::move(operand)) {
@@ -157,13 +145,11 @@ Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Share
 }
 
 Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    // (void)scope;
     DEBUG_FLOW(FlowLevel::HIGH);
 
     validateScope(scope, "VariableReference::evluate", "Name = " + name);
 
     VarNode& varRef = Evaluator::evaluateVariableReference(name, scope, instanceNode); 
-    // Node val = Node(varRef);
     DEBUG_FLOW_EXIT();
     return varRef;
 };
@@ -171,17 +157,22 @@ Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shared
 
 // Computation Evaluations
 Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     validateScope(scope, "BinaryOperation::evaluate", left->toString() + " " + op + " " + right->toString());
     validateLeftAndRightAST(left, right, "BinaryOperation", op);
-    auto leftValue = left->evaluate(scope);
-    auto rightValue = right->evaluate(scope);
+    auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+    auto leftValue = left->evaluate(instanceScope, instanceNode);
+    auto rightValue = right->evaluate(instanceScope, instanceNode);
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Left Value: ", leftValue);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Right Value: ", rightValue);
 
     validateLeftAndRightNodes(leftValue, rightValue, "BinaryOperation", op);
 
 
-    Node val = Evaluator::evaluateBinaryOperation(op, leftValue, rightValue, scope);
+    Node val = Evaluator::evaluateBinaryOperation(op, leftValue, rightValue, scope, instanceNode);
+    DEBUG_LOG(LogLevel::DEBUG, "Output Value: ", val);
     DEBUG_FLOW_EXIT();
     return val;
 };
@@ -191,7 +182,7 @@ Node UnaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     validateScope(scope, "UnaryOperation::evaluate", op);
 
     Node operandValue = operand->evaluate(scope);
-    Node val = Evaluator::evaluateUnaryOperation(op, operandValue);
+    Node val = Evaluator::evaluateUnaryOperation(op, operandValue, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
 }
@@ -241,7 +232,7 @@ Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassIn
     if (!returnValue) {
         throw RunTimeError("Return statement must have a value.");
     }
-    auto value = returnValue->evaluate(scope);
+    auto value = returnValue->evaluate(scope, instanceNode);
 
     DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
 

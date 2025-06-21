@@ -224,6 +224,7 @@ SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
 }
 
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!getInstanceScope()->hasFunction("construct")) {
         throw MerkError("A construct method must be implemented in class: " + getName());
     }
@@ -231,15 +232,24 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     auto methodOpt = getInstanceScope()->getFunction("construct", args);
     if (!methodOpt) {
         throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");
-    }
+    }    
 
     SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
+    auto params = parameters.clone();
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Got Construct Method");
+
+    params.verifyArguments(args);
+    for (size_t i = 0; i < params.size(); ++i) {
+        methodCallScope->declareVariable(params[i].getName(), makeUnique<VarNode>(args[i]));
+    }
+
     SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(self);
 
     auto method = std::static_pointer_cast<Method>(methodOpt->getCallable());
-    method->execute(args, methodCallScope, instanceNode);
+    method->execute(args, methodCallScope, instanceNode); 
 
     isConstructed = true;
+    DEBUG_FLOW_EXIT();
 }
 
 
@@ -259,18 +269,6 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
 Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
     (void)scope;
-    // DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    // auto classScope = getCapturedScope();
-    // if (!classScope->hasFunction("__call__")) {
-    //     throw MerkError("This class instance is not callable.");
-    // }
-
-    // auto sigOpt = classScope->getFunction("__call__", args);
-    // if (!sigOpt) {
-    //     throw MerkError("No matching '__call__' overload found.");
-    // }
-    // DEBUG_FLOW_EXIT();
-    // return sigOpt->call(args, classScope);
     return Node("Null");
 }
 
@@ -355,7 +353,7 @@ Node ClassInstance::call(String name, Vector<Node> args) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto methodSig = getInstanceScope()->getFunction(name, args);
     auto method = methodSig->getCallable();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Current Method", method->toString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Method", method->toString());
 
     SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
     auto instance = std::static_pointer_cast<ClassInstance>(shared_from_this());
@@ -397,10 +395,7 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
 
 Node ClassInstance::getField(const String& fieldName) const {                    // assumes a variable
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    
-    DEBUG_LOG(LogLevel::PERMISSIVE, "PRINTING OUT INSTANCE SCOPE DATA:");
-    // getInstanceScope()->debugPrint();
-    // getInstanceScope()->printChildScopes();
+
 
     DEBUG_FLOW_EXIT();
     return getInstanceScope()->getVariable(fieldName);
@@ -481,7 +476,7 @@ SharedPtr<Scope> ClassInstanceNode::getInstanceScope() {
 SharedPtr<ClassInstance> ClassInstanceNode::getInstance() const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Current Instance Type: ", this);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Instance Type: ", this);
     auto val = std::get<SharedPtr<ClassInstance>>(data.value); 
     auto instance = std::static_pointer_cast<ClassInstance>(val);
     return instance;

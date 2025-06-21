@@ -137,7 +137,7 @@ bool CallableSignature::getIsUserFunction() { return callType != CallableType::N
 
 
 Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::LOW);
     // scope->debugPrint();
     // scope->printChildScopes();
     auto val = callable->execute(args, scope);
@@ -216,52 +216,32 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
     return evaluatedArgs;
 }
 
-Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    auto val = Evaluator::evaluateBlock(children, scope);
+Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+    auto val = Evaluator::evaluateBlock(children, scope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
 }
 
-Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
+Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
     // std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
     // std::cerr << "Type: " << getAstTypeAsString() << std::endl;
     throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 
-Node CallableCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
+Node CallableCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
     return Node(scope->getVariable("var"));
 }
 
 
-Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceScope) const {
+Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
     return Node(scope->getVariable("var"));
 }
 
 
-void CallableBody::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), "(scopeLevel " + std::to_string(getScope()->getScopeLevel()) + ")");
-    for (auto& child : children){
-        child->printAST(os, indent);
-    }
-}
-
-void CallableDef::printAST(std::ostream& os, int indent) const {
-    auto paramStr = !parameters.empty() ?  parameters.toShortString() : "";
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), name, "(" + paramStr + ")", "| scope", getScope()->getScopeLevel());
-    body->printAST(os, indent);
-};
-
-
-void CallableCall::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), "()");
-}
 
 
 CallableSignature::~CallableSignature() {

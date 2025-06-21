@@ -142,10 +142,8 @@ public:
     void linkMethods(Vector<SharedPtr<MethodSignature>>& methodVec, String& methodName, SharedPtr<Scope> instanceScope);
 
     void linkInstanceMethods(SharedPtr<Scope> classTemplateScope, SharedPtr<Scope> instanceScope);
-        // // Probably Not Needed Anymore
-    // void registerCallableType(const String& name, CallableType type);
-    // std::optional<CallableType> getCallableType(const String& name) const;
-    // Node resolveCallable(const String& name, const Vector<Node>& args = {});
+    
+    SharedPtr<Scope> isolateScope(const std::unordered_set<String>& freeVarNames);
     
 
 

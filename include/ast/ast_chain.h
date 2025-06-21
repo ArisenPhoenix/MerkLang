@@ -95,7 +95,9 @@ public:
     void setFirstElement(UniquePtr<ASTStatement> probablyScope, String name);
 
     SharedPtr<Scope> getLastScope();
+    SharedPtr<Scope> getLastScope() const;
     void setLastScope(SharedPtr<Scope> mostRecentScope) const;
+    FreeVars collectFreeVariables() const override;
     
 };
 
@@ -147,6 +149,8 @@ public:
     void setResolutionMode(ResolutionMode newMode, String accessor);
     void setResolutionStartIndex(int index, String accessor);
     void setResolutionMethod(int index, ResolutionMode newMode, SharedPtr<Scope> newScope, String accessor);
+    FreeVars collectFreeVariables() const override;
+
 };
 
 

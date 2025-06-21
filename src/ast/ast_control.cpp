@@ -233,7 +233,7 @@ Break::Break(SharedPtr<Scope> scope) : ASTStatement(scope) {
     DEBUG_FLOW_EXIT();
 }
 
-Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {return condition.get()->evaluate(scope);}
+Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {return condition.get()->evaluate(scope, instanceNode);}
 Node ConditionalBlock::evaluate() const {return condition.get()->evaluate(getScope());}
 
 // Loop Evaluations
@@ -251,7 +251,7 @@ Node WhileLoop::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
     DEBUG_FLOW(FlowLevel::LOW);
 
     DEBUG_LOG(LogLevel::INFO, "Evaluating WhileLoop with scope level: ", scope->getScopeLevel());
-    Node val = Evaluator::evaluateWhileLoop(*condition, body.get(), scope);
+    Node val = Evaluator::evaluateWhileLoop(*condition, body.get(), scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -263,7 +263,7 @@ Node CodeBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
     DEBUG_FLOW(FlowLevel::LOW);
 
     validateScope(scope, "CodeBlock::evaluate(scope)");
-    Node val =  Evaluator::evaluateBlock(children, scope);
+    Node val =  Evaluator::evaluateBlock(children, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -304,7 +304,7 @@ Node IfStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     }
     validateScope(scope, "IfStatement::evaluate", condition->toString());
 
-    Node val = Evaluator::evaluateIf(*this, scope);
+    Node val = Evaluator::evaluateIf(*this, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -392,7 +392,7 @@ Node NoOpNode::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]
     validateScope(scope, "Break");
 
     DEBUG_FLOW_EXIT();
-    Evaluator::evaluateBreak(scope);
+    Evaluator::evaluateBreak(scope, instanceNode);
 }
 
 

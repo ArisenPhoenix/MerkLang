@@ -6,8 +6,9 @@
 #include "ast/ast.h"
 #include "core/functions/function_node.h"
 
-class Scope;
 
+class Scope;
+// class FreeVars;
 
 class ParameterAssignment : public VariableAssignment {
 public:

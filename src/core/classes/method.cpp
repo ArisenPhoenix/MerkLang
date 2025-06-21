@@ -75,18 +75,24 @@ SharedPtr<CallableSignature> Method::toCallableSignature() {
 }
 
 Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    (void)args;
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided");}
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Executing Method with below scope");
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("+++++++++++++++++++ EXECUTING METHOD " + name + " **********************", Colors::orange));
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("CALLSCOPE FOR ADDING PARAMETERS: ", Colors::bg_blue));
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING METHOD ", name);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD", name, "CALL SCOPE BEFORE PARAMS ADDED");
     callScope->owner = generateScopeOwner("MethodExecutor", name);
+    // callScope->debugPrint();
+    // callScope->printChildScopes();
 
-    auto params = parameters.clone();
-    params.verifyArguments(args);
-    for (size_t i = 0; i < params.size(); ++i) {
-        callScope->declareVariable(params[i].getName(), makeUnique<VarNode>(args[i]));
-    }
+    // auto params = parameters.clone();
+    // params.verifyArguments(args);
+    // for (size_t i = 0; i < params.size(); ++i) {
+    //     callScope->declareVariable(params[i].getName(), makeUnique<VarNode>(args[i]));
+    // }
+
+    
     
     try {
 
@@ -97,7 +103,15 @@ Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unus
         if (!callScope){throw MerkError("Method " + name +" Has No Call Scope:");}
 
         if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided just before body->evaluate");}
-        String matches = callScope == capturedScope ? "true" : "false";
+
+        // // capturedScope->appendChildScope(callScope);
+
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Method", name, "Captured Full Scope");
+        // // capturedScope->debugPrint();
+        // // capturedScope->printChildScopes();
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD", name, "CALL SCOPE AFTER PARAMS ADDED");
+        // callScope->debugPrint();
+        // callScope->printChildScopes();
 
         Node val = body->evaluate(callScope, instanceNode);
         DEBUG_FLOW_EXIT();

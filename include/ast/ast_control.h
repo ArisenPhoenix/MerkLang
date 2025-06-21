@@ -8,7 +8,6 @@
 
 // This alias was used for clarity, when dealing with free variables specifically. 
 // The codebase is getting quite large so being explicit has helped to avoid unnecessary problems
-using FreeVars = std::unordered_set<String>;
 
 class Scope;
 
@@ -19,13 +18,7 @@ public:
 };
 
 // Used as sort of a mixin class for a common interface among only those classes needing it.
-class FreeVarCollection {
-public:
-    mutable FreeVars freeVars;
-    mutable FreeVars localAssign;
-    virtual FreeVars collectFreeVariables() const = 0;
-    ~FreeVarCollection();
-};
+
  
 class AstCollector {
 protected:
@@ -42,7 +35,7 @@ public:
 
     
 
-class CodeBlock : public BaseAST, public FreeVarCollection, AstCollector {
+class CodeBlock : public BaseAST, AstCollector {
 
 protected:
     SharedPtr<Scope> scope;
@@ -81,11 +74,12 @@ public:
     friend class MethodBody;
     friend class ClassDef;
     friend class MethodDef;
+    friend class CallableDef;
 
     UniquePtr<BaseAST> clone() const override;
     
     void setScope(SharedPtr<Scope> newScope) override;
-    FreeVars collectFreeVariables() const override;
+    virtual FreeVars collectFreeVariables() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 protected:
@@ -117,7 +111,7 @@ public:
 
 
 
-class ElseStatement : public ASTStatement, public FreeVarCollection {
+class ElseStatement : public ASTStatement {
     mutable UniquePtr<CodeBlock> body;
 public:
     explicit ElseStatement(UniquePtr<CodeBlock> body, SharedPtr<Scope> scope);
@@ -137,7 +131,7 @@ public:
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 
-class ElifStatement : public ASTStatement, public FreeVarCollection { // Also contains the logic of If, parser's job to ensure if is always first.
+class ElifStatement : public ASTStatement { // Also contains the logic of If, parser's job to ensure if is always first.
 
 protected:
     mutable UniquePtr<CodeBlock> body;
@@ -165,7 +159,7 @@ public:
 // Originally IfStatement inherited from ElifStatement because if it quacks and walks like a duck...
 // During some debugging it was made to be a standalone, the issue was not related to its derivative
 // However, I haven't decided to make it inherit from Elif again, for actually no good reason, though it is a bit counterintuitive.
-class IfStatement : public ASTStatement, public FreeVarCollection {
+class IfStatement : public ASTStatement {
 protected:
     mutable UniquePtr<CodeBlock> body;
     UniquePtr<ConditionalBlock> condition;
@@ -214,11 +208,10 @@ public:
     AstType getAstType() const override {return AstType::NoOp;};
     void printAST(std::ostream& os, int indent = 0) const override;
     UniquePtr<BaseAST> clone() const override;
-    // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 }; 
 
 // New base class for loops
-class LoopBlock : public ASTStatement, public FreeVarCollection {
+class LoopBlock : public ASTStatement {
 protected:
     UniquePtr<ConditionalBlock> condition; // Condition to check before each iteration
     UniquePtr<CodeBlock> body;             // The loop's body
@@ -236,10 +229,10 @@ public:
 
     virtual AstType getAstType() const override {return AstType::LoopBlock;};
     virtual String toString() const override { return getAstTypeAsString();}
-    virtual FreeVars collectFreeVariables() const override = 0;
 
     void setScope(SharedPtr<Scope> newScope) override;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override = 0;
+    virtual FreeVars collectFreeVariables() const override {return {};}
 
     
 

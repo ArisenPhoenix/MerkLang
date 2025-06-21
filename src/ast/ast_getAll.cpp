@@ -243,8 +243,8 @@ Vector<const BaseAST*> CallableCall::getAllAst(bool includeSelf) const {
 
 Vector<const BaseAST*> BinaryOperation::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all = {};
-    DEBUG_LOG(LogLevel::PERMISSIVE, "BinaryOperation left type: ", left->getAstTypeAsString());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "BinaryOperation right type: ", right->getAstTypeAsString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "BinaryOperation left type: ", left->getAstTypeAsString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "BinaryOperation right type: ", right->getAstTypeAsString());
 
     if (includeSelf){
         all.push_back(this);
@@ -266,7 +266,7 @@ Vector<const BaseAST*> BinaryOperation::getAllAst(bool includeSelf) const {
 
 Vector<const BaseAST*> Return::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all = {};
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Return AST type of returnValue: ", returnValue->getAstTypeAsString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Return AST type of returnValue: ", returnValue->getAstTypeAsString());
 
     if (includeSelf){
         all.push_back(this);
@@ -307,10 +307,10 @@ Vector<const BaseAST*> ChainOperation::getAllAst(bool includeSelf) const {
 
     auto lhsNodes = lhs->getAllAst(includeSelf);
     mergeVectors(all, lhsNodes);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation getAllAst: lhs type = ", lhs->getAstTypeAsString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation getAllAst: lhs type = ", lhs->getAstTypeAsString());
 
     if (rhs) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation getAllAst: rhs type = ", rhs->getAstTypeAsString());
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation getAllAst: rhs type = ", rhs->getAstTypeAsString());
 
         auto rhsNodes = rhs->getAllAst(includeSelf);
         mergeVectors(all, rhsNodes);

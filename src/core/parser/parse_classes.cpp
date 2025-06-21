@@ -13,47 +13,42 @@
 
 
 
-
-// IdentifierType inferIdentifierType(TokenType type) {
-//     switch (type) {
-//         case TokenType::Variable: return IdentifierType::Variable;
-//         case TokenType::FunctionRef: return IdentifierType::Function;
-//         case TokenType::ClassMethodRef: return IdentifierType::Method;
-//         case TokenType::ClassRef: return IdentifierType::Class;
-//         case TokenType::Parameter: return IdentifierType::Variable;
-//         // default: return IdentifierType::Variable;
-//         default: throw MerkError("infereIdentifier found no matching tokens from " + tokenTypeToString(type));
+// std::tuple<bool, bool, String> Parser::handleIsVarDec() {
+//     Token startToken = currentToken();
+//     // DEBUG_LOG(LogLevel::PERMISSIVE, "StartToken: ", startToken.toColoredString());
+//     bool isDeclaration = startToken.type == TokenType::VarDeclaration;
+//     bool isConst = false;
+//     if (!(startToken.type == TokenType::VarDeclaration || startToken.type == TokenType::ChainEntryPoint)) {
+//         return std::make_tuple(isDeclaration, isConst, "");
 //     }
+
+    
+//     isConst = startToken.value == "const";
+//     if (isDeclaration) {
+//         advance(); //consume (var/const)
+//         auto nextToken = currentToken();
+//         if (nextToken.type == TokenType::Variable || nextToken.type == TokenType::ChainEntryPoint){
+//             // advance(); //consume (const/var)
+//             return std::make_tuple(isDeclaration, isConst, String(startToken.value));
+//         }
+//     }
+
+//     return std::make_tuple(isDeclaration, isConst, "");
+    
 // }
 
-
-std::tuple<bool, bool, String> Parser::handleIsVarDec() {
-    Token startToken = currentToken();
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "StartToken: ", startToken.toColoredString());
-    bool isDeclaration = startToken.type == TokenType::VarDeclaration;
-    bool isConst = false;
-    if (!(startToken.type == TokenType::VarDeclaration || startToken.type == TokenType::ChainEntryPoint)) {
-        return std::make_tuple(isDeclaration, isConst, "");
-    }
-
-    
-    isConst = startToken.value == "const";
-    if (isDeclaration) {
-        advance(); //consume (var/const)
-        auto nextToken = currentToken();
-        if (nextToken.type == TokenType::Variable || nextToken.type == TokenType::ChainEntryPoint){
-            // advance(); //consume (const/var)
-            return std::make_tuple(isDeclaration, isConst, String(startToken.value));
-        }
-    }
-
-    return std::make_tuple(isDeclaration, isConst, "");
-    
+ChainElement createChainElement(const Token& token, const Token& delim, UniquePtr<BaseAST> obj) {
+    ChainElement elem;
+    elem.name = token.value;
+    elem.delimiter = delim.value;
+    elem.type = token.type;
+    elem.object = std::move(obj);
+    return elem;
 }
 
-UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
-    (void)isDeclaration;
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
+    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_LOG(LogLevel::DEBUG, "Chain Is Parsing as a Declaration: ", isDeclaration);
     
     auto chain = makeUnique<Chain>(currentScope);
     Token baseToken = currentToken();
@@ -72,22 +67,17 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
     if (baseToken.value == "Scope") {
         DEBUG_LOG(LogLevel::PERMISSIVE, baseToken.toColoredString());
         throw MerkError("BaseToken.value is Scope");
-        }
+    }
 
-    // Add base element
-    ChainElement baseElem;
-    baseElem.name = baseToken.value;
-    baseElem.delimiter = punct.value;
-    baseElem.type = baseToken.type;
-    baseElem.object = makeUnique<VariableReference>(baseToken.value, currentScope);
-    chain->addElement(std::move(baseElem));
+    // ChainElement baseElem = ;
+    chain->addElement(std::move(createChainElement(baseToken, punct, makeUnique<VariableReference>(baseToken.value, currentScope))));
 
     // Parse the rest of the dotted chain
     while (currentToken().type == TokenType::Punctuation && (currentToken().value == "." || currentToken().value == "::")) {
 
         Token delim = currentToken(); // store for later
 
-        advance(); // move past punctuation token
+        advance(); // move past delim/Punctuation token
 
         Token nextToken = currentToken();
         if (nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef) {
@@ -101,16 +91,54 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
         } else {
             currentObject = parseFunctionCall();
         }
-
-        ChainElement elem;
-        elem.name = nextToken.value;
-        elem.delimiter = delim.value;
-        elem.type = nextToken.type;
-        elem.object = std::move(currentObject);
         
-        chain->addElement(std::move(elem));
+        chain->addElement(std::move(createChainElement(nextToken, delim, std::move(currentObject))));
         advance();  // move to next delimiter or assignment
     }
+
+    Token maybeAssignmentOrType = currentToken(); // placeholder for special logic
+    bool isAssignment = maybeAssignmentOrType.type == TokenType::VarAssignment;
+    bool isColonType = maybeAssignmentOrType.value == ":";
+    bool isMutable = maybeAssignmentOrType.value == "=";
+
+
+    if (isAssignment){
+        advance(); // consume `=` or `:=`
+    }
+
+    std::optional<NodeValueType> typeTag = std::nullopt;
+
+    if (isDeclaration || isAssignment){
+        if (maybeAssignmentOrType.type == TokenType::Punctuation) { // means there is a type association
+
+            if (isColonType && peek().type == TokenType::Type) {
+                typeTag = parseStaticType();
+                isMutable = currentToken(). value == "=";
+                advance(); //consume mutability type
+            }
+        }
+        auto& last = chain->getLast();
+         UniquePtr<ASTStatement> rhs = parseExpression();  // gets the expression or value in which to assign variable to later
+        if (isDeclaration) {
+            bool isStatic = typeTag.has_value();
+            if (last.type == TokenType::Variable) {
+                auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
+                last.object = makeUnique<VariableDeclaration>(last.name, varNode, currentScope, typeTag, std::move(rhs));
+            }
+            DEBUG_FLOW_EXIT();
+
+            return chain;
+        } 
+        else if (isAssignment) {
+            if (last.type == TokenType::Variable) {
+                    last.object = makeUnique<VariableAssignment>(last.name, std::move(rhs), currentScope);
+                }
+
+                return chain;
+                DEBUG_FLOW_EXIT();
+            }
+    }
+    
 
     
 
@@ -118,164 +146,103 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration) {
     return chain;
 }
 
-// UniquePtr<ChainOperation> Parser::parseChainOp() {
-//     DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    
-//     bool isDeclaration = currentToken().type == TokenType::VarDeclaration;
-//     // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", currentToken().toColoredString());
-//     bool isConst = false;
-//     if (isDeclaration) {
-//         isConst = currentToken().value == "const";
-//         advance(); // consume declaration token. 
-//     }
 
-//     UniquePtr<Chain> lhs = parseChain(isDeclaration);  // Handles `a.b.c` chains
-//     Token assign = currentToken();
-//     bool isAssignment = assign.type == TokenType::VarAssignment;
-//     bool isStatic = false;                  // placeholder for when static variables are included.
-//     bool isMutable = assign.value == "=";
-//     if (isAssignment){
-//         advance(); // consume `=` or `:=`
-//     }
-
-
-//     if (isDeclaration || isAssignment) {
-//         UniquePtr<ASTStatement> rhs = parseExpression();
-
-//         auto& last = lhs->getLast();
-//         // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", isDeclaration);
-//         if (isDeclaration) {
-//             if (last.type == TokenType::Variable) {
-//                 auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
-//                 last.object = makeUnique<VariableDeclaration>(last.name, varNode, currentScope, std::nullopt, std::move(rhs));
-//             }
-//             DEBUG_FLOW_EXIT();
-
-//             return makeUnique<ChainOperation>(
-//                 std::move(lhs),
-//                 nullptr,
-//                 isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-//                 currentScope,
-//                 isDeclaration ? isConst : false,
-//                 isDeclaration ? isMutable : true,
-//                 isStatic
-//             );
-//         }
-        
-//         DEBUG_FLOW_EXIT();
-//         return makeUnique<ChainOperation>(
-//             std::move(lhs),
-//             std::move(rhs),
-//             isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-//             currentScope,
-//             isDeclaration ? isConst : false,
-//             isDeclaration ? isMutable : true,
-//             isStatic
-//         );
-//     } else {
-//         // DEBUG_LOG(LogLevel::PERMISSIVE, "NOT IS DECLARATION: ", isDeclaration);
-
-//         // Just a value reference
-//         DEBUG_FLOW_EXIT();
-//         return makeUnique<ChainOperation>(
-//             std::move(lhs),
-//             nullptr,
-//             ChainOpKind::Reference,
-//             currentScope
-//         );
-//     }
-// }
 
 
 UniquePtr<ChainOperation> Parser::parseChainOp() {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     
     bool isDeclaration = currentToken().type == TokenType::VarDeclaration;
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", currentToken().toColoredString());
     bool isConst = false;
-    std::optional<NodeValueType> typeTag = std::nullopt;
-
+    
     if (isDeclaration) {
         isConst = currentToken().value == "const";
         advance(); // consume declaration token.
-        // if (currentToken().type == TokenType::Variable && peek().value == ":" && peek(2).value != ":") {
-        //     typeTag = getTypeFromString(peek().value);
-        // }
     }
 
-    UniquePtr<Chain> lhs = parseChain(isDeclaration);  // Handles `a.b.c` chains
-    Token assign = currentToken();
-    bool isAssignment = assign.type == TokenType::VarAssignment;
-    bool isStatic = typeTag.has_value();                  // placeholder for when static variables are included.
-    bool isMutable = assign.value == "=";
-    if (isAssignment){
-        advance(); // consume `=` or `:=`
-    }
+    UniquePtr<Chain> lhs = parseChain(isDeclaration, isConst);  // Handles `a.b.c` chains
 
-
-    if (isDeclaration || isAssignment) {
-        UniquePtr<ASTStatement> rhs = parseExpression();
-
-        auto& last = lhs->getLast();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", isDeclaration);
-        if (isDeclaration) {
-            if (last.type == TokenType::Variable) {
-                auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
-                // auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic, typeTag);
-                last.object = makeUnique<VariableDeclaration>(last.name, varNode, currentScope, typeTag, std::move(rhs));
-            }
-            DEBUG_FLOW_EXIT();
-
-            return makeUnique<ChainOperation>(
-                std::move(lhs),
-                nullptr,
-                isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-                currentScope,
-                isDeclaration ? isConst : false,
-                isDeclaration ? isMutable : true,
-                isStatic
-            );
-        } else if (isAssignment) {
-            if (last.type == TokenType::Variable) {
-                    // auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
-                    last.object = makeUnique<VariableAssignment>(last.name, std::move(rhs), currentScope);
-                }
-                DEBUG_FLOW_EXIT();
-
-                return makeUnique<ChainOperation>(
-                    std::move(lhs),
-                    nullptr,
-                    isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-                    currentScope,
-                    isDeclaration ? isConst : false,
-                    isDeclaration ? isMutable : true,
-                    isStatic
-                );
-        }
-        
-        DEBUG_FLOW_EXIT();
-        return makeUnique<ChainOperation>(
-            std::move(lhs),
-            std::move(rhs),
-            isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-            currentScope,
-            isDeclaration ? isConst : false,
-            isDeclaration ? isMutable : true,
-            isStatic
-        );
-    } else {
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "NOT IS DECLARATION: ", isDeclaration);
-
-        // Just a value reference
-        DEBUG_FLOW_EXIT();
-        return makeUnique<ChainOperation>(
-            std::move(lhs),
-            nullptr,
-            ChainOpKind::Reference,
-            currentScope
-        );
-    }
+    DEBUG_FLOW_EXIT();
+    return makeUnique<ChainOperation>(
+        std::move(lhs),
+        nullptr,
+        ChainOpKind::Reference,
+        currentScope
+    );
 }
+
+
+
+// Token assign = currentToken();
+    // isAssignment = assign.type == TokenType::VarAssignment;
+    // isMutable = assign.value == "=";
+    // if (isAssignment){
+    //     advance(); // consume `=` or `:=`
+    // }
+
+
+    // if (isDeclaration || isAssignment) {
+    //     UniquePtr<ASTStatement> rhs = parseExpression();
+
+    //     auto& last = lhs->getLast();
+    //     // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", isDeclaration);
+    //     if (isDeclaration) {
+    //         if (last.type == TokenType::Variable) {
+    //             auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
+    //             // auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic, typeTag);
+    //             last.object = makeUnique<VariableDeclaration>(last.name, varNode, currentScope, typeTag, std::move(rhs));
+    //         }
+    //         DEBUG_FLOW_EXIT();
+
+    //         return makeUnique<ChainOperation>(
+    //             std::move(lhs),
+    //             nullptr,
+    //             isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
+    //             currentScope,
+    //             isDeclaration ? isConst : false,
+    //             isDeclaration ? isMutable : true,
+    //             isStatic
+    //         );
+    //     } else if (isAssignment) {
+    //         if (last.type == TokenType::Variable) {
+    //                 // auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
+    //                 last.object = makeUnique<VariableAssignment>(last.name, std::move(rhs), currentScope);
+    //             }
+    //             DEBUG_FLOW_EXIT();
+
+    //             return makeUnique<ChainOperation>(
+    //                 std::move(lhs),
+    //                 nullptr,
+    //                 isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
+    //                 currentScope,
+    //                 isDeclaration ? isConst : false,
+    //                 isDeclaration ? isMutable : true,
+    //                 isStatic
+    //             );
+    //     }
+        
+    //     DEBUG_FLOW_EXIT();
+    //     return makeUnique<ChainOperation>(
+    //         std::move(lhs),
+    //         std::move(rhs),
+    //         isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
+    //         currentScope,
+    //         isDeclaration ? isConst : false,
+    //         isDeclaration ? isMutable : true,
+    //         isStatic
+    //     );
+    // } else {
+    //     // DEBUG_LOG(LogLevel::PERMISSIVE, "NOT IS DECLARATION: ", isDeclaration);
+
+    //     // Just a value reference
+    //     DEBUG_FLOW_EXIT();
+    //     return makeUnique<ChainOperation>(
+    //         std::move(lhs),
+    //         nullptr,
+    //         ChainOpKind::Reference,
+    //         currentScope
+    //     );
+    // }
 
 
 // Skeleton: Parse protected member declarations in the class.

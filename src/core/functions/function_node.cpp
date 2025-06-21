@@ -96,14 +96,14 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     if (funcSig->getCallableType() == CallableType::DEF) {
         throw MerkError("Primary Callable Type is: " + callableTypeAsString(funcSig->getCallableType()));
     }
-
+ 
     // DEBUG_LOG(LogLevel::ERROR, funcSig->getParameterTypes());
     DEBUG_FLOW_EXIT();
     return funcSig;
 }
 
 void UserFunction::setScope(SharedPtr<Scope> newScope) const {
-    newScope->owner = "UserFunction(" + name + ")";
+    newScope->owner = generateScopeOwner("UserFunction", name);
     getBody()->setScope(newScope);
 }
 

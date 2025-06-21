@@ -61,7 +61,7 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
 
     std::optional<NodeValueType> typeTag = parseStaticType();
     // auto stringType = (typeTag.has_value() ? nodeTypeToString(typeTag.value()) : "NONE");
-    DEBUG_LOG(LogLevel::PERMISSIVE, "TYPE: ", (typeTag.has_value() ? nodeTypeToString(typeTag.value()) : "NONE"));
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "TYPE: ", (typeTag.has_value() ? nodeTypeToString(typeTag.value()) : "NONE"));
 
     Token assignment = currentToken();
 
@@ -79,7 +79,7 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
 
 
     auto valueNode = parseExpression();
-    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ValueNode For parseVariableDeclaration: ", Colors::red), valueNode->toString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ValueNode For parseVariableDeclaration: ", Colors::red), valueNode->toString());
     if (!valueNode) {
         throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);
     }
@@ -199,27 +199,27 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
 }
 
 UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::MED);
 
     DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toString());
     // processNewLines();  // for chaining
 
-    Token token = currentToken();
+    Token token = currentToken();   
 
     if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Constructing LitNode");
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Constructing LitNode");
 
         LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
-        DEBUG_LOG(LogLevel::PERMISSIVE, "LitNode Constructed");
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "LitNode Constructed");
 
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Constructing LiteralValue");
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Constructing LiteralValue");
         auto literalVal = makeUnique<LiteralValue>(
             nodeLiteral,
             currentScope,
             token.type == TokenType::String,
             token.type == TokenType::Bool
         );
-        DEBUG_LOG(LogLevel::PERMISSIVE, "LiteralValue Constructed");
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "LiteralValue Constructed");
 
         advance();  // Consume Literal Value
         DEBUG_FLOW_EXIT();

@@ -88,7 +88,7 @@ private:
 
     UniquePtr<ASTStatement> parseProtectedClassAttributes();
     UniquePtr<ASTStatement> parseClassAttributes();
-    UniquePtr<Chain> parseChain(bool isDeclaration = false);
+    UniquePtr<Chain> parseChain(bool isDeclaration = false, bool isConst = false);
     UniquePtr<ChainOperation> parseChainOp();
     String getCurrentClassAccessor();
 
@@ -111,6 +111,7 @@ private:
     Token handleAttributNotation();
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
+    void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
     // For Future Implementation
     // UniquePtr<ImportStatement> parseImport();
     // Vector<UniquePtr<ImportStatement>> parseImports();

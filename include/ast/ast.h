@@ -16,6 +16,8 @@
 #include "utilities/debugging_functions.h"
 
 
+
+
 class Scope;
 
 class LiteralValue : public ASTStatement {
@@ -66,6 +68,7 @@ public:
     std::optional<NodeValueType> getTypeTag() {return typeTag;}
     const UniquePtr<ASTStatement>& getExpression() {return valueExpression;}
     const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
+    const ASTStatement* getRawExpression() const {return valueExpression.get();}
     void setScope(SharedPtr<Scope> newScope) override;
 
     virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
@@ -73,6 +76,7 @@ public:
     virtual AstType getAstType() const override {return AstType::VariableDeclaration;}
     virtual UniquePtr<BaseAST> clone() const override;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
 
 };
 
@@ -91,6 +95,8 @@ public:
     virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
+
+    FreeVars collectFreeVariables() const override;
     
 
 };
@@ -110,6 +116,7 @@ public:
     
     friend class ParameterAssignment;
     const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
+    ASTStatement* getRawExpression() const {return valueExpression.get();}
 
     const String& getName() const { return name; }
     void setScope(SharedPtr<Scope> newScope);
@@ -119,6 +126,7 @@ public:
     virtual AstType getAstType() const override {return AstType::VariableAssignment;}
     virtual UniquePtr<BaseAST> clone() const override;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
 
 
 };
@@ -146,6 +154,7 @@ public:
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
 
 
 };
@@ -205,8 +214,9 @@ public:
     UniquePtr<BaseAST> clone() const override;
     void setScope(SharedPtr<Scope> newScope) override;
     UniquePtr<ASTStatement>& getValue() {return returnValue;}
-    // UniquePtr<ASTStatement> getReturnValue() const {return returnValue;}
+    ASTStatement* getValue() const {return returnValue.get();}
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
 
 };
 

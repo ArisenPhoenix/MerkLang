@@ -116,6 +116,7 @@ public:
     String getName() {return name;}
     ParamList getParameters() {return parameters;}
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
     
 };
 
@@ -138,6 +139,7 @@ public:
     // virtual UniquePtr<CallableBody> getBody() const = 0;
     Vector<Node> handleArgs(SharedPtr<Scope> scope) const;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
 };
 
 

@@ -354,7 +354,7 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
 
     // Set the variable in the current context (not parent or child)
     if (context.hasVariable(name)) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "SCOPE: ", owner, "SCOPE LEVEL: ", scopeLevel);
+        DEBUG_LOG(LogLevel::DEBUG, "SCOPE: ", owner, "SCOPE LEVEL: ", scopeLevel);
         throw VariableAlreadyDeclaredError(name);
     }
     context.setVariable(name, std::move(value));
@@ -429,7 +429,7 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
         throw MerkError("Not a Method Signature");
     }
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FUNC TYPE: ", callableTypeAsString(funcMethSig->getCallableType()), " FUNC SUB_TYPE: ", callableTypeAsString(funcMethSig->getSubType()), " FUNC NAME: ", funcMethName);
+    DEBUG_LOG(LogLevel::DEBUG, "FUNC TYPE: ", callableTypeAsString(funcMethSig->getCallableType()), " FUNC SUB_TYPE: ", callableTypeAsString(funcMethSig->getSubType()), " FUNC NAME: ", funcMethName);
     if (funcMethSig->getSubType() == CallableType::DEF) {
         auto previousOpt = lookupFunction(funcMethName);
         if (previousOpt) {
@@ -473,7 +473,7 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
 
 
 void Scope::registerFunction(const String& name, SharedPtr<UserFunction> function) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
     if (function->getCallableType() == CallableType::CLASS) {
         throw MerkError("Cannot Register A Class Into Function Registry");
     }
@@ -486,7 +486,7 @@ void Scope::registerFunction(const String& name, SharedPtr<UserFunction> functio
 }
 
 void Scope::registerFunction(const String& name, SharedPtr<Callable> anyCallable) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
     if (anyCallable->getCallableType() == CallableType::CLASS) {
         throw MerkError("Cannot Register A Class Into Function Registry");
     }

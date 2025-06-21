@@ -17,25 +17,29 @@
 // The printAST method is mostly for debugging and verification purposes. It is useful for identification of bugs and visualizing the structure
 
 
-
+String scopeLevelAsString(SharedPtr<Scope> scope, String astCaller) {
+    String scopeString = scope ? std::to_string(scope->getScopeLevel()) : "Error Getting Scope For " + astCaller;
+    return "Scope Level " + scopeString;
+}
 
 // AST Basic
 String LiteralValue::toString() const {
+    // auto scopeString = ;
     return getAstTypeAsString() + "(value=" + value.toString() +
         ", isString=" + (_isString ? "true" : "false") +
         ", isBool=" + (_isBool ? "true" : "false") +
-        ", scope=" + std::to_string(getScope() ? getScope()->getScopeLevel() : 0) + ")";;
+        scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";;
 }
 
 String VariableDeclaration::toString() const {
         return getAstTypeAsString() + "(name=" + name +
             ", variable=" + variable.toString() +
-            ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+            scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
 }
 
 String VariableReference::toString() const {
     return getAstTypeAsString() + "(name=" + name +
-           ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+           scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
 }
 
 String VariableAssignment::toString() const {
@@ -46,13 +50,13 @@ String BinaryOperation::toString() const {
     return getAstTypeAsString() + "(operator=" + op +
         ", left=" + (left ? left->toString() : "null") +
         ", right=" + (right ? right->toString() : "null") +
-        ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+        scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
 
 }
 
 String UnaryOperation::toString() const {
     return "UnaryOperation(" + op +
-    ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+    scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
 }
 
 
@@ -60,7 +64,7 @@ void LiteralValue::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::blue), "(value =", value,  ", scope =", getScope() ? getScope()->getScopeLevel() : 0, ")");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::blue), "(value =", value,  scopeLevelAsString(getScope(), getAstTypeAsString()), ")");
 
     DEBUG_FLOW_EXIT();
 };
@@ -69,7 +73,7 @@ void VariableDeclaration::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", variable, ", scope =", getScope()->getScopeLevel(), "):");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", variable, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
     valueExpression->printAST(os, indent);
 
     DEBUG_FLOW_EXIT();
@@ -79,7 +83,7 @@ void VariableAssignment::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(variable =", name, ", scope =", getScope()->getScopeLevel(), ")");
+    debugLog(true,  highlight(getAstTypeAsString(), Colors::cyan), "(variable =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), ")");
     if (valueExpression) {
         valueExpression->printAST(os, indent);
     }
@@ -91,7 +95,7 @@ void VariableReference::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", name, ", scope =", getScope()->getScopeLevel(), ")" );
+    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", name, ", ", scopeLevelAsString(getScope(), getAstTypeAsString()), ")" );
 
     DEBUG_FLOW_EXIT();
 };
@@ -100,7 +104,7 @@ void BinaryOperation::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_blue), "(operator =", op, ", scope =", getScope()->getScopeLevel(), ")");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_blue), "(operator =", op, scopeLevelAsString(getScope(), getAstTypeAsString()), ")");
     if (left) {
         left->printAST(os, indent + 2);
     }
@@ -114,7 +118,7 @@ void UnaryOperation::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_blue), "(operator =", op, ", scope =", getScope()->getScopeLevel());
+    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_blue), "(operator =", op, scopeLevelAsString(getScope(), getAstTypeAsString()) + ")");
     operand->printAST(os, indent);
 
     DEBUG_FLOW_EXIT();
@@ -182,7 +186,7 @@ void CodeBlock::printAST(std::ostream& os, int indent) const {
     }
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight("CodeBlock", Colors::purple), "(scopeLevel =", std::to_string(getScope()->getScopeLevel()) + "):");
+    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()));
 
     if (children.empty()) {
         printIndent(os, indent);
@@ -200,11 +204,33 @@ void CodeBlock::printAST(std::ostream& os, int indent) const {
 
 }
 
+
+void CallableBody::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()));
+    for (auto& child : children){
+        child->printAST(os, indent);
+    }
+}
+
+void CallableDef::printAST(std::ostream& os, int indent) const {
+    auto paramStr = !parameters.empty() ?  parameters.toShortString() : "";
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), name, "(" + paramStr + ")", scopeLevelAsString(getScope(), getAstTypeAsString()));
+    body->printAST(os, indent);
+};
+
+
+void CallableCall::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), "()");
+}
+
 void ElseStatement::printAST(std::ostream& os, int indent) const  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight("ElseStatement", Colors::yellow));
+    debugLog(true, getAstTypeAsString());
     body->printAST(os, indent);
     DEBUG_FLOW_EXIT();
 }
@@ -213,7 +239,7 @@ void ElifStatement::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight("ElIfStatement:", Colors::yellow));
+    debugLog(true, getAstTypeAsString());
     condition->printAST(os, indent + 1);
     body->printAST(os, indent + 2);
 
@@ -224,7 +250,7 @@ void IfStatement::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     int newIndent = printIndent(os, indent);
-    debugLog(true, highlight("IfStatement", Colors::yellow));
+    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()));
 
     // ConditionalBlock::printAST(os, indent + 1);
     condition->printAST(os, indent + 1);
@@ -246,7 +272,7 @@ void WhileLoop::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight("WhileLoop", Colors::yellow));
+    debugLog(true, getAstTypeAsString());
     // os << "WhileLoop\n";
 
 
@@ -264,7 +290,7 @@ void NoOpNode::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight("NoOpNode", Colors::red));
+    debugLog(true, getAstTypeAsString());
 
     DEBUG_FLOW_EXIT();
 
@@ -274,7 +300,7 @@ void Break::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight("Break", Colors::green), "(scope=", scope, ")");
+    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()));
 
     DEBUG_FLOW_EXIT();
 
@@ -313,7 +339,7 @@ void FunctionBody::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     indent = printIndent(os, indent);
 
-    debugLog(true, highlight(getAstTypeAsString(), Colors::purple), "(scopeLevel =", std::to_string(getScope()->getScopeLevel()) + "):");
+    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()) + "):");
 
     if (children.empty()) {
         indent = printIndent(os, indent);
@@ -332,7 +358,7 @@ void FunctionDef::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", name, "scopeLevel =", std::to_string(getScope()->getScopeLevel()),"):");
+    debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()),"):");
     
     parameters.printAST(os, indent);
 
@@ -346,14 +372,14 @@ void FunctionRef::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", name, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
 
     DEBUG_FLOW_EXIT();
 }
 
 void FunctionCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", name, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
+    debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
     // DEBUG_LOG(LogLevel::DEBUG, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", functionName, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
     for (const auto& arg : arguments){
         printIndent(os, indent);
@@ -366,7 +392,7 @@ void ParameterAssignment::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, "ParameterAssignment (variable = ", getName(), ", scope = ", getScope()->getScopeLevel(), ")"); 
+    debugLog(true, "ParameterAssignment (variable = ", getName(), scopeLevelAsString(getScope(), getAstTypeAsString()), ")"); 
     getExpression()->printAST(os, indent);
 
     DEBUG_FLOW_EXIT();
@@ -396,7 +422,7 @@ void ClassCall::printAST(std::ostream& os, int indent) const {
 
 void Accessor::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString() + "(" + getAccessor() + ", ScopeLevel:", getScope()->getScopeLevel(), ")");
+    debugLog(true, getAstTypeAsString() + "(" + getAccessor() + scopeLevelAsString(getScope(), getAstTypeAsString()), ")");
 }
 
 
@@ -405,7 +431,7 @@ String ChainOperation::toString() const {
     String kind = opKindAsString(opKind);
     auto lhs = getLeftSide();
     String scoping = lhs->getSecondaryScope() ? lhs->getSecondaryScope()->formattedScope() : "null";
-    return "ChainOperation(kind: " + kind + ", lhs: " + lhs->toString() + ", SECONDARY SCOPE: " + scoping + ")";
+    return getAstTypeAsString() + "(kind: " + kind + ", lhs: " + lhs->toString() + scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
 }
 
 void ChainOperation::printAST(std::ostream& os, int indent) const {

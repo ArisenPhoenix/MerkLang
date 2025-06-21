@@ -16,7 +16,7 @@
 #include "ast/ast_validate.h"
 
 bool handleChain(Chain* chain, ParamList params, String accessor, String name, SharedPtr<Scope> classScope) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::LOW);
     const auto& elems = chain->getElements();
     bool isAccessorDeclared = !params.empty() && params[0].getName() == accessor;
     bool hasStatic = false;
@@ -27,14 +27,13 @@ bool handleChain(Chain* chain, ParamList params, String accessor, String name, S
             "' via a chain but does not declare it as a parameter.");
         }
         chain->setFirstElement(makeUnique<Accessor>(accessor, classScope), accessor);
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Created Accessor");
         chain->setResolutionMode(ResolutionMode::ClassInstance);
         hasStatic = true;
     }
 
-    if (!elems.empty()) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "First element in Chain is: ", elems[0].name, " (expecting: ", accessor, ")");
-    }
+    // if (!elems.empty()) {
+    //     DEBUG_LOG(LogLevel::PERMISSIVE, "First element in Chain is: ", elems[0].name, " (expecting: ", accessor, ")");
+    // }
 
     DEBUG_FLOW_EXIT();
     return hasStatic;
@@ -42,7 +41,7 @@ bool handleChain(Chain* chain, ParamList params, String accessor, String name, S
 
 
 Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> classScope, const String& accessor) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::LOW);
 
     if (!classScope) {
         throw MerkError("ApplyAccessorFix classScope is null");
@@ -51,7 +50,7 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
     auto& params = methodDef->getParameters();
     bool isAccessorDeclared = !params.empty() && params[0].getName() == accessor;
     Vector<Chain*> nonStaticElements;
-    methodDef->getBody()->printAST(std::cout);
+    // methodDef->getBody()->printAST(std::cout);
 
     // const auto& bodyChildren = methodDef->getBody()->getChildren();
     auto allAst = methodDef->getBody()->getAllAst(true);
@@ -201,7 +200,7 @@ void fixupClassChains(SharedPtr<Scope> classScope, String accessor) {
 }
 
 void stripImplicitAccessor(MethodDef* methodDef, const String& accessor) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::LOW);
     ParamList& params = methodDef->getParameters();
 
     if (!params.empty() && params[0].getName() == accessor) {

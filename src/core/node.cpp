@@ -400,6 +400,8 @@ String Node::toString() const {
         switch (data.type) {
             case NodeValueType::Int:
                 return std::to_string(std::get<int>(data.value));
+            case NodeValueType::Number:
+                return std::to_string(std::get<int>(data.value));
             case NodeValueType::Float:
                 return std::to_string(std::get<float>(data.value));
             case NodeValueType::Double:
@@ -420,11 +422,17 @@ String Node::toString() const {
                 return "Any";
             case NodeValueType::Class:
                 return "Class";
-
+            
             case NodeValueType::ClassInstance:
                 return "<ClassInstance>";
             case NodeValueType::Callable:
                 return "<Callable";
+            case NodeValueType::UNKNOWN:
+                return "UNKNOWN";
+            case NodeValueType::Function:
+                return "Function";
+            case NodeValueType::None:
+                return "None";
             default:
                 throw MerkError("Unsupported type for Node toString.");
         }
@@ -967,6 +975,7 @@ LitNode::LitNode(LitNode&& other) noexcept : Node(std::move(other)) {
 }
 
 LitNode& LitNode::operator=(const LitNode& other) {
+    nodeType = "LitNode";
     if (this != &other) {
         Node::operator=(other);
         // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-assigned.");
@@ -976,6 +985,8 @@ LitNode& LitNode::operator=(const LitNode& other) {
 
 // Move assignment operator
 LitNode& LitNode::operator=(LitNode&& other) noexcept {
+    nodeType = "LitNode";
+
     if (this != &other) {
         Node::operator=(std::move(other));
         // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-assigned.");
@@ -1023,6 +1034,8 @@ VarNode::VarNode(const Node& parentNode, bool isConst, bool isMutable, bool isSt
     if (parentNode.getType() == NodeValueType::Null) {
         throw MerkError("Cannot create a VarNode from an untyped (Null) parent Node.");
     }
+    nodeType = "VarNode";
+
     this->isConst = parentNode.isConst || isConst;
     this->isMutable = parentNode.isMutable || isMutable;
     this->isStatic = parentNode.isStatic || isStatic;
@@ -1033,6 +1046,8 @@ VarNode::VarNode(const Node& parentNode, bool isConst, bool isMutable, bool isSt
 
 // VarNode Copy Constructor
 VarNode::VarNode(const VarNode& other) : Node(other) {
+    nodeType = "VarNode";
+
     this->isConst = other.isConst;
     this->isMutable = other.isMutable;
     this->isStatic = other.isStatic;
@@ -1070,9 +1085,6 @@ VarNode& VarNode::operator=(VarNode&& other) noexcept {
 VarNode* VarNode::clone() const {
     return new VarNode(*this);
 }
-
-
-
 
 
 String LitNode::toString() const {
@@ -1120,18 +1132,16 @@ VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool i
         this->data.type = typeTag.value_or(NodeValueType::Any);
     }
 
-    // this->data.value = value;
-
     validateTypeAlignment();
 }
 
 // For Variable Name Part and ResolvedVariable Construction
 VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic)
-    {
+    :Node(parent) {
     nodeType = "VarNode";
     this->isConst = isConst;
     this->isMutable = isMutable;
-    this->isStatic = isStatic && parent.isStatic && parent.data.type != NodeValueType::Any && parent.data.type != NodeValueType::None && parent.data.type != NodeValueType::Null && parent.data.type != NodeValueType::Uninitialized;
+    this->isStatic = typeTag.has_value() || isStatic; // && parent.data.type != NodeValueType::Uninitialized;
     if (typeTag.has_value()){
         this->data.type = typeTag.value_or(NodeValueType::Any);
     }

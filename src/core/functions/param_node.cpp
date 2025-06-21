@@ -151,6 +151,9 @@ void ParamList::addParameter(const ParamNode& param) {
 
 // Verify arguments against parameters
 void ParamList::verifyArguments(Vector<Node> args) {
+    DEBUG_FLOW(FlowLevel::MED);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "NUM ARGUMENTS:", args.size());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "NUM PARAMETERS:",  parameters.size());
     for (size_t i = 0; i < parameters.size(); ++i) {
         if (i >= args.size() && parameters[i].hasDefault()) {
             continue; // Use default value if argument is missing
@@ -163,6 +166,7 @@ void ParamList::verifyArguments(Vector<Node> args) {
 
         parameters[i].setValue(args[i]); // ✅ Type check is enforced here
     }
+    DEBUG_FLOW_EXIT();
 }
 
 // Retrieve parameter by index

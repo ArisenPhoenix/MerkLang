@@ -113,3 +113,17 @@ String normalizeFileName(const String& filePath) {
 String generateScopeOwner(String userName, String itemName) {
     return userName + "(" + itemName + ")";
 }
+
+
+String joinUnorderedSetStrings(const std::unordered_set<String>& input, const String& delimiter) {
+    std::ostringstream oss;
+    bool first = true;
+    for (const auto& str : input) {
+        if (!first) {
+            oss << delimiter << " ";
+        }
+        oss << str;
+        first = false;
+    }
+    return oss.str();
+}

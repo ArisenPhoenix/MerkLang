@@ -56,6 +56,29 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
     return detached;
 }
 
+
+SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNames) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    auto isolated = std::make_shared<Scope>(0, interpretMode, false);
+    includeMetaData(isolated, true);
+
+    for (const auto& name : freeVarNames) {
+        if (this->hasVariable(name)) {
+            isolated->declareVariable(name, cloneVarNode(getVariable(name).clone()));
+        } else if (auto parent = getParent()) {
+            if (parent->hasVariable(name)) {
+                isolated->declareVariable(name, cloneVarNode(parent->getVariable(name).clone()));
+            }
+        }
+    }
+
+    isolated->localFunctions = this->localFunctions;
+    isolated->localClasses = this->localClasses;
+    DEBUG_FLOW_EXIT();
+    return isolated;
+}
+
+
 void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) const {
     newScope->isDetached = thisIsDetached;
     newScope->isClonedScope = newScope->isClonedScope ? newScope->isClonedScope : isClonedScope;
