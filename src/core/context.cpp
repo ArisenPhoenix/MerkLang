@@ -22,7 +22,6 @@ void Context::setVariable(const String& name, UniquePtr<VarNode> value) {
              
     auto it = variables.find(name);
     if (it != variables.end()) {
-        // Enforce reassignment rules
         if (!it->second->isMutable) {
             throw ImmutableVariableError(name);
         }

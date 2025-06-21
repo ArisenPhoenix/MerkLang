@@ -18,8 +18,6 @@ public:
 };
 
 // Used as sort of a mixin class for a common interface among only those classes needing it.
-
- 
 class AstCollector {
 protected:
     mutable Vector<BaseAST*> collectedNodes;
@@ -53,7 +51,6 @@ public:
     void addChild(UniquePtr<BaseAST> child);
 
     bool contains(const BaseAST* node) const;
-    // Vector<UniquePtr<BaseAST>> getChildrenOfType(AstType astType, bool recurse = false);
     
     virtual SharedPtr<Scope> getCurrentScope() const {return getScope();} 
 
@@ -139,7 +136,6 @@ public:
     UniquePtr<ConditionalBlock> condition;
 
     ElifStatement(UniquePtr<ASTStatement> condition, UniquePtr<CodeBlock> body, SharedPtr<Scope> scope);
-    // const UniquePtr<ConditionalBlock>& getCondition() const { return condition; }
     const ASTStatement* getCondition() const { return condition->getCondition(); }
 
 

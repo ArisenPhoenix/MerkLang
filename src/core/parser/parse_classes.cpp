@@ -11,32 +11,6 @@
 #include "core/parser.h"
 
 
-
-
-// std::tuple<bool, bool, String> Parser::handleIsVarDec() {
-//     Token startToken = currentToken();
-//     // DEBUG_LOG(LogLevel::PERMISSIVE, "StartToken: ", startToken.toColoredString());
-//     bool isDeclaration = startToken.type == TokenType::VarDeclaration;
-//     bool isConst = false;
-//     if (!(startToken.type == TokenType::VarDeclaration || startToken.type == TokenType::ChainEntryPoint)) {
-//         return std::make_tuple(isDeclaration, isConst, "");
-//     }
-
-    
-//     isConst = startToken.value == "const";
-//     if (isDeclaration) {
-//         advance(); //consume (var/const)
-//         auto nextToken = currentToken();
-//         if (nextToken.type == TokenType::Variable || nextToken.type == TokenType::ChainEntryPoint){
-//             // advance(); //consume (const/var)
-//             return std::make_tuple(isDeclaration, isConst, String(startToken.value));
-//         }
-//     }
-
-//     return std::make_tuple(isDeclaration, isConst, "");
-    
-// }
-
 ChainElement createChainElement(const Token& token, const Token& delim, UniquePtr<BaseAST> obj) {
     ChainElement elem;
     elem.name = token.value;
@@ -69,7 +43,6 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         throw MerkError("BaseToken.value is Scope");
     }
 
-    // ChainElement baseElem = ;
     chain->addElement(std::move(createChainElement(baseToken, punct, makeUnique<VariableReference>(baseToken.value, currentScope))));
 
     // Parse the rest of the dotted chain
@@ -172,79 +145,6 @@ UniquePtr<ChainOperation> Parser::parseChainOp() {
 }
 
 
-
-// Token assign = currentToken();
-    // isAssignment = assign.type == TokenType::VarAssignment;
-    // isMutable = assign.value == "=";
-    // if (isAssignment){
-    //     advance(); // consume `=` or `:=`
-    // }
-
-
-    // if (isDeclaration || isAssignment) {
-    //     UniquePtr<ASTStatement> rhs = parseExpression();
-
-    //     auto& last = lhs->getLast();
-    //     // DEBUG_LOG(LogLevel::PERMISSIVE, "IS DECLARATION: ", isDeclaration);
-    //     if (isDeclaration) {
-    //         if (last.type == TokenType::Variable) {
-    //             auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
-    //             // auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic, typeTag);
-    //             last.object = makeUnique<VariableDeclaration>(last.name, varNode, currentScope, typeTag, std::move(rhs));
-    //         }
-    //         DEBUG_FLOW_EXIT();
-
-    //         return makeUnique<ChainOperation>(
-    //             std::move(lhs),
-    //             nullptr,
-    //             isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-    //             currentScope,
-    //             isDeclaration ? isConst : false,
-    //             isDeclaration ? isMutable : true,
-    //             isStatic
-    //         );
-    //     } else if (isAssignment) {
-    //         if (last.type == TokenType::Variable) {
-    //                 // auto varNode = VarNode(last.name, tokenTypeToString(last.type), isConst, isMutable, isStatic);
-    //                 last.object = makeUnique<VariableAssignment>(last.name, std::move(rhs), currentScope);
-    //             }
-    //             DEBUG_FLOW_EXIT();
-
-    //             return makeUnique<ChainOperation>(
-    //                 std::move(lhs),
-    //                 nullptr,
-    //                 isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-    //                 currentScope,
-    //                 isDeclaration ? isConst : false,
-    //                 isDeclaration ? isMutable : true,
-    //                 isStatic
-    //             );
-    //     }
-        
-    //     DEBUG_FLOW_EXIT();
-    //     return makeUnique<ChainOperation>(
-    //         std::move(lhs),
-    //         std::move(rhs),
-    //         isDeclaration ? ChainOpKind::Declaration : ChainOpKind::Assignment,
-    //         currentScope,
-    //         isDeclaration ? isConst : false,
-    //         isDeclaration ? isMutable : true,
-    //         isStatic
-    //     );
-    // } else {
-    //     // DEBUG_LOG(LogLevel::PERMISSIVE, "NOT IS DECLARATION: ", isDeclaration);
-
-    //     // Just a value reference
-    //     DEBUG_FLOW_EXIT();
-    //     return makeUnique<ChainOperation>(
-    //         std::move(lhs),
-    //         nullptr,
-    //         ChainOpKind::Reference,
-    //         currentScope
-    //     );
-    // }
-
-
 // Skeleton: Parse protected member declarations in the class.
 UniquePtr<ASTStatement> Parser::parseClassAttributes() {
     DEBUG_FLOW(FlowLevel::LOW);
@@ -334,7 +234,6 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
     }
 
     UniquePtr<MethodBody> methodBlock = makeUnique<MethodBody>(std::move(bodyBlock));
-    // methodBlock->getScope()->owner = generateScopeOwner("Method", methodName);
 
     DEBUG_LOG(LogLevel::INFO, "MethodBody type: ", typeid(*methodBlock).name());
     
@@ -416,7 +315,7 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
 UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     DEBUG_FLOW(FlowLevel::HIGH);
     insideClass = true;
-    // Expect a 'Class' keyword.
+    // Expect the 'Class' keyword.
     Token token = currentToken();
     if (token.type != TokenType::ClassDef) {
         throw SyntaxError("Expected 'Class' keyword.", token);
@@ -459,13 +358,11 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     if (!classBody->getScope()){
         throw MerkError("ClassBody Was Not provided a valid Scope around line 371 in Parser::parseClassDefinition");
     }
-    // In the class body, we might have protected attribute declarations first,
-    // then method definitions. We also need to ensure the first method is 'construct'.
+
     bool foundConstructor = false;
     String accessor;
 
     ParamList classParams;
-    // Vector<UniquePtr<MethodDef>> constructors;
     while (currentToken().type != TokenType::Dedent && currentToken().type != TokenType::EOF_Token) {
 
         if (processNewLines()){ // if there were blank lines, then go again
@@ -478,8 +375,6 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
         }
 
         else if (currentToken().type == TokenType::ClassMethodDef) {
-        //  ||      currentToken().type == TokenType::FunctionDef) {
-            // The first method must be the constructor.
             if (!foundConstructor) {
                 if (peek().value != "construct") {
                     throw SyntaxError("The first method in a class must be 'construct'.", currentToken());
@@ -490,10 +385,7 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
                 classParams = constructor->getParameters();
                 
                 if (constructor) {
-                    // classBody->setInitializer(std::move(constructor));
-                    // classBody->me
                     classBody->addChild(static_unique_ptr_cast<BaseAST>(std::move(constructor)));
-                    // constructors.emplace_back(constructor);
                 }
             } 
             else if (peek().value == "construct"){

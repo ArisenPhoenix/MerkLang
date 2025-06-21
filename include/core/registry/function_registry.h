@@ -8,9 +8,7 @@
 #include <vector>
 #include "core/types.h"
 #include "utilities/debugger.h"
-// #include "core/functions/function_node.h"
 
-// class FunctionSignature;
 class CallableSignature;
 
 class FunctionRegistry {

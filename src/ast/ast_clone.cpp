@@ -62,9 +62,7 @@ UniquePtr<BaseAST> UnaryOperation::clone() const {
 UniquePtr<BaseAST> NoOpNode::clone() const {return makeUnique<NoOpNode>(getScope());}
 
 
-// AST CONTROL
 UniquePtr<BaseAST> CodeBlock::clone() const {
-    // Create a new CodeBlock with the same scope (or a copy of it, as appropriate)
     UniquePtr<CodeBlock> newBlock = makeUnique<CodeBlock>(getScope());
 
     for (const auto &child : children) {
@@ -130,7 +128,6 @@ UniquePtr<BaseAST> IfStatement::clone() const {
         clonedIf->setElseNode(std::move(clonedElse));
     }
 
-    // Return the newly constructed IfStatement clone.
     return clonedIf;
 }
 
@@ -150,7 +147,6 @@ UniquePtr<BaseAST> FunctionBody::clone() const {
     // Create a new CodeBlock with the same scope (or a copy of it, as appropriate)
     UniquePtr<FunctionBody> newBlock = std::make_unique<FunctionBody>(getScope());
 
-    // Deep-copy each child.
     for (const auto &child : children) {
         newBlock->addChild(child->clone());
     }

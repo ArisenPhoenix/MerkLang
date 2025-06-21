@@ -184,9 +184,7 @@ class Break : public ASTStatement {
 public:
     Break(SharedPtr<Scope> scope);
 
-    String toString() const override {
-        return "Break";
-    }
+    String toString() const override {return "Break";}
     
     AstType getAstType() const override {return AstType::Break;}
 

@@ -6,10 +6,6 @@
 #include <sstream>
 #include "types.h"
 #include "core/functions/param_node.h"
-// class ParamList;
-
-
-// bool isWhitespaceOnly(const String& str);
 
 // Base Error Class: MerkError
 class MerkError : public RunTimeError {

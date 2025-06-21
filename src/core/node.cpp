@@ -978,7 +978,6 @@ LitNode& LitNode::operator=(const LitNode& other) {
     nodeType = "LitNode";
     if (this != &other) {
         Node::operator=(other);
-        // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-assigned.");
     }
     return *this;
 }
@@ -989,7 +988,6 @@ LitNode& LitNode::operator=(LitNode&& other) noexcept {
 
     if (this != &other) {
         Node::operator=(std::move(other));
-        // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-assigned.");
     }
     return *this;
 }

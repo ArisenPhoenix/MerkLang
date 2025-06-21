@@ -13,7 +13,6 @@ class ClassRegistry {
 private:
     std::unordered_map<String, SharedPtr<ClassSignature>> classMap;
 public:
-    // ClassRegistry();
     ~ClassRegistry();
     
     void registerClass(const String& name, SharedPtr<ClassBase> classDef);
@@ -25,7 +24,7 @@ public:
     const std::unordered_map<String, SharedPtr<ClassSignature>>& getClasses() const {return classMap;};
     ClassRegistry clone() const;
     void debugPrint() const;
-    void clear();  // Add this
+    void clear(); 
 
 };
 

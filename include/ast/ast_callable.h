@@ -13,7 +13,6 @@ class MethodDef;
 class Callable;
 class MethodBody;
 class FunctionBody;
-// class CodeBlock;
 
  
 class CallableSignature {
@@ -32,14 +31,7 @@ public:
 
     bool matches(const Vector<NodeValueType>& otherTypes) const;
     
-    // Return the stored callable.
     SharedPtr<Callable> getCallable() const;
-
-    // CallableBody* getBody() const {return callable->getBody();}
-    
-
-    // template<typename T>
-    // SharedPtr<T> getCallableClonedAs() const;
  
     void setParameterTypes(Vector<NodeValueType> paramTypes) {parameterTypes = paramTypes;} 
     const Vector<NodeValueType>& getParameterTypes() const;

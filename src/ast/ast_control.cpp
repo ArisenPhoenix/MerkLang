@@ -233,7 +233,9 @@ Break::Break(SharedPtr<Scope> scope) : ASTStatement(scope) {
     DEBUG_FLOW_EXIT();
 }
 
-Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {return condition.get()->evaluate(scope, instanceNode);}
+Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    return condition.get()->evaluate(scope, instanceNode);
+}
 Node ConditionalBlock::evaluate() const {return condition.get()->evaluate(getScope());}
 
 // Loop Evaluations
@@ -287,8 +289,6 @@ Node ElifStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<
         throw MerkError("ElIfStatement missing condition in ElifStatement::evaluate.");
     }
     validateScope(scope, "ElIfStatement::evaluate", condition->toString());
-
-    // return Evaluator::evaluateElif(*this, scope);
 
     Node val = Evaluator::evaluateElif(*this, scope);
 

@@ -140,8 +140,6 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
         throw MerkError("No Accessor Was Provided In Class Constructor");
     }
 
-    // auto classScope = classDefCapturedScope->createChildScope();
-    // auto classScope = classDefCapturedScope->makeCallScope();
     SharedPtr<Scope> classScope = classDefCapturedScope->makeCallScope();
     classScope->isDetached = true; // detached until ClassBase owns it
     classScope->owner = generateScopeOwner("ClassMainScopeClass", name);
@@ -149,7 +147,6 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 
     if (!classScope){throw MerkError("classScope was not created correctly on the ClassBase.");}
     DEBUG_LOG(LogLevel::TRACE, highlight("Attempting captured setting on cls", Colors::yellow));
-    // classScope->debugPrint();
 
     SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
     cls->setParameters(parameters.clone());
@@ -164,9 +161,7 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     String bodyAccess = accessor;
     classBody->setAccessor(bodyAccess);
 
-    DEBUG_LOG(LogLevel::TRACE, "ClassScope Below: ");
-    // cls->getClassScope()->debugPrint();
-    
+    DEBUG_LOG(LogLevel::TRACE, "ClassScope Below: ");    
 
     classBody->evaluate(cls->getClassScope());
 
@@ -185,13 +180,9 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     classDefCapturedScope->owner = generateScopeOwner("ClassDef--InitialCaptured", name);
     classDefCapturedScope->appendChildScope(cls->getClassScope());
 
-
-    // defScope->appendChildScope(classDefCapturedScope, "ClassDef::evaluate");
     defScope->registerClass(name, cls);
-    // defScope->owner = generateScopeOwner("ClassDef Outer Scope", name);
     
     DEBUG_LOG(LogLevel::TRACE, "ClassDef::classScope created: ");
-    // if (cls->getClassScope()->hasVariable("x")){throw MerkError("ClassDef::evaluate -> cls Already Has Variable 'x' at instance construction time.");}
     auto classNode = ClassNode(cls);
     
     DEBUG_FLOW_EXIT();
@@ -230,7 +221,7 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
     if (!instanceNode){
         throw MerkError("No instanceNode was provided to MethodBody::evaluate");
     }
-    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("EVALUATING METHOD BODY WITH INSTANCE SCOPE: ", Colors::bg_bright_magenta), instanceScope ? std::to_string(instanceScope->getScopeLevel()) : "NULL");
+
     auto val = Evaluator::evaluateMethod(getMutableChildren(), callScope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
@@ -292,7 +283,6 @@ Node MethodDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
 
 ClassDef::~ClassDef() {
     getBody().reset();
-    // DEBUG_LOG(LogLevel::ERROR, "Destroying ClassDef:" + name);
 }
 
 MethodDef::~MethodDef() {
@@ -308,14 +298,10 @@ MethodDef::~MethodDef() {
     if (getClassScope()) {
         getClassScope()->clear();
     }
-
-
-    // DEBUG_LOG(LogLevel::ERROR, "Destroying MethodDef:" + name);
 }
 
 ClassCall::~ClassCall() {
     getScope()->clear();
-    // DEBUG_LOG(LogLevel::ERROR, "Destroying ClassCall:" + name);
 }
 
 MethodCall::~MethodCall() {
@@ -325,13 +311,11 @@ MethodCall::~MethodCall() {
 
 MethodBody::~MethodBody() {
     clear();
-    // DEBUG_LOG(LogLevel::ERROR, "Destroying MethodBody:");
 }
 
 
 ClassBody::~ClassBody() {
     clear();
-    // DEBUG_LOG(LogLevel::DEBUG, "Destroying Class Body");
 }
 
 

@@ -161,12 +161,11 @@ Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPt
 
     validateScope(scope, "BinaryOperation::evaluate", left->toString() + " " + op + " " + right->toString());
     validateLeftAndRightAST(left, right, "BinaryOperation", op);
-    auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-    auto leftValue = left->evaluate(instanceScope, instanceNode);
-    auto rightValue = right->evaluate(instanceScope, instanceNode);
+    auto leftValue = left->evaluate(scope, instanceNode);
 
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Left Value: ", leftValue);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Right Value: ", rightValue);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "GOT PASSED LEFT SIDE");
+    auto rightValue = right->evaluate(scope, instanceNode);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "GOT PASSED RIGHT SIDE");
 
     validateLeftAndRightNodes(leftValue, rightValue, "BinaryOperation", op);
 

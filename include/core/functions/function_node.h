@@ -30,22 +30,17 @@ class FunctionBody : public CallableBody {
         virtual UniquePtr<BaseAST> clone() const override;
         virtual AstType getAstType() const override { return AstType::FunctionBlock;}    
         void printAST(std::ostream& os, int indent = 0) const override;
-        // UniquePtr<BaseAST> clone() const override;
-    
-        
         Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
     };
-// class FunctionBody;
 
 
 
 
-// Function now inherits from Callable.
+// Function inherits from Callable.
 class Function : public Callable {
 protected:
     CallableType subType = CallableType::DEF;
 public:
-    // Constructor: simply forward to Callable.
     Function(String name, ParamList params, CallableType functionType);
     virtual ~Function() = default;
 
@@ -55,9 +50,7 @@ public:
     // Return a FunctionSignature representing this callable.
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
-    // Optionally, return a pointer to the function body (if applicable).
     virtual FunctionBody* getBody() const { return nullptr; }
-    // virtual UniquePtr<CallableBody> getBody() const = 0;
 
     virtual String toString() const override = 0;
 

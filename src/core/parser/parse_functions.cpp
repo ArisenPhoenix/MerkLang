@@ -39,10 +39,7 @@ ParamList Parser::handleParameters(TokenType type){
             String paramName = currentToken().value;
             advance(); // Consume parameter name
             
-            // Check if the parameter has a type annotation
             std::optional<NodeValueType> paramType = parseStaticType();
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "TYPE: ", (paramType.has_value() ? nodeTypeToString(paramType.value()) : "NONE"));
-
             if (expect(TokenType::VarAssignment)){
                 advance(); // consume '='
                 auto token = currentToken();

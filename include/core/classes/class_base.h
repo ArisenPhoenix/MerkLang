@@ -83,10 +83,7 @@ public:
 
 class ClassInstance : public Callable { 
 private:
-
-    // SharedPtr<Scope> capturedScope;
     SharedPtr<Scope> capturedScope;
-    // mutable SharedPtr<Scope> startingScope;
     SharedPtr<Scope> instanceScope; // reference to definition (optional)
     String accessor;
 
@@ -110,7 +107,6 @@ public:
 
     void construct(const Vector<Node>& args, SharedPtr<ClassInstance> classInstance);
     Node call(String name, Vector<Node> args);
-    // SharedPtr<Scope> getScope() {return startingScope;}
 
     virtual Node getField(const String& name) const;                     // assumes a variable
     virtual Node getField(const String& name, TokenType type) const;     // specific to what kind of member i.e var/method
@@ -147,7 +143,6 @@ public:
     String toString() const override;
 };
 
-    // ClassInstanceNode getInstanceNode();
 
 class ClassSignature : public CallableSignature {
 private:

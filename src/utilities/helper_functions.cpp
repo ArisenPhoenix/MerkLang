@@ -83,11 +83,8 @@ String normalizeFileName(const String& filePath) {
     std::filesystem::path p(filePath);
     std::filesystem::path normalized;
     bool found = false;
-    // Iterate over each element in the path.
     for (const auto& part : p) {
         String partLower = toLower(part.string());
-
-        // When encountering "src" or "include", start including subsequent parts.
         if (partLower == "src" || partLower == "include") {
             found = true;
             continue; // Skip the folder itself if you want.
@@ -97,8 +94,6 @@ String normalizeFileName(const String& filePath) {
         }
     }
     
-    // If "src" or "include" wasn't found, just use the filename.
-    // This is for root files that may be used, currently it is where main.cpp and debugger_config.cpp is found
     if (normalized.empty())
         normalized = p.filename();
 

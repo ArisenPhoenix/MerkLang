@@ -21,7 +21,6 @@ void ClassRegistry::registerClass(const String& name, SharedPtr<ClassBase> class
         throw MerkError("Class '" + name + "' already exists.");
     }
     // Create a ClassSignature from the given ClassBase and store it.
-    // classMap[name] = std::make_shared<CallableSignature>(classDef->toCallableSignature());
     if (!classDef->getClassScope()) {
         throw MerkError("ClassRegistry::registerClass(): Classdef contains no scope");
     }
@@ -30,10 +29,6 @@ void ClassRegistry::registerClass(const String& name, SharedPtr<ClassBase> class
 }
 
 void ClassRegistry::clear() {
-    // for (auto& [name, ptr] : classMap) {
-    //     ptr->getCallable()->getCapturedScope().reset();
-    //     ptr.reset();  // Explicitly release the shared_ptr
-    // }
     classMap.clear(); // Then clear the container
 }
 
@@ -47,7 +42,6 @@ void ClassRegistry::registerClass(const String& name, SharedPtr<ClassSignature> 
 std::optional<SharedPtr<ClassSignature>> ClassRegistry::getClass(const String& name) {
     auto it = classMap.find(name);
     if (it != classMap.end()) {
-        // Return the shared_ptr stored in the map
         return it->second;
     }
     return std::nullopt;

@@ -12,7 +12,6 @@ FreeVars CodeBlock::collectFreeVariables() const {
     DEBUG_FLOW();
     freeVars.clear();
     FreeVars localDecls;
-    // localDecls.clear();
 
     // First pass: gather declared variables
     for (const auto& child : children) {
@@ -117,13 +116,11 @@ FreeVars CallableDef::collectFreeVariables() const {
     DEBUG_FLOW();
     freeVars.clear();
 
-    // Don't include declared parameters as free
     std::unordered_set<String> paramNames;
     for (const auto& param : parameters) {
         paramNames.insert(param.getName());
     }
 
-    // Let the function body collect its own free variables
     FreeVars nestedFree = body->collectFreeVariables();
     for (const auto& var : nestedFree) {
         if (paramNames.find(var) == paramNames.end()) {

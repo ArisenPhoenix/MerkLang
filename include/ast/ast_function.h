@@ -8,7 +8,6 @@
 
 
 class Scope;
-// class FreeVars;
 
 class ParameterAssignment : public VariableAssignment {
 public:
@@ -53,13 +52,8 @@ public:
     friend class MethodDef;
     FunctionRef(String name, SharedPtr<Scope> scope);
     virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
-    // virtual Node evaluate() const override { return evaluate(getScope());}
     virtual AstType getAstType() const override { return AstType::FunctionReference;}
-    // virtual CallableSignature toCallableSignature() const;
-
-    // virtual UniquePtr<BaseAST> clone() const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
-    // UniquePtr<FunctionBody> getFunctionBody() {return static_unique_ptr_cast<FunctionBody>(std::move(getBody()));}
     virtual UniquePtr<BaseAST> clone() const override;
 
 };

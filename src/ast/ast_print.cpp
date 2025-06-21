@@ -15,8 +15,6 @@
 
 
 // The printAST method is mostly for debugging and verification purposes. It is useful for identification of bugs and visualizing the structure
-
-
 String scopeLevelAsString(SharedPtr<Scope> scope, String astCaller) {
     String scopeString = scope ? std::to_string(scope->getScopeLevel()) : "Error Getting Scope For " + astCaller;
     return "Scope Level " + scopeString;
@@ -24,7 +22,6 @@ String scopeLevelAsString(SharedPtr<Scope> scope, String astCaller) {
 
 // AST Basic
 String LiteralValue::toString() const {
-    // auto scopeString = ;
     return getAstTypeAsString() + "(value=" + value.toString() +
         ", isString=" + (_isString ? "true" : "false") +
         ", isBool=" + (_isBool ? "true" : "false") +
@@ -68,7 +65,7 @@ void LiteralValue::printAST(std::ostream& os, int indent) const {
 
     DEBUG_FLOW_EXIT();
 };
-// LiteralValue
+
 void VariableDeclaration::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
@@ -125,15 +122,11 @@ void UnaryOperation::printAST(std::ostream& os, int indent) const {
 }
 
 
-// Convert Return to a string
 String Return::toString() const {
     return getAstTypeAsString()+"(value=" + (returnValue ? returnValue->toString() : "None") + ")";
 }
 
-// Evaluate: Simply return the stored value
 
-
-// Print function for debugging
 void Return::printAST(std::ostream& os, int indent) const  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
@@ -153,13 +146,10 @@ String CodeBlock::toString() const {
 }
 
 String WhileLoop::toString() const {
-    // DEBUG_FLOW();
-
     return "WhileLoop(condition=" + (getCondition() ? getCondition()->toString() : "null") +
             ", body=" + (getBody() ? getBody()->toString() : "null") +
             ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
 
-    // DEBUG_FLOW_EXIT();
 }
 
 void ConditionalBlock::printAST(std::ostream& os, int indent) const {
@@ -273,8 +263,6 @@ void WhileLoop::printAST(std::ostream& os, int indent) const {
 
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString());
-    // os << "WhileLoop\n";
-
 
     indent = printIndent(os, indent);
     condition->printAST(os, indent);
@@ -314,16 +302,13 @@ bool CodeBlock::containsReturnStatement() const {
 
         // Check if the child is a ReturnNode
         if (child->getAstType() == AstType::Return) {
-            // DEBUG_FLOW_EXIT();
-
             return true;
         }
 
         // If the child is a nested CodeBlock, check recursively
         auto blockPtr = dynamic_cast<CodeBlock*>(child.get());
         if (blockPtr && blockPtr->containsReturnStatement()) {
-
-            // DEBUG_FLOW_EXIT();
+            DEBUG_FLOW_EXIT();
             return true;
         }
     }
@@ -335,7 +320,6 @@ bool CodeBlock::containsReturnStatement() const {
 
 // AST FUNCTIONS
 void FunctionBody::printAST(std::ostream& os, int indent) const {
-    // printIndent();
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     indent = printIndent(os, indent);
 
@@ -380,7 +364,6 @@ void FunctionRef::printAST(std::ostream& os, int indent) const {
 void FunctionCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
-    // DEBUG_LOG(LogLevel::DEBUG, highlight(getAstTypeAsString(), Colors::bold_red), "(Name =", functionName, "scopeLevel =", std::to_string(getScope()->getScopeLevel()), "):");
     for (const auto& arg : arguments){
         printIndent(os, indent);
         debugLog(true, arg->toString());
@@ -448,9 +431,7 @@ void Chain::printAST(std::ostream& os, int indent) const {
     debugLog(true, getAstTypeAsString()+":");
 
     for (const auto& elem : elements) {
-        // indent = printIndent(os, indent);
         elem.printAST(os, indent);
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Added: ", elem.object->getAstTypeAsString(), "to AST");
     }
 }
 

@@ -16,6 +16,7 @@ enum class ChainOpKind {
 
 String opKindAsString(ChainOpKind opKind);
 
+// Obsolete but will keep it for now.
 enum class ResolutionMode {
     Normal,
     ClassInstance,
@@ -48,7 +49,7 @@ struct ChainElement {
 class Chain : public ASTStatement {
 private:
     Vector<ChainElement> elements;
-    WeakPtr<Scope> classScope; // ← set when evaluating in class
+    WeakPtr<Scope> classScope; //  set when evaluating in class
     int resolutionStartIndex = 0;  // default is 0, resolve from the beginning
     ResolutionMode mode = ResolutionMode::Normal;
     mutable WeakPtr<Scope> lastScope;
@@ -58,7 +59,6 @@ public:
     explicit Chain(SharedPtr<Scope> scope);
     ~Chain();
     void clear();
-    // void addElement(const ChainElement& element);
     void addElement(ChainElement&& elem);
     void replaceLastElementWith(ChainElement&& elem);
     void setResolutionStartIndex(int index);
@@ -67,10 +67,6 @@ public:
 
     AstType getAstType() const override {return AstType::Chain;}
     void printAST(std::ostream& os, int indent = 0) const override;
-
-    // Example of a resolution function that walks the chain:
-    // Node resolve(SharedPtr<Scope> scope) const;
-    // void assign(SharedPtr<Scope> scope, const Node& value) const;
 
     int getResolutionStartIndex() const;
     ResolutionMode getResolutionMode() const;
@@ -88,7 +84,6 @@ public:
     Vector<const BaseAST*> getAllAst(bool includeSelf) const override;
     void setScope(SharedPtr<Scope> scope) override;
     Vector<ChainElement>& getMutableElements();
-    // SharedPtr<Scope> getClassScope();
     ChainElement& getLast();
     ChainElement& getElement(int index);
 

@@ -214,11 +214,8 @@ UniquePtr<BaseAST> Chain::clone() const {
 
         copy->addElement(std::move(elem));
     }
-    // copy->setResolutionMode()
     copy->setResolutionStartIndex(getResolutionStartIndex());
-    // if (mode == ResolutionMode::ClassInstance && classScope){
-    //     copy->setSecondaryScope(getSecondaryScope());
-    // }
+
     copy->setResolutionMode(getResolutionMode());
     copy->setSecondaryScope(getSecondaryScope());
     return copy;
@@ -318,9 +315,7 @@ void ChainOperation::setResolutionStartIndex(int index, String accessor) {
 ResolutionMode ChainOperation::getResolutionMode() { return resolutionMode; }
 
 void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, SharedPtr<Scope> secondaryScope, String accessor) {
-    // if (lhs->getElements().empty()) {
-        
-    // }
+
     if (!lhs->getElements().empty() && lhs->getElement(0).name == accessor) {
         lhs->setResolutionStartIndex(index);
         lhs->setResolutionMode(newMode);
@@ -329,7 +324,6 @@ void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, Shar
         setResolutionStartIndex(index, accessor);
         setResolutionMode(newMode, accessor);
         setSecondaryScope(secondaryScope);
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "SET THE lhs' handling context");
     }
 
     if (rhs && rhs->getAstType() == AstType::Chain) {
@@ -338,17 +332,8 @@ void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, Shar
             chainR->setResolutionStartIndex(index);
             chainR->setResolutionMode(newMode);
             chainR->setSecondaryScope(secondaryScope);
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "SET THE rhs' handling context");
-
         }
     }
-
-    // resolutionStartIndex = index;
-    // resolutionMode = newMode;
-    // classScope = newScope;
-    // setResolutionStartIndex(index, accessor);
-    // setResolutionMode(newMode, accessor);
-    // setSecondaryScope(newScope);
 }
 
 
@@ -365,7 +350,7 @@ void ChainOperation::setScope(SharedPtr<Scope> newScope) {
 Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
-    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("STARTING SCOPE FOR Chain::evaluate() is: " + std::to_string(currentScope->getScopeLevel()), Colors::bg_bright_green));
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("STARTING SCOPE FOR Chain::evaluate() is: " + std::to_string(currentScope->getScopeLevel()), Colors::bg_bright_green));
 
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
     int index = resolutionStartIndex;
@@ -384,63 +369,28 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
 
     for (size_t i = index; i < elements.size(); ++i) {
         const auto& elem = elements[i];
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Current Val Is: ", currentVal);
-        DEBUG_LOG(LogLevel::PERMISSIVE, "ELEMENT TYPE: ", elem.object->getAstTypeAsString());
         AstType objType = elem.object->getAstType();
         if (currentVal.isClassInstance()) {
             auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
             currentScope = instance->getInstanceScope();
             instanceNode = makeShared<ClassInstanceNode>(instance);
             
-            // methodScope->debugPrint();
-
             if (objType == AstType::VariableDeclaration){
-                DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ABOUT TO EVALUATE VariableDeclaration -> Scopes Below", Colors::bg_green));
                 currentVal = elem.object->evaluate(methodScope, instanceNode);
             } 
 
             else if (objType == AstType::VariableAssignment) {
-                DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ABOUT TO EVALUATE VariableAssignment -> Scopes Below", Colors::bg_green));
                 currentVal = elem.object->evaluate(methodScope, instanceNode);
             }
             
             else if (objType == AstType::VariableReference) {
-                DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ABOUT TO EVALUATE VariableReference -> Scopes Below", Colors::bg_green));
-                currentVal = elem.object->evaluate(currentScope, instanceNode);
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
             }
 
             else if (objType == AstType::FunctionCall || objType == AstType::ClassMethodCall) {
-                DEBUG_LOG(LogLevel::PERMISSIVE, highlight("ABOUT TO EVALUATE FunctionCall/ClassMethodCall -> Scopes Below", Colors::bg_green));
-                
-                auto methodCall = static_unique_ptr_cast<MethodCall>(std::move(elem.object->clone()));
-
-                try {
-                    auto arguments = methodCall->handleArgs(currentScope);
-                    auto name = methodCall->getName();
-                    
-                    // currentVal = instance->call(name, arguments);
-                    auto instanceScope = instance->getInstanceScope();
-                    SharedPtr<CallableSignature> callableMethodSig = instanceScope->getFunction(name, arguments);
-                    auto callable = callableMethodSig->getCallable();
-                    auto method = std::static_pointer_cast<Method>(callable);
-                    currentVal = method->execute(arguments, method->getCapturedScope()->makeCallScope(), instanceNode);
-                    method->getBody()->printAST(std::cout);
-
-                    DEBUG_LOG(LogLevel::PERMISSIVE, "MethodName: ", elem.name);
-                    DEBUG_LOG(LogLevel::PERMISSIVE, "Element AST: ");
-                    elem.object->printAST(std::cout);
-                } catch (VariableNotFoundError& e) {
-                    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Variable NOT Found Error When Parsing Method", Colors::bg_bright_magenta));
-                    int indent = 0;
-                    std::ostringstream stream;
-                    for (auto& elem : elements) {
-                        elem.object->printAST(stream, indent);
-                        indent ++;
-                    }
-                    throw MerkError(e.what());
-
-                }
-                
+                auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
+                auto args = functionCall->handleArgs(currentScope);
+                currentVal = instance->call(elem.name, args);
                 
             }
             
@@ -453,7 +403,6 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             setLastScope(currentScope);
         }
     }
-    DEBUG_LOG(LogLevel::PERMISSIVE, "EXITING Chain::evaluate");
     DEBUG_FLOW_EXIT();
     return currentVal;
     
@@ -465,12 +414,12 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     String hasRight = getRightSide() ? "true" : "false";
     String hasInstanceNode = instanceNode ? "true" : "false";
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "OP KIND: ", opKindAsString(opKind));
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "OP KIND: ", opKindAsString(opKind));
 
 
     auto leftVal = lhs->evaluate(scope, instanceNode);
     auto currentScope = lhs->getLastScope();
-    auto& last = lhs->getElements().back();
+    // auto& last = lhs->getElements().back();  // Was An idea
 
     if (!currentScope) throw MerkError("There Is No Current Scope in ChainOperation::evaluate");
 
@@ -498,110 +447,77 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
         DEBUG_LOG(LogLevel::PERMISSIVE, "Left Hand Side of ChainOperation is Valid", leftVal);
     }
     
-    switch (opKind) {
-        case ChainOpKind::Reference:
-            if (leftVal.isClassInstance()) {
-                DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation Reference Is a class instance");
-                // auto instanceNode = static_cast<ClassInstanceNode>(leftVal);
-                auto instanceNode = ClassInstanceNode::from(leftVal);
-                auto instanceScope = instanceNode.getInstanceScope();
 
-                DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance Converted");
-                if (last.type == TokenType::Variable){
-                    int scopeLevel = instanceNode.isValid() ? instanceNode.getInstanceScope()->getScopeLevel() : 0;
-                    DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Field From Scope: ", scopeLevel);
-                    // instanceNode->getInternalScope();
-                    auto instance = instanceNode.getInstance();
+
+    // //                      For Perhaps More Advanced Maneuvers
+
+
+    // switch (opKind) {
+    //     case ChainOpKind::Reference:
+    //         if (leftVal.isClassInstance()) {
+    //             DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation Reference Is a class instance");
+    //             // auto instanceNode = static_cast<ClassInstanceNode>(leftVal);
+    //             auto instanceNode = ClassInstanceNode::from(leftVal);
+    //             auto instanceScope = instanceNode.getInstanceScope();
+
+    //             DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance Converted");
+    //             if (last.type == TokenType::Variable){
+    //                 int scopeLevel = instanceNode.isValid() ? instanceNode.getInstanceScope()->getScopeLevel() : 0;
+    //                 DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Field From Scope: ", scopeLevel);
+    //                 // instanceNode->getInternalScope();
+    //                 auto instance = instanceNode.getInstance();
                     
-                    return instance->getField(last.name, last.type);
-                } 
-                // else if (last.type == TokenType::FunctionCall) {
-                //     auto objectType = last.object->getAstType();
-                    
-                //     if (objectType != AstType::FunctionCall && objectType != AstType::ClassMethodCall && objectType != AstType::FunctionReference) {
-                //         // DEBUG_LOG(LogLevel::PERMISSIVE, "AstType: ", last.object->getAstTypeAsString(), ", TokenType: ", tokenTypeToString(last.type));
-                //         throw MerkError("Type Mismatch in ChainOperation::evaluate between TokenType and AstType");
-                //     }
+    //                 // return instance->getField(last.name, last.type);
+    //             } 
+    //         }
 
-                //     else {
-                //         DEBUG_LOG(LogLevel::PERMISSIVE, "AstType: ", last.object->getAstTypeAsString());
-                //         auto* obj = dynamic_cast<CallableCall*>(last.object.get());
-                //         if (!obj) {
-                //             throw std::runtime_error("Failed to cast to CallableCall!");
-                //         }
-                //         auto& args = obj->arguments;
-                //         Vector<Node> arguments;
-                //         auto instance = instanceNode.getInstance();
-                //         auto sharedInstanceNode = makeShared<ClassInstanceNode>(instanceNode);
-                //         for (auto& arg: args) {
-                //             auto evaluated = arg->evaluate(currentScope, sharedInstanceNode);
-                //             arguments.emplace_back(evaluated);
-                //         }
-                //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Arguments Evaluated For Method: ", last.name);
-                //         auto methodSig = instance->call(last.name, arguments);
-                //         return methodSig;
-                //         // return Node("NULL");
-                //     }
-                //     auto instance = instanceNode.getInstance();
-                //     auto sharedInstanceNode = makeShared<ClassInstanceNode>(instanceNode);
-                //     leftVal = last.object->evaluate(currentScope, sharedInstanceNode);
-                //     return leftVal;
-                // } 
-                // else {
-                //     // DEBUG_LOG(LogLevel::PERMISSIVE, last.object->getAstTypeAsString());
-                //     throw MerkError("Not A Valid Type For ChainOperation::evaluate -> Reference");
-                // }
-                
-                
-            }
+    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Variable Reference");
+    //         return leftVal;
 
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Variable Reference");
-            return leftVal;
+    //     case ChainOpKind::Assignment: 
+    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Assignment");
 
-        case ChainOpKind::Assignment: 
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Assignment");
+    //         // Node val = rhs->evaluate(currentScope, instanceNode);
+    //         if (leftVal.isClassInstance()) {
+    //             auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
+    //             instance->updateField(last.name, rightVal);
+    //         } else {
+    //             currentScope->updateVariable(last.name, rightVal);
+    //         }
+    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Assignment -> probably Null");
 
-            // Node val = rhs->evaluate(currentScope, instanceNode);
-            if (leftVal.isClassInstance()) {
-                auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
-                instance->updateField(last.name, rightVal);
-            } else {
-                currentScope->updateVariable(last.name, rightVal);
-            }
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Assignment -> probably Null");
+    //         DEBUG_FLOW_EXIT();
+    //         return rightVal;
+    //     // }
 
-            DEBUG_FLOW_EXIT();
-            return rightVal;
-        // }
-
-        case ChainOpKind::Declaration: 
-            DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Declaration");
-            if (rhs){
-                throw MerkError("There Shouldn't Be An RHS for A DECLARATION");
-            }
+    //     case ChainOpKind::Declaration: 
+    //         DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Declaration");
+    //         if (rhs){
+    //             throw MerkError("There Shouldn't Be An RHS for A DECLARATION");
+    //         }
             
-            // Node val = rhs->evaluate(currentScope);
-            // VarNode var(val, isConst, isMutable);
-            // if (leftVal.isClassInstance()) {
-            //     auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
-            //     instance->declareField(last.name, var);
-            // } else {
-            //     currentScope->debugPrint();
-            //     currentScope->printChildScopes();
-            //     auto variable = makeUnique<VarNode>(val, isConst, isMutable, isStatic);
-            //     currentScope->declareVariable(last.name, std::move(variable));
-            // }
+    //         // Node val = rhs->evaluate(currentScope);
+    //         // VarNode var(val, isConst, isMutable);
+    //         // if (leftVal.isClassInstance()) {
+    //         //     auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
+    //         //     instance->declareField(last.name, var);
+    //         // } else {
+    //         //     currentScope->debugPrint();
+    //         //     currentScope->printChildScopes();
+    //         //     auto variable = makeUnique<VarNode>(val, isConst, isMutable, isStatic);
+    //         //     currentScope->declareVariable(last.name, std::move(variable));
+    //         // }
 
-            // // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Declaration -> probably Null");
+    //         // // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Declaration -> probably Null");
 
-            // DEBUG_FLOW_EXIT();
-            // return var;
-            DEBUG_LOG(LogLevel::PERMISSIVE, highlight("VAR CREATED: ", Colors::bg_green), leftVal, "IN SCOPE: ");
-            // scope->debugPrint();
-            return leftVal;
-        // }
-    }
-    DEBUG_FLOW_EXIT();
-    throw MerkError("Unknown chain operation kind.");
-
+    //         // DEBUG_FLOW_EXIT();
+    //         // return var;
+    //         DEBUG_LOG(LogLevel::PERMISSIVE, highlight("VAR CREATED: ", Colors::bg_green), leftVal, "IN SCOPE: ");
+    //         // scope->debugPrint();
+    //         return leftVal;
+    //     // }
+    // }
+    // DEBUG_FLOW_EXIT();
+    // throw MerkError("Unknown chain operation kind.");
+    return leftVal;
 }

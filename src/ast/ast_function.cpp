@@ -135,7 +135,6 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     
     auto funcSig = func->toCallableSignature();
 
-    // Register the function in the current scope's function registry:
     scope->registerFunction(name, funcSig);
 
     if (!defScope){
@@ -160,7 +159,6 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
         DEBUG_LOG(LogLevel::PERMISSIVE, "NONE");
     }
 
-    // Wrap it in a FunctionNode (for returning it as a value)
     FunctionNode funcNode(func);
 
     DEBUG_FLOW_EXIT();
@@ -183,12 +181,9 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
         throw FunctionNotFoundError(name);
     }
     SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
-    // SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->get().getCallable());
 
-    // SharedPtr<Function> func = optSig->get().getCallable();
     func->getCapturedScope()->owner = generateScopeOwner("FuncCall", name);
     SharedPtr<Scope> capturedScope = func->getCapturedScope();
-    // callScope->debugPrint();
 
     auto callScope = capturedScope->makeCallScope();
     DEBUG_LOG(LogLevel::PERMISSIVE, "CALL SCOPE");
@@ -212,7 +207,6 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     DEBUG_LOG(LogLevel::DEBUG, "******************************* UserFunction Scope Set *******************************");
 
     func->parameters.verifyArguments(evaluatedArgs);
-    // For each parameter, declare it in the new scope.
     for (size_t i = 0; i < func->parameters.size(); ++i) {
         VarNode paramVar(evaluatedArgs[i]);
         callScope->declareVariable(func->parameters[i].getName(), makeUnique<VarNode>(paramVar));
@@ -226,25 +220,19 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
         throw ScopeError("FunctionCall func->getBoby()->getScope  created an unusable scope");
     }
    
+    scope->appendChildScope(callScope, "FunctionCall::evaluate");
 
     Node value = func->execute(evaluatedArgs, callScope);
-    scope->appendChildScope(callScope, "FunctionCall::evaluate");
     DEBUG_FLOW_EXIT();
     return value; 
 }
 
-Node FunctionRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-
-    // DEBUG_FLOW(FlowLevel::HIGH);
-    
+Node FunctionRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {    
     auto optSig = scope->getFunction(name);
     if (optSig.size() == 0) {
         throw RunTimeError("Function '" + name + "' not found.");
     }
-    // SharedPtr<Function> func = static_shared_ptr_cast<Function>(optSig->get().getCallable());
 
-    // This will be a vector
-    // SharedPtr<Function> funcs = std::static_pointer_cast<Function>(optSig.front());
     SharedPtr<Function> funcs = std::static_pointer_cast<Function>(optSig.front()->getCallable());
 
 

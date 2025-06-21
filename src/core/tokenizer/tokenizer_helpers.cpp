@@ -2,21 +2,8 @@
 #include "core/tokenizer.h"
 
 #include "utilities/debugging_functions.h"
-// #include "utilities/debugger.h"
 #include "utilities/debugger.h"
-
-
 #include "core/errors.h"
-
-
-// bool Tokenizer::isClass(size_t startPos) {
-
-// }
-
-// bool Tokenizer::isClass(String value) {
-//     bool insideClass = false;
-//     if (!tokens.empty() && lastToken().type == TokenType::Class);
-// }
 
 
 bool Tokenizer::isFunction(size_t startPos) {
@@ -113,7 +100,6 @@ bool Tokenizer::isClass(size_t startPos) {
 }
 
 void Tokenizer::updateCurrentLineText() {
-    // Update currentLineText on newline or at the start
     if (column == 1) { // Start of a new line
         size_t lineEnd = source.find('\n', position);
         if (lineEnd == String::npos) {

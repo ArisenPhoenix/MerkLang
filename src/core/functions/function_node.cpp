@@ -76,7 +76,6 @@ Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_un
     }
 
     DEBUG_FLOW_EXIT();
-    // return value;
     throw MerkError("Function did not return a value.");
 }
 
@@ -84,8 +83,6 @@ FunctionBody::~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying F
 
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::LOW);
-    // DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
-    // DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(getSubType()));
 
     SharedPtr<CallableSignature> funcSig = makeShared<CallableSignature>(
         shared_from_this(), getCallableType()
@@ -97,7 +94,6 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
         throw MerkError("Primary Callable Type is: " + callableTypeAsString(funcSig->getCallableType()));
     }
  
-    // DEBUG_LOG(LogLevel::ERROR, funcSig->getParameterTypes());
     DEBUG_FLOW_EXIT();
     return funcSig;
 }

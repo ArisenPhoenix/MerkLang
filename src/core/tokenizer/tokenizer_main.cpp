@@ -40,7 +40,7 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
-        // Handle comments
+        // Handle comments - perhaps will use them for something else later
         if (position < sourceLength && source[position] == '#') {
             while (position < sourceLength && source[position] != '\n') {
                 position++;
@@ -87,10 +87,8 @@ Vector<Token> Tokenizer::tokenize() {
             
         }
 
-
         // Handle identifiers, numbers, and strings
         else if (isLetter(source[position])) {
-            // size_t idStart = position;
             Token identifier = readIdentifier();  // advances past identifier
         
             char nextChar = position < sourceLength ? source[position] : '\0';
@@ -105,8 +103,8 @@ Vector<Token> Tokenizer::tokenize() {
             tokens.push_back(identifier);
             skipWhitespace();
             
-            if (handleOptionalType(tokens)) {
-                continue;  // We've already tokenized the type annotation
+            if (previousToken().type == TokenType::Variable && handleOptionalType(tokens)) {
+                continue;  // already tokenized the type annotation
             }
         } else if (isDigit(source[position])) {
             tokens.push_back(readNumber());
@@ -163,8 +161,6 @@ Token Tokenizer::readNumber() {
     size_t start = position;
     int startColumn = column;
 
-    // bool hasDot = false;
-
     // Read leading digits
     while (position < sourceLength && isDigit(source[position])) {
         position++;
@@ -174,7 +170,6 @@ Token Tokenizer::readNumber() {
     // Check for decimal part
     if (position < sourceLength && source[position] == '.') {
         if (isDigit(peek())) {
-            // hasDot = true;
             position++;
             column++;
 
@@ -201,8 +196,7 @@ Token Tokenizer::readString() {
     while (position < sourceLength && source[position] != '"') {
         if (source[position] == '\\') { // Handle escape sequences
             if (position + 1 >= sourceLength) {
-                // throw RunTimeError("Unfinished escape sequence in string literal.");
-                TokenizationError("Unfinished escape sequence in string literal.", line, column);
+                throw TokenizationError("Unfinished escape sequence in string literal.", line, column);
             }
             char nextChar = source[++position];
             column++;
@@ -223,13 +217,10 @@ Token Tokenizer::readString() {
         column++;
     }
 
-    // Ensure the string is properly terminated
     if (position >= sourceLength || source[position] != '"') {
-        // throw RunTimeError("Unmatched double-quote in string literal.");
         throw UnmatchedQuoteError(line, column, currentLineText);
     }
 
-    // Move past the closing double-quote
     position++;
     column++;
 
@@ -345,12 +336,6 @@ Token Tokenizer::readIdentifier() {
         type = TokenType::Bool;
     }
 
-    // Function Call?
-    // else if (isFunction(position)) {
-    //     type = TokenType::FunctionCall;
-    //     DEBUG_LOG(LogLevel::DEBUG, "Classified as function call: ", value);
-    // }
-
     DEBUG_LOG(LogLevel::DEBUG, "Exiting readIdentifier with value: ", value, " (Type: ", tokenTypeToString(type), ")");
     DEBUG_FLOW_EXIT();
     return Token(type, value, line, startColumn);
@@ -414,13 +399,6 @@ bool Tokenizer::isWhitespace(char c) const {
     return c == ' ' || c == '\t';
 }
 
-// bool Tokenizer::isLetter(char c) const {
-//     if (position >= sourceLength) {
-//         throw OutOfBoundsError(line, column, currentLineText);
-//     }
-//     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
-// }
-
 bool Tokenizer::isLetter(char c) const {
     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
 }
@@ -445,12 +423,7 @@ bool Tokenizer::isPunctuation(char c) const {
 
 bool Tokenizer::handleOptionalType(Vector<Token>& tokens) {
     if (position < sourceLength && source[position] == ':') {
-        // size_t colonPos = position;
         int colonCol = column;
-        
-
-        
-        
         if (!isFunction(previousToken().value) && !isClass(previousToken().value)){
             skipWhitespace();  // Allow optional space
             position++;

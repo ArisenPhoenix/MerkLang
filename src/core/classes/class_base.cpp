@@ -28,21 +28,18 @@ ClassBase::ClassBase(String otherName, String otherAccessor, SharedPtr<Scope> te
 }
 
 ClassBase::~ClassBase() {
-    // DEBUG_LOG(LogLevel::ERROR, "Destorying ClassBase");
     if (getClassScope()){
-        // DEBUG_LOG(LogLevel::ERROR, highlight("Still Holding Onto classScope", Colors::yellow));
         getClassScope().reset();
     }
     if (getCapturedScope()){
-        // DEBUG_LOG(LogLevel::ERROR, highlight("Still Holding Onto capturedScope", Colors::yellow));
         getCapturedScope().reset();
 
     }
+
 }
 // Add a method to the class by storing its signature in the class scope.
-// Here we assume that setVariable will store a Node that wraps the method signature.
+// Here it's assumed that setVariable will store a Node that wraps the method signature.
 void ClassBase::addMethod(const String& name, SharedPtr<Method> method) {
-    // Wrap the method signature into a Node.
     classScope->registerFunction(name, method->toCallableSignature());
     DEBUG_LOG(LogLevel::DEBUG, "Method added to ClassBase: ", name);
 }
@@ -74,7 +71,6 @@ void ClassBase::setCapturedScope(SharedPtr<Scope> scope) {
     }
     capturedScope = scope;
     initialCapturedScope = scope;
-    // getCapturedScope()->owner = "ClassBaseCaptured(" + name + ")";
 }
 
 void ClassBase::setClassScope(SharedPtr<Scope> scope) {
@@ -91,11 +87,6 @@ SharedPtr<Scope> ClassBase::getCapturedScope() const {
     if (auto captured = capturedScope.lock()) {
         return captured;
     }
-
-    // else if (capturedScope.expired()){
-    //     return nullptr;
-    // }
-
 
     if (initialCapturedScope) {
         return initialCapturedScope;
@@ -120,19 +111,7 @@ Node ClassBase::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unuse
 
 void ClassBase::setScope(SharedPtr<Scope> newScope) const {
     (void)newScope;
-    // scope = newScope;
-    // if (!newScope){
-    //     throw MerkError("New Scope provided to ClassBase is null");
-    // }
-    // scope->owner = "ClassBase(" + name + ")";
-    // getBody()->setScope(newScope);
-
 }
-
-
-// void ClassBase::setBody(UniquePtr<ClassBody> updatedBody) {body = std::move(updatedBody);}
-// UniquePtr<ClassBody>& ClassBase::getBody() {return body;}
-// ClassBody* ClassBase::getBody() const {return body.get();};
 
 SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
@@ -169,12 +148,8 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
         }
     }
 
-    // Clone the classScope (member scope)
-    // SharedPtr<Scope> clonedClassScope = ;
     getClassScope()->owner = generateScopeOwner("ClassBase", name);
     auto classBase = std::static_pointer_cast<ClassBase>(shared_from_this());
-    // auto sig = makeShared<ClassSignature>(classBase);
-    // SharedPtr<CallableSignature> classSig = makeShared<ClassSignature>(shared_from_this());
     SharedPtr<CallableSignature> classSig = makeShared<ClassSignature>(classBase);
     DEBUG_FLOW_EXIT();
     return classSig;
@@ -205,13 +180,10 @@ void ClassInstance::setCapturedScope(SharedPtr<Scope> scope) {
     }
     capturedScope = scope;
     
-    // capturedScope->owner = "ClassInstanceScope(" + name + ")";
 }
 
 void ClassInstance::setScope(SharedPtr<Scope> newScope) const {
-    // startingScope = newScope;
     (void)newScope;
-    // startingScope = newScope;
 }
 
 String ClassInstance::toString() const {
@@ -237,10 +209,6 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
 
     auto params = parameters.clone();
-    // params.verifyArguments(args);
-    // for (size_t i = 0; i < params.size(); ++i) {
-    //     methodCallScope->declareVariable(params[i].getName(), makeUnique<VarNode>(args[i]));
-    // }
 
     SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(self);
 
@@ -249,20 +217,6 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
 
     isConstructed = true;
 }
-
-
-
-// class InstanceNode : public CallableNode {
-//     public:
-//         InstanceNode(SharedPtr<ClassInstance> instance)
-//             : CallableNode(instance, "Instance") {
-//             data.type = NodeValueType::ClassInstance;
-//         }
-    
-//         SharedPtr<ClassInstance> getInstance() const {
-//             return std::get<SharedPtr<ClassInstance>>(data.value);
-//         }
-//     };
     
 Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
@@ -306,7 +260,7 @@ void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = sc
 Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
     (void)args;
-    // auto instanceScope = instanceNode->getInternalScope();
+
     if (!scope){
         throw MerkError("Scope passed is no longer valid");
     }
@@ -319,11 +273,6 @@ Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, Shar
         throw MerkError("Classbase Created Unsuccessfully");
     }
 
-    // if (classBase->getClassScope()->hasVariable("x")){throw MerkError("ClassSignature::call -> ClassBase Already Has Variable 'x' at instance construction time.");}
-    
-    // auto instanceScope = instanceNode->getInternalScope();
-    // auto captured = classBase->getCapturedScope()->clone();
-    // auto captured = classBase->getCapturedScope()->clone();
     auto captured = instanceScope->getParent();
     captured->owner = generateScopeOwner("InstanceCaptured", classBase->getName());
     if (!captured){
@@ -351,7 +300,6 @@ Node ClassInstance::call(String name, Vector<Node> args) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto methodSig = getInstanceScope()->getFunction(name, args);
     auto method = methodSig->getCallable();
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Method", method->toString());
 
     SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
     auto instance = std::static_pointer_cast<ClassInstance>(shared_from_this());
@@ -360,7 +308,7 @@ Node ClassInstance::call(String name, Vector<Node> args) {
     Node val = method->execute(args, methodCallScope, instanceNode);
 
     DEBUG_FLOW_EXIT();
-    return *instanceNode;
+    return val;
 }
 
 

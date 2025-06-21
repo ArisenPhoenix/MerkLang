@@ -20,7 +20,6 @@ void FunctionRegistry::clear() {
 void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSignature> signature) {
     DEBUG_FLOW(FlowLevel::LOW);
     
-    // CallableType newFuncType = signature->getCallable()->getCallableType();
     const CallableType callType = signature->getCallableType();
     const CallableType subType = signature->getSubType();
 
@@ -36,7 +35,6 @@ void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSi
         throw MerkError("Unsupported callable type in function registry: " + callableTypeAsString(callType));
     }
     if (subType == CallableType::DEF) {
-        // For def functions, there is only one allowed.
         if (!overloads.empty()) {
             overloads[0] = signature;
         } else {
@@ -45,10 +43,8 @@ void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSi
     }
 
     else if (subType == CallableType::FUNCTION) {
-        // For functions, check if any overload has the same signature.
         const auto& newParamTypes = signature->getParameterTypes();
         for (const auto& existingSig : overloads) {
-            // Only compare if the existing overload is also a function.
             if (existingSig->getSubType() == CallableType::FUNCTION && existingSig->matches(newParamTypes)) {
                 DEBUG_FLOW_EXIT();
                 
@@ -73,7 +69,6 @@ bool FunctionRegistry::hasFunction(const String& name) const {
     return func;
 }
 
-// std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>
 std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name, const Vector<Node>& args)  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     auto it = functions.find(name);
@@ -82,8 +77,6 @@ std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegi
         return std::nullopt;
     }
         
-
-    // Build a vector of argument types.
     Vector<NodeValueType> argTypes;
     for (const auto &arg : args) {
         argTypes.push_back(arg.getType());
@@ -95,10 +88,8 @@ std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegi
         DEBUG_LOG(LogLevel::TRACE, "Checking Function Candidate", name, candidate->getCallable()->parameters.toString());
 
         // If this is a def function, return it regardless.
-        // Def functions are meant to be more light weight and flexible.
         DEBUG_LOG(LogLevel::TRACE, "Function Type: ", callableTypeAsString(candidate->getSubType()));
         if (candidate->getSubType() == CallableType::DEF) {
-            // return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(candidate);
             return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(candidate);
         }
         else if (candidate->getSubType() == CallableType::FUNCTION) {
@@ -146,21 +137,6 @@ void FunctionRegistry::debugPrint() const {
     
     DEBUG_FLOW_EXIT();
 }
-
-
-// FunctionRegistry FunctionRegistry::clone() const {
-//     DEBUG_FLOW(FlowLevel::MED);
-//     FunctionRegistry copy;
-//     for (const auto& [fname, sigs] : functions) {
-//         for (const auto& sig : sigs) {
-//             // Shallow copy of the shared pointer.
-//             copy.registerFunction(fname, sig);
-//         }
-//     }
-
-//     DEBUG_FLOW_EXIT();
-//     return copy;
-// }
 
 
 FunctionRegistry FunctionRegistry::clone() const {

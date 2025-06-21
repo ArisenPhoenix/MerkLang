@@ -86,7 +86,6 @@ public:
 
     // Print the AST for debugging.
     void printAST(std::ostream& os, int indent = 0) const override;
-    // String toString() const override;
     Vector<String> removeMethodAccessors(UniquePtr<ClassBody>& clsBody) const;
     AstType getAstType() const override {return AstType::ClassDefinition;}
     void setClassAccessor(String accessorName);
@@ -116,10 +115,6 @@ public:
     ClassRef(String instanceName, SharedPtr<Scope> scope);
     UniquePtr<BaseAST> clone() const override;
 
-    // Evaluate: retrieves the member from the class instance.
-    // Node evaluate(SharedPtr<Scope> scope) const override;
-    // void printAST(std::ostream& os, int indent = 0) const override;
-
     AstType getAstType() const override {return AstType::ClassReference;}
 };
 
@@ -137,7 +132,6 @@ public:
     MethodDef(UniquePtr<FunctionDef> funcDef);
     ~MethodDef();
 
-    // Node evaluate(SharedPtr<Scope> scope) const override;
     UniquePtr<BaseAST> clone() const override;
 
     String toString() const override;
@@ -161,8 +155,6 @@ public:
     ~MethodCall();
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     AstType getAstType() const override { return AstType::ClassMethodCall;}
-    // UniquePtr<BaseAST> clone() const override;
-    // String toString() const override;
 
 };
 
@@ -171,7 +163,6 @@ class MethodRef : public CallableRef {
 protected:
     String accessor;
 public:
-    // Constructor: Force the FunctionType to METHOD.
     MethodRef(String name, SharedPtr<Scope> scope);
 
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
@@ -184,7 +175,6 @@ public:
 class Accessor : public ASTStatement {
 protected:
     String accessor;
-    // SharedPtr<ClassInstanceNode> instanceScope;
 
 public:
     Accessor(String accessor, SharedPtr<Scope> scope);
@@ -200,24 +190,8 @@ public:
     UniquePtr<BaseAST> clone() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
     void setScope(SharedPtr<Scope> scope) override;
-    // SharedPtr<Scope> getInstanceScope() const {return instanceScope;}
-    // void setInstanceScope(SharedPtr<Scope> newScope) {instanceScope = newScope;}
-    // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+
 };
-
-
-// class ScopeNode : public Node {
-//     String accessor;
-// public:
-//     ScopeNode(String accessor, SharedPtr<Scope> scope);
-    
-//     SharedPtr<MethodNode> getMethod(String methodName, Vector<Node> args);
-//     SharedPtr<FunctionNode> getFunction(String funcName, Vector<Node> args);
-//     SharedPtr<Scope> getScope() const;
-//     VarNode getAttribute(String varName);
-//     String getAccessor() {return accessor;}
-
-// };
 
 #endif // AST_CLASS_H
 

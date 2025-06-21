@@ -480,8 +480,6 @@ void Scope::registerFunction(const String& name, SharedPtr<UserFunction> functio
     auto signature = function->toCallableSignature();
     handleFunctionRegistration(name, signature);
     
-    // localFunctions[name].emplace_back(signature);
-
     DEBUG_FLOW_EXIT();
 }
 
@@ -493,17 +491,12 @@ void Scope::registerFunction(const String& name, SharedPtr<Callable> anyCallable
     auto signature = anyCallable->toCallableSignature();
     handleFunctionRegistration(name, signature);
 
-    // localFunctions[name].emplace_back(signature);
-
-
     DEBUG_FLOW_EXIT();
 }
 
 void Scope::registerFunction(const String& name, SharedPtr<CallableSignature> signature) {
     DEBUG_FLOW(FlowLevel::MED);
     handleFunctionRegistration(name, signature);
-
-    // localFunctions[name].emplace_back(signature);
     DEBUG_FLOW_EXIT();
 }
 
@@ -534,27 +527,7 @@ std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const 
     return std::nullopt;
   }
 
-// SharedPtr<CallableSignature> Scope::handleLookupFunction(String& name, const Vector<Node>& args) const {
-//     for (auto candidate : it->second) {
-//             if (candidate->getSubType() == CallableType::DEF) {
-//                 if (candidate->matches(argTypes)){
-//                     return candidate;
-//                 } else {
-//                     throw FunctionNotFoundError(name);
-//                 }
-//             }
 
-//             else if (candidate->getSubType() == CallableType::FUNCTION) {
-//                 if (candidate->matches(argTypes)){
-//                     DEBUG_FLOW_EXIT();
-//                     return candidate;
-//                 } 
-//             }
-//         }
-// }
-
-
-// lookup a function: first in local overlay
 std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const Vector<Node>& args) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     auto it = localFunctions.find(name);

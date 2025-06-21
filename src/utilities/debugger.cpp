@@ -81,11 +81,11 @@ String Debugger::currentTime() const {
 
 
 
-// Optionally include a timestamp.
+// include a timestamp.
 void Debugger::setIncludeTimestamp(bool include) { includeTimestamp = include; }
 bool Debugger::getIncludeTimestamp() const { return includeTimestamp; }
 
-// Optionally include file info.
+// include file info.
 void Debugger::setIncludeFileInfo(bool include) { includeFileInfo = include; }
 bool Debugger::getIncludeFileInfo() const { return includeFileInfo; }
 
@@ -113,7 +113,7 @@ void Debugger::printFiles(){
     }
     std::sort(fileNames.begin(), fileNames.end());
 
-    // Set column widths. Adjust these as needed.
+    // Set column widths.
     const int fileColWidth = 40;
     const int logLevelColWidth = 20;
     const int flowLevelColWidth = 20;
@@ -233,8 +233,6 @@ bool Debugger::handleFlowProceed(FlowLevel methodFlowLevel, const String& file){
 
 void Debugger::handleLogDisplay(LogLevel level, const String &normFile, int line, String args) {
         std::ostringstream oss;
-        // String normFile = normalizeFileName(file);
-
         oss << handleLevel(level);
         oss << handleTime();
         oss << handleFileDisplay(normFile, line);
@@ -244,8 +242,6 @@ void Debugger::handleLogDisplay(LogLevel level, const String &normFile, int line
 }
 
 void Debugger::handleFlowDisplay(FlowLevel level, const String &normFile, int line, String methodName, bool entering) {
-    // String normFile = normalizeFileName(file);
-
     std::ostringstream oss;
     oss << handleLevel(FlowLevel::FLOW) << handleLevel(level)
     << handleTime()

@@ -95,8 +95,6 @@ private:
     void addAccessor(String accessorName);
     void popAccessor();
     
-    // UniquePtr<ASTStatement> parseClassMembers();
-
     UniquePtr<ASTStatement> parseReturnStatement();
     UniquePtr<ASTStatement> parseContinueStatement();
 
@@ -104,7 +102,6 @@ private:
     void processDedent(SharedPtr<Scope> manualScope = nullptr);
     bool processNewLines();
     void processBlankSpaces();
-    // ParamList parseParameters(TokenType type = TokenType::FunctionDef);
 
     bool expect(TokenType tokenType, bool strict = false);
 

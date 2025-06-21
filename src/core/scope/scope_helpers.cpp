@@ -50,8 +50,6 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
         }
     }
 
-    // DEBUG_LOG(LogLevel::INFO, highlight("[Context Variables From Detached Scope]:", Colors::yellow));
-
     DEBUG_FLOW_EXIT();
     return detached;
 }
@@ -92,32 +90,7 @@ void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) cons
     } else {
         newScope->owner = owner;
     }
-    // newScope->owner = newScope->isDetached ? newScope->owner.empty() ? owner + "(detached)" : owner : newScope->owner == "None" ? owner : owner;
 }
-
-
-// SharedPtr<Scope> Scope::clone(bool strict) const {
-//     DEBUG_FLOW(FlowLevel::MED);
-//     if (parentScope.expired()){
-//         if (strict) {
-//             throw ParentScopeNotFoundError();
-//         }
-//     }
-//     auto newScope = std::make_shared<Scope>(getParent(), this->interpretMode);
-    
-//     // Deep copy the variables from this scope.
-//     for (const auto& [name, var] : this->context.getVariables()) {
-//         newScope->context.setVariable(name, UniquePtr<VarNode>(var->clone()));
-//     }
-    
-//     newScope->functionRegistry = this->functionRegistry.clone();
-//     newScope->classRegistry = this->classRegistry.clone();
-//     newScope->isClonedScope = true;
-//     includeMetaData(newScope, isDetached);
-//     DEBUG_FLOW_EXIT();
-    
-//     return newScope;
-// }
 
 SharedPtr<Scope> Scope::clone(bool strict) const {
     DEBUG_FLOW(FlowLevel::MED);
@@ -125,41 +98,16 @@ SharedPtr<Scope> Scope::clone(bool strict) const {
     SharedPtr<Scope> newScope;
     if (auto parent = parentScope.lock()) {
         // use the weak/child constructor
-        // Scope(parent, globalFunctions, globalClasses, interpretMode);
         newScope = std::make_shared<Scope>(parent, globalFunctions, globalClasses, interpretMode);
     } else {
         if (strict){
             throw ParentScopeNotFoundError();
         }
-        // it really was a root, so use the int‐ctor
         newScope = std::make_shared<Scope>(0, interpretMode);
     }
 
-    // now deep‐copy your context, registries, metadata…
     for (const auto& [name,var] : this->context.getVariables())
         newScope->context.setVariable(name, UniquePtr<VarNode>(var->clone()));
-
-    // for (const auto& [funcName, funcVect] : localFunctions) {
-    //     for (const auto& funcSig : funcVect) {
-    //         if (funcSig){
-    //             newScope->registerFunction(funcName, funcSig);
-    //         }
-    //         else {
-    //             throw MerkError("Clone Failed at Function: " + funcName);
-    //         }
-    //     }
-    // }
-
-    // for (auto& [className, classSig] : localClasses) {
-
-    //     if (classSig){
-    //         newScope->registerClass(className, classSig);
-    //     }
-    //     else {
-    //         throw MerkError("Clone Failed at Function: " + className);
-    //     }
-
-    // }
 
     newScope->localFunctions = this->localFunctions;
     newScope->localClasses = this->localClasses;
@@ -230,7 +178,6 @@ void Scope::printChildScopes(int indentLevel) const {
         debugLog(true, highlight("\n\n======================== Start Scope::printChildScopes ========================", Colors::cyan));
     }
     auto parent = parentScope.lock();
-    // auto newIndent = indentLevel * 2;
     auto indent = String(indentLevel+2, ' ');
     int numInstances = 0;
     for (auto& [varName, var] : context.getVariables()) {
@@ -257,7 +204,6 @@ void Scope::printChildScopes(int indentLevel) const {
         for (auto& [varName, var] : context.getVariables()) {
             if (var->isClassInstance()) {
                 auto instance = std::get<SharedPtr<ClassInstance>>(var->getValue());
-                // auto instance = std::static_pointer_cast<ClassInstance>(callable);
                 instance->getInstanceScope()->printChildScopes(indentLevel+2);
                 instance->getCapturedScope()->printChildScopes(indentLevel+2);
             }
@@ -278,7 +224,6 @@ void Scope::printChildScopes(int indentLevel) const {
 
 void Scope::printContext(int depth) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    // Print current scope details
     String indent(depth * 2, ' '); // Indentation based on depth
     std::cout << indent << "Scope Level: " << scopeLevel
               << " | Memory Loc: " << this
@@ -310,6 +255,7 @@ void Scope::printContext(int depth) const {
 void Scope::setScopeLevel(int newLevel) {
     scopeLevel = newLevel;
 }
+
 void Scope::updateChildLevelsRecursively() {
     for (auto& child : childScopes){
         child->setScopeLevel(scopeLevel+1);
@@ -351,8 +297,6 @@ bool Scope::has(const SharedPtr<Scope>& checkScope) {
         throw MerkError("ChildScope for checking is null");
     }
     if (this == checkScope.get()) {
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Scopes Match at: ", checkScope.get(), 
-        //           "ScopeLevel: ", checkScope->getScopeLevel(), "Owner: ", owner);
         return true;
     }
     for (auto& child : getChildren()) {
