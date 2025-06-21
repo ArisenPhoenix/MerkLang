@@ -36,31 +36,22 @@ public:
     bool hasVariable(const String& name) const;
     void debugPrint() const;
 
-    UniquePtr<Context> clone() const {
-        auto newContext = std::make_unique<Context>();
-        // Deep copy logic for all members of Context
-        newContext->variables = deepCopyVariables();
-        newContext->arguments = arguments;  // Assuming this is copyable
-        return newContext;
-}
+    UniquePtr<Context> clone() const;
+
+    void clear();
 
     // Get a const reference to all variables in the current context
     const std::unordered_map<String, UniquePtr<VarNode>>& getVariables() const;
 
 
 private:
-    std::unordered_map<String, UniquePtr<VarNode>> deepCopyVariables() const {
-        std::unordered_map<String, UniquePtr<VarNode>> copy;
-        for (const auto& [key, value] : variables) {
-            if (value) {
-                copy[key] = std::make_unique<VarNode>(*value);  // Deep copy each VarNode
-            }
-        }
-        return copy;
-    }
+    std::unordered_map<String, UniquePtr<VarNode>> deepCopyVariables() const;
     std::unordered_map<String, UniquePtr<VarNode>> variables; // Variables for the current context
     Vector<VarNode> arguments;                                // Function arguments
 };
+
+
+
 
 #endif // CONTEXT_H
 

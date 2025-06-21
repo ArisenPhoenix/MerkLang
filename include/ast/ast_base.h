@@ -10,9 +10,11 @@
 #include <variant>
 
 class Scope;
+class ClassInstanceNode;
+using FreeVars = std::unordered_set<String>;
+
 
 // These templates are specific to the AST structures, so it is reasonable to only include them here, rather than types.h
-
 template <typename T, typename U>
 UniquePtr<T> static_unique_ptr_cast(UniquePtr<U>&& ptr) {
     return UniquePtr<T>(static_cast<T*>(ptr.release()));
@@ -34,17 +36,23 @@ UniquePtr<T> static_shared_ptr_cast(SharedPtr<U>&& ptr) {
     return SharedPtr<T>(static_cast<T*>(ptr.release()));
 }
 
+class FreeVarCollection {
+public:
+    mutable FreeVars freeVars;
+    mutable FreeVars localAssign;
+    virtual FreeVars collectFreeVariables() const = 0;
+    ~FreeVarCollection();
+};
 
-class BaseAST {
+
+class BaseAST : public FreeVarCollection {
 protected:
-    WeakPtr<Scope> scope;
     String branch = "Base";
 
 public:
     BaseAST(SharedPtr<Scope> scope = nullptr);
-    virtual ~BaseAST() = default;
+    virtual ~BaseAST();
 
-    // virtual String toString() const {return "BaseAST";}
     virtual String toString() const = 0;
 
     // Virtual method for printing the AST node (for debugging purposes)
@@ -61,33 +69,16 @@ public:
     virtual AstType getAstType() const {return AstType::Base;}
     String getAstTypeAsString() const {return astTypeToString(getAstType());}
     
-    virtual void setScope(SharedPtr<Scope> newScope);
+    virtual void setScope(SharedPtr<Scope> newScope) = 0;
 
-    SharedPtr<Scope> getScope() const {
-        auto locked = scope.lock();
-        return locked;
-    }
+    virtual SharedPtr<Scope> getScope() const = 0;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const;
-    virtual Node evaluate(SharedPtr<Scope> scope) const = 0;
+    virtual Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
     virtual Node evaluate() const = 0;
 
     virtual UniquePtr<BaseAST> clone() const = 0;
     String getBranch() const {return branch;}
-
-    // Vector<const BaseAST*> BaseAST::getAllAst(std::function<bool(const BaseAST*)> filter, bool includeSelf) const {
-    //     Vector<const BaseAST*> result;
-    
-    //     if (includeSelf && filter(this)) {
-    //         result.push_back(this);
-    //     }
-    
-    //     for (const auto& child : getChildren()) {
-    //         auto subResults = child->getAllAst(filter, true);  // recurse
-    //         result.insert(result.end(), subResults.begin(), subResults.end());
-    //     }
-    
-    //     return result;
-    // }
+    virtual FreeVars collectFreeVariables() const override {return {};}
 };
 
 
@@ -96,7 +87,8 @@ public:
 
 class ASTStatement : public BaseAST {
 public:
-    explicit ASTStatement(SharedPtr<Scope> scope) : BaseAST(scope) {branch = "AST";}
+    WeakPtr<Scope> scope;
+    explicit ASTStatement(SharedPtr<Scope> scope);
     ~ASTStatement() override = default;
 
     virtual void printAST(std::ostream& os, int indent = 0) const {
@@ -108,14 +100,22 @@ public:
     }
     virtual AstType getAstType() const override {return AstType::AST;}
     virtual String toString() const override {return getAstTypeAsString();}
-
-    virtual Node evaluate(SharedPtr<Scope> scope) const override= 0;
+    SharedPtr<Scope> getScope() const override {
+        if (auto s = scope.lock()) {
+            return s;
+        }
+        return nullptr;
+    }
+    virtual void setScope(SharedPtr<Scope> newScope) override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override= 0;
 
     virtual Node evaluate() const override {return evaluate(getScope());}
 
     virtual UniquePtr<BaseAST> clone() const override;
 
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    virtual FreeVars collectFreeVariables() const override {return {};}
+
 
 };
 

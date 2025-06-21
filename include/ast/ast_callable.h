@@ -13,9 +13,8 @@ class MethodDef;
 class Callable;
 class MethodBody;
 class FunctionBody;
-// class CodeBlock;
 
-
+ 
 class CallableSignature {
 private:
     SharedPtr<Callable> callable;
@@ -25,21 +24,15 @@ private:
 
 public:
     explicit CallableSignature(SharedPtr<Callable> callable, CallableType callType);
-    virtual ~CallableSignature() = default;  // <-- Add this line
+    virtual ~CallableSignature();
 
     Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;
+    virtual Node call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 
     bool matches(const Vector<NodeValueType>& otherTypes) const;
     
-    // Return the stored callable.
     SharedPtr<Callable> getCallable() const;
-
-    // CallableBody* getBody() const {return callable->getBody();}
-    
-
-    // template<typename T>
-    // SharedPtr<T> getCallableClonedAs() const;
-
+ 
     void setParameterTypes(Vector<NodeValueType> paramTypes) {parameterTypes = paramTypes;} 
     const Vector<NodeValueType>& getParameterTypes() const;
     CallableType getCallableType() { return callType; }
@@ -65,24 +58,24 @@ public:
 
     CallableBody(UniquePtr<CallableBody>&& block);
     CallableBody(UniquePtr<CallableBody>* body);
-    ~CallableBody(){
-        DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange));
-    } 
+    virtual ~CallableBody();
 
 
     virtual AstType getAstType() const override { return AstType::CallableBody;}
     virtual Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
+    virtual String toString() const override {return astTypeToString(getAstType());}
 
     virtual void printAST(std::ostream& os, int indent = 0) const;
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
-    
+    virtual Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    Node evaluate() const override {return evaluate(getScope());}
+
     virtual UniquePtr<BaseAST> clone() const override;
 
     // For Calling Within A Method's Context
     MethodBody* toMethodBody();
     
     // For Calling Within A Function's Context
-    FunctionBody* toFunctionBody();
+    FunctionBody* toFunctionBody(); 
 
     // CatchAll
     CallableBody* toCallableBody();
@@ -97,14 +90,15 @@ public:
     String name;
     mutable ParamList parameters;
     UniquePtr<CallableBody> body;
+    ~CallableDef();
 
     CallableType callType;
     friend class MethodDef;
 
     CallableDef(String name, ParamList parameters, UniquePtr<CallableBody> body, CallableType funcType, SharedPtr<Scope> scope);
-    ~CallableDef() = default;
+
     virtual AstType getAstType() const override { return AstType::CallableDefinition;}
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const override;
     virtual UniquePtr<BaseAST> clone() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
     virtual String toString() const override {return astTypeToString(getAstType());}
@@ -114,6 +108,7 @@ public:
     String getName() {return name;}
     ParamList getParameters() {return parameters;}
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
     
 };
 
@@ -123,11 +118,11 @@ public:
     String name;
     Vector<UniquePtr<ASTStatement>> arguments;
     CallableCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope);
-
+    ~CallableCall();
     virtual AstType getAstType() const override { return AstType::CallableCall;}
     
 
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
 
@@ -136,6 +131,7 @@ public:
     // virtual UniquePtr<CallableBody> getBody() const = 0;
     Vector<Node> handleArgs(SharedPtr<Scope> scope) const;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    FreeVars collectFreeVariables() const override;
 };
 
 
@@ -148,9 +144,9 @@ public:
     AstType getAstType() const override { return AstType::CallableReference;}
     String toString() const override {return astTypeToString(getAstType());}
 
-    Node evaluate(SharedPtr<Scope> scope) const override;
-
-    String getName() {return name;}
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+ 
+    String getName() const {return name;}
     virtual UniquePtr<BaseAST> clone() const override;
     // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };

@@ -19,11 +19,9 @@ public:
     CallableType callType;
     CallableType subType;
     bool requiresReturn = true;
-    
-    // Constructors.
-    // Callable() {}
+
     Callable() {}
-    Callable(Callable& callable);
+    Callable(Callable& callable); 
     Callable(Method& method);
     Callable(Function& function);
     Callable(String name, ParamList params, CallableType callType);
@@ -31,7 +29,7 @@ public:
     virtual ~Callable() = default;
     
     // Execute the callable with the provided arguments and scope.
-    virtual Node execute(const Vector<Node> args, SharedPtr<Scope> scope) const = 0;
+    virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
     
     // Set and get the captured scope.
     virtual void setCapturedScope(SharedPtr<Scope> scope) = 0;
@@ -40,12 +38,11 @@ public:
     // Produce a FunctionSignature for registration.
     virtual SharedPtr<class CallableSignature> toCallableSignature() = 0;
     virtual String toString() const = 0; 
-    // virtual UniquePtr<CallableBody> getBody() const = 0;
-    // virtual CallableBody* getBody() const = 0;
 
     virtual void setScope(SharedPtr<Scope> newScope) const = 0;
     
     String getName() const;
+    String& getQualifiedName();
 
     CallableType getCallableType() const;
     CallableType getSubType() const;
@@ -59,24 +56,15 @@ protected:
     SharedPtr<Scope> internalScope; // Optional — used for chained resolution
 
 public:
-    
-    explicit CallableNode(SharedPtr<Callable> callable, String callableType = "Callable") {
-        data.type = NodeValueType::Callable;
-        data.value = callable; // Stored as SharedPtr<Callable>
-        nodeType = callableType+"Node";
-        isCallable = true;
-    }
+    explicit CallableNode(SharedPtr<Callable> callable, String callableType = "Callable");
+    explicit CallableNode(SharedPtr<CallableNode> callableNode); // for returning non shared callable node 
 
-    virtual SharedPtr<Callable> getCallable() const {
-        return std::get<SharedPtr<Callable>>(data.value);
-    }
+    virtual SharedPtr<Callable> getCallable() const;
 
-    void setInternalScope(SharedPtr<Scope> scope) { internalScope = scope; }
-    SharedPtr<Scope> getInternalScope() const { return internalScope; }
+    void setInternalScope(SharedPtr<Scope> scope);
+    SharedPtr<Scope> getInternalScope() const;
 
-    virtual String toString() const {
-        return "<" + nodeType + ": " + getCallable()->toString() + ">";
-    }
+    virtual String toString() const;
 };
 
 

@@ -42,7 +42,7 @@ private:
     bool consume(TokenType type);
     bool consume(String value);
     bool consume(TokenType type, String val1, String val2 = "", String val3 = "");
-    Token peek();
+    Token peek(int number = 1);
     Token find(TokenType type, int limit);
     bool existing(TokenType type, int limit);
     Token previousToken() const;
@@ -50,6 +50,7 @@ private:
     bool match(TokenType type, const String& value = "");
     
     int getOperatorPrecedence(const String& op) const;
+    std::tuple<bool, bool, String> handleIsVarDec();
 
     // Scope Management
     void enterScope(SharedPtr<Scope> manualScope = nullptr);  // Enter a new child scope
@@ -69,7 +70,7 @@ private:
     UniquePtr<CodeBlock> parseBlock(SharedPtr<Scope> = nullptr);
     UniquePtr<BaseAST> parseStatement();
     
-
+    std::optional<NodeValueType> getTypeFromString(String typeStr);
     std::optional<std::type_index> getStaticType();
     void interpret(CodeBlock* CodeBlockForEvaluation) const;
     void interpret(ASTStatement* CodeBlockForEvaluation) const;
@@ -87,15 +88,13 @@ private:
 
     UniquePtr<ASTStatement> parseProtectedClassAttributes();
     UniquePtr<ASTStatement> parseClassAttributes();
-    UniquePtr<Chain> parseChain();
-
+    UniquePtr<Chain> parseChain(bool isDeclaration = false, bool isConst = false);
+    UniquePtr<ChainOperation> parseChainOp();
     String getCurrentClassAccessor();
 
     void addAccessor(String accessorName);
     void popAccessor();
     
-    // UniquePtr<ASTStatement> parseClassMembers();
-
     UniquePtr<ASTStatement> parseReturnStatement();
     UniquePtr<ASTStatement> parseContinueStatement();
 
@@ -103,13 +102,13 @@ private:
     void processDedent(SharedPtr<Scope> manualScope = nullptr);
     bool processNewLines();
     void processBlankSpaces();
-    // ParamList parseParameters(TokenType type = TokenType::FunctionDef);
 
     bool expect(TokenType tokenType, bool strict = false);
 
     Token handleAttributNotation();
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
+    void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
     // For Future Implementation
     // UniquePtr<ImportStatement> parseImport();
     // Vector<UniquePtr<ImportStatement>> parseImports();

@@ -2,21 +2,8 @@
 #include "core/tokenizer.h"
 
 #include "utilities/debugging_functions.h"
-// #include "utilities/debugger.h"
 #include "utilities/debugger.h"
-
-
 #include "core/errors.h"
-
-
-// bool Tokenizer::isClass(size_t startPos) {
-
-// }
-
-// bool Tokenizer::isClass(String value) {
-//     bool insideClass = false;
-//     if (!tokens.empty() && lastToken().type == TokenType::Class);
-// }
 
 
 bool Tokenizer::isFunction(size_t startPos) {
@@ -113,7 +100,6 @@ bool Tokenizer::isClass(size_t startPos) {
 }
 
 void Tokenizer::updateCurrentLineText() {
-    // Update currentLineText on newline or at the start
     if (column == 1) { // Start of a new line
         size_t lineEnd = source.find('\n', position);
         if (lineEnd == String::npos) {
@@ -198,3 +184,27 @@ void Tokenizer::finalizeIndentation(Vector<Token>& tokens) {
         indentStack.pop_back();
     }
 }
+
+
+bool isUpper(char c) {
+    return std::isupper(static_cast<unsigned char>(c));
+}
+
+
+bool Tokenizer::isCapitalizedType(size_t pos) const {
+    if (pos >= sourceLength) return false;
+
+    if (!std::isupper(static_cast<unsigned char>(source[pos]))) return false;
+
+    // Continue checking for alphanumeric identifier
+    while (pos < sourceLength) {
+        char c = source[pos];
+        if (!(std::isalpha(static_cast<unsigned char>(c)) || std::isdigit(static_cast<unsigned char>(c)))) {
+            break;
+        }
+        pos++;
+    }
+
+    return true;
+}
+

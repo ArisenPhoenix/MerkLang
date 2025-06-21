@@ -29,11 +29,90 @@ Parser::Parser(Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpret
             throw MerkError("Root scope must not be null when initializing the parser.");
         }
         rootBlock = makeUnique<CodeBlock>(rootScope);
+        currentScope = rootScope->createChildScope();
+        if (!currentScope){
+            throw MerkError("Initial Scope is null");
+        }
         // nativeFunctionNames = rootScope->functionNames;
         // DEBUG_LOG(LogLevel::INFO, "Parser initialized with root scope at level: ", rootScope->getScopeLevel(),
         //         " | Memory Loc: ", rootScope.get());
         // DEBUG_FLOW_EXIT();
 }
+
+UniquePtr<CodeBlock> Parser::parse() {
+    // DEBUG_FLOW(FlowLevel::HIGH);
+
+    // DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
+    if (!currentScope){
+        throw MerkError("Initial Scope is null");
+    }
+    try {
+        while (currentToken().type != TokenType::EOF_Token) {
+            // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parse: with token:", currentToken().toString());
+            // DEBUG_LOG(LogLevel::TRACE, "Scope use_count: ", currentScope.use_count(), ", Address: ", currentScope.get());
+    
+            if (currentToken().type == TokenType::Newline) {
+                advance(); // Skip blank lines
+                continue;
+            }
+    
+            auto statement = parseStatement();
+            if (!statement) {
+                throw MerkError("Parser::parse: Null statement returned during parsing. Token: " + currentToken().toString());
+            }
+    
+            // If interpretMode is enabled and interpretation is by block, evaluate each statement one-by-one, whether it is a control or variable
+            if (interpretMode && byBlock){
+                try {
+                    interpret(statement.get());
+                } catch(MerkError& e) {
+                    rootBlock->printAST(std::cout, 0);
+                    throw MerkError(e.what());
+                }
+                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting AST by Block ===========================", Colors::bg_red));
+                
+                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting AST by Block ===========================", Colors::bg_red));
+                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            }
+            
+            // Add the parsed statement to the block
+            rootBlock->addChild(std::move(statement));
+        }
+    
+    
+        // If interpretMode is enabled and interpretation is not by block, evaluate the entire AST in a batch.
+        if (interpretMode && !byBlock){
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting Full AST ===========================", Colors::bg_red));
+    
+    
+            // rootBlock->printAST(std::cout);
+            rootBlock->printAST(std::cout, 0);
+            interpret(rootBlock.get());
+            
+            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting Full AST ===========================", Colors::bg_red));
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+            
+            // currentScope->printContext();
+            // DEBUG_LOG(LogLevel::INFO, "\n\n\n");
+            // currentScope->debugPrint();
+        }
+    
+        // DEBUG_LOG(LogLevel::INFO, "Returning CodeBlock from parse() with scope address: ", currentScope.get(), ", at block address: ", rootBlock.get());
+        
+        // rootBlock->printAST(std::cout);
+        // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
+        // rootBlock->printAST(std::cout);
+        // DEBUG_FLOW_EXIT();
+        return std::move(rootBlock); // Return the parsed block node
+    } catch (MerkError& e) {
+        rootScope->printChildScopes();
+        throw MerkError(e.what());
+    }
+    
+}
+
 
 bool Parser::getAllowScopeCreation() const {return allowScopecreation;}
 
@@ -169,70 +248,6 @@ void Parser::interpret(BaseAST* block_or_ast) const {
     // DEBUG_FLOW_EXIT();
 }
 
-UniquePtr<CodeBlock> Parser::parse() {
-    // DEBUG_FLOW(FlowLevel::HIGH);
-
-    // DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
-    try {
-        while (currentToken().type != TokenType::EOF_Token) {
-            // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parse: with token:", currentToken().toString());
-            // DEBUG_LOG(LogLevel::TRACE, "Scope use_count: ", currentScope.use_count(), ", Address: ", currentScope.get());
-    
-            if (currentToken().type == TokenType::Newline) {
-                advance(); // Skip blank lines
-                continue;
-            }
-    
-            auto statement = parseStatement();
-            if (!statement) {
-                throw MerkError("Parser::parse: Null statement returned during parsing. Token: " + currentToken().toString());
-            }
-    
-            // If interpretMode is enabled and interpretation is by block, evaluate each statement one-by-one, whether it is a control or variable
-            if (interpretMode && byBlock){
-                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting AST by Block ===========================", Colors::bg_red));
-                interpret(statement.get());
-                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting AST by Block ===========================", Colors::bg_red));
-                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            }
-            
-            // Add the parsed statement to the block
-            rootBlock->addChild(std::move(statement));
-        }
-    
-    
-        // If interpretMode is enabled and interpretation is not by block, evaluate the entire AST in a batch.
-        if (interpretMode && !byBlock){
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting Full AST ===========================", Colors::bg_red));
-    
-    
-            // rootBlock->printAST(std::cout);
-            
-            interpret(rootBlock.get());
-            
-            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting Full AST ===========================", Colors::bg_red));
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            
-            // currentScope->printContext();
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n");
-            // currentScope->debugPrint();
-        }
-    
-        // DEBUG_LOG(LogLevel::INFO, "Returning CodeBlock from parse() with scope address: ", currentScope.get(), ", at block address: ", rootBlock.get());
-        
-        // rootBlock->printAST(std::cout);
-        // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-        // rootBlock->printAST(std::cout);
-        // DEBUG_FLOW_EXIT();
-        return std::move(rootBlock); // Return the parsed block node
-    } catch (MerkError& e) {
-        rootScope->printChildScopes();
-        throw MerkError(e.what());
-    }
-    
-}
 
 Token Parser::currentToken() const {
     if (position < tokens.size()) {
@@ -256,10 +271,12 @@ Token Parser::advance() {
     return currentToken();
 }
 
-Token Parser::peek(){
-    ++position;
+Token Parser::peek(int number){
+    // ++position;
+    position += number;
     Token nextToken = currentToken();
-    --position;
+    position -= number;
+    // --position;
     return nextToken;
 }
 
@@ -412,14 +429,33 @@ std::optional<std::type_index> getType(Token token){
 
 }
 
+std::optional<NodeValueType> Parser::getTypeFromString(String typeStr) {
+    if (typeStr == "Int") return NodeValueType::Int;
+    if (typeStr == "Float") return NodeValueType::Float;
+    if (typeStr == "Double") return NodeValueType::Double;
+    if (typeStr == "Long") return NodeValueType::Long;
+    if (typeStr == "Bool") return NodeValueType::Bool;
+    if (typeStr == "Char") return NodeValueType::Char;
+    if (typeStr == "String") return NodeValueType::String;
+    if (typeStr == "Vector") return NodeValueType::Vector;
+    if (typeStr == "Function") return NodeValueType::Function;
+    if (typeStr == "Class") return NodeValueType::Class;
+    if (typeStr == "Method") return NodeValueType::Method;
+    if (typeStr == "Null") return NodeValueType::Null;
+    if (typeStr == "Any") return NodeValueType::Any;
+    else {
+        return std::nullopt;
+    }
+}
+
 std::optional<NodeValueType> Parser::parseStaticType() {
-    if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
+    if (currentToken().value != ":") {
         return std::nullopt; // No type annotation found
     }
     advance(); // Consume ':'
 
     Token typeToken = currentToken();
-    if (typeToken.type != TokenType::Identifier) {
+    if (typeToken.type != TokenType::Type) {
         throw SyntaxError("Expected type name after ':'.", currentToken());
     }
 
@@ -427,20 +463,8 @@ std::optional<NodeValueType> Parser::parseStaticType() {
     advance(); // Consume type name
 
     // Convert string to NodeValueType
-    if (typeStr == "int") return NodeValueType::Int;
-    if (typeStr == "float") return NodeValueType::Float;
-    if (typeStr == "double") return NodeValueType::Double;
-    if (typeStr == "long") return NodeValueType::Long;
-    if (typeStr == "bool") return NodeValueType::Bool;
-    if (typeStr == "char") return NodeValueType::Char;
-    if (typeStr == "string") return NodeValueType::String;
-    if (typeStr == "vector") return NodeValueType::Vector;
-    if (typeStr == "function") return NodeValueType::Function;
-    if (typeStr == "class") return NodeValueType::Class;
-    if (typeStr == "method") return NodeValueType::Method;
-    if (typeStr == "null") return NodeValueType::Null;
-
-    throw SyntaxError("Unknown type annotation: " + typeStr, typeToken);
+    return getTypeFromString(typeStr);
+    // throw SyntaxError("Unknown type annotation: " + typeStr, typeToken);
 }
 
 void Parser::processIndent(SharedPtr<Scope> manualScope){
@@ -474,6 +498,12 @@ bool Parser::processNewLines(){
 };
 
 
+void Parser::reinjectControlToken(const Token& token) {
+    tokens.insert(tokens.begin() + position, token);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Reinjected token at position ", position, ": ", token.toColoredString());
+
+}
+
 void Parser::processBlankSpaces() {
     // placeholder
 };
@@ -489,4 +519,12 @@ bool Parser::expect(TokenType tokenType, bool strict) {
     }
     
     return false;
+}
+
+
+void Parser::displayNextTokens(String baseTokenName, size_t number, String location) {
+    DEBUG_LOG(LogLevel::PERMISSIVE, baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
+    for (size_t i = 1; i < number + 1; i++) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
+    }
 }

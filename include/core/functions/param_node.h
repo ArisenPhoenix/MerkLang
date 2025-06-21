@@ -6,7 +6,7 @@
 #include <string>
 
 
-const bool debugParam = true;
+// const bool debugParam = true;
 
 
 // ParamNode inherits from VarNode
@@ -112,7 +112,7 @@ private:
 public:
     // Default Constructor
     ParamList() = default;
-
+    ~ParamList();
     // Add a parameter to the list
     void addParameter(const ParamNode& param);
 

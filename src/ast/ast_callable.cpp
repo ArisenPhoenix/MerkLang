@@ -72,11 +72,24 @@ UniquePtr<BaseAST> CallableRef::clone() const {
     return calRef;
 }
 
+// CallableDef::~CallableDef() {
+//     getBody().release();
+// }
+CallableDef::~CallableDef() = default;
+CallableCall::~CallableCall() = default;
+// CallableCall::~CallableCall() {
+//     getScope().reset();
+//     arguments.clear();
+// }
 
+CallableBody::~CallableBody() {
+    clear();
+    getCurrentScope()->clear();
+}
 
 CallableBody::CallableBody(UniquePtr<CallableBody>&& oldBody)
   : CodeBlock(std::move(oldBody->getChildren()), oldBody->getScope()) {
-    oldBody.release();
+    oldBody.reset();
 }
 
 CallableBody::CallableBody(SharedPtr<Scope> scope)
@@ -85,7 +98,6 @@ CallableBody::CallableBody(SharedPtr<Scope> scope)
 CallableBody::CallableBody(UniquePtr<CallableBody>* block) : CodeBlock(std::move(block->get()->getChildren()), block->get()->getScope()) {
     block->release();
 }
-
 
 CallableDef::CallableDef(String name, ParamList parameters, UniquePtr<CallableBody> body, CallableType callType, SharedPtr<Scope> scope) 
     : ASTStatement(scope), name(name), parameters(parameters), body(std::move(body)), callType(callType){
@@ -104,10 +116,6 @@ CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
         branch = "Callable";
 }
-
-
-
-
 
 CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType callTypeAdded)
     : callable(std::move(callable)), callType(callTypeAdded)
@@ -129,64 +137,74 @@ bool CallableSignature::getIsUserFunction() { return callType != CallableType::N
 
 
 Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::LOW);
+    // scope->debugPrint();
+    // scope->printChildScopes();
     auto val = callable->execute(args, scope);
     DEBUG_FLOW_EXIT();
     return val;
-  }
+}
+
+Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
+    (void)args;
+    (void)scope;
+    (void)classScope;
+    throw MerkError("BaseClass CallableSignature has no implementation for CallableSignature::call");
+
+}
   
   
 SharedPtr<Callable> CallableSignature::getCallable() const { return callable;}
 
 const Vector<NodeValueType>& CallableSignature::getParameterTypes() const {
-if (parameterTypes.size() == 0) {
-    parameterTypes = callable->parameters.getParameterTypes();
-}
-return parameterTypes;
+    if (parameterTypes.size() == 0) {
+        parameterTypes = callable->parameters.getParameterTypes();
+    }
+    return parameterTypes;
 }
 
 bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
-DEBUG_FLOW(FlowLevel::LOW);
-debugLog(true, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
-// First, check that the number of arguments matches.
-if (parameterTypes.size() != argTypes.size()) {
-    
-    DEBUG_LOG(LogLevel::INFO, "Parameter count does not match. Expected: ", parameterTypes.size(),
-                ", got: ", argTypes.size());
-    DEBUG_FLOW_EXIT();
-    return false;
-}
-
-// Now check each parameter type.
-for (size_t i = 0; i < parameterTypes.size(); ++i) {
-    NodeValueType expected = parameterTypes[i];
-    NodeValueType provided = argTypes[i];
-    DEBUG_LOG(LogLevel::DEBUG, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
-
-    // Allow a parameter declared as "Any" to match any argument.
-    if (expected == NodeValueType::Any) {
-        continue;
-    }
-    // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
-    if (provided == NodeValueType::Uninitialized) {
-        continue;
-    }
-
-    // Otherwise, they must match exactly.
-    if (expected != provided) {
-        DEBUG_LOG(LogLevel::DEBUG, "Type mismatch on parameter ", i, ": expected ",
-        nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
-        DEBUG_LOG(LogLevel::DEBUG, "Parameter Failed Expected Type Criteria, returning false");
-
+    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_LOG(LogLevel::ERROR, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
+    // First, check that the number of arguments matches.
+    if (getParameterTypes().size() != argTypes.size()) {
+        
+        DEBUG_LOG(LogLevel::ERROR, "Parameter count does not match. Expected: ", parameterTypes.size(),
+                    ", got: ", argTypes.size());
         DEBUG_FLOW_EXIT();
         return false;
     }
-}
 
-DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
+    // Now check each parameter type.
+    for (size_t i = 0; i < parameterTypes.size(); ++i) {
+        NodeValueType expected = parameterTypes[i];
+        NodeValueType provided = argTypes[i];
+        DEBUG_LOG(LogLevel::ERROR, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
 
-DEBUG_FLOW_EXIT();
-return true;
+        // Allow a parameter declared as "Any" to match any argument.
+        if (expected == NodeValueType::Any) {
+            continue;
+        }
+        // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
+        if (provided == NodeValueType::Uninitialized) {
+            continue;
+        }
+
+        // Otherwise, they must match exactly.
+        if (expected != provided) {
+            DEBUG_LOG(LogLevel::ERROR, "Type mismatch on parameter ", i, ": expected ",
+            nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
+            DEBUG_LOG(LogLevel::ERROR, "Parameter Failed Expected Type Criteria, returning false");
+
+            DEBUG_FLOW_EXIT();
+            return false;
+        }
+    }
+
+    DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
+
+    DEBUG_FLOW_EXIT();
+    return true;
 }
 
 Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
@@ -198,55 +216,37 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
     return evaluatedArgs;
 }
 
-Node CallableBody::evaluate(SharedPtr<Scope> scope) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    auto val = Evaluator::evaluateBlock(children, scope);
+Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+    auto val = Evaluator::evaluateBlock(children, scope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
 }
 
-Node CallableDef::evaluate(SharedPtr<Scope> scope) const {
+Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
     // std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
     // std::cerr << "Type: " << getAstTypeAsString() << std::endl;
     throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 
-Node CallableCall::evaluate(SharedPtr<Scope> scope) const {
+Node CallableCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
     return Node(scope->getVariable("var"));
 }
 
 
-Node CallableRef::evaluate(SharedPtr<Scope> scope) const {
+Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
     return Node(scope->getVariable("var"));
 }
 
 
-void CallableBody::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), "(scopeLevel " + std::to_string(getScope()->getScopeLevel()) + ")");
-    for (auto& child : children){
-        child->printAST(os, indent);
-    }
+
+
+CallableSignature::~CallableSignature() {
+    parameterTypes.clear();
 }
-
-void CallableDef::printAST(std::ostream& os, int indent) const {
-    auto paramStr = !parameters.empty() ?  parameters.toShortString() : "";
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), name, "(" + paramStr + ")", "| scope", getScope()->getScopeLevel());
-    body->printAST(os, indent);
-};
-
-
-void CallableCall::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), "()");
-}
-
-
-
 
 
 

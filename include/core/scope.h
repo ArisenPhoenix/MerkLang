@@ -15,27 +15,66 @@ class ClassSignature;
 
 
 class Scope : public std::enable_shared_from_this<Scope> {
+private:
+    WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
+    int scopeLevel;                      // The level of the scope in the hierarchy
+    static inline size_t liveScopeCount = 0;
+    static inline size_t totalScopeCreated = 0;
 public:
+    static void printScopeReport() {
+        std::cout << "----------------------------" << std::endl;
+        std::cout << "Total Scopes Created: " << totalScopeCreated << std::endl;
+        std::cout << "Live Scopes Remaining: " << liveScopeCount << std::endl;
+        if (liveScopeCount != 0) {
+            std::cout << "[Memory Leak Detected!] " << liveScopeCount << " Scope(s) were not destroyed!" << std::endl;
+        } else {
+            std::cout << "[Memory Clean] All scopes were properly freed." << std::endl;
+        }
+        std::cout << "----------------------------" << std::endl;
+    }
 
     // Constructor
-    explicit Scope(int scopeLevel, bool interpretMode);
-    explicit Scope(std::weak_ptr<Scope> parentScope = std::weak_ptr<Scope>(), bool interpretMode = false);
-    ~Scope();
+    explicit Scope(int scopeLevel, bool interpretMode, bool isRoot = false);
+    explicit Scope(WeakPtr<Scope> parentScope = WeakPtr<Scope>(), bool interpretMode = false);
+    explicit Scope(SharedPtr<Scope> parentScope, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpreMode);
 
-    // Scope Management
-    SharedPtr<Scope> createChildScope(); // Create a child scope
-    SharedPtr<Scope> getParent() const;  // Get the parent scope
+    // // DESTRUCTOR
+    ~Scope();
+    void clear();
+    // // Attributes
+    String formattedScope();
+    SharedPtr<FunctionRegistry>  globalFunctions;
+    SharedPtr<ClassRegistry>     globalClasses;
+    
+    // Local Storage
+    std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
+    std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
+
     int currentLine;
     int currentColumn;
-    int getScopeLevel() const;           // Get the current scope level
 
-    // Created For Debugging Scope when developing functions. Will keep until such time as deemed unnecessary
     bool isDetached = false;
     bool isCallableScope = false;
     bool isClonedScope = false;
     String owner = "";
 
+    // Vector<String> protectedMembers;
+    // void setProtectedMembers(Vector<String> protectedMems);
+    // Vector<String> Scope::getProtectedMembers() const;
+    // Scope Manipulation
+    void attachToInstanceScope(SharedPtr<Scope> instanceScope);
+    bool removeChildScope(const SharedPtr<Scope>& target);
+    void appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool recursive = true);
+    void appendChildScope(SharedPtr<Scope> childScope, bool recursive = true);
+    SharedPtr<Scope> createChildScope(); // Create a child scope
     void includeMetaData(SharedPtr<Scope> newScope, bool isDetached = false) const;
+    SharedPtr<Scope> makeInstanceScope(SharedPtr<Scope> classScope);
+
+    // Scope Management
+    SharedPtr<Scope> getParent() const;  // Get the parent scope
+    int getScopeLevel() const;           // Get the current scope level
+    SharedPtr<Scope> makeCallScope();
+    SharedPtr<Scope> detachScope(const std::unordered_set<String>& freeVarNames);
 
     // Context Management
     const Context& getContext() const { return context; }
@@ -50,74 +89,73 @@ public:
     void printContext(int depth = 0) const;
 
 
+    void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
+    SharedPtr<CallableSignature> handleLookupFunction(String& name, const Vector<Node>& args) const;
     
-    // Registry Management
-    const FunctionRegistry& getFunctionRegistry() const;
-    FunctionRegistry& getFunctionRegistry();
+    //// Registry Management
+    //// Function Management
+    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const Vector<Node>& args) const;
+    std::optional<Vector<SharedPtr<CallableSignature>>> lookupFunction(const String& name) const;
+
+    const SharedPtr<FunctionRegistry> getFunctionRegistry() const;
+    SharedPtr<FunctionRegistry> getFunctionRegistry();
+
     const FunctionRegistry& getAllFunctions(FunctionRegistry& callingRegister) const;
     bool hasFunction(const String& name) const;
 
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
+    void registerFunction(const String& name, SharedPtr<Callable> anyCallable);
+    SharedPtr<CallableSignature> getFunction(const String& name, const Vector<Node>& args);
+    Vector<SharedPtr<CallableSignature>> getFunction(const String& name);
 
-    std::optional<std::reference_wrapper<CallableSignature>> getFunction(const String& name, const Vector<Node>& args);
-    std::optional<std::reference_wrapper<CallableSignature>> getFunction(const String& name);
 
+    //// Class Management
+    std::optional<SharedPtr<ClassSignature>> lookupClass(const String& name) const;
 
-    // Class Management
-    const ClassRegistry& getClassRegistry() const;
-    ClassRegistry& getClassRegistry();
+    SharedPtr<ClassRegistry> getClassRegistry();
+
     bool hasClass(const String& name) const;
-    // void registerClass();
     void registerClass(const String& name, SharedPtr<ClassBase> cls);
     void registerClass(const String& name, SharedPtr<ClassSignature> classSig);
-    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getClass(const String& name);
-
-    // for dynamic resolution of chains
-    Node lookup(const String& name, IdentifierType type);
-    
-
+    std::optional<SharedPtr<ClassSignature>> getClass(const String& name);
 
     // Scope Other
     Vector<SharedPtr<Scope>> getChildren();
     bool hasChildren();
     void debugPrint() const;
-    void printChildScopes(int indentLevel = 0) const;
-
-
     void setParent(SharedPtr<Scope> scope);
 
-  
-    SharedPtr<Scope> detachScope(const std::unordered_set<String>& freeVarNames);
-    SharedPtr<Scope> mergeScope(SharedPtr<Scope> newScope);
+    bool has(const SharedPtr<Scope>& scope);
 
     void updateChildLevelsRecursively();
     void setScopeLevel(int newLevel);
 
-    SharedPtr<Scope> clone() const;
+    SharedPtr<Scope> clone(bool strict = false) const;
 
     bool parentIsValid();
 
-    void registerCallableType(const String& name, CallableType type);
-    SharedPtr<std::unordered_map<String, CallableType>> globalCallables;
-    std::optional<CallableType> getCallableType(const String& name) const;
-    Node resolveCallable(const String& name, const Vector<Node>& args = {});
-    void attachToInstanceScope(SharedPtr<Scope> instanceScope);
+    // // DEBUGGING
+    void printChildScopes(int indentLevel = 0) const;
+    void linkMethod(SharedPtr<Method> method, String methodName, SharedPtr<Scope> instanceScope);
+    void linkMethods(SharedPtr<CallableSignature>  methodSig, String methodName, SharedPtr<Scope> instanceScope);
+    void linkMethods(Vector<SharedPtr<MethodSignature>>& methodVec, String& methodName, SharedPtr<Scope> instanceScope);
+
+    void linkInstanceMethods(SharedPtr<Scope> classTemplateScope, SharedPtr<Scope> instanceScope);
     
-    bool removeChildScope(const SharedPtr<Scope>& target);
-    void appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool recursive = true);
-    void appendChildScope(SharedPtr<Scope> childScope, bool recursive = true);
+    SharedPtr<Scope> isolateScope(const std::unordered_set<String>& freeVarNames);
+    
+
 
 private:
     void setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration);
-    std::weak_ptr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
     Vector<SharedPtr<Scope>> childScopes;      // List containing child scopes of (this) scope
-    int scopeLevel;                            // The level of the scope in the hierarchy
     Context context;                           // The context for variable management
-    FunctionRegistry functionRegistry;         // Registry for function management
-    ClassRegistry classRegistry;               // Add class registry
+    // FunctionRegistry functionRegistry;         // Registry for function management
+    // ClassRegistry classRegistry;               // Add class registry
 
     bool interpretMode;
+    bool isRoot;
 };
 
 #endif // SCOPE_H

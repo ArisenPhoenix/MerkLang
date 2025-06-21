@@ -30,6 +30,8 @@ String nodeTypeToString(NodeValueType type) {
         
         case NodeValueType::Uninitialized: return highlight("Uninitialized", Colors::red);
         case NodeValueType::UNKNOWN: return highlight("Unknown", Colors::bold_red);
+        case NodeValueType::Callable: return highlight("Callable", Colors::red);
+        case NodeValueType::ClassInstance: return highlight("ClassInstance", Colors::red);
 
         default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
 
@@ -77,17 +79,24 @@ String astTypeToString(AstType type) {
         case AstType::ClassMethodBlock: return highlight("ClassMethodBody", Colors::bold_purple);
         case AstType::ClassMethodDef: return highlight("ClassMethodDef", Colors::bold_red);
         case AstType::ClassMethodCall: return highlight("ClassMethodCall", Colors::bold_red);
+        
+
         case AstType::ClassMethodRef: return highlight("ClassMethodRef", Colors::bold_blue);
 
         case AstType::AttributeDeclaration: return highlight("AttributeDeclaration", Colors::bold_cyan);
         case AstType::AttributeAssignment: return highlight("AttributeAssignment", Colors::bold_cyan);
         case AstType::AttributeReference: return highlight("AttributeReference", Colors::teal);
         case AstType::Chain: return highlight("Chain", Colors::yellow);
+        case AstType::ChainOperation: return highlight("ChainOperation", Colors::bg_green);
+        case AstType::Accessor: return highlight("Accessor", Colors::red);
+
 
         case AstType::Function: return "Function";
         case AstType::NoOp: return highlight("NoOp", Colors::light_gray);
 
         case AstType::ImportStatement: return highlight("ImportStatement", Colors::light_blue);
+
+        case AstType::AST: return highlight("AST", Colors::red);
 
         default: return "Unknown";
     }
@@ -97,6 +106,7 @@ String astTypeToString(AstType type) {
 
 String tokenTypeToString(TokenType type, bool colored) {
     switch (type) {
+        case TokenType::Type: return colored ? highlight("Type", Colors::red) : "Type";
         case TokenType::Keyword: return colored ? highlight("Keyword", Colors::bold_white) : "Keyword";
 
         case TokenType::Identifier: return colored ? highlight("Identifier", Colors::bg_yellow) :  "Identifier";
@@ -173,6 +183,7 @@ String callableTypeAsString(CallableType callableType){
 
 String getTokenDescription(TokenType type) {
     switch (type) {
+        case TokenType::Type: return "The Type To Be Held In The Node";
         case TokenType::Keyword: return "Keyword in the language.";
         case TokenType::Identifier: return "Variable or function name.";
         case TokenType::Number: return "Number of any type.";

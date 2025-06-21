@@ -11,19 +11,21 @@ class ClassSignature;
 
 class ClassRegistry {
 private:
-    std::unordered_map<String, SharedPtr<CallableSignature>> classMap;
+    std::unordered_map<String, SharedPtr<ClassSignature>> classMap;
 public:
-    ~ClassRegistry() = default;
+    ~ClassRegistry();
     
     void registerClass(const String& name, SharedPtr<ClassBase> classDef);
-    void registerClass(const String& name, SharedPtr<CallableSignature> classSignature);
+    void registerClass(const String& name, SharedPtr<ClassSignature> classSignature);
     
     bool hasClass(const String& name) const;
-    
-    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getClass(const String& name);
-    const std::unordered_map<String, SharedPtr<CallableSignature>>& getClasses() const {return classMap;};
 
+    std::optional<SharedPtr<ClassSignature>> getClass(const String& name);
+    const std::unordered_map<String, SharedPtr<ClassSignature>>& getClasses() const {return classMap;};
+    ClassRegistry clone() const;
     void debugPrint() const;
+    void clear(); 
+
 };
 
 #endif // CLASS_REGISTRY_H

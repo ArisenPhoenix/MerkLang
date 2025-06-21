@@ -18,38 +18,6 @@
 #include "core/scope.h"
  
 
-
-
-// this was the original idea for function scoping, but a better one was made, namely detaching, filling, then reattaching the scope using appendChildScope
-// The idea may still be useful in the future so keeping the idea and its implementation in-tact
-// SharedPtr<Scope> Scope::mergeScope(SharedPtr<Scope> definingScope) {  
-//     // DEBUG_FLOW(FlowLevel::VERY_LOW);
-//     (void)definingScope;
-
-//     SharedPtr<Scope> callScope = std::make_shared<Scope>(0, interpretMode);
-//     // DEBUG_LOG(LogLevel::TRACE, "******************************************************************************************");
-//     // DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Variables: Creating a temporary function call scope.");
-//     getAllVariables(context);
-//     // context.debugPrint();
-    
-//     // DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Functions: Creating a temporary function call scope.");
-//     // Step 3: Copy functions from definingScope **only if they aren't already updated in the current scope**
-//     getAllFunctions(functionRegistry);
-
-
-//     // DEBUG_LOG(LogLevel::TRACE, "Scope for mergedScope in Scope::mergeScope");
-//     // callScope->debugPrint();
-
-//     // DEBUG_LOG(LogLevel::TRACE, "FunctionRegistry for mergedScope in Scope::mergeScope");
-//     // functionRegistry.debugPrint();
-
-//     // DEBUG_LOG(LogLevel::TRACE, "[Scope::mergeScope] Function call scope created successfully.");
-//     // callScope->parentScope = nullptr;
-//     // DEBUG_LOG(LogLevel::TRACE, "******************************************************************************************");
-//     // DEBUG_FLOW_EXIT();
-//     return callScope;
-// }
-
 UniquePtr<VarNode> cloneVarNode(VarNode* original) {
     return UniquePtr<VarNode>(original);
 }
@@ -58,8 +26,14 @@ UniquePtr<VarNode> cloneVarNode(VarNode* original) {
 SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::MED);
     // Create a new scope that is not attached where: (no parent, or parent = nullptr).
-    auto detached = std::make_shared<Scope>(0, this->interpretMode);
+    // explicit Scope(SharedPtr<Scope> parentScope, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpreMode);
+
+    auto detached = std::make_shared<Scope>(shared_from_this(), globalFunctions, globalClasses, interpretMode);
+    // detached->setParent(nullptr);
+    // detached->setScopeLevel(0);
+    // Scope()
     detached->isDetached = true;
+    detached->owner = owner+"(detached)";
     includeMetaData(detached, true);
     // For each free variable name, if it exists in this scope, or parent, get it and add to the vector
     for (const auto& name : freeVarNames) {
@@ -76,56 +50,75 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
         }
     }
 
-    for (const auto& [fname, signatures] : this->functionRegistry.getFunctions()) {
-        for (const auto& sig : signatures) {
-            detached->getFunctionRegistry().registerFunction(fname, sig);
-        }
-    }
-
-    // DEBUG_LOG(LogLevel::INFO, highlight("[Context Variables From Detached Scope]:", Colors::yellow));
-
     DEBUG_FLOW_EXIT();
     return detached;
 }
+
+
+SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNames) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    auto isolated = std::make_shared<Scope>(0, interpretMode, false);
+    includeMetaData(isolated, true);
+
+    for (const auto& name : freeVarNames) {
+        if (this->hasVariable(name)) {
+            isolated->declareVariable(name, cloneVarNode(getVariable(name).clone()));
+        } else if (auto parent = getParent()) {
+            if (parent->hasVariable(name)) {
+                isolated->declareVariable(name, cloneVarNode(parent->getVariable(name).clone()));
+            }
+        }
+    }
+
+    isolated->localFunctions = this->localFunctions;
+    isolated->localClasses = this->localClasses;
+    DEBUG_FLOW_EXIT();
+    return isolated;
+}
+
 
 void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) const {
     newScope->isDetached = thisIsDetached;
     newScope->isClonedScope = newScope->isClonedScope ? newScope->isClonedScope : isClonedScope;
     newScope->isCallableScope = newScope->isCallableScope ? newScope->isCallableScope : isCallableScope;
-    newScope->owner = newScope->isDetached ? "detached" : owner;
+    if (newScope->isDetached) {
+        if (newScope->owner.empty()) {
+            newScope->owner = owner;
+        } else {
+            newScope->owner = owner + "(detached)";
+        }
+    } else {
+        newScope->owner = owner;
+    }
 }
 
-
-SharedPtr<Scope> Scope::clone() const {
+SharedPtr<Scope> Scope::clone(bool strict) const {
     DEBUG_FLOW(FlowLevel::MED);
-    auto newScope = std::make_shared<Scope>(this->scopeLevel, this->interpretMode);
-    
-    // Deep copy the variables from this scope.
-    for (const auto& [name, var] : this->context.getVariables()) {
-        newScope->context.setVariable(name, UniquePtr<VarNode>(var->clone()));
+
+    SharedPtr<Scope> newScope;
+    if (auto parent = parentScope.lock()) {
+        // use the weak/child constructor
+        newScope = std::make_shared<Scope>(parent, globalFunctions, globalClasses, interpretMode);
+    } else {
+        if (strict){
+            throw ParentScopeNotFoundError();
+        }
+        newScope = std::make_shared<Scope>(0, interpretMode);
     }
-    
-    newScope->functionRegistry = this->functionRegistry.clone();
-    newScope->isClonedScope = true;
+
+    for (const auto& [name,var] : this->context.getVariables())
+        newScope->context.setVariable(name, UniquePtr<VarNode>(var->clone()));
+
+    newScope->localFunctions = this->localFunctions;
+    newScope->localClasses = this->localClasses;
+    newScope->isClonedScope    = true;
     includeMetaData(newScope, isDetached);
+
     DEBUG_FLOW_EXIT();
-    
     return newScope;
 }
 
 
-// Exit the current scope (optional logic if cleanup is needed)
-// void Scope::exitScope() {
-//     // DEBUG_FLOW(FlowLevel::LOW);
-//     // DEBUG_LOG(LogLevel::TRACE, "Exiting scope at level: ", scopeLevel, " with ", context.getVariables().size(), " variables present.");
-
-//     // if (auto parent = parentScope.lock()) {
-//     //     std::cout << "Returning to parent scope at level: " << parent->getScopeLevel() << "\n";
-//     // } else {
-//     //     std::cout << "No parent scope exists; exiting root scope.\n";
-//     // }
-//     // DEBUG_FLOW_EXIT();
-// }
 
 Vector<SharedPtr<Scope>> Scope::getChildren() {
     return childScopes;
@@ -157,10 +150,14 @@ void Scope::debugPrint() const {
         "isDetached:", isDetached ? "true" : "false", 
         "isCloned:", isClonedScope ? "true" : "false", 
         "isCallableScope:", isCallableScope ? "true" : "false",
-        "Owner:", !owner.empty() ? owner : "None" 
+        "Owner:", !owner.empty() ? owner : "<None Provided>>" 
     );
     context.debugPrint();
-    functionRegistry.debugPrint();
+    // globalFunctions->debugPrint();
+    for (auto& funcVec : localFunctions){
+        auto& funcName = funcVec.first;
+        debugLog(true, funcName, funcVec);
+    }
     
     for (const auto& child : childScopes) {
         child->debugPrint();
@@ -180,23 +177,43 @@ void Scope::printChildScopes(int indentLevel) const {
     if (scopeLevel == 0){
         debugLog(true, highlight("\n\n======================== Start Scope::printChildScopes ========================", Colors::cyan));
     }
-    auto indent = String(indentLevel * 2, ' ');
+    auto parent = parentScope.lock();
+    auto indent = String(indentLevel+2, ' ');
+    int numInstances = 0;
+    for (auto& [varName, var] : context.getVariables()) {
+        if (var->isClassInstance()) {
+            numInstances += 1;
+        }
+    }
 
     // Print information about the current scope
     debugLog(true, indent,
         "Scope Level:", scopeLevel, 
         "| Memory Loc:", this, 
         "| Parent Loc:", parentScope.lock() ? parentScope.lock() : nullptr,
-        "| Number of Variabls:", context.getVariables().size(),
+        "| Number of Variabls:", context.getVariables().size() - numInstances,
         "| Number of Children:", childScopes.size(),
-        "| Num Functions:", functionRegistry.getFunctions().size(),
-        "| Num Classes:", classRegistry.getClasses().size(),
-        "| Owner:", !owner.empty() ? owner : "None"
+        "| Num Functions:", localFunctions.size(),
+        "| Num Classes:", localClasses.size(),
+        "| Num Instance: ", numInstances,
+        "| Owner:", !owner.empty() ? owner : "<None Provided>>"
         );
+    
+    if (numInstances > 0) {
+        debugLog(true, indent, "=================== GO INSTANCE LOG ===================");
+        for (auto& [varName, var] : context.getVariables()) {
+            if (var->isClassInstance()) {
+                auto instance = std::get<SharedPtr<ClassInstance>>(var->getValue());
+                instance->getInstanceScope()->printChildScopes(indentLevel+2);
+                instance->getCapturedScope()->printChildScopes(indentLevel+2);
+            }
+        }
+        debugLog(true, indent, "=================== END INSTANCE LOG ===================");
 
+    }
     // Recursively print each child scope
     for (const auto& child : childScopes) {
-        child->printChildScopes(indentLevel + 1); // Increase indentation for child
+        child->printChildScopes(indentLevel+2); // Increase indentation for child
     }
     if (scopeLevel == 0){
         debugLog(true, highlight("======================== End Scope::printChildScopes ========================\n", Colors::cyan));
@@ -207,7 +224,6 @@ void Scope::printChildScopes(int indentLevel) const {
 
 void Scope::printContext(int depth) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    // Print current scope details
     String indent(depth * 2, ' '); // Indentation based on depth
     std::cout << indent << "Scope Level: " << scopeLevel
               << " | Memory Loc: " << this
@@ -233,62 +249,21 @@ void Scope::printContext(int depth) const {
 }
 
 
-void Scope::registerCallableType(const String& name, CallableType type) {
-    (*globalCallables)[name] = type;
-}
 
-std::optional<CallableType> Scope::getCallableType(const String& name) const {
-    auto it = globalCallables->find(name);
-    if (it != globalCallables->end()) {
-        return it->second;
-    }
-    return std::nullopt;
-}
+
 
 void Scope::setScopeLevel(int newLevel) {
     scopeLevel = newLevel;
 }
+
 void Scope::updateChildLevelsRecursively() {
     for (auto& child : childScopes){
         child->setScopeLevel(scopeLevel+1);
+        includeMetaData(child);
         child->updateChildLevelsRecursively();
     }
 }
 
-Node Scope::resolveCallable(const String& name, const Vector<Node>& args) {
-    auto typeOpt = getCallableType(name);
-    if (!typeOpt.has_value()) {
-        throw MerkError("Callable '" + name + "' not found in global callables.");
-    }
-
-    CallableType kind = *typeOpt;
-
-    switch (kind) {
-        case CallableType::FUNCTION:
-        case CallableType::DEF:
-        case CallableType::LAMBDA:
-        case CallableType::NATIVE: {
-            auto funcOpt = getFunction(name, args);
-            if (!funcOpt) throw FunctionNotFoundError(name);
-            return FunctionNode(funcOpt->get().getCallable());
-        }
-
-        case CallableType::CLASS: {
-            auto classOpt = getClass(name);
-            if (!classOpt.has_value()) {
-                throw MerkError("Class '" + name + "' not found.");
-            }
-            return ClassNode(std::dynamic_pointer_cast<ClassBase>(classOpt->get()->getCallable()));
-        }
-
-        case CallableType::METHOD:
-        case CallableType::INSTANCE:
-        case CallableType::CALLABLE:
-            throw MerkError("Cannot resolve callable of unsupported type directly: " + name);
-    }
-
-    throw MerkError("Unrecognized callable type for '" + name + "'.");
-}
 
 
 
@@ -303,3 +278,32 @@ bool Scope::removeChildScope(const SharedPtr<Scope>& target) {
     DEBUG_LOG(LogLevel::DEBUG, "Failed to remove child scope: not found.");
     return false;
 }
+
+
+
+void Scope::setParent(SharedPtr<Scope> scope) {
+    if (scope){
+        scope->appendChildScope(shared_from_this());
+        scopeLevel = scope->getScopeLevel() + 1;
+    }
+    parentScope = scope;
+    
+}
+
+
+
+bool Scope::has(const SharedPtr<Scope>& checkScope) {
+    if (!checkScope) {
+        throw MerkError("ChildScope for checking is null");
+    }
+    if (this == checkScope.get()) {
+        return true;
+    }
+    for (auto& child : getChildren()) {
+        if (child->has(checkScope)) {
+            return true;
+        }
+    }
+    return false;
+}
+

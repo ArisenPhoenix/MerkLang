@@ -25,7 +25,7 @@ FunctionBody::FunctionBody(SharedPtr<Scope> scope) : CallableBody(scope) {
 }
 
 Function::Function(String name, ParamList params, CallableType funcType)
-    : Callable(name, std::move(params), CallableType::FUNCTION)
+    : Callable(name, params, CallableType::FUNCTION)
 {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     
@@ -35,9 +35,9 @@ Function::Function(String name, ParamList params, CallableType funcType)
 }
 
 UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType)
-    : Function(name, std::move(parameters), CallableType::FUNCTION), body(std::move(body)) {
+    : Function(name, parameters, CallableType::FUNCTION), body(std::move(body)) {
         DEBUG_FLOW(FlowLevel::LOW);
-
+        
         setSubType(funcType);
             
         setCallableType(CallableType::FUNCTION);
@@ -59,7 +59,7 @@ SharedPtr<Scope> UserFunction::getCapturedScope() const {
     return capturedScope;
 }
 
-Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope) const {
+Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
     DEBUG_FLOW();
     if (!scope){
@@ -76,14 +76,13 @@ Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope) const {
     }
 
     DEBUG_FLOW_EXIT();
-    // return value;
     throw MerkError("Function did not return a value.");
 }
 
+FunctionBody::~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();} 
+
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::ERROR, "Callable Type: ", callableTypeAsString(this->callType));
-    DEBUG_LOG(LogLevel::ERROR, "subType: ", callableTypeAsString(this->subType));
 
     SharedPtr<CallableSignature> funcSig = makeShared<CallableSignature>(
         shared_from_this(), getCallableType()
@@ -94,11 +93,18 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     if (funcSig->getCallableType() == CallableType::DEF) {
         throw MerkError("Primary Callable Type is: " + callableTypeAsString(funcSig->getCallableType()));
     }
+ 
     DEBUG_FLOW_EXIT();
     return funcSig;
 }
 
 void UserFunction::setScope(SharedPtr<Scope> newScope) const {
-    newScope->owner = "UserFunction(" + name + ")";
+    newScope->owner = generateScopeOwner("UserFunction", name);
     getBody()->setScope(newScope);
 }
+
+
+FunctionNode::FunctionNode(SharedPtr<Function> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
+
+FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
+SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr<Function>>(data.value);}

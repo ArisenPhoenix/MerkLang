@@ -4,22 +4,22 @@
 #include "core/registry/function_registry.h"
 #include "utilities/debugger.h"
 
- 
+
 FunctionRegistry::~FunctionRegistry() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-    for (auto& [name, functionSignatures] : functions) {
-        functionSignatures.clear();  // Explicitly clear each vector of UniquePtrs
+    for (auto& [name, vec] : functions) {
+        vec.clear();
     }
-    functions.clear();  // Clear the map itself
+    functions.clear();
     DEBUG_FLOW_EXIT();
 }
 
-
+void FunctionRegistry::clear() {
+    functions.clear();
+}
 void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSignature> signature) {
     DEBUG_FLOW(FlowLevel::LOW);
     
-    // CallableType newFuncType = signature->getCallable()->getCallableType();
     const CallableType callType = signature->getCallableType();
     const CallableType subType = signature->getSubType();
 
@@ -35,7 +35,6 @@ void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSi
         throw MerkError("Unsupported callable type in function registry: " + callableTypeAsString(callType));
     }
     if (subType == CallableType::DEF) {
-        // For def functions, there is only one allowed.
         if (!overloads.empty()) {
             overloads[0] = signature;
         } else {
@@ -44,10 +43,8 @@ void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSi
     }
 
     else if (subType == CallableType::FUNCTION) {
-        // For functions, check if any overload has the same signature.
         const auto& newParamTypes = signature->getParameterTypes();
         for (const auto& existingSig : overloads) {
-            // Only compare if the existing overload is also a function.
             if (existingSig->getSubType() == CallableType::FUNCTION && existingSig->matches(newParamTypes)) {
                 DEBUG_FLOW_EXIT();
                 
@@ -72,8 +69,7 @@ bool FunctionRegistry::hasFunction(const String& name) const {
     return func;
 }
 
-
-std::optional<std::reference_wrapper<CallableSignature>> FunctionRegistry::getFunction(const String& name, const Vector<Node>& args) {
+std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name, const Vector<Node>& args)  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     auto it = functions.find(name);
     if (it == functions.end() || it->second.empty()){
@@ -81,8 +77,6 @@ std::optional<std::reference_wrapper<CallableSignature>> FunctionRegistry::getFu
         return std::nullopt;
     }
         
-
-    // Build a vector of argument types.
     Vector<NodeValueType> argTypes;
     for (const auto &arg : args) {
         argTypes.push_back(arg.getType());
@@ -90,20 +84,19 @@ std::optional<std::reference_wrapper<CallableSignature>> FunctionRegistry::getFu
     DEBUG_LOG(LogLevel::TRACE, highlight("Function:", Colors::bold_blue), name, "was defined using", highlight("function", Colors::red));
 
     // Search for a matching overload.
-    for (const auto& candidate : it->second) {
+    for (auto candidate : it->second) {
         DEBUG_LOG(LogLevel::TRACE, "Checking Function Candidate", name, candidate->getCallable()->parameters.toString());
 
         // If this is a def function, return it regardless.
-        // Def functions are meant to be more light weight and flexible.
         DEBUG_LOG(LogLevel::TRACE, "Function Type: ", callableTypeAsString(candidate->getSubType()));
         if (candidate->getSubType() == CallableType::DEF) {
-            return std::optional<std::reference_wrapper<CallableSignature>>(*candidate);
+            return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(candidate);
         }
         else if (candidate->getSubType() == CallableType::FUNCTION) {
 
             if (candidate->matches(argTypes)){
                 DEBUG_FLOW_EXIT();
-                return std::optional<std::reference_wrapper<CallableSignature>>(*candidate);
+                return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(candidate);
             }
             DEBUG_LOG(LogLevel::DEBUG, highlight("Function:", Colors::bold_blue), name, "args didn't match");
         }
@@ -116,13 +109,12 @@ std::optional<std::reference_wrapper<CallableSignature>> FunctionRegistry::getFu
 }
 
 
-std::optional<std::reference_wrapper<CallableSignature>> FunctionRegistry::getFunction(const String& name) {
+std::optional<Vector<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name) {
     DEBUG_FLOW(FlowLevel::MED);
     auto it = functions.find(name);
     if (it != functions.end() && !it->second.empty()) {
-        
         DEBUG_FLOW_EXIT();
-        return std::optional<std::reference_wrapper<CallableSignature>>(*it->second.front());
+        return it->second;
     }
 
     DEBUG_FLOW_EXIT();
@@ -134,25 +126,28 @@ std::optional<std::reference_wrapper<CallableSignature>> FunctionRegistry::getFu
 
 void FunctionRegistry::debugPrint() const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    debugLog(true, "Registered Functions:");
-    for (const auto &pair : functions) {
-        debugLog(true, "  ", pair.first,  "(", pair.second.size()-1, " overload(s))");
+    if (functions.empty()) {
+        debugLog(true, "No functions registered.");
+    } else {
+        debugLog(true, "Registered Functions:");
+        for (const auto &pair : functions) {
+            debugLog(true, "  ", pair.first,  "(", pair.second.size()-1, " overload(s))");
+        }
     }
+    
     DEBUG_FLOW_EXIT();
 }
 
 
 FunctionRegistry FunctionRegistry::clone() const {
-    DEBUG_FLOW(FlowLevel::MED);
     FunctionRegistry copy;
-    for (const auto& [fname, sigs] : functions) {
-        for (const auto& sig : sigs) {
-            // Shallow copy of the shared pointer.
-            copy.registerFunction(fname, sig);
+    for (const auto& [name, sigList] : this->functions) {
+        std::vector<SharedPtr<CallableSignature>> copied;
+        for (const auto& sig : sigList) {
+            copied.push_back(std::make_shared<CallableSignature>(*sig)); // Clone the signature
         }
+        copy.functions[name] = std::move(copied);
     }
-
-    DEBUG_FLOW_EXIT();
     return copy;
 }
 

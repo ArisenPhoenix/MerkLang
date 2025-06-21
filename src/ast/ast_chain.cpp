@@ -1,15 +1,31 @@
 #include "core/types.h"
 #include "core/scope.h"
 #include "core/node.h"
+#include "ast/ast_base.h"
 
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/helper_functions.h"
+#include "ast/ast_callable.h"
+
 #include "ast/ast_function.h"
+#include "ast/ast_class.h"
 #include "core/classes/class_base.h"
 #include "core/classes/method.h"
 #include "ast/ast_chain.h"
- 
+
+#include "core/errors.h"
+#include "core/scope.h"
+
+
+String opKindAsString(ChainOpKind opKind){
+    switch (opKind) {
+        case ChainOpKind::Reference: return "Reference";
+        case ChainOpKind::Assignment: return "Assignment";
+        case ChainOpKind::Declaration: return "Declaration";
+        default: throw MerkError("Unknown OpKind");
+    }
+}
 
 
 ChainElement::ChainElement() {
@@ -19,22 +35,38 @@ ChainElement::ChainElement() {
     delimiter = "";
 }
 
+void out(std::ostream& os) {(void)os;}
+void ChainElement::printAST(std::ostream& os, int indent) const {
+    
+    printIndent(os, indent);
+    os << "Name: " << name << " TokenType: " << tokenTypeToString(type);
+    object ? object->printAST(os, indent) : out(os);
+};
+
+ChainElement::ChainElement(ChainElement&& other) noexcept
+  : name(std::move(other.name))
+  , object(std::move(other.object))        // just steal the pointer
+  , delimiter(std::move(other.delimiter))
+  , type(other.type)
+{}
+
+
 ChainElement& ChainElement::operator=(ChainElement&& other) noexcept {
-    name = other.name;
-    type = other.type;
-    object = std::move(other.object->clone());
-    delimiter = other.delimiter;
+    if (this != &other) {
+      name      = std::move(other.name);
+      object    = std::move(other.object);    // DON’T clone!
+      delimiter = std::move(other.delimiter);
+      type      = other.type;
+    }
     return *this;
-}
-ChainElement::ChainElement(ChainElement&& other) noexcept {
-    name = other.name;
-    type = other.type;
-    object = std::move(other.object->clone());
-    delimiter = other.delimiter;
-}
+  }
 
-// Chain::Chain() : ASTStatement() {}
-
+ChainElement::~ChainElement() {
+    clear();
+}
+void ChainElement::clear() {
+    object.reset();   // deletes the AST, then sets the ptr to null
+}
 
 Chain::Chain(SharedPtr<Scope> scope) : ASTStatement(scope) { branch = "Chain"; }
 void Chain::addElement(ChainElement&& elem) {
@@ -42,8 +74,35 @@ void Chain::addElement(ChainElement&& elem) {
 
 }
 
-void Chain::setResolutionStartIndex(int index) {resolutionStartIndex = index;}
 
+void Chain::clear() {
+    for (auto& elem : elements){
+        elem.clear();
+    } 
+
+}
+Chain::~Chain() {
+    if (getSecondaryScope()){
+        getSecondaryScope().reset();
+    }
+    clear();
+}
+void Chain::setResolutionStartIndex(int index) {resolutionStartIndex = index;}
+void Chain::setSecondaryScope(SharedPtr<Scope> secondary) {classScope = secondary;}
+void Chain::setResolutionMode(ResolutionMode newMode) {mode = newMode;}
+
+int Chain::getResolutionStartIndex() const {return resolutionStartIndex;}
+ResolutionMode Chain::getResolutionMode() const {return mode;}
+SharedPtr<Scope> Chain::getSecondaryScope() const {
+    if (classScope.expired()){
+        return nullptr;
+    }
+    if (auto scope = classScope.lock()){
+        return scope;
+    } else {
+        return nullptr;
+    }
+}
 
 const Vector<ChainElement>& Chain::getElements() const {
     return elements;
@@ -84,6 +143,7 @@ SharedPtr<Scope> getAssociatedScope(const Node& node) {
             DEBUG_LOG(LogLevel::TRACE, "getAssociatedScope -> ClassInstance scope resolved");
             return std::get<SharedPtr<ClassInstance>>(node.getValue())->getCapturedScope();
         }
+
             
         default:
             return nullptr;  // Caller should handle this case
@@ -96,168 +156,51 @@ void Chain::setScope(SharedPtr<Scope> scope) {
         if (elem.object) elem.object->setScope(scope);
     }
 }
-
-
-// Node Chain::evaluate(SharedPtr<Scope> scope) const {
-//     DEBUG_FLOW(FlowLevel::HIGH);
-//     Node current;
-//     SharedPtr<Scope> currentScope = classScope ? classScope : scope ? scope : getScope();
-//     DEBUG_LOG(LogLevel::ERROR, "Chain::evaluate was called with scope level: ", currentScope->getScopeLevel());
-//     DEBUG_LOG(LogLevel::ERROR, "Has Class Scope: ", classScope ? "true" : "false", "Has Provided Scope: ", scope ? "true": "false", "Has InternalScope: ", getScope() ? "true" : "false");
-//     DEBUG_LOG(LogLevel::ERROR, "Has Finalized Scope: ", currentScope ? "true" : "false");
-//     DEBUG_LOG(LogLevel::ERROR, "Has clsScope: ", classScope ? "true" : "false", "Resolution Start Index: ", resolutionStartIndex, "Num Entries: ", elements.size());
-    
-//     if (!currentScope){
-//         currentScope = getScope();
-//     }
-//     // Start from the resolutionStartIndex (default 0)
-//     for (size_t i = resolutionStartIndex; i < elements.size(); ++i) {
-//         const auto& elem = elements[i];
-
-//         DEBUG_LOG(LogLevel::ERROR, "Current elem in Chain is: ");
-//         elem.printAST(std::cout, currentScope->getScopeLevel());
-
-//         // Evaluate the object within the current scope
-//         Node result = elem.object->evaluate(currentScope);
-//         if (!result.isValid()) {
-//             throw MerkError("Invalid resolution at chain element: " + elem.name);
-//         }
-
-//         current = result;
-//         DEBUG_LOG(LogLevel::ERROR, "NODE DATA IN Chain::evaluate |", nodeTypeToString(current.getType()));
-//         // Advance the scope based on the result
-//         DEBUG_LOG(LogLevel::ERROR, "Is Callable: ", current.getIsCallable());
-//         if (current.getIsCallable()) {
-//             NodeValueType type = current.getType();
-            
-
-//             if (type == NodeValueType::ClassInstance) {
-//                 // If the next element is accessed via `.`, try to resolve an attribute/method
-//                 if (i + 1 < elements.size() && elements[i + 1].delimiter == ".") {
-//                     auto nextName = elements[i + 1].name;
-//                     Node field = current.getField(nextName);
-
-//                     if (!field.isValid()) {
-//                         throw MerkError("Field '" + nextName + "' not found in class instance.");
-//                     }
-
-//                     current = field;
-//                     if (i > 0 && elements[i - 1].delimiter == "." && current.getType() == NodeValueType::ClassInstance) {
-//                         currentScope = getAssociatedScope(current);  // <-- instanceScope (for self)
-//                     }
-//                     // currentScope = getAssociatedScope(current); // in case it's a method or scoped field
-//                     continue;
-//                 }
-//             } else if (type == NodeValueType::Callable){
-//                 // Invalid Virtual CallableNode
-//             } else if (type == NodeValueType::Function) {
-//                 // Function Specific Log --- if Needed
-//             } else if (type == NodeValueType::Class) {
-//                 // Class Specific Logic
-//             } else if (type == NodeValueType::ClassInstance) {
-//                 // Class Instance Specific Logic
-//             } else if (type == NodeValueType::Method){
-//                 // Method Specific Logic
-//             } else {
-//                 DEBUG_LOG(LogLevel::ERROR, "No Conditions Were Met When Finding NodeValueType in Chain::evaluate");
-                
-//                 // handle raw values such as Int
-//             }
-//             // Optionally add logic for other callable types (e.g., static, methods)
-//         }
-
-//         if (mode == ResolutionMode::ClassInstance) {
-//             if (classScope){
-//                 current = elem.object->evaluate(classScope);
-//             }
-//             throw MerkError("Resolution Mode was set to ClassInstance, yet no Class Scope Was Apparent");
-//         }
-//         if (classScope){
-//         } else {
-//             current = elem.object->evaluate(currentScope);
-//         }
-       
-
-
-//         currentScope = getAssociatedScope(current);  // Advance scope if applicable
-//     }
-//     DEBUG_FLOW_EXIT();
-//     return current;
-// }
-
-
-Node Chain::evaluate(SharedPtr<Scope> scope) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    DEBUG_LOG(LogLevel::ERROR, "Chain::evaluate", "Num Elements:", elements.size());
-    SharedPtr<Scope> currentScope = classScope ? classScope : (scope ? scope : getScope());
-    if (!currentScope) throw MerkError("Chain::evaluate: no valid scope");
-    Node currentVal;
-    for (size_t i = resolutionStartIndex; i < elements.size(); ++i) {
-        const auto& elem = elements[i];
-
-        if (mode == ResolutionMode::ClassInstance) {
-            if (!classScope){
-                throw MerkError("No Class Scope Was Provided for ResolutionMode::ClassInstance");
-            }
-            DEBUG_LOG(LogLevel::ERROR, "Evaluating Class Instance");
-            Node currentVal = elem.object->evaluate(classScope);
-
-        } else {
-            DEBUG_LOG(LogLevel::ERROR, "Evaluating Normal Instance");
-
-            currentVal = elem.object->evaluate(currentScope);
-
-        }
-        // elem.printAST(std::cout, currentScope->getScopeLevel());
-
-        if (!currentVal.isValid()) {
-            throw MerkError("Invalid resolution at chain element: " + elem.name);
-        }
-        DEBUG_LOG(LogLevel::ERROR, "Current Val: ", currentVal);
-
-
-        // // Special behavior for class instances
-        // if (currentVal.getIsCallable() && currentVal.getType() == NodeValueType::ClassInstance) {
-        //     if (i + 1 < elements.size() && elements[i + 1].delimiter == ".") {
-        //         auto nextName = elements[i + 1].name;
-        //         Node field = currentVal.getField(nextName);
-        //         if (!field.isValid()) {
-        //             throw MerkError("Field '" + nextName + "' not found in class instance.");
-        //         }
-        //         currentVal = field;
-        //         currentScope = getAssociatedScope(currentVal);
-        //         continue;
-        //     }
-        // }
-
-        currentScope = getAssociatedScope(currentVal);
-    }
-    DEBUG_LOG(LogLevel::ERROR, "Final Chain Evaluation Val: ", currentVal);
-    DEBUG_FLOW_EXIT();
-    return currentVal;
+void Chain::setLastScope(SharedPtr<Scope> mostRecentScope) const {
+    lastScope = mostRecentScope;
 }
 
 
 
-
-void Chain::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString());
-    for (const auto& elem : elements) {
-        elem.printAST(os, indent);
+void Chain::setFirstElement(UniquePtr<ASTStatement> probablyScope, String name) {
+    if (elements.size() == 0){
+        throw MerkError("There are no elements to set in Chain::setFirstElement");
     }
+
+    elements[0].object = std::move(probablyScope);
+    elements[0].name = name;
+}
+
+Vector<ChainElement>& Chain::getMutableElements() {
+    return elements;
 }
 
 
-
-String Chain::toString() const {
-    std::ostringstream oss;
-    for (const auto& elem : elements) {
-        oss << elem.name;
-        oss << ".";
+ChainElement& Chain::getElement(int index) {
+    if (elements.empty()) {
+        throw MerkError("Chain::getObject() called on empty chain.");
     }
-    return oss.str();
+
+    if (index == -1) {
+        return getLast();
+    }
+
+    if (index < 0 || static_cast<size_t>(index) >= elements.size()) {
+        throw MerkError("Chain::getObject() index out of range: " + std::to_string(index));
+    }
+
+    return elements[index];
 }
+
+
+ChainElement& Chain::getLast() {
+    if (elements.empty()) {
+        throw MerkError("Chain::lastObject() called on empty chain.");
+    }
+    return elements.back();
+}
+
+
 
 
 UniquePtr<BaseAST> Chain::clone() const {
@@ -271,70 +214,310 @@ UniquePtr<BaseAST> Chain::clone() const {
 
         copy->addElement(std::move(elem));
     }
+    copy->setResolutionStartIndex(getResolutionStartIndex());
+
+    copy->setResolutionMode(getResolutionMode());
+    copy->setSecondaryScope(getSecondaryScope());
     return copy;
 }
 
-
+SharedPtr<Scope> Chain::getLastScope() {
+    if (auto scope = lastScope.lock()) {
+        return scope;
+    }
+    return nullptr;
+}
 
 void Chain::replaceLastElementWith(ChainElement&& elem) {
     elements.back() = std::move(elem);
 }
 
 
+ChainOperation::ChainOperation(UniquePtr<Chain> lhs,
+                               UniquePtr<ASTStatement> rhs,
+                               ChainOpKind opKind,
+                               SharedPtr<Scope> scope,
+                               bool isConst,
+                               bool isMutable,
+                               bool isStatic
+                            )
+    : ASTStatement(scope), lhs(std::move(lhs)), rhs(std::move(rhs)), opKind(opKind), isConst(isConst), isMutable(isMutable), isStatic(isStatic) {}
+
+    
+
+
+   
+
+
+
+UniquePtr<BaseAST> ChainOperation::clone() const {
+    return makeUnique<ChainOperation>(
+        static_unique_ptr_cast<Chain>(lhs->clone()),
+        rhs ? static_unique_ptr_cast<ASTStatement>(rhs->clone()) : nullptr,
+        opKind, getScope(), isConst, isMutable);
+}
 
 
 
 
-// Node Chain::evaluate(SharedPtr<Scope> scope) const {
-//     Node current;
-//     SharedPtr<Scope> currentScope = scope;
-
-//     for (size_t i = 0; i < elements.size(); ++i) {
-//         const auto& elem = elements[i];
-
-//         Node result = elem.object->evaluate(currentScope);
-//         if (!result.isValid()) {
-//             throw MerkError("Invalid resolution at chain element: " + elem.name);
-//         }
-
-//         // Check if result is a class instance and we're doing a field or method access
-//         if (result.getIsCallable()) {
-//             NodeValueType nodeType = result.getType();
-//             if (nodeType == NodeValueType::Callable){
-//                 // Invalid Virtual CallableNode
-//             } else if (nodeType == NodeValueType::Function) {
-//                 // Function Specific Log --- if Needed
-//             } else if (nodeType == NodeValueType::Class) {
-//                 // Class Specific Logic
-//             } else if (nodeType == NodeValueType::ClassInstance) {
-//                 // Class Instance Specific Logic
-//             } else if (nodeType == NodeValueType::Method){
-//                 // Method Specific Logic
-//             }
-//             // && i + 1 < elements.size()
-//             const auto& next = elements[i + 1];
 
 
 
-//             // Only resolve attributes if dot-access
-//             if (next.delimiter == ".") {
-//                 Node field = result.getField(next.name);
-//                 if (!field.isValid()) {
-//                     throw MerkError("Field '" + next.name + "' not found in class instance.");
-//                 }
-//                 current = field;
-//                 currentScope = getAssociatedScope(current);  // Could be field-specific
-//                 ++i;  // Skip ahead since we've manually handled next
-//                 continue;
-//             }
+UniquePtr<Chain>& ChainOperation::getLeft() {
+    return lhs;
+};
+UniquePtr<ASTStatement>& ChainOperation::getRight() {
+    return rhs;
+}
+Chain* ChainOperation::getLeftSide() const {
+    return lhs.get();
+}
+ASTStatement* ChainOperation::getRightSide() const {
+    return rhs.get();
+}
 
-//             // Handle :: static access later
-//         }
 
-//         // General case
-//         current = result;
-//         currentScope = getAssociatedScope(current);
-//     }
 
-//     return current;
-// }
+SharedPtr<Scope> ChainOperation::getSecondaryScope() {
+    if (auto scope = classScope.lock()) {
+        return scope;
+    }
+    return nullptr;
+}
+void ChainOperation::setSecondaryScope(SharedPtr<Scope> scope) {
+    classScope = scope;
+}
+
+void ChainOperation::setResolutionMode(ResolutionMode newMode, String accessor) {
+    // lhs->setResolutionMode(newMode);
+    if (lhs->getElement(0).name == accessor) {
+        lhs->setResolutionMode(newMode);
+    }
+    if (rhs && rhs->getAstType() == AstType::Chain) {
+        Chain* chainR = static_cast<Chain*>(getRightSide());
+        if (chainR->getElement(0).name == accessor) {
+            chainR->setResolutionMode(newMode);
+        }
+    } 
+}
+void ChainOperation::setResolutionStartIndex(int index, String accessor) {
+    if (lhs->getElement(0).name == accessor) {
+        lhs->setResolutionStartIndex(index);
+    }
+    if (rhs && rhs->getAstType() == AstType::Chain) {
+        Chain* chainR = static_cast<Chain*>(getRightSide());
+        if (chainR->getElement(0).name == accessor) {
+            chainR->setResolutionStartIndex(index);
+        }
+    }    
+}
+
+ResolutionMode ChainOperation::getResolutionMode() { return resolutionMode; }
+
+void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, SharedPtr<Scope> secondaryScope, String accessor) {
+
+    if (!lhs->getElements().empty() && lhs->getElement(0).name == accessor) {
+        lhs->setResolutionStartIndex(index);
+        lhs->setResolutionMode(newMode);
+        lhs->setSecondaryScope(secondaryScope);
+
+        setResolutionStartIndex(index, accessor);
+        setResolutionMode(newMode, accessor);
+        setSecondaryScope(secondaryScope);
+    }
+
+    if (rhs && rhs->getAstType() == AstType::Chain) {
+        Chain* chainR = static_cast<Chain*>(getRightSide());
+        if (!chainR->getElements().empty() && chainR->getElement(0).name == accessor) {
+            chainR->setResolutionStartIndex(index);
+            chainR->setResolutionMode(newMode);
+            chainR->setSecondaryScope(secondaryScope);
+        }
+    }
+}
+
+
+
+void ChainOperation::setScope(SharedPtr<Scope> newScope) {
+    lhs->setScope(newScope);
+    if (rhs){
+        rhs->setScope(newScope);
+    }
+}
+
+
+
+Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("STARTING SCOPE FOR Chain::evaluate() is: " + std::to_string(currentScope->getScopeLevel()), Colors::bg_bright_green));
+
+    if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
+    int index = resolutionStartIndex;
+
+    setLastScope(currentScope);
+    Node currentVal;
+
+    auto& baseElem = elements[index];
+    if (baseElem.object->getAstType() == AstType::Accessor){
+        currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
+        
+    } else {
+        currentVal = baseElem.object->evaluate(currentScope, instanceNode);
+    }
+    index ++;
+
+    for (size_t i = index; i < elements.size(); ++i) {
+        const auto& elem = elements[i];
+        AstType objType = elem.object->getAstType();
+        if (currentVal.isClassInstance()) {
+            auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
+            currentScope = instance->getInstanceScope();
+            instanceNode = makeShared<ClassInstanceNode>(instance);
+            
+            if (objType == AstType::VariableDeclaration){
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+            } 
+
+            else if (objType == AstType::VariableAssignment) {
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+            }
+            
+            else if (objType == AstType::VariableReference) {
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+            }
+
+            else if (objType == AstType::FunctionCall || objType == AstType::ClassMethodCall) {
+                auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
+                auto args = functionCall->handleArgs(currentScope);
+                currentVal = instance->call(elem.name, args);
+                
+            }
+            
+            currentScope = elem.object->getScope();
+            setLastScope(currentScope);
+
+        } else {
+            currentVal = elem.object->evaluate(currentScope);
+            currentScope = elem.object->getScope();
+            setLastScope(currentScope);
+        }
+    }
+    DEBUG_FLOW_EXIT();
+    return currentVal;
+    
+}
+
+Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    String hasLeft = getLeftSide() ? "true" : "false";
+    String hasRight = getRightSide() ? "true" : "false";
+    String hasInstanceNode = instanceNode ? "true" : "false";
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "OP KIND: ", opKindAsString(opKind));
+
+
+    auto leftVal = lhs->evaluate(scope, instanceNode);
+    auto currentScope = lhs->getLastScope();
+    // auto& last = lhs->getElements().back();  // Was An idea
+
+    if (!currentScope) throw MerkError("There Is No Current Scope in ChainOperation::evaluate");
+
+    SharedPtr<Scope> leftScope = lhs->getLastScope();
+    SharedPtr<Scope> rightScope;
+    Node rightVal;
+
+    if (getRightSide()){
+        if (getRightSide()->getAstType() == AstType::Chain){
+            auto r = static_cast<Chain*>(getRightSide());
+            rightVal = r->evaluate(currentScope, instanceNode);
+            rightScope = r->getLastScope();
+        } else {
+            rightVal = getRightSide()->evaluate(currentScope, instanceNode);
+        }
+    } else {
+        DEBUG_LOG(LogLevel::PERMISSIVE, highlight("No Right Side For ChainOperation", Colors::bg_green));
+    }
+
+
+
+    if (!leftVal.isValid()) {
+        throw MerkError("Left Hand Side of ChainOperation is invalid");
+    } else {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Left Hand Side of ChainOperation is Valid", leftVal);
+    }
+    
+
+
+    // //                      For Perhaps More Advanced Maneuvers
+
+
+    // switch (opKind) {
+    //     case ChainOpKind::Reference:
+    //         if (leftVal.isClassInstance()) {
+    //             DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation Reference Is a class instance");
+    //             // auto instanceNode = static_cast<ClassInstanceNode>(leftVal);
+    //             auto instanceNode = ClassInstanceNode::from(leftVal);
+    //             auto instanceScope = instanceNode.getInstanceScope();
+
+    //             DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance Converted");
+    //             if (last.type == TokenType::Variable){
+    //                 int scopeLevel = instanceNode.isValid() ? instanceNode.getInstanceScope()->getScopeLevel() : 0;
+    //                 DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Field From Scope: ", scopeLevel);
+    //                 // instanceNode->getInternalScope();
+    //                 auto instance = instanceNode.getInstance();
+                    
+    //                 // return instance->getField(last.name, last.type);
+    //             } 
+    //         }
+
+    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Variable Reference");
+    //         return leftVal;
+
+    //     case ChainOpKind::Assignment: 
+    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Assignment");
+
+    //         // Node val = rhs->evaluate(currentScope, instanceNode);
+    //         if (leftVal.isClassInstance()) {
+    //             auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
+    //             instance->updateField(last.name, rightVal);
+    //         } else {
+    //             currentScope->updateVariable(last.name, rightVal);
+    //         }
+    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Assignment -> probably Null");
+
+    //         DEBUG_FLOW_EXIT();
+    //         return rightVal;
+    //     // }
+
+    //     case ChainOpKind::Declaration: 
+    //         DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Declaration");
+    //         if (rhs){
+    //             throw MerkError("There Shouldn't Be An RHS for A DECLARATION");
+    //         }
+            
+    //         // Node val = rhs->evaluate(currentScope);
+    //         // VarNode var(val, isConst, isMutable);
+    //         // if (leftVal.isClassInstance()) {
+    //         //     auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
+    //         //     instance->declareField(last.name, var);
+    //         // } else {
+    //         //     currentScope->debugPrint();
+    //         //     currentScope->printChildScopes();
+    //         //     auto variable = makeUnique<VarNode>(val, isConst, isMutable, isStatic);
+    //         //     currentScope->declareVariable(last.name, std::move(variable));
+    //         // }
+
+    //         // // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Declaration -> probably Null");
+
+    //         // DEBUG_FLOW_EXIT();
+    //         // return var;
+    //         DEBUG_LOG(LogLevel::PERMISSIVE, highlight("VAR CREATED: ", Colors::bg_green), leftVal, "IN SCOPE: ");
+    //         // scope->debugPrint();
+    //         return leftVal;
+    //     // }
+    // }
+    // DEBUG_FLOW_EXIT();
+    // throw MerkError("Unknown chain operation kind.");
+    return leftVal;
+}

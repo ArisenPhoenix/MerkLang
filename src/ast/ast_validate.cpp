@@ -1,14 +1,15 @@
 #include "utilities/debugger.h"
+#include "core/errors.h"
+#include "core/scope.h" 
+#include "core/classes/method.h"
+
 #include "ast/ast_base.h"
 #include "ast/ast_control.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_chain.h"
 #include "ast/ast_class.h"
-#include "core/errors.h"
 #include "ast/ast_validate.h"
 
-// #include "utilities/ast_vali.h"
-#include "ast/ast_base.h"
 static thread_local std::unordered_set<const BaseAST*> globalVisited;
 
 
@@ -16,7 +17,9 @@ void ASTUtils::traverse(const Vector<UniquePtr<BaseAST>>& nodes, const std::func
     std::unordered_set<const BaseAST*> localSet;
     if (!visited) visited = &localSet;
     for (const auto& node : nodes) {
-
+        if (!node) {
+            throw MerkError("The Node Being Attempted TO traverse does not exist");
+        }
         fn(node.get());
         if (recursive) {
             for (const BaseAST* child : node->getAllAst(includeSelf)) {
@@ -45,6 +48,7 @@ void ASTUtils::traverse(const Vector<const BaseAST*>& nodes, const std::function
             }
         }
     }
+    localSet.clear();
 }
 
 bool ASTUtils::traverseUntil(const Vector<UniquePtr<BaseAST>>& nodes, const std::function<bool(BaseAST*)>& predicate, bool recursive, bool includeSelf, std::unordered_set<const BaseAST*> *visited) {
@@ -63,6 +67,8 @@ bool ASTUtils::traverseUntil(const Vector<UniquePtr<BaseAST>>& nodes, const std:
             }
         }
     }
+    localSet.clear();
+
     return false;
 }
 
@@ -83,6 +89,8 @@ bool ASTUtils::traverseUntil(const Vector<const BaseAST*>& nodes, const std::fun
             }
         }
     }
+    localSet.clear();
+
     return false;
 }
 

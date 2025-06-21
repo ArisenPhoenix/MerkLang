@@ -8,13 +8,14 @@
 #include "core/functions/function_node.h"  // Now includes Callable (and Function)
 
 
-
+class Chain;
 
 class Method : public Callable {
 protected:
     CallableType subType = CallableType::DEF;
     String accessor;
-    SharedPtr<Scope> classScope;
+    mutable SharedPtr<Scope> classScope;
+    bool isStatic;
 
 public:
     UniquePtr<MethodBody> body;
@@ -22,12 +23,8 @@ public:
 
     Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn = false);
     Method(Function&& function);  // For preparation of dynamic updates of methods in a class etc.
-    // Method(Function&& function);
     Method(Method& method);
-
-    // Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, String accessor, bool requiresReturn = false);
-    // Execution will be similar but checks for the accessor will be needed
-    Node execute(Vector<Node> args, SharedPtr<Scope> callScope) const override;
+    Node execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     void setCapturedScope(SharedPtr<Scope> scope) override;
     SharedPtr<Scope> getCapturedScope() const override;
@@ -41,12 +38,14 @@ public:
     void setAccessor(String access);
 
     void setScope(SharedPtr<Scope> newScope) const override;
-    // CallableBody* getBody() const override {return body.get();}
 
-    SharedPtr<Scope> getClassScope();
+    SharedPtr<Scope> getClassScope() const;
     void setClassScope(SharedPtr<Scope> newClassScope);
+
     MethodBody* getBody();
     MethodBody* getBody() const;
+    Vector<Chain*> getNonStaticElements();
+    bool getIsStatic();
 
 protected:
     SharedPtr<Scope> capturedScope;
@@ -55,19 +54,10 @@ protected:
 
 class MethodNode : public CallableNode {
 public:
-    MethodNode(SharedPtr<Method> method) : CallableNode(method, "Method") {
-        data.type = NodeValueType::Method;
-    }
+    MethodNode(SharedPtr<Method> method);
 
-    MethodNode(SharedPtr<Callable> method) : CallableNode(method, "Method") {
-        data.type = NodeValueType::Method;
-    }
+    MethodNode(SharedPtr<Callable> method);
 
-
-
-
-    SharedPtr<Callable> getCallable() const override {
-        return std::get<SharedPtr<Method>>(data.value);
-    }
+    SharedPtr<Callable> getCallable() const override;
 };
 #endif // METHOD_H

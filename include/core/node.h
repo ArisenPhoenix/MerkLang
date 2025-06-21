@@ -7,21 +7,7 @@
 #include <sstream>
 #include <variant>
 #include "core/types.h"
-// #include "utilities/debugging_functions.h"
-// #include "utilities/debugger.h"
-
-
-// namespace std {
-//     template <>
-//     struct hash<Node> {
-//         size_t operator()(const Node& node) const {
-//             return std::hash<std::string>{}(node.toString()); // Use string representation for hashing
-//         }
-//     };
-// }
-
-// class VarNode; // Forward Declare VarNode
-
+#include <optional>
 
 // Struct for NodeData using a union for efficient storage
 struct NodeData {
@@ -33,7 +19,7 @@ struct NodeData {
     NodeData& operator=(const NodeData&) = default; // Copy assignment operator
     NodeData& operator=(NodeData&&) noexcept = default; // Move assignment operator
     explicit NodeData(NodeValueType t) : type(t), value(Null) {}
-    ~NodeData() = default; // Destructor
+    ~NodeData(); // Destructor
 };
 
 class Node {
@@ -48,13 +34,18 @@ public:
     bool isMutable = true;
     bool isStatic = false;
     bool isCallable = false;
+
     void setValue(const Node& other);
     void setValue(const VariantType& newValue);
     NodeValueType determineResultType(const Node& left, const Node& right) const;
     String nodeType = "DataNode";
+    String name = "";
 
-    virtual Node getField(const String& name) const;
-    virtual Node getField(const String& name, TokenType type) const;
+
+
+    bool isInstanceScope();
+    bool isInstanceScope() const;
+    
     bool isClassInstance();
     bool isClassInstance() const;
     
@@ -176,22 +167,10 @@ public:
     LitNode(LitNode&& other) noexcept;
 
     // Copy assignment operator
-    LitNode& operator=(const LitNode& other) {
-        if (this != &other) {
-            Node::operator=(other);
-            // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-assigned.");
-        }
-        return *this;
-    }
+    LitNode& operator=(const LitNode& other);
 
     // Move assignment operator
-    LitNode& operator=(LitNode&& other) noexcept {
-        if (this != &other) {
-            Node::operator=(std::move(other));
-            // DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-assigned.");
-        }
-        return *this;
-    } 
+    LitNode& operator=(LitNode&& other) noexcept; 
 
     String toString() const override;
 
@@ -202,12 +181,15 @@ public:
 // Variable Node for variables
 class VarNode : public Node {
 public:
-    String nodeType = "VarNode";
     
     VarNode();
     explicit VarNode(const VariantType& value, bool isConst = false, bool isMutable = true, bool isStatic = false);
     explicit VarNode(const String& value, const String& typeStr, bool isConst = false, bool isMutable = true, bool isStatic = false);
     explicit VarNode(const Node& parentNode, bool isConst = false, bool isMutable = true, bool isStatic = false);
+
+    // // For Static Typing
+    explicit VarNode(const String value, const String& type, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = false);
+    explicit VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = true);
     
     // Copy Constructor
     VarNode(const VarNode& other);
@@ -230,22 +212,6 @@ public:
     void setValue(VariantType newValue){Node::setValue(newValue);}
     virtual VarNode* clone() const;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

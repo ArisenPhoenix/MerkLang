@@ -22,10 +22,6 @@
 
 UniquePtr<IfStatement> Parser::parseIfStatement() {
     // DEBUG_FLOW(FlowLevel::HIGH);
-    // DEBUG_LOG(LogLevel::TRACE, "Parser::parseIfStatement: Parsing 'if' statement. Current Scope Level: ",
-    //          currentScope->getScopeLevel());
-
-    // DEBUG_LOG(LogLevel::ERROR, "Processing If Now");
     if (currentToken().value != "if") {
         throw MissingTokenError(currentToken(), "Expected 'if' keyword.");
     }
@@ -42,8 +38,6 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
     }
     advance(); // Consume ':'
 
-    // Parse the "then" block
-    // DEBUG_LOG(LogLevel::ERROR, "Calling thenBLock parseBlock()");
     auto thenBlock = parseBlock();
 
     SharedPtr<Scope> statementsScope = currentScope;             // Controlling Statement Scope
@@ -74,7 +68,6 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
     while (currentToken().type == TokenType::Keyword && currentToken().value == "elif") {
         advance(); // Consume 'elif'
 
-        // Parse the condition for `elif`
         auto elifCondition = parseExpression();
 
         DEBUG_LOG(LogLevel::TRACE, highlight("Processed elifCondition", Colors::pink));
@@ -90,18 +83,13 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
 
         advance(); // Consume ':'
 
-        // Parse the `elif` block
-        // DEBUG_LOG(LogLevel::DEBUG, highlight("Attempting elifBlock", Colors::pink));
-
         auto elifBlock = parseBlock(blocksScope);
-        // DEBUG_LOG(LogLevel::ERROR, highlight("Processed elifBlock", Colors::pink));
 
         if (!elifBlock) {
             throw MerkError("Parser::parseIfStatement: Failed to parse 'elif' block.");
         }
 
         // Create an ElIfStatement and add it to the vector
-        // DEBUG_LOG(LogLevel::TRACE, "Elif Condition In Parser: ");
         auto elifNode = makeUnique<ElifStatement>(
             std::move(elifCondition),
             std::move(elifBlock),  // Pass unique block
@@ -109,11 +97,8 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
         );
 
         elifNodes.push_back(std::move(elifNode));
-        // DEBUG_LOG(LogLevel::TRACE, highlight("Elif Added ", Colors::pink), "Current Scope Level: ", currentScope->getScopeLevel());
     }
 
-    // Parse an optional `else` block
-    // DEBUG_LOG(LogLevel::TRACE, "Processing Else Now");
     UniquePtr<ElseStatement> elseNode = nullptr;
     if (currentToken().type == TokenType::Keyword && currentToken().value == "else") {
         advance(); // Consume 'else'
@@ -152,8 +137,6 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
 
 UniquePtr<WhileLoop> Parser::parseWhileLoop() {
     // DEBUG_FLOW(FlowLevel::HIGH);
-    // DEBUG_LOG(LogLevel::TRACE, "Parser::parseWhileLoop: Entering");
-
     if (currentToken().value != "while") {
         throw UnexpectedTokenError(currentToken(), "while");
     }
@@ -188,9 +171,7 @@ UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
         blockScope = controlScope;
     }
 
-    // DEBUG_LOG(LogLevel::INFO, "Parser::parseBlock: Entering parseBlock with token: ", currentToken().toString());
-
-    auto codeBlock = makeUnique<CodeBlock>(blockScope); // Use current scope here.
+    auto codeBlock = makeUnique<CodeBlock>(blockScope);
 
     processNewLines();
     
@@ -205,10 +186,8 @@ UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
 
         auto statement = parseStatement();
         if (statement) {
-            // DEBUG_LOG(LogLevel::INFO, "parseBlock: Adding statement to block. Type: ", statement->getAstTypeAsString());
             codeBlock->addChild(std::move(statement));
-            // DEBUG_LOG(LogLevel::INFO,"Statement added to CodeBlock. Current children count: ", 
-            // codeBlock->getChildren().size());
+            
         } else {
             // DEBUG_LOG(LogLevel::INFO, "parseBlock: CodeBlock has children.");
         }
@@ -218,9 +197,6 @@ UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
     processDedent(blockScope);
 
     processNewLines();
-
-    // DEBUG_LOG(LogLevel::TRACE, highlight("Parser::parseBlock: After processing block. Current Scope Level: ", Colors::pink), 
-    // blockScope->getScopeLevel(), " | Current Scope Loc: ", blockScope.get());
     
     // DEBUG_FLOW_EXIT();
     return codeBlock;

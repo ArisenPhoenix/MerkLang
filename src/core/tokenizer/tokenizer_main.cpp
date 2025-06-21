@@ -4,23 +4,6 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
 
-// bool Tokenizer::isLogicOperator() {
-//     size_t start = position;
-//     int startColumn = column;
-
-//     // Read identifier (letters, digits, underscores)
-//     while (position < sourceLength && (isLetter(source[position])) && (!isWhitespace(source[position]))) {
-//         start++;
-//         startColumn++;
-//     }
-
-//     String value = source.substr(start, position - start);
-//     if (value == "and" || value == "or" || value == "not"){
-//         return true;
-//     }
-//     return false;
-// }
-
 
 bool Tokenizer::isLogicOperator() {
     size_t lookahead = position;
@@ -57,7 +40,7 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
-        // Handle comments
+        // Handle comments - perhaps will use them for something else later
         if (position < sourceLength && source[position] == '#') {
             while (position < sourceLength && source[position] != '\n') {
                 position++;
@@ -87,14 +70,6 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
-        // else if (isLogicOperator()){
-        //     Token string = readString();
-        //     tokens.push_back(Token(TokenType::Operator, string.value, line, column));
-        //     position+=string.value.size();
-        //     column ++;
-        //     continue;
-        // }
-
         // Handle compound operators first
         if ((isOperator(source[position]) || isPunctuation(source[position])) &&
             (isOperator(peek()) || isPunctuation(peek()))) {
@@ -112,14 +87,10 @@ Vector<Token> Tokenizer::tokenize() {
             
         }
 
-
         // Handle identifiers, numbers, and strings
         else if (isLetter(source[position])) {
-            // size_t idStart = position;
             Token identifier = readIdentifier();  // advances past identifier
         
-            // Peek at the char immediately after the identifier
-            // char nextChar = position < sourceLength ? source[position] : '\0';
             char nextChar = position < sourceLength ? source[position] : '\0';
         
             char nextNextChar = peek();
@@ -130,6 +101,11 @@ Vector<Token> Tokenizer::tokenize() {
             }
         
             tokens.push_back(identifier);
+            skipWhitespace();
+            
+            if (previousToken().type == TokenType::Variable && handleOptionalType(tokens)) {
+                continue;  // already tokenized the type annotation
+            }
         } else if (isDigit(source[position])) {
             tokens.push_back(readNumber());
         } else if (source[position] == '"') {
@@ -185,8 +161,6 @@ Token Tokenizer::readNumber() {
     size_t start = position;
     int startColumn = column;
 
-    // bool hasDot = false;
-
     // Read leading digits
     while (position < sourceLength && isDigit(source[position])) {
         position++;
@@ -196,7 +170,6 @@ Token Tokenizer::readNumber() {
     // Check for decimal part
     if (position < sourceLength && source[position] == '.') {
         if (isDigit(peek())) {
-            // hasDot = true;
             position++;
             column++;
 
@@ -223,8 +196,7 @@ Token Tokenizer::readString() {
     while (position < sourceLength && source[position] != '"') {
         if (source[position] == '\\') { // Handle escape sequences
             if (position + 1 >= sourceLength) {
-                // throw RunTimeError("Unfinished escape sequence in string literal.");
-                TokenizationError("Unfinished escape sequence in string literal.", line, column);
+                throw TokenizationError("Unfinished escape sequence in string literal.", line, column);
             }
             char nextChar = source[++position];
             column++;
@@ -245,13 +217,10 @@ Token Tokenizer::readString() {
         column++;
     }
 
-    // Ensure the string is properly terminated
     if (position >= sourceLength || source[position] != '"') {
-        // throw RunTimeError("Unmatched double-quote in string literal.");
         throw UnmatchedQuoteError(line, column, currentLineText);
     }
 
-    // Move past the closing double-quote
     position++;
     column++;
 
@@ -311,7 +280,7 @@ Token Tokenizer::readIdentifier() {
     }
     
     // Function Name (Immediately after `def`)
-    else if (tokens.size() > 0 && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef)){
+    else if (tokens.size() > 0 && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef) && (previousToken().value != "=" && previousToken().value != ":=")){
         type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
         functions.insert(value);
     }
@@ -328,7 +297,7 @@ Token Tokenizer::readIdentifier() {
         insideArgs = true;
     }
 
-    else if (isFunction(value)){
+    else if (isFunction(value) && previousToken().type != TokenType::VarDeclaration){
         type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
     }
 
@@ -366,12 +335,6 @@ Token Tokenizer::readIdentifier() {
     else if (value == "true" || value == "false") {
         type = TokenType::Bool;
     }
-
-    // Function Call?
-    // else if (isFunction(position)) {
-    //     type = TokenType::FunctionCall;
-    //     DEBUG_LOG(LogLevel::DEBUG, "Classified as function call: ", value);
-    // }
 
     DEBUG_LOG(LogLevel::DEBUG, "Exiting readIdentifier with value: ", value, " (Type: ", tokenTypeToString(type), ")");
     DEBUG_FLOW_EXIT();
@@ -436,13 +399,6 @@ bool Tokenizer::isWhitespace(char c) const {
     return c == ' ' || c == '\t';
 }
 
-// bool Tokenizer::isLetter(char c) const {
-//     if (position >= sourceLength) {
-//         throw OutOfBoundsError(line, column, currentLineText);
-//     }
-//     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
-// }
-
 bool Tokenizer::isLetter(char c) const {
     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
 }
@@ -465,3 +421,33 @@ bool Tokenizer::isPunctuation(char c) const {
 }
 
 
+bool Tokenizer::handleOptionalType(Vector<Token>& tokens) {
+    if (position < sourceLength && source[position] == ':') {
+        int colonCol = column;
+        if (!isFunction(previousToken().value) && !isClass(previousToken().value)){
+            skipWhitespace();  // Allow optional space
+            position++;
+            column++;
+            skipWhitespace();
+            if (isCapitalizedType(position)) {
+            // Parse the type
+                size_t typeStart = position;
+                int typeCol = column;
+                while (position < sourceLength &&
+                    (isLetter(source[position]) || isDigit(source[position]))) {
+                    position++;
+                    column++;
+                }
+
+                String typeStr = source.substr(typeStart, position - typeStart);
+                tokens.emplace_back(TokenType::Punctuation, ":", line, colonCol);
+                tokens.emplace_back(TokenType::Type, typeStr, line, typeCol);
+                return true;
+            } else {
+                throw TokenizationError("Expected a capitalized type after ':'", line, column, currentLineText);
+            }
+        }
+        
+    }
+    return false;
+}

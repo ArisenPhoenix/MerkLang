@@ -24,40 +24,33 @@ class FunctionBody : public CallableBody {
         // Steal Constructor
         FunctionBody(UniquePtr<CodeBlock>&& block);
     
-        ~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange));} 
+        ~FunctionBody();
     
-        virtual Node evaluate(SharedPtr<Scope> scope) const override;
+        virtual Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
         virtual UniquePtr<BaseAST> clone() const override;
         virtual AstType getAstType() const override { return AstType::FunctionBlock;}    
         void printAST(std::ostream& os, int indent = 0) const override;
-        // UniquePtr<BaseAST> clone() const override;
-    
-        
         Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
     };
-// class FunctionBody;
 
 
 
 
-// Function now inherits from Callable.
+// Function inherits from Callable.
 class Function : public Callable {
 protected:
     CallableType subType = CallableType::DEF;
 public:
-    // Constructor: simply forward to Callable.
     Function(String name, ParamList params, CallableType functionType);
     virtual ~Function() = default;
 
     // Execute must be implemented by derived classes.
-    virtual Node execute(const Vector<Node> args, SharedPtr<Scope> scope) const = 0;
+    virtual Node execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
 
     // Return a FunctionSignature representing this callable.
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
-    // Optionally, return a pointer to the function body (if applicable).
     virtual FunctionBody* getBody() const { return nullptr; }
-    // virtual UniquePtr<CallableBody> getBody() const = 0;
 
     virtual String toString() const override = 0;
 
@@ -79,7 +72,7 @@ public:
 public:
     UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType);
 
-    Node execute(Vector<Node> args, SharedPtr<Scope> scope) const override;
+    Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     void setCapturedScope(SharedPtr<Scope> scope);
 
@@ -98,12 +91,10 @@ public:
 
 class FunctionNode : public CallableNode {
 public:
-    FunctionNode(SharedPtr<Function> function) : CallableNode(function , "Function") {data.type = NodeValueType::Function;}
+    FunctionNode(SharedPtr<Function> function);
 
-    FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {
-        data.type = NodeValueType::Function;
-    }
-    SharedPtr<Callable> getCallable() const override {return std::get<SharedPtr<Function>>(data.value);}
+    FunctionNode(SharedPtr<Callable> function);
+    SharedPtr<Callable> getCallable() const override;
 };
 
 

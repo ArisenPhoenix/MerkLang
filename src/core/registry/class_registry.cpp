@@ -8,31 +8,41 @@ void ClassRegistry::debugPrint() const {
     }
 }
 
+
+ClassRegistry::~ClassRegistry() {
+    DEBUG_FLOW(FlowLevel::LOW);
+
+    clear();  // Clear the map itself
+    DEBUG_FLOW_EXIT();
+}
+
 void ClassRegistry::registerClass(const String& name, SharedPtr<ClassBase> classDef) {
     if (classMap.find(name) != classMap.end()) {
         throw MerkError("Class '" + name + "' already exists.");
     }
     // Create a ClassSignature from the given ClassBase and store it.
-    // classMap[name] = std::make_shared<CallableSignature>(classDef->toCallableSignature());
-    if (!classDef->getScope()) {
+    if (!classDef->getClassScope()) {
         throw MerkError("ClassRegistry::registerClass(): Classdef contains no scope");
     }
-    auto classSig = classDef->toCallableSignature();
+    auto classSig = std::static_pointer_cast<ClassSignature>(classDef->toCallableSignature());
     classMap[name] = classSig;
 }
 
-void ClassRegistry::registerClass(const String& name, SharedPtr<CallableSignature> classSignature) {
+void ClassRegistry::clear() {
+    classMap.clear(); // Then clear the container
+}
+
+void ClassRegistry::registerClass(const String& name, SharedPtr<ClassSignature> classSignature) {
     if (classMap.find(name) != classMap.end()) {
         throw MerkError("Class '" + name + "' already exists.");
     }
     classMap[name] = classSignature;
 }
 
-std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> ClassRegistry::getClass(const String& name) {
+std::optional<SharedPtr<ClassSignature>> ClassRegistry::getClass(const String& name) {
     auto it = classMap.find(name);
     if (it != classMap.end()) {
-        // Return the shared_ptr stored in the map
-        return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(it->second);
+        return it->second;
     }
     return std::nullopt;
 }
@@ -42,3 +52,11 @@ bool ClassRegistry::hasClass(const String& name) const {
 }
 
 
+
+ClassRegistry ClassRegistry::clone() const {
+    ClassRegistry clonedClasses;
+    for (const auto& [name, classSig] : this->classMap) {
+        clonedClasses.classMap[name] = classSig;
+    }
+    return clonedClasses;
+}

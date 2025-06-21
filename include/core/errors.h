@@ -5,10 +5,7 @@
 #include <string>
 #include <sstream>
 #include "types.h"
-
-
-
-// bool isWhitespaceOnly(const String& str);
+#include "core/functions/param_node.h"
 
 // Base Error Class: MerkError
 class MerkError : public RunTimeError {
@@ -359,11 +356,14 @@ public:
 class ArgumentError : public EvaluationError {
 private:
     String functionName;
-    size_t expectedArgs;
-    size_t receivedArgs;
+    size_t expectedSize;
+    size_t receivedSize;
+    ParamList expectedParams;
+    Vector<Node> receivedArguments;
 
 public:
     ArgumentError(const String& functionName, size_t expected, size_t received);
+    ArgumentError(const String& functionName, ParamList parameters, Vector<Node> arguments);
 
     String errorPrefix() const override;
 

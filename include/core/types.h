@@ -28,7 +28,7 @@ class Method;
 class MethodNode;
 class InstanceNode;
 class ClassInstance;
-
+class Scope;
 
 // Aliases
 using String = std::string;
@@ -68,6 +68,7 @@ using DependencyGraph = std::unordered_map<String, std::unordered_set<String>>;
 
 // Enum for Tokens and their types of the value held by the variant
 enum class TokenType {
+    Type,
     Keyword,
     Identifier,
     Number,
@@ -142,6 +143,7 @@ enum class NodeValueType {
     Uninitialized,
     Any,
     UNKNOWN,
+    Scope
 };
 
 
@@ -198,6 +200,8 @@ enum class AstType {
     AttributeAssignment,
 
     Chain,
+    ChainOperation,
+    Accessor,
 
     Unknown,
     NoOp,
@@ -252,7 +256,8 @@ using VariantType = std::variant<
     SharedPtr<ClassBase>,
     SharedPtr<Method>,
     SharedPtr<Callable>,
-    SharedPtr<ClassInstance>
+    SharedPtr<ClassInstance>,
+    SharedPtr<Scope>
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
 

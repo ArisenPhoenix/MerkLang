@@ -39,11 +39,12 @@ int main(int argc, char* argv[]) {
 
     // Step 3: Initialize Global Scope
     const bool interpretMode = true;
-    const bool byBlock = true;
+    const bool byBlock = false;
+    const bool isRoot = true;
 
         
-    SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode);
-    globalScope->owner = "=========GLOBAL=========";
+    SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, isRoot);
+    globalScope->owner = "GLOBAL";
     
     try {
         // Step 4: Initialize Tokenizer
@@ -54,7 +55,7 @@ int main(int argc, char* argv[]) {
         auto tokens = tokenizer.tokenize();
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
 
-        tokenizer.printTokens((Debugger::getInstance().getLevel() >= LogLevel::ERROR));
+        tokenizer.printTokens((Debugger::getInstance().getLogLevel() >= LogLevel::ERROR));
 
         // Step 5: Parse tokens into an AST
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
@@ -73,13 +74,14 @@ int main(int argc, char* argv[]) {
         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
         ast->printAST(std::cout);
         globalScope->debugPrint();
-        // globalScope->printChildScopes();
+        globalScope->printChildScopes();
 
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
 
     } catch (MerkError& e){
         std::cerr << e.errorString() << std::endl;
+        
     } catch (const std::exception& ex) {
         std::cerr << "Error during execution: " << ex.what() << std::endl;
         return 1;
@@ -92,6 +94,8 @@ int main(int argc, char* argv[]) {
 
     // DEBUG_LOG(LogLevel::DEBUG, "==================== PROGRAM TERMINATION ====================");
     // nativeFunctions.clear();
+    globalScope->printScopeReport();
+    globalScope->clear();
     globalScope.reset();
     
     return 0;

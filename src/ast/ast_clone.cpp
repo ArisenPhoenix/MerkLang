@@ -7,6 +7,11 @@
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
 #include "ast/ast_callable.h"
+#include "ast/ast_class.h"
+
+
+#include "core/classes/class_base.h"
+#include "core/classes/method.h"
 
 UniquePtr<BaseAST> ASTStatement::clone() const {
     throw MerkError("Cannot Clone Base Class ASTStatement");
@@ -57,9 +62,7 @@ UniquePtr<BaseAST> UnaryOperation::clone() const {
 UniquePtr<BaseAST> NoOpNode::clone() const {return makeUnique<NoOpNode>(getScope());}
 
 
-// AST CONTROL
 UniquePtr<BaseAST> CodeBlock::clone() const {
-    // Create a new CodeBlock with the same scope (or a copy of it, as appropriate)
     UniquePtr<CodeBlock> newBlock = makeUnique<CodeBlock>(getScope());
 
     for (const auto &child : children) {
@@ -125,7 +128,6 @@ UniquePtr<BaseAST> IfStatement::clone() const {
         clonedIf->setElseNode(std::move(clonedElse));
     }
 
-    // Return the newly constructed IfStatement clone.
     return clonedIf;
 }
 
@@ -145,7 +147,6 @@ UniquePtr<BaseAST> FunctionBody::clone() const {
     // Create a new CodeBlock with the same scope (or a copy of it, as appropriate)
     UniquePtr<FunctionBody> newBlock = std::make_unique<FunctionBody>(getScope());
 
-    // Deep-copy each child.
     for (const auto &child : children) {
         newBlock->addChild(child->clone());
     }
@@ -164,4 +165,68 @@ UniquePtr<BaseAST> FunctionCall::clone() const {
         clonedArgs.push_back(std::move(clonedArg));
     }
     return makeUnique<FunctionCall>(name, std::move(clonedArgs), getScope());
+}
+
+
+
+UniquePtr<BaseAST> ClassBody::clone() const {
+    if (!getScope()){
+        throw MerkError("No Scope Present in ClassBody::clone()");
+    }
+    UniquePtr<ClassBody> newBlock = makeUnique<ClassBody>(getScope());
+    std::unordered_map<String, SharedPtr<Scope>> methodScopes;
+
+    for (const auto &child : children) {
+        DEBUG_LOG(LogLevel::TRACE, "ClassBody::clone()", "current child", child->toString());
+
+        if (!child){
+            DEBUG_LOG(LogLevel::WARNING, "ClassBody::clone()", "Null child encountered in ClassBody::clone()");
+        }
+
+        newBlock->addChild(child->clone());
+        
+        DEBUG_LOG(LogLevel::TRACE, "ClassBody::clone()", "Added Child to ClassBody", child->getAstTypeAsString());
+
+    }
+    return newBlock;
+}
+
+
+
+UniquePtr<BaseAST> MethodBody::clone() const {
+    UniquePtr<MethodBody> newBlock = makeUnique<MethodBody>(getScope());
+
+    for (const auto &child : children) {
+        newBlock->addChild(child->clone());
+    }
+    newBlock->setNonStaticElements(nonStaticElements);
+    newBlock->isStatic = isStatic;
+    return newBlock;
+}
+
+
+
+UniquePtr<BaseAST> MethodDef::clone() const {
+    DEBUG_FLOW(FlowLevel::LOW);
+    if (!body->getScope()){
+        throw MerkError("No scope present in MethodDef::clone");
+    }
+    UniquePtr<BaseAST> clonedBodyBase = body->clone();
+    
+    auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
+    auto methodDef = makeUnique<MethodDef>(name, parameters.clone(), std::move(clonedBody), callType, getScope()->clone());
+    String access = getMethodAccessor();
+
+    methodDef->setMethodAccessor(access);
+
+    DEBUG_FLOW_EXIT();
+    return methodDef;
+}
+
+
+
+
+UniquePtr<BaseAST> Accessor::clone() const {
+    auto cloned = makeUnique<Accessor>(getAccessor(), getScope());
+    return cloned;
 }

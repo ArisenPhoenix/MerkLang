@@ -6,8 +6,8 @@
 #include "ast/ast.h"
 #include "core/functions/function_node.h"
 
-class Scope;
 
+class Scope;
 
 class ParameterAssignment : public VariableAssignment {
 public:
@@ -26,7 +26,7 @@ public:
     friend class MethodDef;
     FunctionDef(String name, ParamList parameters, UniquePtr<FunctionBody> body, CallableType funcType, SharedPtr<Scope> scope);
     ~FunctionDef() = default;
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual AstType getAstType() const override { return AstType::FunctionDefinition;}
     virtual UniquePtr<BaseAST> clone() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
@@ -38,7 +38,7 @@ class FunctionCall : public CallableCall {
 public:
     FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
 
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual AstType getAstType() const override { return AstType::FunctionCall;}
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
@@ -51,14 +51,9 @@ public:
     CallableType funcType;
     friend class MethodDef;
     FunctionRef(String name, SharedPtr<Scope> scope);
-    virtual Node evaluate(SharedPtr<Scope> scope) const override;
-    // virtual Node evaluate() const override { return evaluate(getScope());}
+    virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual AstType getAstType() const override { return AstType::FunctionReference;}
-    // virtual CallableSignature toCallableSignature() const;
-
-    // virtual UniquePtr<BaseAST> clone() const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
-    // UniquePtr<FunctionBody> getFunctionBody() {return static_unique_ptr_cast<FunctionBody>(std::move(getBody()));}
     virtual UniquePtr<BaseAST> clone() const override;
 
 };

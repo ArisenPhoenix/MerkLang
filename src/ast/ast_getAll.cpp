@@ -27,7 +27,6 @@ Vector<const BaseAST*> ASTStatement::getAllAst(bool includeSelf) const {
     }
     return {}; 
 }
-// VariableAssignment
 
 Vector<const BaseAST*> VariableAssignment::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all;
@@ -39,8 +38,6 @@ Vector<const BaseAST*> VariableAssignment::getAllAst(bool includeSelf) const {
     if (valueExpression) {
         auto values = valueExpression->getAllAst(includeSelf);
         mergeVectors(all, values);
-        // all.insert(all.end(), values.begin(), values.end());
-
     }
     return all; 
 }
@@ -51,12 +48,10 @@ Vector<const BaseAST*> ConditionalBlock::getAllAst(bool includeSelf) const {
         all.push_back(this);
     }
 
-    // Assuming ConditionalBlock wraps a condition and a body
     if (condition) {
         auto cond = condition->getAllAst(includeSelf);
         mergeVectors(all, cond);
 
-        // all.insert(all.end(), cond.begin(), cond.end());
     }
 
     return all;
@@ -73,9 +68,6 @@ Vector<const BaseAST*> VariableDeclaration::getAllAst(bool includeSelf) const {
     if (valueExpression) {
         auto values = valueExpression->getAllAst(includeSelf);
         mergeVectors(all, values);
-
-        // all.insert(all.end(), values.begin(), values.end());
-
     }
     return all; 
 }
@@ -89,8 +81,6 @@ Vector<const BaseAST*> CodeBlock::getAllAst(bool includeSelf) const {
     for (const auto& child : children) {
         auto childNodes = child->getAllAst(includeSelf);
         mergeVectors(all, childNodes);
-
-        // all.insert(all.end(), childNodes.begin(), childNodes.end());
     }
     return all;
 
@@ -111,22 +101,16 @@ Vector<const BaseAST*> IfStatement::getAllAst(bool includeSelf) const {
     if (body) {
         auto bodyNodes = body->getAllAst(includeSelf);
         mergeVectors(all, bodyNodes);
-
-        // all.insert(all.end(), bodyNodes.begin(), bodyNodes.end());
     }
 
     for (const auto& elif : getElifs()) {
         auto elifs = elif->getAllAst(includeSelf);
         mergeVectors(all, elifs);
-
-        // all.insert(all.end(), elifs.begin(), elifs.end());
     }
 
     if (getElse()) {
         auto elseNodes = getElse()->getBody()->getAllAst(includeSelf);
         mergeVectors(all, elseNodes);
-
-        // all.insert(all.end(), elseNodes.begin(), elseNodes.end());
     }
 
     return all;
@@ -143,15 +127,11 @@ Vector<const BaseAST*> ElifStatement::getAllAst(bool includeSelf) const {
     if (condition) {
         auto cond = condition->getAllAst(includeSelf);
         mergeVectors(all, cond);
-
-        // all.insert(all.end(), cond.begin(), cond.end());
     }
 
     if (body) {
         auto bodyNodes = body->getAllAst(includeSelf);
         mergeVectors(all, bodyNodes);
-
-        // all.insert(all.end(), bodyNodes.begin(), bodyNodes.end());
     }
     return all; 
 }
@@ -172,41 +152,11 @@ Vector<const BaseAST*> WhileLoop::getAllAst(bool includeSelf) const {
     if (condition) {
         auto cond = condition->getAllAst(includeSelf);
         mergeVectors(all, cond);
-
-        // all.insert(all.end(), cond.begin(), cond.end());
     }
 
     if (body) {
         auto bodyNodes = body->getAllAst(includeSelf);
         mergeVectors(all, bodyNodes);
-
-        // all.insert(all.end(), bodyNodes.begin(), bodyNodes.end());
-    }
-
-    return all;
-}
-
-
-
-Vector<const BaseAST*> BinaryOperation::getAllAst(bool includeSelf) const {
-    Vector<const BaseAST*> all = {};
-
-    if (includeSelf){
-        all.push_back(this);
-    }
-
-    if (left){
-        auto lefts = left->getAllAst(includeSelf);
-        mergeVectors(all, lefts);
-
-        // all.insert(all.end(), lefts.begin(), lefts.end());
-    }
-
-    if (right){
-        auto rights = right->getAllAst(includeSelf);
-        mergeVectors(all, rights);
-
-        // all.insert(all.end(), rights.begin(), rights.end());
     }
 
     return all;
@@ -222,32 +172,9 @@ Vector<const BaseAST*> UnaryOperation::getAllAst(bool includeSelf) const {
     if (operand) {
         auto operands = operand->getAllAst(includeSelf);
         mergeVectors(all, operands);
-
-        // all.insert(all.end(), operands.begin(), operands.end());
-
     }
     return all; 
 }
-
-
-Vector<const BaseAST*> Return::getAllAst(bool includeSelf) const {
-    Vector<const BaseAST*> all = {};
-
-    if (includeSelf){
-        // return {const_cast<Return*>(this)};
-        all.push_back(this);
-    }
-    if (returnValue){
-        auto returns = returnValue->getAllAst(includeSelf);
-        mergeVectors(all, returns);
-
-        // all.insert(all.end(), returns.begin(), returns.end());
-    }
-
-    return all; 
-}
-
-
 
 Vector<const BaseAST*> CallableDef::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all = {};
@@ -259,8 +186,6 @@ Vector<const BaseAST*> CallableDef::getAllAst(bool includeSelf) const {
     if (body) {
         auto elems = body->getAllAst(includeSelf);
         mergeVectors(all, elems);
-
-        // all.insert(all.end(), elems.begin(), elems.end());
     }
 
     return all; 
@@ -278,15 +203,47 @@ Vector<const BaseAST*> CallableCall::getAllAst(bool includeSelf) const {
         for (auto& arg : arguments){
             auto args = arg->getAllAst(includeSelf);
             mergeVectors(all, args);
-
-            // all.insert(all.end(), args.begin(), args.end());
-
         }
     }
 
     return all; 
 }
 
+
+Vector<const BaseAST*> BinaryOperation::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+
+    if (includeSelf){
+        all.push_back(this);
+    }
+
+    if (left){
+        auto lefts = left->getAllAst(includeSelf);
+        mergeVectors(all, lefts);
+    }
+
+    if (right){
+        auto rights = right->getAllAst(includeSelf);
+        mergeVectors(all, rights);
+    }
+
+    return all;
+}
+
+
+Vector<const BaseAST*> Return::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+    if (includeSelf){
+        all.push_back(this);
+    }
+    if (returnValue){
+        auto returns = returnValue->getAllAst(includeSelf);
+        mergeVectors(all, returns);
+
+    }
+
+    return all; 
+}
 
 
 Vector<const BaseAST*> Chain::getAllAst(bool includeSelf) const {
@@ -297,9 +254,29 @@ Vector<const BaseAST*> Chain::getAllAst(bool includeSelf) const {
 
     for (const auto& element : elements) {
         if (element.object) {
-            auto sub = element.object->getAllAst();  // or false if you're wrapping a primitive
+            auto sub = element.object->getAllAst(includeSelf);  // or false if you're wrapping a primitive
             mergeVectors(all, sub);
         }
+    }
+
+    return all;
+}
+
+
+
+Vector<const BaseAST*> ChainOperation::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all;
+    
+    if (includeSelf)
+        all.push_back(this);
+
+    auto lhsNodes = lhs->getAllAst(includeSelf);
+    mergeVectors(all, lhsNodes);
+
+    if (rhs) {
+        auto rhsNodes = rhs->getAllAst(includeSelf);
+        mergeVectors(all, rhsNodes);
+
     }
 
     return all;
