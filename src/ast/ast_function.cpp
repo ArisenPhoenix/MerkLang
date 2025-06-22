@@ -78,11 +78,10 @@ Node FunctionBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     auto freeVarNames = body->collectFreeVariables();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Callable Type For Function", name, callableTypeAsString(callType));
 
     if (callType == CallableType::FUNCTION){
         FreeVars tempFreeVars = freeVarNames;
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "freeVarNames before param check: ", highlight(joinStrings(freeVarNames, ", "), Colors::bg_cyan));
+
         for (auto& freeVar : freeVarNames){
             std::cout << freeVar;
         }
@@ -94,17 +93,11 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
             }
         }
         
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Remaining tempFreeVars after param strip: ", highlight(joinUnorderedSetStrings(tempFreeVars, ", "), Colors::red));
         for (auto& freeVar : tempFreeVars){
             std::cout << freeVar;
         }
         if (tempFreeVars.size() > 0){
-            std::ostringstream oss;
-            for (auto& var : tempFreeVars){
-                DEBUG_LOG(LogLevel::PERMISSIVE, var);
-                oss << highlight("'", Colors::yellow) << highlight(var, Colors::purple) << highlight("'", Colors::yellow) << " ";
-            }
-            throw MerkError("The Following Vars: " + oss.str() + "; were defined outside of function defined using function");
+            throw MerkError("The Following Vars: " + highlight(joinUnorderedSetStrings(tempFreeVars, ", "), Colors::yellow) + "; were defined outside of function defined using function");
         }
     }   
   
@@ -148,16 +141,6 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     }
 
     func->setCapturedScope(defScope);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEF SCOPE");
-    defScope->debugPrint();
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEF SCOPE PARENT:");
-
-    if (defScope->getParent()){
-        defScope->getParent()->debugPrint();
-    } else {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "NONE");
-    }
 
     FunctionNode funcNode(func);
 
@@ -186,17 +169,6 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     SharedPtr<Scope> capturedScope = func->getCapturedScope();
 
     auto callScope = capturedScope->makeCallScope();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "CALL SCOPE");
-
-    callScope->debugPrint();
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "CALL SCOPE Parent");
-
-    if (callScope->getParent()){
-        callScope->getParent()->debugPrint();
-    } else {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "NONE");
-    }
 
     callScope->owner = "FunctionCall:evaluate (" + name + ")";
 

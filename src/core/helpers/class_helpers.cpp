@@ -31,9 +31,9 @@ bool handleChain(Chain* chain, ParamList params, String accessor, String name, S
         hasStatic = true;
     }
 
-    // if (!elems.empty()) {
-    //     DEBUG_LOG(LogLevel::PERMISSIVE, "First element in Chain is: ", elems[0].name, " (expecting: ", accessor, ")");
-    // }
+    if (!elems.empty()) {
+        DEBUG_LOG(LogLevel::DEBUG, "First element in Chain is: ", elems[0].name, " (expecting: ", accessor, ")");
+    }
 
     DEBUG_FLOW_EXIT();
     return hasStatic;
@@ -116,64 +116,6 @@ for (const BaseAST* raw : chains) {
     return nonStaticElements;
 }
 
-// Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> classScope, const String& accessor) {
-//     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-//     // DEBUG_LOG(LogLevel::PERMISSIVE, "Checking methodDef Through applyAccesorFix: ", methodDef->toString());
-
-
-//     if (!classScope) {
-//         throw MerkError("ApplyAccessorFix classScope is null");
-//     }
-//     // bool isStatic = false;
-//     Vector<Chain*> nonStaticElements;
-//     const auto& bodyChildren = methodDef->getBody()->getChildren();
-
-//     ASTUtils::traverse(bodyChildren, [&](BaseAST* node) {
-//         DEBUG_LOG(LogLevel::PERMISSIVE, "Visiting node: ", node->getAstTypeAsString());
-
-//         auto& params = methodDef->getParameters();
-//         bool isAccessorDeclared = !params.empty() && params[0].getName() == accessor;
-
-//         // Handle direct Chain nodes
-//         if (node->getAstType() == AstType::Chain) {
-//             Chain* chain = static_cast<Chain*>(node);
-//             if (handleChain(chain, params, accessor, methodDef->getName(), classScope)) {
-//                 nonStaticElements.emplace_back(chain);
-//             }
-//             // return;
-//         }
-
-//         // Also descend into ChainOperations (as you already do)
-//         else if (node->getAstType() == AstType::ChainOperation) {
-//             ChainOperation* chainOp = static_cast<ChainOperation*>(node);
-
-//             if (chainOp->getRightSide() && chainOp->getRightSide()->getAstType() == AstType::Chain) {
-//                 Chain* chainR = static_cast<Chain*>(chainOp->getRightSide());
-//                 if (handleChain(chainR, params, accessor, methodDef->getName(), classScope)) {
-//                     nonStaticElements.emplace_back(chainR);
-//                 }
-//             }
-
-//             Chain* chainL = chainOp->getLeftSide();
-//             if (chainL && !chainL->getElements().empty() && chainL->getElements()[0].name == accessor) {
-//                 if (!isAccessorDeclared) {
-//                     throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
-//                                     "' via a chain but does not declare it as a parameter.");
-//                 }
-
-//                 if (handleChain(chainL, params, accessor, methodDef->getName(), classScope)) {
-//                     nonStaticElements.emplace_back(chainL);
-//                 }
-//             }
-//         }
-
-
-//     }, true, false);
-
-    
-//     DEBUG_FLOW_EXIT();
-//     return nonStaticElements;
-// }
 
 void fixupClassChains(SharedPtr<Scope> classScope, String accessor) {
     for (const auto& [name, signatures] : classScope->getFunctionRegistry()->getFunctions()) {

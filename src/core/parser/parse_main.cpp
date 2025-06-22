@@ -500,8 +500,6 @@ bool Parser::processNewLines(){
 
 void Parser::reinjectControlToken(const Token& token) {
     tokens.insert(tokens.begin() + position, token);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Reinjected token at position ", position, ": ", token.toColoredString());
-
 }
 
 void Parser::processBlankSpaces() {
@@ -523,8 +521,8 @@ bool Parser::expect(TokenType tokenType, bool strict) {
 
 
 void Parser::displayNextTokens(String baseTokenName, size_t number, String location) {
-    DEBUG_LOG(LogLevel::PERMISSIVE, baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
+    debugLog(true, baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
     for (size_t i = 1; i < number + 1; i++) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
+        debugLog(true, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
     }
 }

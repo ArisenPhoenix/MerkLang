@@ -38,11 +38,6 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         throw UnexpectedTokenError(punct, "'.' or '::'");
     }
 
-    if (baseToken.value == "Scope") {
-        DEBUG_LOG(LogLevel::PERMISSIVE, baseToken.toColoredString());
-        throw MerkError("BaseToken.value is Scope");
-    }
-
     chain->addElement(std::move(createChainElement(baseToken, punct, makeUnique<VariableReference>(baseToken.value, currentScope))));
 
     // Parse the rest of the dotted chain
@@ -239,21 +234,15 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
     
     CallableType methodType;
 
-    if (methodDefType == "def"){
-        methodType = CallableType::DEF;
-    }
+    if (methodDefType == "def"){methodType = CallableType::DEF;}
 
-    else if (methodDefType == "function"){
-        methodType = CallableType::FUNCTION;
-    } 
+    else if (methodDefType == "function"){methodType = CallableType::FUNCTION;} 
     
     else {
         DEBUG_LOG(LogLevel::INFO, "Method definition parsed unsuccessfully: ", methodName, ":", methodDefType);
         throw MerkError("Function Type: " + methodDefType + " is not Valid");
     }
 
-    
-    DEBUG_LOG(LogLevel::DEBUG, "CurrentToken Before Leaving parseMethodDefinitions: ", currentToken().toString());
     UniquePtr<MethodDef> methodDef = makeUnique<MethodDef>(
         methodName,
         std::move(parameters),
@@ -262,7 +251,6 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
         currentScope
     );
     
-    DEBUG_LOG(LogLevel::INFO, "Function definition parsed successfully: ", methodName);
     DEBUG_FLOW_EXIT();
     return methodDef;
 }

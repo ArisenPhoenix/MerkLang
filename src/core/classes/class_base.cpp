@@ -283,7 +283,7 @@ Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, Shar
         instanceScope->printChildScopes();
         throw MerkError("Instance Scope does not live in captured Scope");
     } 
-    else {DEBUG_LOG(LogLevel::PERMISSIVE, "Instance Scope Lives in Captured Scope");}
+    else {DEBUG_LOG(LogLevel::DEBUG, "Instance Scope Lives in Captured Scope");}
     auto params = classBase->getParameters().clone();
 
 
@@ -356,8 +356,6 @@ void ClassInstance::declareField(const String& fieldName, const Node& var) {    
 
 
 void ClassInstance::declareField(const String& fieldName, const VarNode& var) {
-
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Declaring Field VarNode&: ", fieldName);
     if (!instanceScope) {
         throw MerkError("Cannot declare field: instanceScope is missing");
     }

@@ -425,6 +425,7 @@ const SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() const {return glo
 SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() {return globalFunctions;}
 
 void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMethSig) {
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Current Method Being Registered: ", funcMethName, " Type: ", callableTypeAsString(funcMethSig->getCallableType()), " SubType: ", callableTypeAsString(funcMethSig->getSubType()));
     if (!funcMethSig){
         throw MerkError("Not a Method Signature");
     }

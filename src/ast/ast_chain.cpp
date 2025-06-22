@@ -350,7 +350,6 @@ void ChainOperation::setScope(SharedPtr<Scope> newScope) {
 Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
-    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("STARTING SCOPE FOR Chain::evaluate() is: " + std::to_string(currentScope->getScopeLevel()), Colors::bg_bright_green));
 
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
     int index = resolutionStartIndex;
@@ -388,6 +387,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             }
 
             else if (objType == AstType::FunctionCall || objType == AstType::ClassMethodCall) {
+                elem.object->printAST(std::cout);
                 auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
                 auto args = functionCall->handleArgs(currentScope);
                 currentVal = instance->call(elem.name, args);
@@ -398,6 +398,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             setLastScope(currentScope);
 
         } else {
+            elem.object->printAST(std::cout);
             currentVal = elem.object->evaluate(currentScope);
             currentScope = elem.object->getScope();
             setLastScope(currentScope);
@@ -414,7 +415,7 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     String hasRight = getRightSide() ? "true" : "false";
     String hasInstanceNode = instanceNode ? "true" : "false";
 
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "OP KIND: ", opKindAsString(opKind));
+    DEBUG_LOG(LogLevel::DEBUG, "OP KIND: ", opKindAsString(opKind));
 
 
     auto leftVal = lhs->evaluate(scope, instanceNode);
@@ -436,7 +437,7 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
             rightVal = getRightSide()->evaluate(currentScope, instanceNode);
         }
     } else {
-        DEBUG_LOG(LogLevel::PERMISSIVE, highlight("No Right Side For ChainOperation", Colors::bg_green));
+        DEBUG_LOG(LogLevel::DEBUG, highlight("No Right Side For ChainOperation", Colors::bg_green));
     }
 
 
@@ -444,7 +445,7 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     if (!leftVal.isValid()) {
         throw MerkError("Left Hand Side of ChainOperation is invalid");
     } else {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Left Hand Side of ChainOperation is Valid", leftVal);
+        DEBUG_LOG(LogLevel::DEBUG, "Left Hand Side of ChainOperation is Valid", leftVal);
     }
     
 
@@ -455,15 +456,12 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     // switch (opKind) {
     //     case ChainOpKind::Reference:
     //         if (leftVal.isClassInstance()) {
-    //             DEBUG_LOG(LogLevel::PERMISSIVE, "ChainOperation Reference Is a class instance");
     //             // auto instanceNode = static_cast<ClassInstanceNode>(leftVal);
     //             auto instanceNode = ClassInstanceNode::from(leftVal);
     //             auto instanceScope = instanceNode.getInstanceScope();
 
-    //             DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance Converted");
     //             if (last.type == TokenType::Variable){
     //                 int scopeLevel = instanceNode.isValid() ? instanceNode.getInstanceScope()->getScopeLevel() : 0;
-    //                 DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Field From Scope: ", scopeLevel);
     //                 // instanceNode->getInternalScope();
     //                 auto instance = instanceNode.getInstance();
                     
@@ -471,11 +469,9 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     //             } 
     //         }
 
-    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Variable Reference");
     //         return leftVal;
 
     //     case ChainOpKind::Assignment: 
-    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Assignment");
 
     //         // Node val = rhs->evaluate(currentScope, instanceNode);
     //         if (leftVal.isClassInstance()) {
@@ -484,14 +480,12 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     //         } else {
     //             currentScope->updateVariable(last.name, rightVal);
     //         }
-    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Assignment -> probably Null");
 
     //         DEBUG_FLOW_EXIT();
     //         return rightVal;
     //     // }
 
     //     case ChainOpKind::Declaration: 
-    //         DEBUG_LOG(LogLevel::PERMISSIVE, "Entered ChainOperation::evaluate -> Declaration");
     //         if (rhs){
     //             throw MerkError("There Shouldn't Be An RHS for A DECLARATION");
     //         }
@@ -508,11 +502,9 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     //         //     currentScope->declareVariable(last.name, std::move(variable));
     //         // }
 
-    //         // // DEBUG_LOG(LogLevel::PERMISSIVE, "Returning Declaration -> probably Null");
 
     //         // DEBUG_FLOW_EXIT();
     //         // return var;
-    //         DEBUG_LOG(LogLevel::PERMISSIVE, highlight("VAR CREATED: ", Colors::bg_green), leftVal, "IN SCOPE: ");
     //         // scope->debugPrint();
     //         return leftVal;
     //     // }

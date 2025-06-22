@@ -72,9 +72,7 @@ SharedPtr<CallableSignature> Method::toCallableSignature() {
 Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided");}
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Executing Method with below scope");
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("CALLSCOPE FOR ADDING PARAMETERS: ", Colors::bg_blue));
     callScope->owner = generateScopeOwner("MethodExecutor", name);
     
     parameters.clone().verifyArguments(args);
@@ -90,7 +88,6 @@ Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unus
 
         if (!callScope){throw MerkError("Method " + name +" Has No Call Scope:");}
 
-        if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided just before body->evaluate");}
         String matches = callScope == capturedScope ? "true" : "false";
 
         Node val = body->evaluate(callScope, instanceNode);
