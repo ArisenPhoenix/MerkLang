@@ -50,66 +50,95 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
     auto& params = methodDef->getParameters();
     bool isAccessorDeclared = !params.empty() && params[0].getName() == accessor;
     Vector<Chain*> nonStaticElements;
-    // methodDef->getBody()->printAST(std::cout);
-
-    // const auto& bodyChildren = methodDef->getBody()->getChildren();
     auto allAst = methodDef->getBody()->getAllAst(true);
 
-auto chains = ASTUtils::collectMatching(
-    allAst,
-    [](const BaseAST* node) {
-        return node->getAstType() == AstType::Chain || node->getAstType() == AstType::ChainOperation;
-    },
-    false, false  // no recursion needed here — we've already done it via getAllAst(true)
-);
+    auto chains = ASTUtils::collectMatching(
+        allAst,
+        [](const BaseAST* node) {
+            return node->getAstType() == AstType::Chain || node->getAstType() == AstType::ChainOperation;
+        },
+        false, false  // no recursion needed here — we've already done it via getAllAst(true)
+    );
 
-for (const BaseAST* raw : chains) {
-    if (raw->getAstType() == AstType::Chain) {
-        auto* chain = const_cast<Chain*>(static_cast<const Chain*>(raw));
-        if (!chain->getElements().empty() && chain->getElements()[0].name == accessor) {
-            if (!isAccessorDeclared) {
-                throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
-                                "' via a chain but does not declare it as a parameter.");
-            }
-
-            if (handleChain(chain, params, accessor, methodDef->getName(), classScope)) {
-                nonStaticElements.emplace_back(chain);
-            }
-        }
-
-    } else if (raw->getAstType() == AstType::ChainOperation) {
-        auto* chainOp = const_cast<ChainOperation*>(static_cast<const ChainOperation*>(raw));
-
-        // Left side
-        Chain* lhs = chainOp->getLeftSide();
-        if (lhs && !lhs->getElements().empty() && lhs->getElements()[0].name == accessor) {
-            if (!isAccessorDeclared) {
-                throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
-                                "' via a chain but does not declare it as a parameter.");
-            }
-
-            if (handleChain(lhs, params, accessor, methodDef->getName(), classScope)) {
-                nonStaticElements.emplace_back(lhs);
-            }
-        }
-
-        // Right side (optional)
-        auto* rhs = chainOp->getRightSide();
-        if (rhs && rhs->getAstType() == AstType::Chain) {
-            auto* chainR = static_cast<Chain*>(rhs);
-            if (!chainR->getElements().empty() && chainR->getElements()[0].name == accessor) {
+    for (const BaseAST* raw : chains) {
+        if (raw->getAstType() == AstType::Chain) {
+            auto* chain = const_cast<Chain*>(static_cast<const Chain*>(raw));
+            if (!chain->getElements().empty() && chain->getElements()[0].name == accessor) {
                 if (!isAccessorDeclared) {
                     throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
                                     "' via a chain but does not declare it as a parameter.");
                 }
 
-                if (handleChain(chainR, params, accessor, methodDef->getName(), classScope)) {
-                    nonStaticElements.emplace_back(chainR);
+                if (handleChain(chain, params, accessor, methodDef->getName(), classScope)) {
+                    nonStaticElements.emplace_back(chain);
+                }
+            }
+
+        } else if (raw->getAstType() == AstType::ChainOperation) {
+            auto* chainOp = const_cast<ChainOperation*>(static_cast<const ChainOperation*>(raw));
+
+            // Left side
+            Chain* lhs = chainOp->getLeftSide();
+            if (lhs && !lhs->getElements().empty() && lhs->getElements()[0].name == accessor) {
+                if (!isAccessorDeclared) {
+                    throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
+                                    "' via a chain but does not declare it as a parameter.");
+                }
+
+                if (handleChain(lhs, params, accessor, methodDef->getName(), classScope)) {
+                    nonStaticElements.emplace_back(lhs);
+                }
+            }
+
+            // Right side (optional)
+            auto* rhs = chainOp->getRightSide();
+            if (rhs && rhs->getAstType() == AstType::Chain) {
+                auto* chainR = static_cast<Chain*>(rhs);
+                if (!chainR->getElements().empty() && chainR->getElements()[0].name == accessor) {
+                    if (!isAccessorDeclared) {
+                        throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
+                                        "' via a chain but does not declare it as a parameter.");
+                    }
+
+                    if (handleChain(chainR, params, accessor, methodDef->getName(), classScope)) {
+                        nonStaticElements.emplace_back(chainR);
+                    }
                 }
             }
         }
     }
-}
+    auto allAst2 = methodDef->getBody()->getAllAst(true);
+    auto instanceReturnReferences = ASTUtils::collectMatching(
+        allAst2,
+        [](const BaseAST* node) {
+            return node->getAstType() == AstType::Return;
+        },
+        false, false  // no recursion needed here — we've already done it via getAllAst(true)
+    );
+
+    for (const BaseAST* rawReturnRef : instanceReturnReferences) {
+        auto* rawReturn = const_cast<Return*>(static_cast<const Return*>(rawReturnRef));
+        auto& returnExpr = rawReturn->getValue();  // UniquePtr<ASTStatement>&
+
+        if (!returnExpr) continue;
+
+        if (returnExpr->getAstType() == AstType::VariableReference) {
+            auto* varRef = static_cast<VariableReference*>(returnExpr.get());
+
+            if (varRef->getName() == accessor) {
+                if (!isAccessorDeclared) {
+                    throw MerkError("Method '" + methodDef->getName() + "' returns '" + accessor +
+                                    "', but does not declare it as a parameter.");
+                }
+                // Replace VariableReference("self") with Accessor("self")
+                returnExpr = makeUnique<Accessor>(accessor, classScope);
+            }
+        }
+    }
+
+
+
+
 
 
     DEBUG_FLOW_EXIT();

@@ -515,6 +515,8 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
     if (std::holds_alternative<String>(value)) return NodeValueType::String;
     if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
     if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
+    // if (std::holds_alternative<SharedPtr<ClassInstanceNode>>(value)) return NodeValueType::ClassInstance;
+    // if (std::holds_alternative<SharedPtr<FunctionNode>>(value)) return NodeValueType::Function;
     return NodeValueType::Any;  // Allow `Any` when the type is unknown
 }
 
@@ -639,6 +641,9 @@ void validateModifiability(const Node& node) {
 Node performArithmeticOperation(const Node& left, const Node& right, 
                                 const std::function<double(double, double)>& operation) {
     NodeValueType resultType = determineNumericResultType(left, right);
+    if (left.isStatic && left.getType() != resultType) {
+        throw MerkError("Types Don't Match For Node " + nodeTypeToString(left.getType()) + " -> " + nodeTypeToString(resultType));
+    }
     DEBUG_LOG(LogLevel::ERROR, "ResultType: ", nodeTypeToString(resultType));
 
     double leftValue = left.toDouble();
@@ -742,7 +747,6 @@ Node& Node::operator/=(const Node& other) {
 
 
 Node Node::plusEquals(const Node& other) {
-
     return *this += other;
 };
 Node& Node::minusEquals(const Node& other) {

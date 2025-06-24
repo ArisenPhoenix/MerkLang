@@ -18,9 +18,10 @@ class FunctionBody;
 class CallableSignature {
 private:
     SharedPtr<Callable> callable;
-    mutable Vector<NodeValueType> parameterTypes; 
     CallableType callType;
     CallableType subType; // DEF, FUNCTION, etc.
+    mutable Vector<NodeValueType> parameterTypes; 
+    ParamList parameters;
 
 public:
     explicit CallableSignature(SharedPtr<Callable> callable, CallableType callType);
@@ -35,11 +36,13 @@ public:
  
     void setParameterTypes(Vector<NodeValueType> paramTypes) {parameterTypes = paramTypes;} 
     const Vector<NodeValueType>& getParameterTypes() const;
+    const ParamList getParameters();
     CallableType getCallableType() { return callType; }
     void setCallableType(CallableType callType);
     bool getIsUserFunction();
     CallableType getSubType() {return subType;}
     void setSubType(CallableType subClassification) {subType = subClassification;}
+    void setParameters(ParamList params);
 
 };
 

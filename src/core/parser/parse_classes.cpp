@@ -106,9 +106,6 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
                 DEBUG_FLOW_EXIT();
             }
     }
-    
-
-    
 
     DEBUG_FLOW_EXIT();
     return chain;

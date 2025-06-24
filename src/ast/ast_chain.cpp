@@ -1,6 +1,8 @@
 #include "core/types.h"
 #include "core/scope.h"
 #include "core/node.h"
+#include "core/functions/argument_node.h"
+
 #include "ast/ast_base.h"
 
 #include "utilities/debugger.h"
@@ -16,6 +18,7 @@
 
 #include "core/errors.h"
 #include "core/scope.h"
+
 
 
 String opKindAsString(ChainOpKind opKind){
@@ -389,7 +392,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             else if (objType == AstType::FunctionCall || objType == AstType::ClassMethodCall) {
                 elem.object->printAST(std::cout);
                 auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
-                auto args = functionCall->handleArgs(currentScope);
+                auto args = functionCall->handleArgs(currentScope); 
                 currentVal = instance->call(elem.name, args);
                 
             }

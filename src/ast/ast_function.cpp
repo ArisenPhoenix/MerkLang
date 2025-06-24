@@ -2,13 +2,15 @@
 
 #include "core/types.h"
 #include "core/node.h"
+#include "core/functions/argument_node.h"
 #include "core/errors.h"
 #include "utilities/helper_functions.h"
 #include "core/scope.h"
 #include "ast/ast_base.h"
-// #include "ast/ast_control.h"
 #include "ast/ast.h"
 #include "core/functions/function_node.h"
+#include "core/functions/native_function.h"
+
 #include "core/evaluator.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_function.h"
@@ -49,6 +51,9 @@ FunctionDef::FunctionDef(String name, ParamList parameters, UniquePtr<FunctionBo
 
 FunctionCall::FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
     : CallableCall(functionName, std::move(arguments), scope) {
+        if (this->name.empty()) {
+            throw MerkError("FunctionCall constructed with empty name");
+        }
         // DEBUG_FLOW(FlowLevel::MED); 
         branch = "CallableCall";
         // DEBUG_FLOW_EXIT();
@@ -149,21 +154,36 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::HIGH); 
-    scope->owner = generateScopeOwner("FuncCall", name);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
+    
     Vector<Node> evaluatedArgs = handleArgs(scope);
+
+    
 
     if (!scope->hasFunction(name)){
         throw MerkError("Function: " + name + " Couldn't Be Found");
     }
+
+    
     DEBUG_LOG(LogLevel::ERROR, highlight("Found Function " + name, Colors::yellow));
     
     auto optSig = scope->getFunction(name, evaluatedArgs);
-
+    
     if (!optSig){
         throw FunctionNotFoundError(name);
     }
+
     SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
+
+
+    if (func->getSubType() == CallableType::NATIVE) {
+        func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+
+        return func->execute(evaluatedArgs, scope);
+    }
+    
+    
+    // scope->owner = generateScopeOwner("FuncCall", name);
 
     func->getCapturedScope()->owner = generateScopeOwner("FuncCall", name);
     SharedPtr<Scope> capturedScope = func->getCapturedScope();
@@ -178,14 +198,8 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     
     DEBUG_LOG(LogLevel::DEBUG, "******************************* UserFunction Scope Set *******************************");
 
-    func->parameters.verifyArguments(evaluatedArgs);
-    for (size_t i = 0; i < func->parameters.size(); ++i) {
-        VarNode paramVar(evaluatedArgs[i]);
-        callScope->declareVariable(func->parameters[i].getName(), makeUnique<VarNode>(paramVar));
-    }
+    func->placeArgsInCallScope(evaluatedArgs, callScope);
 
-    
-    
     func->setCapturedScope(callScope);
     
     if (!func->getBody()->getScope()){

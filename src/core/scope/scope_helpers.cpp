@@ -13,7 +13,7 @@
 #include "core/registry/class_registry.h"
 #include "core/registry/function_registry.h"
 
-#include "core/functions/native_functions.h"
+// #include "core/functions/native_functions.h"
 #include "core/errors.h"
 #include "core/scope.h"
  
@@ -25,13 +25,8 @@ UniquePtr<VarNode> cloneVarNode(VarNode* original) {
 // In Scope class
 SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::MED);
-    // Create a new scope that is not attached where: (no parent, or parent = nullptr).
-    // explicit Scope(SharedPtr<Scope> parentScope, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpreMode);
 
     auto detached = std::make_shared<Scope>(shared_from_this(), globalFunctions, globalClasses, interpretMode);
-    // detached->setParent(nullptr);
-    // detached->setScopeLevel(0);
-    // Scope()
     detached->isDetached = true;
     detached->owner = owner+"(detached)";
     includeMetaData(detached, true);

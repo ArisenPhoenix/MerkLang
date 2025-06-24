@@ -42,6 +42,7 @@ SharedPtr<CallableSignature> Method::toCallableSignature(SharedPtr<Method> metho
     auto sig = makeShared<CallableSignature>(method, CallableType::METHOD);
     sig->setSubType(method->getSubType());
     getCapturedScope()->owner = generateScopeOwner("MethodSignature", name);
+    sig->setParameters(parameters.clone());
     return sig;
 }
 
@@ -63,7 +64,8 @@ SharedPtr<CallableSignature> Method::toCallableSignature() {
     if (methodSig->getCallableType() == CallableType::DEF) {
         throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));
     }
-    
+    methodSig->setParameters(parameters.clone());
+
     // DEBUG_LOG(LogLevel::ERROR, funcSig->getParameterTypes());
     DEBUG_FLOW_EXIT();
     return methodSig;
@@ -75,10 +77,7 @@ Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unus
 
     callScope->owner = generateScopeOwner("MethodExecutor", name);
     
-    parameters.clone().verifyArguments(args);
-    for (size_t i = 0; i < parameters.size(); ++i) {
-        callScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(args[i]));
-    }
+    placeArgsInCallScope(args, callScope);
     
     try {
 

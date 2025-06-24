@@ -1,5 +1,6 @@
 #include "core/functions/callable.h"
 #include "core/classes/method.h"
+#include "core/functions/argument_node.h"
 
 
 Callable::Callable(Method& method){
@@ -92,4 +93,19 @@ SharedPtr<Scope> CallableNode::getInternalScope() const { return internalScope; 
 
 String CallableNode::toString() const {
     return "<" + nodeType + ": " + getCallable()->toString() + ">";
+}
+
+
+void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope> callScope) const {
+    parameters.verifyArguments(evaluatedArgs);
+    ArgumentList args;
+
+    for (auto& evaluated: evaluatedArgs) {
+        args.addPositionalArg(evaluated);
+    }
+    auto finalArgs = args.bindTo(parameters);
+    for (size_t i = 0; i < parameters.size(); ++i) {
+        VarNode paramVar(finalArgs[i]);
+        callScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(paramVar));
+    }
 }

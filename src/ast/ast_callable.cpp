@@ -16,6 +16,8 @@
 #include "ast/ast_class.h"  
 #include "ast/ast_callable.h"
 
+#include "core/functions/argument_node.h"
+
 
 // For Calling Within A Method's Context
 MethodBody* CallableBody::toMethodBody() {
@@ -125,12 +127,23 @@ CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType 
   if (callableTypeAsString(callType) == "Unknown"){
     throw MerkError("Failed to instantiate callType at CallableSignature instantiation");
 }
+    // parameters = std::move(callable->parameters.clone());
+
   DEBUG_FLOW_EXIT();
 }
+
+
 
 void CallableSignature::setCallableType(CallableType functionType) { 
     callType = functionType; 
 }
+
+
+
+void CallableSignature::setParameters(ParamList params) {
+    parameters = params;
+}
+
 
 bool CallableSignature::getIsUserFunction() { return callType != CallableType::NATIVE;}
 
@@ -156,65 +169,70 @@ Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, S
   
 SharedPtr<Callable> CallableSignature::getCallable() const { return callable;}
 
+const ParamList CallableSignature::getParameters() {
+    if (parameters.empty()) {
+        parameters = getCallable()->parameters.clone();
+        if (parameters.empty()) {
+            return parameters;
+        }
+    }
+    return parameters;
+}
+
 const Vector<NodeValueType>& CallableSignature::getParameterTypes() const {
-    if (parameterTypes.size() == 0) {
+    if (parameterTypes.empty()) {
+        parameterTypes = callable->parameters.getParameterTypes();
+        return parameterTypes;
+    }
+    if (getParameterTypes().size() == 0) {
         parameterTypes = callable->parameters.getParameterTypes();
     }
     return parameterTypes;
 }
 
+
+
 bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
-    DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::ERROR, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
-    // First, check that the number of arguments matches.
-    if (getParameterTypes().size() != argTypes.size()) {
-        
-        DEBUG_LOG(LogLevel::ERROR, "Parameter count does not match. Expected: ", parameterTypes.size(),
-                    ", got: ", argTypes.size());
-        DEBUG_FLOW_EXIT();
-        return false;
+    size_t paramCount = parameters.size();
+    size_t argCount = argTypes.size();
+
+    if (!parameters.empty() && parameters.back().isVarArgsParameter()) {
+        if (argCount < paramCount - 1) return false;
+    } else {
+        if (argCount != paramCount) return false;
     }
 
-    // Now check each parameter type.
-    for (size_t i = 0; i < parameterTypes.size(); ++i) {
-        NodeValueType expected = parameterTypes[i];
-        NodeValueType provided = argTypes[i];
-        DEBUG_LOG(LogLevel::ERROR, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
+    for (size_t i = 0; i < parameters.size(); ++i) {
+        if (parameters[i].isVarArgsParameter()) break;
 
-        // Allow a parameter declared as "Any" to match any argument.
-        if (expected == NodeValueType::Any) {
+        NodeValueType expected = parameters[i].getType();
+        NodeValueType provided = i < argTypes.size() ? argTypes[i] : NodeValueType::Uninitialized;
+
+        if (expected == NodeValueType::Any || provided == NodeValueType::Uninitialized)
             continue;
-        }
-        // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
-        if (provided == NodeValueType::Uninitialized) {
-            continue;
-        }
 
-        // Otherwise, they must match exactly.
-        if (expected != provided) {
-            DEBUG_LOG(LogLevel::ERROR, "Type mismatch on parameter ", i, ": expected ",
-            nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
-            DEBUG_LOG(LogLevel::ERROR, "Parameter Failed Expected Type Criteria, returning false");
-
-            DEBUG_FLOW_EXIT();
-            return false;
-        }
+        if (expected != provided) return false;
     }
 
-    DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
-
-    DEBUG_FLOW_EXIT();
     return true;
 }
+
+
+
 
 Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
     Vector<Node> evaluatedArgs;
 
+
     for (const auto &arg : arguments) {
         evaluatedArgs.push_back(arg->evaluate(scope));
     }
+
     return evaluatedArgs;
 }
+
+
+
 
 Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
@@ -249,6 +267,81 @@ CallableSignature::~CallableSignature() {
 }
 
 
+
+
+
+
+//ORIGINAL
+
+// bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
+//     size_t paramCount = parameters.size();
+//     size_t argCount = argTypes.size();
+
+//     if (!parameters.empty() && parameters.back().isVarArgsParameter()) {
+//         if (argCount < paramCount - 1) return false;
+//     } else {
+//         if (argCount != paramCount) return false;
+//     }
+
+//     for (size_t i = 0; i < parameters.size(); ++i) {
+//         if (parameters[i].isVarArgsParameter()) break;
+
+//         NodeValueType expected = parameters[i].getType();
+//         NodeValueType provided = i < argTypes.size() ? argTypes[i] : NodeValueType::Uninitialized;
+
+//         if (expected == NodeValueType::Any || provided == NodeValueType::Uninitialized)
+//             continue;
+
+//         if (expected != provided) return false;
+//     }
+
+//     return true;
+// }
+
+
+// bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
+//     DEBUG_FLOW(FlowLevel::LOW);
+//     DEBUG_LOG(LogLevel::ERROR, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
+//     // First, check that the number of arguments matches.
+//     if (getParameterTypes().size() != argTypes.size()) {
+        
+//         DEBUG_LOG(LogLevel::ERROR, "Parameter count does not match. Expected: ", parameterTypes.size(),
+//                     ", got: ", argTypes.size());
+//         DEBUG_FLOW_EXIT();
+//         return false;
+//     }
+
+//     // Now check each parameter type.
+//     for (size_t i = 0; i < parameterTypes.size(); ++i) {
+//         NodeValueType expected = parameterTypes[i];
+//         NodeValueType provided = argTypes[i];
+//         DEBUG_LOG(LogLevel::ERROR, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
+
+//         // Allow a parameter declared as "Any" to match any argument.
+//         if (expected == NodeValueType::Any) {
+//             continue;
+//         }
+//         // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
+//         if (provided == NodeValueType::Uninitialized) {
+//             continue;
+//         }
+
+//         // Otherwise, they must match exactly.
+//         if (expected != provided) {
+//             DEBUG_LOG(LogLevel::ERROR, "Type mismatch on parameter ", i, ": expected ",
+//             nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
+//             DEBUG_LOG(LogLevel::ERROR, "Parameter Failed Expected Type Criteria, returning false");
+
+//             DEBUG_FLOW_EXIT();
+//             return false;
+//         }
+//     }
+
+//     DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
+
+//     DEBUG_FLOW_EXIT();
+//     return true;
+// }
 
 // template<typename T>
 // SharedPtr<T> CallableSignature::getCallableClonedAs() const {

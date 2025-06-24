@@ -1,5 +1,6 @@
 #include <iostream>
 #include "core/types.h"
+#include "core/functions/argument_node.h"
 #include "utilities/debugger.h"
 #include "utilities/helper_functions.h"
 #include "core/node.h"
@@ -128,6 +129,7 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     scope->owner = generateScopeOwner("MethodCall", name);
     Vector<Node> evaluatedArgs = handleArgs(scope);
 
+
     // DEBUG_LOG(LogLevel::PERMISSIVE, "HANDLED ARGS IN METHOD CALL :: EVALUATE");
 
     if (!scope->hasFunction(name)){
@@ -155,12 +157,7 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     
     DEBUG_LOG(LogLevel::DEBUG, "******************************* Method Scope Set *******************************");
 
-    method->parameters.verifyArguments(evaluatedArgs);
-    // For each parameter, declare it in the new scope.
-    for (size_t i = 0; i < method->parameters.size(); ++i) {
-        VarNode paramVar(evaluatedArgs[i]);
-        callScope->declareVariable(method->parameters[i].getName(), makeUnique<VarNode>(paramVar));
-    }
+    method->placeArgsInCallScope(evaluatedArgs, callScope);
 
     scope->appendChildScope(callScope, "MethodCall::evaluate");
     
@@ -201,8 +198,12 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     DEBUG_LOG(LogLevel::TRACE, highlight("Attempting captured setting on cls", Colors::yellow));
 
     SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
-    cls->setParameters(parameters.clone());
+    
     cls->setCapturedScope(classDefCapturedScope);
+    // cls->setParameters(classBase)
+    DEBUG_LOG(LogLevel::PERMISSIVE, "SETTING CLASSSIG PARAMS");
+    cls->setParameters(parameters.clone());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Params: ", cls->getParameters());
     if (!cls->getCapturedScope()) {throw MerkError("CapturedScope was not set correctly on the ClassBase.");}
 
     auto* classBody = static_cast<ClassBody*>(getBody());

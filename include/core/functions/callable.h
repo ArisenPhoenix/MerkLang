@@ -48,6 +48,8 @@ public:
     CallableType getSubType() const;
     void setSubType(CallableType subClassification);
     void setCallableType(CallableType primaryClassification);
+    void placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope> callScope) const;
+
 };
 
 
@@ -57,7 +59,8 @@ protected:
 
 public:
     explicit CallableNode(SharedPtr<Callable> callable, String callableType = "Callable");
-    explicit CallableNode(SharedPtr<CallableNode> callableNode); // for returning non shared callable node 
+    explicit CallableNode(SharedPtr<CallableNode> callableNode); // for returning non shared callable node
+
 
     virtual SharedPtr<Callable> getCallable() const;
 

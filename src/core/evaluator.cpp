@@ -164,16 +164,6 @@ namespace Evaluator {
         auto previousValue = instanceScope->getVariable(name);
         instanceScope->updateVariable(name, resolvedVariable);
         auto updatedValue = instanceScope->getVariable(name);
-        if (previousValue == updatedValue) {
-            throw MerkError("Values Didn't Change");
-        }
-
-        if (name == "y") {
-            instanceScope->debugPrint();
-            instanceScope->printChildScopes();
-        }
-
-        
 
         // DEBUG_LOG(LogLevel::DEBUG, highlight("VariableAssignmentNode updated: Name =", Colors::bg_bright_magenta), name, ", New Value =", resolvedVariable);
 
@@ -665,12 +655,18 @@ namespace Evaluator {
         method->setCapturedScope(defScope);
 
         auto methodSig = method->toCallableSignature();
+        DEBUG_LOG(LogLevel::PERMISSIVE, "SETTING METHOD SIG PARAMS FOR ", methodName);
+
+        methodSig->setParameters(parameters.clone());
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Params: ", methodSig->getParameters());
+
 
         if (method->getCallableType() != CallableType::METHOD && method->getSubType() == CallableType::METHOD) {
             DEBUG_LOG(LogLevel::ERROR, "The Types TO Provided To MethodDef::Evaluate -> CallType: ", callableTypeAsString(callType), " methodType: ", callableTypeAsString(methodType));
             DEBUG_LOG(LogLevel::ERROR, "Method 'get_area_offset' is not being constructed properly with Type: ", callableTypeAsString(method->getCallableType()), "And SubType: ", callableTypeAsString(method->getSubType()));
             throw MerkError("Evaluator:: evaluateMethodDef: See Above Error 1");
         }
+
         classScope->registerFunction(methodName, methodSig);
 
         DEBUG_LOG(LogLevel::TRACE, highlight("Registered Method: " + methodName, Colors::yellow), "into: ", classScope.get(), "Owner: ", classScope->owner);

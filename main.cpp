@@ -21,6 +21,8 @@
 
 #include "core/scope.h"
 
+#include "core/functions/builtins.h"
+
 
 int main(int argc, char* argv[]) {
     // Debug::configureDebugger();
@@ -45,6 +47,12 @@ int main(int argc, char* argv[]) {
         
     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, isRoot);
     globalScope->owner = "GLOBAL";
+    auto globalFunctions = getNativeFunctions(globalScope);
+    for (auto& [name, globalFunc]: globalFunctions) {
+        globalScope->registerFunction(name, globalFunc);
+    }
+    
+    
     
     try {
         // Step 4: Initialize Tokenizer

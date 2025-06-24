@@ -16,6 +16,7 @@ private:
     VariantType defaultValue;      // Default value (if any)
     bool isVarArgs = false;        // Track if this is a varargs parameter
     bool hasDefaultValue = false;  // True if the parameter has a default value
+    
 
 public:
     ~ParamNode() = default;
@@ -74,6 +75,7 @@ public:
 
     // Check if this is a varargs parameter
     bool isVarArgsParameter() const { return isVarArgs; }  
+    void setIsVarArgsParam(bool);
 
     // Check if this is a positional argument
     bool isPositional() const { return paramName.empty(); }
@@ -100,6 +102,7 @@ public:
 
 
 
+
 private:
     void validateExpectedType(NodeValueType expectedType);
 };
@@ -121,6 +124,8 @@ public:
 
     // Get parameter count
     size_t size() const { return parameters.size(); }
+    ParamNode& back();
+    ParamNode back() const;
 
     // Access parameters by index
     const ParamNode& operator[](size_t index) const;

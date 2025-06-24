@@ -15,6 +15,7 @@
 
 
 class Scope;
+class NativeFunction;
 
 class FunctionBody : public CallableBody {
     public:
@@ -94,6 +95,8 @@ public:
     FunctionNode(SharedPtr<Function> function);
 
     FunctionNode(SharedPtr<Callable> function);
+    FunctionNode(SharedPtr<NativeFunction> native);
+
     SharedPtr<Callable> getCallable() const override;
 };
 

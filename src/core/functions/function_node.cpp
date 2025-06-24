@@ -93,6 +93,8 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     if (funcSig->getCallableType() == CallableType::DEF) {
         throw MerkError("Primary Callable Type is: " + callableTypeAsString(funcSig->getCallableType()));
     }
+
+    funcSig->setParameters(parameters.clone());
  
     DEBUG_FLOW_EXIT();
     return funcSig;
@@ -108,3 +110,4 @@ FunctionNode::FunctionNode(SharedPtr<Function> function) : CallableNode(function
 
 FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
 SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr<Function>>(data.value);}
+// FunctionNode::FunctionNode(SharedPtr<NativeFunction> native): FunctionNode(static_pointer_cast<Callable>(native)) {}

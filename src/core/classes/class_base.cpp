@@ -151,6 +151,7 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     getClassScope()->owner = generateScopeOwner("ClassBase", name);
     auto classBase = std::static_pointer_cast<ClassBase>(shared_from_this());
     SharedPtr<CallableSignature> classSig = makeShared<ClassSignature>(classBase);
+    classSig->setParameters(parameters.clone());
     DEBUG_FLOW_EXIT();
     return classSig;
 }

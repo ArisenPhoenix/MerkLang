@@ -431,6 +431,30 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
     }
 
     DEBUG_LOG(LogLevel::DEBUG, "FUNC TYPE: ", callableTypeAsString(funcMethSig->getCallableType()), " FUNC SUB_TYPE: ", callableTypeAsString(funcMethSig->getSubType()), " FUNC NAME: ", funcMethName);
+    if (funcMethSig->getSubType() == CallableType::NATIVE) {
+        auto previousOpt = lookupFunction(funcMethName);
+        if (previousOpt){
+            auto& previous = previousOpt.value();
+            bool replaced = false;
+            for (auto& prev: previous) {
+                DEBUG_LOG(LogLevel::PERMISSIVE, "Checking Parameter Matches");
+                if (prev->matches(funcMethSig->getParameterTypes())){
+                    
+                    prev = funcMethSig;
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced) {
+                previous.push_back(funcMethSig);  // Append if not found
+            } 
+        }
+        else {
+            localFunctions[funcMethName] = {funcMethSig};  // First time
+        }
+        return;
+    }
+    
     if (funcMethSig->getSubType() == CallableType::DEF) {
         auto previousOpt = lookupFunction(funcMethName);
         if (previousOpt) {
@@ -467,6 +491,7 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
         localFunctions[funcMethName].emplace_back(funcMethSig);
         return;
     }
+
 
     throw MerkError("Not A Function: " + funcMethName);
 }
