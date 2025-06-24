@@ -27,25 +27,28 @@ public:
     Callable(String name, ParamList params, CallableType callType);
     Callable(String name, ParamList params, CallableType callType, bool requiresReturn);
     virtual ~Callable() = default;
-    
+
+    String getName() const;
+    String& getQualifiedName();
+
+    CallableType getCallableType() const;
+    CallableType getSubType() const;
+
     // Execute the callable with the provided arguments and scope.
     virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
     
     // Set and get the captured scope.
     virtual void setCapturedScope(SharedPtr<Scope> scope) = 0;
     virtual SharedPtr<Scope> getCapturedScope() const = 0;
+    virtual void setScope(SharedPtr<Scope> newScope) const = 0;
     
     // Produce a FunctionSignature for registration.
     virtual SharedPtr<class CallableSignature> toCallableSignature() = 0;
     virtual String toString() const = 0; 
 
-    virtual void setScope(SharedPtr<Scope> newScope) const = 0;
-    
-    String getName() const;
-    String& getQualifiedName();
 
-    CallableType getCallableType() const;
-    CallableType getSubType() const;
+    
+   
     void setSubType(CallableType subClassification);
     void setCallableType(CallableType primaryClassification);
     void placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope> callScope) const;

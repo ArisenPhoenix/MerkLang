@@ -21,7 +21,7 @@
 
 #include "core/scope.h"
 
-#include "core/functions/builtins.h"
+#include "core/builtins.h"
 
 
 int main(int argc, char* argv[]) {

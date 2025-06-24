@@ -41,11 +41,6 @@ public:
     String nodeType = "DataNode";
     String name = "";
 
-
-
-    bool isInstanceScope();
-    bool isInstanceScope() const;
-    
     bool isClassInstance();
     bool isClassInstance() const;
     
@@ -90,8 +85,10 @@ public:
     String getTypeAsString() const;
     virtual String toString() const;
     bool toBool() const;
+    // SharedPtr<NodeVector> toVector();
+    // SharedPtr<NodeList> toList();
 
-
+ 
     
     NodeValueType getNodeValueType(const String& typeStr, const String& valueStr);
     NodeValueType getNodeValueType(const VariantType& value);
@@ -108,7 +105,8 @@ public:
     bool isValid() const;
     bool isLong() const;
     bool getIsCallable() const;
-    void setIsCallable(bool isCallable);
+    bool isVector() const;
+    bool isList() const;
 
     Node negate() const;
     VariantType getValue() const;

@@ -39,7 +39,7 @@ public:
     // Retrieve a member variable's value.
     Node getMember(const String& name);
 
-    Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     void setCapturedScope(SharedPtr<Scope> scope) override;
     void setClassScope(SharedPtr<Scope> scope);
@@ -51,14 +51,14 @@ public:
     String& getQualifiedAccessor();
     void setScope(SharedPtr<Scope> newScope) const;
 
-    String toString() const override;
+    virtual String toString() const override;
 
     void setParameters(ParamList params);
     ParamList getParameters() {return parameters;}
 
 
     // Produce a ClassSignature for this class definition.
-    SharedPtr<CallableSignature> toCallableSignature() override; 
+    virtual SharedPtr<CallableSignature> toCallableSignature() override; 
     
 };
 
@@ -133,12 +133,6 @@ public:
     SharedPtr<Scope> getScope();
     SharedPtr<Scope> getInstanceScope();
     SharedPtr<Callable> getCallable() const override;
-    static ClassInstanceNode from(const Node& node) {
-        if (!node.isClassInstance()) {
-            throw MerkError("Cannot create ClassInstanceNode from non-ClassInstance node.");
-        }
-        return ClassInstanceNode(std::get<SharedPtr<ClassInstance>>(node.getValue()));
-    };
 
     String toString() const override;
 };

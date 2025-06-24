@@ -116,8 +116,6 @@ void ClassBase::setScope(SharedPtr<Scope> newScope) const {
 SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
-    
-
     if (!getCapturedScope()) {
         throw MerkError("Captured Scope in ClassBase::toCallableSignature is null");
     }

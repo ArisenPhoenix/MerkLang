@@ -240,6 +240,26 @@ struct UninitializedType {
 
 };
 
+// struct NodeList {
+//     constexpr bool operator==(const NodeList&) const {return true;}
+// };
+ 
+using NodeList = Vector<Node>;
+
+// struct NodeVector {
+//     constexpr bool operator==(const NodeVector&) const {return true;}
+// };
+
+// Vector<Node>,
+// SharedPtr<Vector<Node>>,
+
+// SharedPtr<NodeList>,
+// SharedPtr<NodeVector>
+// else if constexpr (std::is_same_v<T, SharedPtr<NodeVector>)
+//     return NodeValueType::Vector;
+// else if constexpr (std::is_same_v<T, SharedPtr<NodeList>)
+//     return NodeValueType::List;
+
 using VariantType = std::variant<
     int,
     float,

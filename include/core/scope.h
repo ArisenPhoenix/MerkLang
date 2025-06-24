@@ -118,6 +118,7 @@ public:
     bool hasClass(const String& name) const;
     void registerClass(const String& name, SharedPtr<ClassBase> cls);
     void registerClass(const String& name, SharedPtr<ClassSignature> classSig);
+    void registerClass(String& name, SharedPtr<ClassSignature> classSig) const;
     std::optional<SharedPtr<ClassSignature>> getClass(const String& name);
 
     // Scope Other
@@ -137,11 +138,6 @@ public:
 
     // // DEBUGGING
     void printChildScopes(int indentLevel = 0) const;
-    void linkMethod(SharedPtr<Method> method, String methodName, SharedPtr<Scope> instanceScope);
-    void linkMethods(SharedPtr<CallableSignature>  methodSig, String methodName, SharedPtr<Scope> instanceScope);
-    void linkMethods(Vector<SharedPtr<MethodSignature>>& methodVec, String& methodName, SharedPtr<Scope> instanceScope);
-
-    void linkInstanceMethods(SharedPtr<Scope> classTemplateScope, SharedPtr<Scope> instanceScope);
     
     SharedPtr<Scope> isolateScope(const std::unordered_set<String>& freeVarNames);
     

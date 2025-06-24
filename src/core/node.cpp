@@ -343,14 +343,6 @@ bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInst
 
 bool Node::isClassInstance() {return data.type == NodeValueType::ClassInstance;}
 
-bool Node::isInstanceScope() {
-    return data.type == NodeValueType::Scope;
-}
-
-bool Node::isInstanceScope() const {
-    return data.type == NodeValueType::Scope;
-}
-
 
 bool Node::isNumeric() const { return isInt() || isFloat() || isDouble() || isLong(); }
 
@@ -387,6 +379,18 @@ double Node::toDouble() const {
 long Node::toLong() const {
     return convertNumber<long>();
 }
+
+// SharedPtr<NodeVector> Node::toVector() {
+//     if (data.type == NodeValueType::Vector) {
+//         return static_cast<SharedPtr<NodeVector>>(std::get<SharedPtr<NodeVector>>(data.value));
+//     }
+// }
+
+// SharedPtr<NodeList> Node::toList() {
+//     if (data.type == NodeValueType::List) {
+//         return static_cast<SharedPtr<NodeList>>(std::get<SharedPtr<NodeList>>(data.value));
+//     }
+// }
 
 bool Node::toBool() const {
     if (data.type != NodeValueType::Bool) {
@@ -515,10 +519,12 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
     if (std::holds_alternative<String>(value)) return NodeValueType::String;
     if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
     if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
+    // if (std::holds_alternative<NodeVector>(value)) return NodeValueType::Vector;
+    // if (std::holds_alternative<NodeList>(value)) return NodeValueType::List;
     // if (std::holds_alternative<SharedPtr<ClassInstanceNode>>(value)) return NodeValueType::ClassInstance;
     // if (std::holds_alternative<SharedPtr<FunctionNode>>(value)) return NodeValueType::Function;
     return NodeValueType::Any;  // Allow `Any` when the type is unknown
-}
+} 
 
 void Node::validateTypeAlignment() const {
     if (data.type == NodeValueType::Null) {
@@ -871,6 +877,9 @@ Node::Node(const Node& other) {
     isConst = other.isConst;
     isMutable = other.isMutable;
     isStatic = other.isStatic;
+    isCallable = other.isCallable;
+    name = other.name;
+
 
     DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-constructed.");
 }

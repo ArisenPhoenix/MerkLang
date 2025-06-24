@@ -670,7 +670,30 @@ void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
     DEBUG_FLOW_EXIT();
 }
 
+// void Scope::registerClass(String& name, SharedPtr<ClassSignature> classSig) const {
+//     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
+//     if (!classSig) {
+//         throw MerkError("registerClass called with null ClassBase for: " + name);
+//     }
+
+//     if (auto clsOpt = lookupClass(name); clsOpt && clsOpt.value()) {
+//         throw MerkError("Class '" + name + "' is already defined in this scope.");
+//     }
+
+//     // auto sig = std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature());
+    
+
+
+//     // if (!sig) {
+//     //     throw MerkError("ClassSignature is null when registering: " + name);
+//     // }
+
+    
+
+//     localClasses[name] = std::move(const_cast<ClassSignature>(classSig));
+//     DEBUG_FLOW_EXIT();
+// }
 
 
 
