@@ -5,19 +5,21 @@
 NativeFunction::NativeFunction(
     String name,
     ParamList params,
-    std::function<Node(Vector<Node>, SharedPtr<Scope>)> impl
+    std::function<Node(Vector<Node>, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> impl
+
 )
     : Function(std::move(name), std::move(params), CallableType::FUNCTION),
       nativeImpl(std::move(impl)) {
     setSubType(CallableType::NATIVE);
 }
 
-Node NativeFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode>) const {
+Node NativeFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    // (void)instanceNode;
     if (!nativeImpl) {
         throw MerkError("NativeFunction has no implementation.");
     }
-    
-    return nativeImpl(args, scope);
+     
+    return nativeImpl(args, scope, instanceNode);
 }
 
 SharedPtr<CallableSignature> NativeFunction::toCallableSignature() {

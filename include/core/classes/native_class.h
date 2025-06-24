@@ -15,7 +15,7 @@ private:
     // std::function<void(SharedPtr<ClassInstanceNode>, Vector<Node>)> constructorFn;
     std::function<void(Vector<Node>, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> constructorFn;
     // std::unordered_map<String, SharedPtr<NativeMethod>> methodMap;
-
+ 
 public:
     NativeClass(String name, String accessor, SharedPtr<Scope> classScope);
 

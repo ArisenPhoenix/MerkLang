@@ -9,6 +9,17 @@
 
 // Define native functions
 
+Node print(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+  (void)instanceNode;
+  for (size_t i = 0; i < args.size(); ++i) {
+        std::cout << args[i].toString();
+        if (i < args.size() - 1) std::cout << " ";
+    }
+    std::cout << std::endl;
+    return Node(); // none
+}  
+
+
 
 SharedPtr<NativeFunction> createPrintFunction([[maybe_unused]] SharedPtr<Scope> scope) {
     ParamList params;
@@ -19,14 +30,15 @@ SharedPtr<NativeFunction> createPrintFunction([[maybe_unused]] SharedPtr<Scope> 
     return makeShared<NativeFunction>(
         "print",
         std::move(params),
-        [](Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope) -> Node {
-            for (size_t i = 0; i < args.size(); ++i) {
-                std::cout << args[i].toString();
-                if (i < args.size() - 1) std::cout << " ";
-            }
-            std::cout << std::endl;
-            return Node(); // none
-        }
+        print
+        // [](Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope) -> Node {
+        //     for (size_t i = 0; i < args.size(); ++i) {
+        //         std::cout << args[i].toString();
+        //         if (i < args.size() - 1) std::cout << " ";
+        //     }
+        //     std::cout << std::endl;
+        //     return Node(); // none
+        // }
     );
 }
 

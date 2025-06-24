@@ -5,6 +5,6 @@
 class Scope;
 class Callable;
 
-using NativeClassFactory = std::function<SharedPtr<NativeClass>(SharedPtr<Scope>)>;
-std::unordered_map<String, SharedPtr<CallableSignature>> getAllNativeClasses(SharedPtr<Scope>);
+// using NativeClassFactory = std::function<SharedPtr<NativeClass>(SharedPtr<Scope>)>;
+// std::unordered_map<String, SharedPtr<CallableSignature>> getAllNativeClasses(SharedPtr<Scope>);
 

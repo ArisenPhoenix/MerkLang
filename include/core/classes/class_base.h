@@ -90,7 +90,8 @@ private:
 public:
     bool isConstructed = false;
 
-    ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, String& accessor);
+    ClassInstance(const String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String& accessor);
+    // ClassInstance(const String name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String accessor); // for NativeClasses
 
     ~ClassInstance() override;
     

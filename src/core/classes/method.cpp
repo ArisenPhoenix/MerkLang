@@ -10,15 +10,61 @@
 #include "core/classes/method.h"
 
 
-Method::Method(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn)
-    : Callable(std::move(name), std::move(params), CallableType::METHOD, requiresReturn), body(std::move(body)), capturedScope(scope)
+Method::Method(String name, ParamList params, CallableType funcType, bool requiresReturn)
+    : Callable(name, params, CallableType::FUNCTION), requiresReturn(requiresReturn)
+{
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
+    DEBUG_FLOW_EXIT();
+}
+
+String Method::getAccessor() {return accessor;}
+void Method::setAccessor(String access) {accessor = access;}
+
+SharedPtr<Scope> Method::getClassScope() const {return classScope;}
+void Method::setClassScope(SharedPtr<Scope> newClassScope) {
+    if (!newClassScope) {
+        throw MerkError("Cannot Set newClassScope to a null Scope");
+    }
+    classScope = newClassScope;
+}
+
+
+bool Method::getIsStatic() {return isStatic;}
+
+
+Method::~Method() {
+    capturedScope->clear();
+    
+}
+
+
+Vector<Chain*> UserMethod::getNonStaticElements() {
+    return getBody()->getNonStaticElements();
+}
+
+
+String UserMethod::toString() const {
+    std::ostringstream params;
+    for (auto& param : parameters) {
+        params << param.toShortString();
+    }
+
+    return "UserMethod<"+name+">(" + params.str() + ")" ;
+
+}
+
+
+UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn)
+    : Method(std::move(name), std::move(params), CallableType::METHOD, requiresReturn), body(std::move(body))
 {
     DEBUG_LOG(LogLevel::TRACE, "Method created: ", getName());
+    setCapturedScope(scope);
     setSubType(callType);
 }
 
-Method::Method(Function&& function)
-    : Callable(function.getName(), std::move(function.parameters), CallableType::METHOD, false) {
+UserMethod::UserMethod(Function&& function)
+    : Method(function.getName(), std::move(function.parameters), CallableType::METHOD, false) {
     body = std::make_unique<MethodBody>(function.getCapturedScope());
 
     for (auto& child : function.getBody()->getChildren()){
@@ -30,15 +76,15 @@ Method::Method(Function&& function)
     setSubType(function.getSubType());
 }
 
-Method::Method(Method& method) : Callable(method) {
+UserMethod::UserMethod(UserMethod& method) : Method(method) {
     body = static_unique_ptr_cast<MethodBody>(method.body->clone());
     capturedScope = method.capturedScope;
-    capturedScope->owner = "Method(" + method.getName() + ")";
+    capturedScope->owner = "UserMethod(" + method.getName() + ")";
     setCallableType(CallableType::METHOD);
     setSubType(method.getSubType());
 }
 
-SharedPtr<CallableSignature> Method::toCallableSignature(SharedPtr<Method> method) {
+SharedPtr<CallableSignature> UserMethod::toCallableSignature(SharedPtr<UserMethod> method) {
     auto sig = makeShared<CallableSignature>(method, CallableType::METHOD);
     sig->setSubType(method->getSubType());
     getCapturedScope()->owner = generateScopeOwner("MethodSignature", name);
@@ -46,12 +92,12 @@ SharedPtr<CallableSignature> Method::toCallableSignature(SharedPtr<Method> metho
     return sig;
 }
 
-void Method::setScope(SharedPtr<Scope> newScope) const {
+void UserMethod::setScope(SharedPtr<Scope> newScope) const {
     getBody()->setScope(newScope);
 }
 
 
-SharedPtr<CallableSignature> Method::toCallableSignature() {
+SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     
@@ -71,9 +117,9 @@ SharedPtr<CallableSignature> Method::toCallableSignature() {
     return methodSig;
 }
 
-Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    if (!instanceNode) {throw MerkError("An Instance In Method::execute was not provided");}
+    if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
 
     callScope->owner = generateScopeOwner("MethodExecutor", name);
     
@@ -98,55 +144,22 @@ Node Method::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unus
     }
 }
 
-void Method::setCapturedScope(SharedPtr<Scope> scope) {
+void UserMethod::setCapturedScope(SharedPtr<Scope> scope) {
     if (!scope) {
-        throw MerkError("Cannot set a null scope in Method::setCapturedScope.");
+        throw MerkError("Cannot set a null scope in UserMethod::setCapturedScope.");
     }
     capturedScope = scope;
     capturedScope->owner = generateScopeOwner("MethodCapturedScope", name);
     body->setScope(capturedScope);
 }
 
-SharedPtr<Scope> Method::getCapturedScope() const {
+SharedPtr<Scope> UserMethod::getCapturedScope() const {
     return capturedScope;
 }
 
+MethodBody* UserMethod::getBody() {return body.get();}
 
-
-
-
-String Method::getAccessor() {return accessor;}
-void Method::setAccessor(String access) {accessor = access;}
-
-SharedPtr<Scope> Method::getClassScope() const {return classScope;}
-void Method::setClassScope(SharedPtr<Scope> newClassScope) {
-    if (!newClassScope) {
-        throw MerkError("Cannot Set newClassScope to a null Scope");
-    }
-    classScope = newClassScope;
-}
-
-
-bool Method::getIsStatic() {return isStatic;}
-Vector<Chain*> Method::getNonStaticElements() {
-    return getBody()->getNonStaticElements();
-    
-}
-
-
-String Method::toString() const {
-    std::ostringstream params;
-    for (auto& param : parameters) {
-        params << param.toShortString();
-    }
-
-    return "Method<"+name+">(" + params.str() + ")" ;
-
-}
-
-MethodBody* Method::getBody() {return body.get();}
-
-MethodBody* Method::getBody() const {return body.get();}
+MethodBody* UserMethod::getBody() const {return body.get();}
 
 
 

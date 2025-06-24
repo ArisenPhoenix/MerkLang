@@ -155,7 +155,7 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
 }
  
 
-ClassInstance::ClassInstance(String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, String& accessor)
+ClassInstance::ClassInstance(const String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String& accessor)
     : Callable(name, params, CallableType::INSTANCE), capturedScope(capturedScope), instanceScope(instanceScope), accessor(accessor) {
         instanceScope->owner = generateScopeOwner("ClassInstance", name);
         auto startingScopeCheck = getCapturedScope()->getParent();
@@ -163,6 +163,16 @@ ClassInstance::ClassInstance(String& name, SharedPtr<Scope> capturedScope, Share
             throw MerkError("Could Not Get Defining Scope For Class Instance");
         }
 }
+
+
+// ClassInstance::ClassInstance(const String name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String accessor)
+//     : Callable(name, params, CallableType::INSTANCE), capturedScope(capturedScope), instanceScope(instanceScope), accessor(accessor) {
+//         instanceScope->owner = generateScopeOwner("ClassInstance", name);
+//         // auto startingScopeCheck = getCapturedScope()->getParent();
+//         // if (!startingScopeCheck) {
+//         //     throw MerkError("Could Not Get Defining Scope For Class Instance");
+//         // }
+//     }
 
 
 SharedPtr<Scope> ClassInstance::getCapturedScope() const {

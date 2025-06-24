@@ -642,7 +642,7 @@ namespace Evaluator {
 
         DEBUG_LOG(LogLevel::TRACE, "FunctionDef Defining Scope: ", passedScope->getScopeLevel());
         
-        SharedPtr<Method> method = makeShared<Method>(methodName, parameters, std::move(clonedBody), ownScope, callType);
+        SharedPtr<Method> method = makeShared<UserMethod>(methodName, parameters, std::move(clonedBody), ownScope, callType);
         
         
         if (!method){

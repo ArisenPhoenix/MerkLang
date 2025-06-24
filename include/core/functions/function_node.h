@@ -39,8 +39,7 @@ class FunctionBody : public CallableBody {
 
 // Function inherits from Callable.
 class Function : public Callable {
-protected:
-    CallableType subType = CallableType::DEF;
+
 public:
     Function(String name, ParamList params, CallableType functionType);
     virtual ~Function() = default;
