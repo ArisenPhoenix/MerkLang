@@ -35,23 +35,6 @@ public:
 
 };
 
-
-
-
-
-
-// class FunctionNode : public CallableNode {
-// public:
-//     FunctionNode(SharedPtr<Function> function);
-
-//     FunctionNode(SharedPtr<Callable> function);
-//     FunctionNode(SharedPtr<NativeFunction> native);
-
-//     SharedPtr<Callable> getCallable() const override;
-// };
-
-
-
 #endif // INVOCABLE_H
 
 
