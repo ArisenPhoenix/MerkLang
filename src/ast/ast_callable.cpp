@@ -10,13 +10,15 @@
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 
-#include "core/functions/function_node.h"
+#include "core/callables/functions/function.h"
 #include "core/evaluator.h"
 #include "ast/ast_function.h"
+#include "ast/ast_method.h"
 #include "ast/ast_class.h"  
 #include "ast/ast_callable.h"
 
-#include "core/functions/argument_node.h"
+#include "core/callables/argument_node.h"
+
 
 
 // For Calling Within A Method's Context

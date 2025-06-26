@@ -1,6 +1,6 @@
 #include <iostream>
 #include "core/types.h"
-#include "core/functions/argument_node.h"
+#include "core/callables/argument_node.h"
 #include "utilities/debugger.h"
 #include "utilities/helper_functions.h"
 #include "core/node.h"
@@ -11,8 +11,8 @@
 
 #include "ast/ast_callable.h"
 #include "ast/ast_chain.h"
-#include "core/classes/method.h" 
-#include "core/classes/class_base.h"
+#include "core/callables/classes/method.h" 
+#include "core/callables/classes/class_base.h"
 #include "ast/ast_class.h"
 #include "ast/exceptions.h"
 #include "ast/ast_validate.h"
@@ -27,9 +27,6 @@ ClassBody::ClassBody(UniquePtr<CodeBlock>&& block)
 ClassBody::ClassBody(SharedPtr<Scope> scope)
     : CallableBody(scope) {}
 
-MethodBody::MethodBody(UniquePtr<CodeBlock>&& body) : CallableBody(std::move(body)){}
-MethodBody::MethodBody(SharedPtr<Scope> scope) : CallableBody(scope) {}
-MethodBody::MethodBody(UniquePtr<CallableBody>* body) : CallableBody(std::move(body)) {}
 
 ClassCall::ClassCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
     : CallableCall(name, std::move(arguments), scope) {
@@ -42,80 +39,23 @@ void ClassDef::setClassAccessor(String accessorName){accessor = accessorName;}
 
 String ClassDef::getClassAccessor() {return accessor;}
     
-MethodDef::MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, CallableType funcType, SharedPtr<Scope> scope)
-: CallableDef(name, std::move(parameters), std::move(body), CallableType::METHOD, scope) {
-    if (funcType == CallableType::METHOD){
-        throw MerkError("The CallableType Provided was METHOD");
-    }
-
-    
-    this->methodType = funcType;
-    if (this->methodType == CallableType::METHOD) {
-        throw MerkError("MethodDef::methodType is a METHOD");
-    } 
-    
-
-}
-
-MethodDef::MethodDef(UniquePtr<FunctionDef> funcDef)
-    : CallableDef(funcDef->getName(), funcDef->getParameters(), makeUnique<MethodBody>(std::move(funcDef->getBody())), CallableType::METHOD, funcDef->getScope()) 
-{
-    methodType = funcDef->callType;
-    funcDef.reset();
-}
-
 ParamList& ClassDef::getParameters() {return parameters;}
 ParamList& MethodDef::getParameters() {return parameters;}
 
 const ParamList& MethodDef::getParameters() const {return parameters;}
 
-MethodCall::MethodCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
-    : CallableCall(name, std::move(arguments), scope) {
-    branch = "Callable";
-}
-
-
-void MethodDef::setMethodAccessor(String& accessorName) {accessor = accessorName;}
-
-String MethodDef::getMethodAccessor() const {return accessor;}
-
-void MethodDef::setNonStaticElements(Vector<Chain*> nonStaticEls) {
-    nonStaticElements = nonStaticEls;
-}
 
 Vector<Chain*> MethodBody::getNonStaticElements() {
     return nonStaticElements;
 }
 
-bool MethodBody::getIsStatic() {
-    return isStatic;
-}
-
-void MethodBody::setNonStaticElements(Vector<Chain*> nonStaticEls){
-    nonStaticElements = nonStaticEls;
-    if (nonStaticElements.size() > 0) {
-        isStatic = true;
-    }
-}
 
 void ClassBody::setAccessor(String& classAccessor) {accessor = classAccessor;}
-
-bool MethodDef::isConstructor() const {return name == "construct";}
 
 void ClassBody::setCapturedScope(SharedPtr<Scope> capturedScope) {classCapturedScope = capturedScope;}
 
 void ClassBody::setClassScope(SharedPtr<Scope> newScope) {classScope = newScope;}
 
-SharedPtr<Scope> MethodDef::getClassScope() const {return classScope;}
-
-void MethodDef::setClassScope(SharedPtr<Scope> scope) {
-    if (!scope) {
-        DEBUG_LOG(LogLevel::ERROR, highlight("Setting MethodDef Scope Failed", Colors::yellow));
-
-        throw MerkError("MethodDef new ClassScope is null");
-    }
-    classScope = scope;
-}
 
 Accessor::Accessor(String accessor, SharedPtr<Scope> scope)
     : ASTStatement(scope), accessor(std::move(accessor)) {
@@ -123,55 +63,6 @@ Accessor::Accessor(String accessor, SharedPtr<Scope> scope)
 
 void Accessor::setScope(SharedPtr<Scope> scope) {(void)scope;}
 
-Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
-    scope->owner = generateScopeOwner("MethodCall", name);
-    Vector<Node> evaluatedArgs = handleArgs(scope);
-
-
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "HANDLED ARGS IN METHOD CALL :: EVALUATE");
-
-    if (!scope->hasFunction(name)){
-        throw MerkError("Method: " + name + " Couldn't Be Found");
-    }
-    DEBUG_LOG(LogLevel::ERROR, highlight("Found Function " + name, Colors::yellow));
-    
-    auto optSig = scope->getFunction(name, evaluatedArgs);
-
-    if (!optSig){
-        throw FunctionNotFoundError(name);
-    }
-    SharedPtr<Method> method = std::static_pointer_cast<Method>(optSig->getCallable());
-    SharedPtr<Scope> callScope = method->getCapturedScope();
-    callScope->owner = generateScopeOwner("MethodCall", name);
-
-    callScope = callScope->makeCallScope();
-    callScope->owner = generateScopeOwner("MethodCall", name);
-    
-    callScope->owner = "MethodCall:evaluate (" + name + ")";
-
-    if (!callScope){
-        throw MerkError("Scope Is Not Valid In MethodCall::execute->method");
-    }
-    
-    DEBUG_LOG(LogLevel::DEBUG, "******************************* Method Scope Set *******************************");
-
-    method->placeArgsInCallScope(evaluatedArgs, callScope);
-
-    scope->appendChildScope(callScope, "MethodCall::evaluate");
-    
-    method->setCapturedScope(callScope);
-    
-    if (!method->getBody()->getScope()){
-        throw ScopeError("MethodCall func->getBoby()->getScope  created an unusable scope");
-    }
-   
-
-    Node value = method->execute(evaluatedArgs, callScope, instanceNode);
-    DEBUG_FLOW_EXIT();
-    return value; 
-}
 
 Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
@@ -242,27 +133,6 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     return classNode;
 }
 
-Node MethodBody::evaluate() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    throw MerkError(highlight("EVALUATING METHOD BODY WITH NO INSTANCE SCOPE: ", Colors::bg_bright_magenta));
-    DEBUG_FLOW_EXIT();
-    return Node();
-}
-
-Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    if (!callScope){
-        throw MerkError("There Is No callScope provided to MethodBody::evaluate");
-    }
-    if (!instanceNode){
-        throw MerkError("No instanceNode was provided to MethodBody::evaluate");
-    }
-
-    auto val = Evaluator::evaluateMethodBody(getMutableChildren(), callScope, instanceNode);
-    DEBUG_FLOW_EXIT();
-    return val;
-}
-
 Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     return Evaluator::evaluateClassBody(classCapturedScope, classScope, getScope(), accessor, getMutableChildren());
@@ -325,35 +195,13 @@ ClassDef::~ClassDef() {
     getBody().reset();
 }
 
-MethodDef::~MethodDef() {
-    if (body) {
-        body->clear();  // Clear children
-        body.reset();   // Fully destroy body first
-    }
-
-    if (getScope()) {
-        getScope()->clear();
-    }
-
-    if (getClassScope()) {
-        getClassScope()->clear();
-    }
-}
-
 ClassCall::~ClassCall() {
     getScope()->clear();
-}
-
-MethodCall::~MethodCall() {
-    getScope()->clear();
-    DEBUG_LOG(LogLevel::TRACE, "Destroying MethodCall:" + name);
-}
-
-MethodBody::~MethodBody() {
-    clear();
 }
 
 ClassBody::~ClassBody() {
     clear();
 }
+
+
 

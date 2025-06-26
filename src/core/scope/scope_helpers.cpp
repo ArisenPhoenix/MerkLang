@@ -7,13 +7,11 @@
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
 
-#include "core/functions/param_node.h"
+#include "core/callables/param_node.h"
 #include "core/context.h"
-#include "core/functions/function_node.h"
+#include "core/callables/functions/function.h"
 #include "core/registry/class_registry.h"
 #include "core/registry/function_registry.h"
-
-// #include "core/functions/native_functions.h"
 #include "core/errors.h"
 #include "core/scope.h"
  
@@ -67,7 +65,11 @@ SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNa
 
     isolated->localFunctions = this->localFunctions;
     isolated->localClasses = this->localClasses;
+    if (!isolated) {
+        throw MerkError("isolated Scope is Null");
+    }
     DEBUG_FLOW_EXIT();
+
     return isolated;
 }
 

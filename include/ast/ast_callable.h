@@ -3,10 +3,10 @@
 
 #include <unordered_set>
 #include "utilities/debugger.h" 
-#include "core/functions/param_node.h"
+#include "core/callables/param_node.h"
 #include "ast/ast_base.h"
 #include "ast/ast.h"
-#include "ast/ast_control.h"
+#include "ast/ast_control.h" 
 
 class Scope;
 class MethodDef;
@@ -43,7 +43,7 @@ public:
     CallableType getSubType() {return subType;}
     void setSubType(CallableType subClassification) {subType = subClassification;}
     void setParameters(ParamList params);
-
+ 
 };
 
 

@@ -331,6 +331,11 @@ SharedPtr<Scope> CodeBlock::getScope() const {
     return scope;
 }
 
+void ConditionalBlock::setScope(SharedPtr<Scope> newScope) {
+    scope = newScope;
+    condition->setScope(newScope);
+}
+
 
 // setScope Overrides
 void ElseStatement::setScope(SharedPtr<Scope> newScope) {

@@ -1,6 +1,6 @@
-#include "core/functions/callable.h"
-#include "core/classes/method.h"
-#include "core/functions/argument_node.h"
+#include "core/callables/callable.h"
+#include "core/callables/classes/method.h"
+#include "core/callables/argument_node.h"
 
 
 Callable::Callable(Method& method){
@@ -36,6 +36,20 @@ Callable::Callable(Callable& callable)
 }
 
 
+bool Callable::getIsStatic() {
+    return isStatic;
+}
+void Callable::setIsStatic(bool updatedStatic) {
+    isStatic = updatedStatic;
+}
+bool Callable::getRequiresReturn() {
+    return requiresReturn;
+}
+void Callable::setRequiresReturn(bool updatedRequiresReturn) {
+    requiresReturn = updatedRequiresReturn;
+}
+
+
 String& Callable::getQualifiedName() {
     String& newName = name;
     return newName;
@@ -48,8 +62,8 @@ Callable::Callable(String name, ParamList params, CallableType callType)
         }
     }
 
-Callable::Callable(String name, ParamList params, CallableType callType, bool requiresReturn)
-    : name(std::move(name)), parameters(std::move(params)), callType(callType), requiresReturn(requiresReturn) {
+Callable::Callable(String name, ParamList params, CallableType callType, bool requiresReturn, bool isStatic)
+    : name(std::move(name)), parameters(std::move(params)), callType(callType), requiresReturn(requiresReturn), isStatic(isStatic) {
         if (callableTypeAsString(callType) == "Unknown"){
             throw MerkError("Failed to instantiate callType at Callable::Callable with requiresReturn instantiation");
         }
@@ -109,3 +123,6 @@ void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope>
         callScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(paramVar));
     }
 }
+
+
+

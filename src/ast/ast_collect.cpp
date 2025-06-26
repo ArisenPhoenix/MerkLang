@@ -5,6 +5,7 @@
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
+#include "ast/ast_method.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_chain.h"
 

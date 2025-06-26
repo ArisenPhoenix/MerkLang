@@ -6,8 +6,11 @@
 #include "ast/ast.h"
 #include "ast/ast_chain.h"
 #include "ast/ast_control.h"
-#include "ast/ast_function.h"
 #include "ast/ast_callable.h"
+#include "ast/ast_function.h"
+#include "ast/ast_method.h"
+
+
 #include "ast/ast_class.h"
 #include "core/scope.h"
 
@@ -371,16 +374,16 @@ void FunctionCall::printAST(std::ostream& os, int indent) const {
     os << std::endl;
 }
 
-void ParameterAssignment::printAST(std::ostream& os, int indent) const {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
+// void ParameterAssignment::printAST(std::ostream& os, int indent) const {
+//     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
-    indent = printIndent(os, indent);
-    debugLog(true, "ParameterAssignment (variable = ", getName(), scopeLevelAsString(getScope(), getAstTypeAsString()), ")"); 
-    getExpression()->printAST(os, indent);
+//     indent = printIndent(os, indent);
+//     debugLog(true, "ParameterAssignment (variable = ", getName(), scopeLevelAsString(getScope(), getAstTypeAsString()), ")"); 
+//     getExpression()->printAST(os, indent);
 
-    DEBUG_FLOW_EXIT();
+//     DEBUG_FLOW_EXIT();
 
-}
+// }
 
 
 String MethodDef::toString() const {return astTypeToString(getAstType());}

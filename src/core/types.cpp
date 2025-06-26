@@ -32,6 +32,8 @@ String nodeTypeToString(NodeValueType type) {
         case NodeValueType::UNKNOWN: return highlight("Unknown", Colors::bold_red);
         case NodeValueType::Callable: return highlight("Callable", Colors::red);
         case NodeValueType::ClassInstance: return highlight("ClassInstance", Colors::red);
+        case NodeValueType::List: return highlight("ClassInstance<List>", Colors::bold_white);
+        case NodeValueType::Array: return highlight("ClassInstance<Array>", Colors::bold_white);
 
         default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
 
@@ -160,6 +162,10 @@ String tokenTypeToString(TokenType type, bool colored) {
 
         case TokenType::EOF_Token: return colored ? highlight("EOF_Token", Colors::red) : "EOF_Token";
 
+        case TokenType::LeftBracket: return colored ? highlight("LeftBracket", Colors::bold_yellow) : "LeftBracket";
+        case TokenType::RightBracket: return colored ? highlight("RightBracket", Colors::bold_yellow) : "RightBracket";
+        case TokenType::LeftArrow: return colored ? highlight("LeftArrow", Colors::bold_yellow) : "LeftArrow";
+        case TokenType::RightArrow: return colored ? highlight("RightArrow", Colors::bold_yellow) : "RightArrow";
         default: return "Invalid TokenType";
     }
 }
@@ -244,4 +250,27 @@ String identifierTypeToString(IdentifierType identifierType) {
     default: return "Unknown";
 
     }
+}
+
+
+
+ResolvedType::ResolvedType(String primaryType) {
+    baseType = primaryType;
+}
+
+ResolvedType::ResolvedType(String primaryType, Vector<ResolvedType> innerType) {
+    baseType = primaryType;
+    inner = innerType;
+}
+
+String ResolvedType::toString() const {
+    if (inner.empty()) return baseType;
+
+    String result = baseType + "[";
+    for (size_t i = 0; i < inner.size(); ++i) {
+        result += inner[i].toString();
+        if (i < inner.size() - 1) result += ", ";
+    }
+    result += "]";
+    return result;
 }

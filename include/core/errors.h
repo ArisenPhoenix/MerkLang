@@ -5,7 +5,7 @@
 #include <string>
 #include <sstream>
 #include "types.h"
-#include "core/functions/param_node.h"
+#include "core/callables/param_node.h" 
 
 // Base Error Class: MerkError
 class MerkError : public RunTimeError {

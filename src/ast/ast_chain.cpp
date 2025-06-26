@@ -1,7 +1,7 @@
 #include "core/types.h"
 #include "core/scope.h"
 #include "core/node.h"
-#include "core/functions/argument_node.h"
+#include "core/callables/argument_node.h"
 
 #include "ast/ast_base.h"
 
@@ -12,13 +12,20 @@
 
 #include "ast/ast_function.h"
 #include "ast/ast_class.h"
-#include "core/classes/class_base.h"
-#include "core/classes/method.h"
+#include "core/callables/classes/class_base.h"
+#include "core/callables/classes/method.h"
 #include "ast/ast_chain.h"
 
 #include "core/errors.h"
 #include "core/scope.h"
 
+// Input	Meaning
+// self.x	Dot syntax (attribute)
+// -3.14	Numeric literal (float)
+// fib(3).x	Dot syntax after a call
+// 0.5	Float literal
+// myFunc().3 Invalid
+// myClass().x Valid
 
 
 String opKindAsString(ChainOpKind opKind){
@@ -244,14 +251,7 @@ ChainOperation::ChainOperation(UniquePtr<Chain> lhs,
                                bool isMutable,
                                bool isStatic
                             )
-    : ASTStatement(scope), lhs(std::move(lhs)), rhs(std::move(rhs)), opKind(opKind), isConst(isConst), isMutable(isMutable), isStatic(isStatic) {}
-
-    
-
-
-   
-
-
+: ASTStatement(scope), lhs(std::move(lhs)), rhs(std::move(rhs)), opKind(opKind), isConst(isConst), isMutable(isMutable), isStatic(isStatic) {}
 
 UniquePtr<BaseAST> ChainOperation::clone() const {
     return makeUnique<ChainOperation>(
@@ -259,12 +259,6 @@ UniquePtr<BaseAST> ChainOperation::clone() const {
         rhs ? static_unique_ptr_cast<ASTStatement>(rhs->clone()) : nullptr,
         opKind, getScope(), isConst, isMutable);
 }
-
-
-
-
-
-
 
 UniquePtr<Chain>& ChainOperation::getLeft() {
     return lhs;
@@ -390,7 +384,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             }
 
             else if (objType == AstType::FunctionCall || objType == AstType::ClassMethodCall) {
-                elem.object->printAST(std::cout);
+                // elem.object->printAST(std::cout);
                 auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
                 auto args = functionCall->handleArgs(currentScope); 
                 currentVal = instance->call(elem.name, args);
@@ -418,12 +412,11 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     String hasRight = getRightSide() ? "true" : "false";
     String hasInstanceNode = instanceNode ? "true" : "false";
 
-    DEBUG_LOG(LogLevel::DEBUG, "OP KIND: ", opKindAsString(opKind));
+    DEBUG_LOG(LogLevel::TRACE, "OP KIND: ", opKindAsString(opKind));
 
 
     auto leftVal = lhs->evaluate(scope, instanceNode);
     auto currentScope = lhs->getLastScope();
-    // auto& last = lhs->getElements().back();  // Was An idea
 
     if (!currentScope) throw MerkError("There Is No Current Scope in ChainOperation::evaluate");
 
@@ -440,7 +433,7 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
             rightVal = getRightSide()->evaluate(currentScope, instanceNode);
         }
     } else {
-        DEBUG_LOG(LogLevel::DEBUG, highlight("No Right Side For ChainOperation", Colors::bg_green));
+        DEBUG_LOG(LogLevel::TRACE, highlight("No Right Side For ChainOperation", Colors::bg_green));
     }
 
 
@@ -448,7 +441,7 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     if (!leftVal.isValid()) {
         throw MerkError("Left Hand Side of ChainOperation is invalid");
     } else {
-        DEBUG_LOG(LogLevel::DEBUG, "Left Hand Side of ChainOperation is Valid", leftVal);
+        DEBUG_LOG(LogLevel::TRACE, "Left Hand Side of ChainOperation is Valid", leftVal);
     }
     
 

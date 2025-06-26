@@ -102,6 +102,7 @@ public:
     static UniquePtr<ConditionalBlock> create(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope) {
         return makeUnique<ConditionalBlock>(std::move(condition), scope);
     }
+    void setScope(SharedPtr<Scope> newScope) override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 

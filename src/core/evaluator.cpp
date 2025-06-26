@@ -12,7 +12,7 @@
 #include "core/scope.h"
 #include "core/evaluator.h"
 #include "core/scope.h"
-#include "core/classes/method.h"
+#include "core/callables/classes/method.h"
 #include "core/helpers/class_helpers.h"
 
 #include "utilities/helper_functions.h"
@@ -148,9 +148,6 @@ namespace Evaluator {
         VarNode resolvedVariable;
         AstType valueNodeType = value->getAstType();
         if (valueNodeType == AstType::VariableReference || valueNodeType == AstType::Literal){
-            scope->debugPrint();
-            scope->printChildScopes();
-
             resolvedVariable = VarNode(value->evaluate(scope, instanceNode));
         } else {
             resolvedVariable = VarNode(value->evaluate(instanceScope, instanceNode));
@@ -193,9 +190,9 @@ namespace Evaluator {
 
     
     Node evaluateFunction(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        (void)instanceNode;
-        DEBUG_FLOW(FlowLevel::LOW);
-        MARK_UNUSED_MULTI(scope);
+        // (void)instanceNode;
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        MARK_UNUSED_MULTI(scope, instanceNode);
 
         Node lastValue;
             for (const auto& child : children) {
@@ -208,7 +205,7 @@ namespace Evaluator {
                 );
                                 
                 // child->getScope()->debugPrint();
-                lastValue = child->evaluate();
+                lastValue = child->evaluate(scope, instanceNode);
     
                
                 if (!lastValue.isValid()){
@@ -478,6 +475,7 @@ namespace Evaluator {
         DEBUG_FLOW_EXIT();
         return lastValue; // Return the last evaluated value
     }
+
     Node evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> classScope, SharedPtr<Scope> generatedScope, String accessor, Vector<UniquePtr<BaseAST>>& children) {
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!classCapturedScope) {throw MerkError("Class Captured Scope Was Not Set On Body");}
@@ -556,6 +554,9 @@ namespace Evaluator {
         if (!classOpt.has_value()) {throw MerkError("Class not found: " + className);}
 
         auto classSig = classOpt.value();
+        if (!classSig) {
+            throw MerkError("Class signature is null for class: " + className);
+        }
         auto classTemplate = classSig->getClassDef();
         auto capturedScope = classTemplate->getCapturedScope();
         auto capturedClone = capturedScope->clone(true);  // clone it safely
@@ -655,10 +656,9 @@ namespace Evaluator {
         method->setCapturedScope(defScope);
 
         auto methodSig = method->toCallableSignature();
-        DEBUG_LOG(LogLevel::PERMISSIVE, "SETTING METHOD SIG PARAMS FOR ", methodName);
+        DEBUG_LOG(LogLevel::TRACE, "SETTING METHOD SIG PARAMS FOR ", methodName);
 
         methodSig->setParameters(parameters.clone());
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Params: ", methodSig->getParameters());
 
 
         if (method->getCallableType() != CallableType::METHOD && method->getSubType() == CallableType::METHOD) {

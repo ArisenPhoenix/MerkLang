@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
    
     // Step 2: Read file content
     String content = readFile(filePath);
-    outputFileContents(content, 500);
+    outputFileContents(content, 800);
 
     // Step 3: Initialize Global Scope
     const bool interpretMode = true;
@@ -47,10 +47,7 @@ int main(int argc, char* argv[]) {
         
     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, isRoot);
     globalScope->owner = "GLOBAL";
-    auto globalFunctions = getNativeFunctions(globalScope);
-    for (auto& [name, globalFunc]: globalFunctions) {
-        globalScope->registerFunction(name, globalFunc);
-    }
+    
     
     
     
@@ -64,7 +61,15 @@ int main(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
 
         tokenizer.printTokens((Debugger::getInstance().getLogLevel() >= LogLevel::ERROR));
+        // auto globalFunctions = getNativeFunctions(globalScope);
+        // for (auto& [name, globalFunc]: globalFunctions) {
+        //     globalScope->registerFunction(name, globalFunc);
+        // }
 
+        // auto globalClasses = getNativeClasses(globalScope);
+        // for (auto& [name, globalCls]: globalClasses) {
+        //     globalScope->registerClass(name, globalCls);
+        // }
         // Step 5: Parse tokens into an AST
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
         Parser parser(tokens, globalScope, interpretMode, byBlock);

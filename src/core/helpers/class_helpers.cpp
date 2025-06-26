@@ -2,11 +2,11 @@
 #include "core/helpers/class_helpers.h"
 
 #include "core/scope.h"
-#include "core/classes/class_base.h"
-#include "core/classes/method.h"
+#include "core/callables/classes/class_base.h"
+#include "core/callables/classes/method.h"
 #include "core/node.h"
 #include "core/errors.h"
-#include "core/functions/param_node.h"
+#include "core/callables/param_node.h"
 
 #include "ast/ast_base.h"
 #include "ast/ast.h"
@@ -32,7 +32,7 @@ bool handleChain(Chain* chain, ParamList params, String accessor, String name, S
     }
 
     if (!elems.empty()) {
-        DEBUG_LOG(LogLevel::DEBUG, "First element in Chain is: ", elems[0].name, " (expecting: ", accessor, ")");
+        DEBUG_LOG(LogLevel::TRACE, "First element in Chain is: ", elems[0].name, " (expecting: ", accessor, ")");
     }
 
     DEBUG_FLOW_EXIT();
@@ -155,7 +155,7 @@ void fixupClassChains(SharedPtr<Scope> classScope, String accessor) {
             auto method = std::dynamic_pointer_cast<Method>(callable);
             if (!method) continue;
 
-            auto* body = method->getBody();
+            auto* body = method->getInvocableBody();
             if (!body) continue;
 
             ASTUtils::traverse(body->getChildren(), [&](BaseAST* node) {

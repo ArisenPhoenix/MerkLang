@@ -10,16 +10,16 @@
 #include "ast/ast_validate.h"
 #include "ast/ast_class.h"
 #include "ast/ast_chain.h"
-#include "core/functions/callable.h"
-#include "core/classes/method.h"
-#include "core/functions/param_node.h"
+#include "core/callables/callable.h"
+#include "core/callables/classes/method.h"
+#include "core/callables/param_node.h"
 
 #include "core/context.h"
 #include "core/registry/class_registry.h"
 #include "core/registry/function_registry.h"
 #include "core/errors.h"
-#include "core/functions/function_node.h"
-#include "core/classes/method.h"
+#include "core/callables/functions/function.h"
+#include "core/callables/classes/method.h"
 #include "core/scope.h"
 
 #include <cassert>
@@ -425,12 +425,15 @@ const SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() const {return glo
 SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() {return globalFunctions;}
 
 void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMethSig) {
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Current Method Being Registered: ", funcMethName, " Type: ", callableTypeAsString(funcMethSig->getCallableType()), " SubType: ", callableTypeAsString(funcMethSig->getSubType()));
+    auto primaryType = callableTypeAsString(funcMethSig->getCallableType());
+    auto subType = callableTypeAsString(funcMethSig->getSubType());
+
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Current ", primaryType, " Being Registered: ", funcMethName, " Type: ", primaryType, " SubType: ", subType);
     if (!funcMethSig){
         throw MerkError("Not a Method Signature");
     }
 
-    DEBUG_LOG(LogLevel::DEBUG, "FUNC TYPE: ", callableTypeAsString(funcMethSig->getCallableType()), " FUNC SUB_TYPE: ", callableTypeAsString(funcMethSig->getSubType()), " FUNC NAME: ", funcMethName);
+    DEBUG_LOG(LogLevel::DEBUG, "FUNC TYPE: ", primaryType, " FUNC SUB_TYPE: ", subType, " FUNC NAME: ", funcMethName);
     if (funcMethSig->getSubType() == CallableType::NATIVE) {
         auto previousOpt = lookupFunction(funcMethName);
         if (previousOpt){
@@ -696,25 +699,46 @@ void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
 // }
 
 
-
-
 std::optional<SharedPtr<ClassSignature>> Scope::getClass(const String& name) {
+    if (auto className = lookupClass(name); className) {
+        return className;
+    }
 
-    if (auto className = lookupClass(name)){
-        return className;
+    if (globalClasses) {
+        auto globalClass = globalClasses->getClass(name);
+        if (globalClass) return globalClass;
     }
-    if (auto className = globalClasses->getClass(name)){
-        return className;
-    }
-    if (globalClasses->hasClass(name)) {
-        return globalClasses->getClass(name);
-    }
+
     auto parent = parentScope.lock();
     if (parent) {
         return parent->getClass(name);
     }
-    throw MerkError("Class: " + name + " Does Not Exist.");
+
+    return std::nullopt;
 }
+
+
+// std::optional<SharedPtr<ClassSignature>> Scope::getClass(const String& name) {
+
+//     if (auto className = lookupClass(name)){
+//         return className;
+//     }
+//     if (auto className = globalClasses->getClass(name)){
+//         return className;
+//         // if (className.has_value()) {
+            
+//         // }
+        
+//     }
+//     if (globalClasses->hasClass(name)) {
+//         return globalClasses->getClass(name);
+//     }
+//     auto parent = parentScope.lock();
+//     if (parent) {
+//         return parent->getClass(name);
+//     }
+//     throw MerkError("Class: " + name + " Does Not Exist.");
+// }
 
 
 bool Scope::hasClass(const String& name) const {

@@ -3,15 +3,15 @@
 #include "core/errors.h"
 #include "core/evaluator.h"
 #include "ast/exceptions.h" 
+#include "ast/ast_base.h"
 #include "ast/ast_class.h"
 #include "ast/ast_chain.h"
 #include "ast/ast_callable.h"
-#include "ast/ast_callable.h"
-#include "core/classes/method.h"
+#include "core/callables/classes/method.h"
 
 
-Method::Method(String name, ParamList params, CallableType funcType, bool requiresReturn)
-    : Callable(name, params, CallableType::FUNCTION), requiresReturn(requiresReturn)
+Method::Method(String name, ParamList params, CallableType funcType, bool requiresReturn, bool isStatic)
+    : Invocable(name, params, CallableType::FUNCTION, requiresReturn, isStatic)
 {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
@@ -30,7 +30,7 @@ void Method::setClassScope(SharedPtr<Scope> newClassScope) {
 }
 
 
-bool Method::getIsStatic() {return isStatic;}
+// bool Method::getIsStatic() {return isStatic;}
 
 
 Method::~Method() {
@@ -40,7 +40,7 @@ Method::~Method() {
 
 
 Vector<Chain*> UserMethod::getNonStaticElements() {
-    return getBody()->getNonStaticElements();
+    return getThisBody()->getNonStaticElements();
 }
 
 
@@ -55,8 +55,8 @@ String UserMethod::toString() const {
 }
 
 
-UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn)
-    : Method(std::move(name), std::move(params), CallableType::METHOD, requiresReturn), body(std::move(body))
+UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType)
+    : Method(std::move(name), std::move(params), CallableType::METHOD, false, false), body(std::move(body))
 {
     DEBUG_LOG(LogLevel::TRACE, "Method created: ", getName());
     setCapturedScope(scope);
@@ -93,6 +93,7 @@ SharedPtr<CallableSignature> UserMethod::toCallableSignature(SharedPtr<UserMetho
 }
 
 void UserMethod::setScope(SharedPtr<Scope> newScope) const {
+    newScope->owner = generateScopeOwner("UserMethod", name);
     getBody()->setScope(newScope);
 }
 
@@ -144,29 +145,25 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_
     }
 }
 
-void UserMethod::setCapturedScope(SharedPtr<Scope> scope) {
-    if (!scope) {
-        throw MerkError("Cannot set a null scope in UserMethod::setCapturedScope.");
-    }
-    capturedScope = scope;
-    capturedScope->owner = generateScopeOwner("MethodCapturedScope", name);
-    body->setScope(capturedScope);
-}
+// void UserMethod::setCapturedScope(SharedPtr<Scope> scope) {
+//     if (!scope) {
+//         throw MerkError("Cannot set a null scope in UserMethod::setCapturedScope.");
+//     }
+//     capturedScope = scope;
+//     capturedScope->owner = generateScopeOwner("MethodCapturedScope", name);
+//     body->setScope(capturedScope);
+// }
 
-SharedPtr<Scope> UserMethod::getCapturedScope() const {
-    return capturedScope;
-}
+// SharedPtr<Scope> UserMethod::getCapturedScope() const {
+//     return capturedScope;
+// }
 
-MethodBody* UserMethod::getBody() {return body.get();}
+// UniquePtr<CallableBody>& UserMethod::getBody() { return static_unique_ptr_cast<CallableBody>(body); }
 
-MethodBody* UserMethod::getBody() const {return body.get();}
-
-
-
-
-
-
-
+CallableBody* UserMethod::getInvocableBody() {return body.get();}
+CallableBody* UserMethod::getBody() const {return body.get();}
+MethodBody* UserMethod::getThisBody() {return body.get();}
+UniquePtr<CallableBody> UserMethod::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}
 
 
 

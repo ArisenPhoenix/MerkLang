@@ -281,7 +281,7 @@ Token Parser::peek(int number){
 }
 
 bool Parser::consume(TokenType type) {
-    if (match(type)) { // match only checks the type here because no value is provided
+    if (currentToken().type == type) { // match only checks the type here because no value is provided
         // return previousToken(); // Return the matched token
         advance();
         return true;
@@ -321,8 +321,8 @@ bool Parser::check(TokenType type, const String& value) const {
     return currentToken().type == type && (value.empty() || currentToken().value == value);
 }
 
-bool Parser::match(TokenType type, const String& value) {
-    if (currentToken().type == type && (value.empty() || currentToken().value == value)) {
+bool Parser::consumeIf(TokenType type, const String& value) {
+    if (check(type, value)) {
         advance(); // Consume the token
         return true;
     }
@@ -526,3 +526,39 @@ void Parser::displayNextTokens(String baseTokenName, size_t number, String locat
         debugLog(true, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
     }
 }
+
+
+ResolvedType Parser::parseResolvedType() {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseResolvedType: Entering with token: ", currentToken().toColoredString());
+
+    if (consumeIf(TokenType::Operator, "<")) {
+        auto inner = parseResolvedType();
+        consume(TokenType::Operator, ">");
+        return ResolvedType("Array", { inner });
+    }
+    if (consumeIf(TokenType::LeftBracket, "[")) {
+        auto inner = parseResolvedType();
+        consume(TokenType::RightBracket, "]");
+        return ResolvedType("List", { inner });
+    }
+    if (consumeIf(TokenType::Operator, "{")) {
+        auto first = parseResolvedType();
+        if (consumeIf(TokenType::Punctuation, ",")) {
+            auto second = parseResolvedType();
+            consume(TokenType::Operator, "}");
+            return ResolvedType("Map", { first, second });
+        } else {
+            consume(TokenType::Operator, "}");
+            return ResolvedType("Set", { first });
+        }
+    }
+    if (consumeIf(TokenType::Type)) {
+        DEBUG_FLOW_EXIT();
+        return ResolvedType(previousToken().value);
+    }
+    DEBUG_FLOW_EXIT();
+    throw MerkError("Invalid type annotation.");
+}
+
+

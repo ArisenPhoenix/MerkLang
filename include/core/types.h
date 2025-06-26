@@ -13,6 +13,8 @@
 #include <functional>
 #include <unordered_set>
 
+
+
 // This is essentially a global types repository used throughout the whole codebase
 
 // Forward declarations
@@ -116,7 +118,16 @@ enum class TokenType {
 
     ChainEntryPoint,
 
-    Unknown
+    Unknown,
+    LeftBracket,
+    RightBracket,
+    LiteralArrowLeft,
+    LiteralArrowRight,
+    BraceLeft,
+    BraceRight,
+    LeftArrow,
+    RightArrow,
+    BeginTyping
 };
 
 // Enum for the type of the value held by the variant
@@ -143,7 +154,10 @@ enum class NodeValueType {
     Uninitialized,
     Any,
     UNKNOWN,
-    Scope
+    Scope,
+
+    List,
+    Array
 };
 
 
@@ -239,26 +253,11 @@ struct UninitializedType {
     constexpr bool operator==(const UninitializedType&) const { return true; }
 
 };
-
-// struct NodeList {
-//     constexpr bool operator==(const NodeList&) const {return true;}
-// };
  
 using NodeList = Vector<Node>;
+class ListNode;
+class ArrayNode;
 
-// struct NodeVector {
-//     constexpr bool operator==(const NodeVector&) const {return true;}
-// };
-
-// Vector<Node>,
-// SharedPtr<Vector<Node>>,
-
-// SharedPtr<NodeList>,
-// SharedPtr<NodeVector>
-// else if constexpr (std::is_same_v<T, SharedPtr<NodeVector>)
-//     return NodeValueType::Vector;
-// else if constexpr (std::is_same_v<T, SharedPtr<NodeList>)
-//     return NodeValueType::List;
 
 using VariantType = std::variant<
     int,
@@ -277,7 +276,10 @@ using VariantType = std::variant<
     SharedPtr<Method>,
     SharedPtr<Callable>,
     SharedPtr<ClassInstance>,
-    SharedPtr<Scope>
+    SharedPtr<Scope>,
+    SharedPtr<ListNode>,
+    SharedPtr<ArrayNode>
+
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
 
@@ -459,6 +461,19 @@ String callableTypeAsString(CallableType callableType);
 
 
 String identifierTypeToString(IdentifierType identifierType);
+
+
+
+
+
+class ResolvedType {
+    String baseType;  // e.g. "Array", "List", "Schema", or "UserStruct"
+    Vector<ResolvedType> inner;  // Nested for Array[Map[String, Int]]
+public:
+    ResolvedType(String baseType);
+    ResolvedType(String baseType, Vector<ResolvedType> inner);
+    String toString() const;
+};
 
 
 #endif // TYPES_H

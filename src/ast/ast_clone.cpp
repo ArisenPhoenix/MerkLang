@@ -10,8 +10,8 @@
 #include "ast/ast_class.h"
 
 
-#include "core/classes/class_base.h"
-#include "core/classes/method.h"
+#include "core/callables/classes/class_base.h"
+#include "core/callables/classes/method.h"
 
 UniquePtr<BaseAST> ASTStatement::clone() const {
     throw MerkError("Cannot Clone Base Class ASTStatement");
@@ -43,6 +43,9 @@ UniquePtr<BaseAST> VariableAssignment::clone() const {
 } 
 
 UniquePtr<BaseAST> BinaryOperation::clone() const {
+    if (!getScope()) {
+        throw MerkError("BinaryOpeation::clone getScope() is null");
+    }
     UniquePtr<BaseAST> clonedLeftBase = left->clone();
     auto clonedLeft = static_unique_ptr_cast<ASTStatement>(std::move(clonedLeftBase));
 
@@ -200,7 +203,6 @@ UniquePtr<BaseAST> MethodBody::clone() const {
         newBlock->addChild(child->clone());
     }
     newBlock->setNonStaticElements(nonStaticElements);
-    newBlock->isStatic = isStatic;
     return newBlock;
 }
 

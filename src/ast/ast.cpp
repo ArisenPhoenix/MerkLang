@@ -105,7 +105,12 @@ UnaryOperation::UnaryOperation(const String& op, UniquePtr<ASTStatement> operand
 // Calculation Constructors
 BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left, UniquePtr<ASTStatement> right, SharedPtr<Scope> scope)
     : ASTStatement(scope), op(op), left(std::move(left)), right(std::move(right)) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (!scope) {
+        throw MerkError("The Scope Passed to BinaryOperation::BinaryOperation is null");
+    }
     validateScope(scope, "BinaryOperation::BinaryOperation", op);
+    DEBUG_FLOW_EXIT();
 }
 
 
@@ -204,9 +209,15 @@ void VariableAssignment::setScope(SharedPtr<Scope> newScope) {
 }
 
 void BinaryOperation::setScope(SharedPtr<Scope> newScope) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
+    if (!newScope) {
+        throw MerkError("BinaryOperation::setScope -> scope is null");
+    }
     scope = newScope;
     left->setScope(newScope);
     right->setScope(newScope);
+    DEBUG_FLOW_EXIT();
 }
 
 
@@ -217,15 +228,17 @@ void UnaryOperation::setScope(SharedPtr<Scope> newScope) {
 
 
 void Return::setScope(SharedPtr<Scope> newScope) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
     scope = newScope;
     if (returnValue){
         returnValue->setScope(newScope);
     }
-    
+    DEBUG_FLOW_EXIT();
 }
 
 Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const  {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!returnValue) {
         throw RunTimeError("Return statement must have a value.");
     }
@@ -241,15 +254,18 @@ Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassIn
 
 
 Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
-    : ASTStatement(scope), returnValue(std::move(value)) {}
+    : ASTStatement(scope), returnValue(std::move(value)) {
+        validateScope(scope, "Return::Return", returnValue->toString());
+    }
 
 
 
 Continue::Continue(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 
 Node Continue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
-    DEBUG_FLOW();
+    // (void)scope;
+    MARK_UNUSED_MULTI(scope);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     throw ContinueException();
 }
 

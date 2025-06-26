@@ -3,7 +3,7 @@
 
 #include "core/types.h"
 #include "ast/ast_callable.h"
-#include "core/functions/callable.h"
+#include "core/callables/callable.h"
 #include "core/errors.h"
 
 class Node;

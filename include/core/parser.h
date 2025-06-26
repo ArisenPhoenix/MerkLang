@@ -13,7 +13,6 @@
 #include "ast/ast_chain.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
-// #include "ast/ast_import.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_class.h"
 
@@ -47,7 +46,7 @@ private:
     bool existing(TokenType type, int limit);
     Token previousToken() const;
     bool check(TokenType type, const String& value = "") const;
-    bool match(TokenType type, const String& value = "");
+    bool consumeIf(TokenType type, const String& value = "");
     
     int getOperatorPrecedence(const String& op) const;
     std::tuple<bool, bool, String> handleIsVarDec();
@@ -82,6 +81,7 @@ private:
     UniquePtr<FunctionCall> parseFunctionCall();
 
     UniquePtr<ASTStatement> parseClassCall();
+    UniquePtr<ASTStatement> parseClassLiteralCall();
     UniquePtr<ASTStatement> parseClassDefinition();
     UniquePtr<MethodDef> parseClassInitializer();
     UniquePtr<MethodDef> parseClassMethod();
@@ -109,6 +109,7 @@ private:
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
     void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
+    ResolvedType parseResolvedType();
     // For Future Implementation
     // UniquePtr<ImportStatement> parseImport();
     // Vector<UniquePtr<ImportStatement>> parseImports();

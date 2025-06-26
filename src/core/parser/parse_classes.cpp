@@ -8,6 +8,7 @@
 #include "core/tokenizer.h"      // For token types
 #include "core/scope.h"
 #include "ast/ast_callable.h"
+#include "ast/ast_method.h"
 #include "core/parser.h"
 
 
@@ -419,4 +420,49 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     return classDefNode;
 }
 
+
+UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    Token token = currentToken();
+    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseClassLiteralCall: Entering with token: ", currentToken().toColoredString());
+
+    if (consumeIf(TokenType::LeftBracket, "[")) {
+        Vector<UniquePtr<ASTStatement>> elements;
+
+        if (!check(TokenType::RightBracket, "]")) {
+            do {
+                elements.push_back(parsePrimaryExpression());
+            } while (consumeIf(TokenType::Punctuation, ","));
+        }
+
+        consume(TokenType::RightBracket, "]");
+
+        auto call = makeUnique<ClassCall>("List", std::move(elements), currentScope);
+        processNewLines();
+        DEBUG_FLOW_EXIT();
+        return call;
+    }
+
+    if (consumeIf(TokenType::LeftArrow, "<")) {
+        Vector<UniquePtr<ASTStatement>> elements;
+
+        if (!check(TokenType::Operator, ">")) {
+            do {
+                elements.push_back(parsePrimaryExpression());
+            } while (consumeIf(TokenType::Punctuation, ","));
+        }
+
+        consume(TokenType::Operator, ">");
+
+        auto call = makeUnique<ClassCall>("Array", std::move(elements), currentScope);
+        processNewLines();
+        DEBUG_FLOW_EXIT();
+        return call;
+    }
+
+
+    DEBUG_FLOW_EXIT();
+    throw UnexpectedTokenError(currentToken(), "Expected list or array literal.");
+
+}
 

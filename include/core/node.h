@@ -220,6 +220,14 @@ inline bool validateConditionIsBool(Node node, String methodName, bool debug = t
 bool validateLeftAndRightNodes(Node leftNode, Node rightNode, String methodName, String op = "", bool debug = true);
 
 
+
+
+
+class ComposableTypeNode : public Node {
+    String baseType;         // e.g., "List" or "Map"
+    Vector<SharedPtr<Node>> innerTypes; // e.g., [Int], or [String, Int]
+};
+
 #endif // NODE_H
 
 

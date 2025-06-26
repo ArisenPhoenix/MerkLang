@@ -1,7 +1,7 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
 #include "core/scope.h" 
-#include "core/classes/method.h"
+#include "core/callables/classes/method.h"
 
 #include "ast/ast_base.h"
 #include "ast/ast_control.h"

@@ -6,8 +6,8 @@
 #include "core/node.h"
 #include "ast/ast_class.h"
 #include "ast/ast_chain.h"
-#include "core/classes/method.h"
-#include "core/classes/class_base.h"
+#include "core/callables/classes/method.h"
+#include "core/callables/classes/class_base.h"
 #include "core/scope.h"
 #include "ast/ast_validate.h"
 #include <cassert>

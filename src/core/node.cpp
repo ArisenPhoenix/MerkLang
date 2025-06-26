@@ -1,7 +1,7 @@
 #include "core/node.h"
 #include "core/types.h"
-#include "core/functions/callable.h"
-#include "core/classes/class_base.h"
+#include "core/callables/callable.h"
+#include "core/callables/classes/class_base.h"
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "core/errors.h"
@@ -603,9 +603,6 @@ NodeValueType determineNumericResultType(const Node& left, const Node& right) {
         throw MerkError("Cannot perform arithmetic on non-numeric types.");
     }
 
-    DEBUG_LOG(LogLevel::ERROR, "Left Side: ", nodeTypeToString(left.getType()));
-    DEBUG_LOG(LogLevel::ERROR, "Right Side: ", nodeTypeToString(right.getType()));
-
 
     // Follow type promotion rules for dynamic variables
     if (!left.isStatic && !right.isStatic) {
@@ -650,7 +647,7 @@ Node performArithmeticOperation(const Node& left, const Node& right,
     if (left.isStatic && left.getType() != resultType) {
         throw MerkError("Types Don't Match For Node " + nodeTypeToString(left.getType()) + " -> " + nodeTypeToString(resultType));
     }
-    DEBUG_LOG(LogLevel::ERROR, "ResultType: ", nodeTypeToString(resultType));
+    DEBUG_LOG(LogLevel::TRACE, "ResultType: ", nodeTypeToString(resultType));
 
     double leftValue = left.toDouble();
     double rightValue = right.toDouble();
@@ -658,20 +655,20 @@ Node performArithmeticOperation(const Node& left, const Node& right,
 
     // Return result with appropriate type
     if (resultType == NodeValueType::Int) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning INT");
+        DEBUG_LOG(LogLevel::TRACE, "Returning INT");
         return Node(static_cast<int>(result));
     }
     if (resultType == NodeValueType::Float) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning FLOAT");
+        DEBUG_LOG(LogLevel::TRACE, "Returning FLOAT");
 
         return Node(static_cast<float>(result));
     }
     if (resultType == NodeValueType::Double) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning DOUBLE");
+        DEBUG_LOG(LogLevel::TRACE, "Returning DOUBLE");
         return Node(result);
     }
     if (resultType == NodeValueType::Long) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning LONG");
+        DEBUG_LOG(LogLevel::TRACE, "Returning LONG");
 
         return Node(static_cast<long>(result));
     }

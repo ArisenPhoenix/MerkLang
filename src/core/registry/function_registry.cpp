@@ -1,6 +1,6 @@
 #include "core/types.h"
 #include "ast/ast_callable.h"
-#include "core/functions/function_node.h"
+#include "core/callables/functions/function.h"
 #include "core/registry/function_registry.h"
 #include "utilities/debugger.h"
 

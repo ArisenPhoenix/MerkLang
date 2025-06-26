@@ -16,6 +16,18 @@ bool Tokenizer::isLogicOperator() {
     return (value == "and" || value == "or" || value == "not");
 }
 
+const std::unordered_set<std::string> knownTypes = {
+    "Int", "Float", "Bool", "String", "Array", "List", "Map", "Schema", "Set"
+};
+
+
+const std::unordered_set<String> keywords = {
+    "if", "elif", "else", "from", "as", "import", "while", "continue", "break", "return", "for"
+};
+
+const std::unordered_set<char> typeContainers = {
+    '<', '[', ']', '>'
+};
 
 
 Vector<Token> Tokenizer::tokenize() {
@@ -29,6 +41,8 @@ Vector<Token> Tokenizer::tokenize() {
             position++;
             column++;
         }
+
+        // auto c = source[position];
 
         if (source[position] == '\n') {
             // Secondary Backslash for viewing properly in the output
@@ -48,6 +62,13 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
+        else if (source[position] == '[') {
+            tokens.emplace_back(TokenType::LeftBracket, "[", line, column);
+            position++;
+            column++;
+            continue;
+        }
+
         else if (source[position] == '(') {
             tokens.push_back(Token(TokenType::Punctuation, "(", line, column));
             position++;
@@ -61,6 +82,14 @@ Vector<Token> Tokenizer::tokenize() {
             column++;
             continue;
         }
+
+        else if (source[position] == ']') {
+            tokens.emplace_back(TokenType::RightBracket, "]", line, column);
+            position++;
+            column++;
+            continue;
+        }
+
         else if (source[position] == ')') {
             tokens.push_back(Token(TokenType::Punctuation, ")", line, column));
             position++;
@@ -78,7 +107,7 @@ Vector<Token> Tokenizer::tokenize() {
             column += 2;
             continue;
         }
-        // Handle single-character operators
+        // Handle single character operators
         else if (isOperator(source[position]) || isPunctuation(source[position])) {
             tokens.push_back(readOperatorOrPunctuation());
             position++;  // Move past the single character
@@ -90,7 +119,11 @@ Vector<Token> Tokenizer::tokenize() {
         // Handle identifiers, numbers, and strings
         else if (isLetter(source[position])) {
             Token identifier = readIdentifier();  // advances past identifier
-        
+            
+            if (knownTypes.count(identifier.value)) {
+                identifier.type = TokenType::Type;
+            }
+
             char nextChar = position < sourceLength ? source[position] : '\0';
         
             char nextNextChar = peek();
@@ -102,8 +135,10 @@ Vector<Token> Tokenizer::tokenize() {
         
             tokens.push_back(identifier);
             skipWhitespace();
+
             
             if (previousToken().type == TokenType::Variable && handleOptionalType(tokens)) {
+                
                 continue;  // already tokenized the type annotation
             }
         } else if (isDigit(source[position])) {
@@ -134,8 +169,8 @@ Token Tokenizer::readCompoundOperatorOrPunctuation() {
     if (twoCharOp == "==" || twoCharOp == "!=" ||
         twoCharOp == "<=" || twoCharOp == ">=" || twoCharOp == "&&" ||
         twoCharOp == "||" || twoCharOp == "+=" || twoCharOp == "-=" ||
-        twoCharOp == "*=" || twoCharOp == "/=" || twoCharOp == "%=") {
-
+        twoCharOp == "*=" || twoCharOp == "/=" || twoCharOp == "%=" || twoCharOp == "->" ) { // last one signifies return value
+        
         return Token(TokenType::Operator, twoCharOp, line, startColumn);
     }
 
@@ -151,7 +186,15 @@ Token Tokenizer::readOperatorOrPunctuation() {
     }
 
     // Handle other mathematical and logical operators
-    if (isOperator(c)) return Token(TokenType::Operator, String(1, c), line, column);
+    if (isOperator(c)) {
+        if (c == '<' && lastTokenWas(TokenType::VarAssignment)) {
+            return Token(TokenType::LeftArrow, String(1, c), line, column);
+        } 
+        // else if (c == '>' && lastTokenWas(TokenType::VarAssignment)) {
+        //     return Token(TokenType::RightArrow, String(1, c), line, column);
+        // }
+        return Token(TokenType::Operator, String(1, c), line, column);
+    };
     if (isPunctuation(c)) return Token(TokenType::Punctuation, String(1, c), line, column);
 
     throw UnknownTokenError(String(1, c), line, column, currentLineText);
@@ -316,20 +359,24 @@ Token Tokenizer::readIdentifier() {
         type = TokenType::VarDeclaration;
     }
 
+    else if (keywords.count(value)) {
+        type = TokenType::Keyword;
+    }
+
     // Control Flow Keywords
-    else if (value == "if" || value == "elif" || value == "else") {
-        type = TokenType::Keyword;
-    }
+    // else if (value == "if" || value == "elif" || value == "else") {
+    //     type = TokenType::Keyword;
+    // }
 
-    // Recognize import-related keywords:
-    else if (value == "import" || value == "from") {
-        type = TokenType::Keyword;
-    }
+    // // Recognize import-related keywords:
+    // else if (value == "import" || value == "from") {
+    //     type = TokenType::Keyword;
+    // }
 
-    // Loop Keywords
-    else if (value == "for" || value == "while" || value == "break" || value == "return" || value == "continue") {
-        type = TokenType::Keyword;
-    }
+    // // Loop Keywords
+    // else if (value == "for" || value == "while" || value == "break" || value == "return" || value == "continue") {
+    //     type = TokenType::Keyword;
+    // }
 
     // Boolean Literals
     else if (value == "true" || value == "false") {
@@ -442,6 +489,8 @@ bool Tokenizer::handleOptionalType(Vector<Token>& tokens) {
                 String typeStr = source.substr(typeStart, position - typeStart);
                 tokens.emplace_back(TokenType::Punctuation, ":", line, colonCol);
                 tokens.emplace_back(TokenType::Type, typeStr, line, typeCol);
+                return true;
+            } else if (typeContainers.count(source[position])) {
                 return true;
             } else {
                 throw TokenizationError("Expected a capitalized type after ':'", line, column, currentLineText);
