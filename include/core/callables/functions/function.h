@@ -26,6 +26,7 @@ public:
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
     virtual FunctionBody* getThisBody() = 0;
+    virtual FunctionBody* getThisBody() const = 0;
 
     virtual UniquePtr<CallableBody> getBody() override = 0;
     virtual CallableBody* getBody() const override = 0;
@@ -54,7 +55,8 @@ public:
 
     SharedPtr<CallableSignature> toCallableSignature() override;
     
-    virtual FunctionBody* getThisBody();
+    FunctionBody* getThisBody() override; 
+    FunctionBody* getThisBody() const override;
     virtual UniquePtr<CallableBody> getBody() override;
     virtual CallableBody* getBody() const override;
     virtual CallableBody* getInvocableBody() override;

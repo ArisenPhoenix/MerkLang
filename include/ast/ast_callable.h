@@ -53,11 +53,7 @@ class CallableBody : public CodeBlock {
 public:
     // friend class MethodBody;
     CallableBody(SharedPtr<Scope> scope);
-    CallableBody(UniquePtr<CodeBlock>&& block)
-        : CodeBlock(block->getScope()) {
-        this->children = std::move(block->children);
-        block.reset();
-    }
+    CallableBody(UniquePtr<CodeBlock>&& block);
 
     CallableBody(UniquePtr<CallableBody>&& block);
     CallableBody(UniquePtr<CallableBody>* body);

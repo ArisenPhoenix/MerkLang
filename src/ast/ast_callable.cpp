@@ -76,15 +76,16 @@ UniquePtr<BaseAST> CallableRef::clone() const {
     return calRef;
 }
 
-// CallableDef::~CallableDef() {
-//     getBody().release();
-// }
 CallableDef::~CallableDef() = default;
 CallableCall::~CallableCall() = default;
-// CallableCall::~CallableCall() {
-//     getScope().reset();
-//     arguments.clear();
-// }
+
+
+
+CallableBody::CallableBody(UniquePtr<CodeBlock>&& block)
+    : CodeBlock(block->getScope()) {
+    this->children = std::move(block->children);
+    block.reset();
+}
 
 CallableBody::~CallableBody() {
     clear();
@@ -245,8 +246,6 @@ Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 
 Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
-    // std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
-    // std::cerr << "Type: " << getAstTypeAsString() << std::endl;
     throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 

@@ -252,9 +252,8 @@ namespace Evaluator {
 
 
     Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
-        (void)instanceNode;
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-        DEBUG_FLOW(FlowLevel::LOW);
         DEBUG_LOG(LogLevel::TRACE, "evaluateIf");
         if (ifStatement.getCondition()->evaluate(instanceScope, instanceNode).toBool()) {
             DEBUG_FLOW_EXIT();

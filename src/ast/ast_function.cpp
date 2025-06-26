@@ -63,23 +63,32 @@ Node FunctionBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 
 FunctionRef::FunctionRef(String name, SharedPtr<Scope> scope)
     : CallableRef(name, scope) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
         branch = "CallableRef";
-}
+    DEBUG_FLOW_EXIT();
+    }
 
 
 
 FunctionDef::FunctionDef(String name, ParamList parameters, UniquePtr<FunctionBody> body, CallableType funcType, SharedPtr<Scope> scope)
     : CallableDef(name, std::move(parameters), std::move(body), funcType, scope) {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
         DEBUG_LOG(LogLevel::DEBUG, "FuncType: ", callableTypeAsString(callType));
+        DEBUG_FLOW_EXIT();
 }
 
 
 FunctionCall::FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
     : CallableCall(functionName, std::move(arguments), scope) {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
         if (this->name.empty()) {
             throw MerkError("FunctionCall constructed with empty name");
         }
         branch = "CallableCall";
+        DEBUG_FLOW_EXIT();
 }
 
 
@@ -175,6 +184,7 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     }
 
     func->setCapturedScope(defScope);
+    func->setScope(defScope);
     DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::evaluate -> Captured Scope was Set for function");
 
     if (!func->getCapturedScope()) {throw MerkError("The Captured Definition Scope for the function created was not set properly");}

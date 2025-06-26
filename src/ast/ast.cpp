@@ -53,14 +53,14 @@ BaseAST::BaseAST(SharedPtr<Scope> scope) {(void)scope;}
 // Basic Constructors
 LiteralValue::LiteralValue(LitNode value, SharedPtr<Scope> scope, bool isString, bool isBool)
     : ASTStatement(scope), value(value), _isString(isString), _isBool(isBool) {
-        validateScope(scope, "LiteralValue::LiteralValue", value.toString());
+        // validateScope(scope, "LiteralValue::LiteralValue", value.toString());
     }
 
 // Variable Constructors
 VariableDeclaration::VariableDeclaration(String name, VarNode value, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
     : ASTStatement(scope), name(std::move(name)), variable(std::move(value)),
         typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
-        validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
+        // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
         DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
 }
 
@@ -78,7 +78,7 @@ VariableReference::VariableReference(UniquePtr<VariableReference> varRef) : ASTS
 
 VariableAssignment::VariableAssignment(String name, UniquePtr<ASTStatement> valueExpression, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name), valueExpression(std::move(valueExpression)) {
-        validateScope(scope, "VariableAssignment::VariableAssignment", name);
+        // validateScope(scope, "VariableAssignment::VariableAssignment", name);
     }
 
 VariableAssignment::VariableAssignment(UniquePtr<VariableAssignment> varAssign) : ASTStatement(varAssign->getScope()) {
@@ -109,7 +109,7 @@ BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left,
     if (!scope) {
         throw MerkError("The Scope Passed to BinaryOperation::BinaryOperation is null");
     }
-    validateScope(scope, "BinaryOperation::BinaryOperation", op);
+    // validateScope(scope, "BinaryOperation::BinaryOperation", op);
     DEBUG_FLOW_EXIT();
 }
 
@@ -117,9 +117,9 @@ BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left,
 
 
 Node LiteralValue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::LOW);
-
-    validateScope(scope, "LiteralValue", toString());
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    MARK_UNUSED_MULTI(scope);
+    // validateScope(scope, "LiteralValue", toString());
     Node val =  Evaluator::evaluateLiteral(value, _isString, _isBool);
 
     DEBUG_FLOW_EXIT();
@@ -130,7 +130,7 @@ Node LiteralValue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    validateScope(scope, "VariableDeclaration");
+    // validateScope(scope, "VariableDeclaration");
     DEBUG_LOG(LogLevel::TRACE, highlight("[VariableDeclaration::evaluate]", Colors::orange), valueExpression->toString());
     Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, typeTag, scope, instanceNode);
 
@@ -141,7 +141,7 @@ Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shar
 Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    validateScope(scope, "VariableAssignment::evaluate", name);
+    // validateScope(scope, "VariableAssignment::evaluate", name);
 
     Node val = Evaluator::evaluateVariableAssignment(name, valueExpression.get(), scope, instanceNode);
 
@@ -152,7 +152,7 @@ Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Share
 Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    validateScope(scope, "VariableReference::evluate", "Name = " + name);
+    // validateScope(scope, "VariableReference::evluate", "Name = " + name);
 
     VarNode& varRef = Evaluator::evaluateVariableReference(name, scope, instanceNode); 
     DEBUG_FLOW_EXIT();

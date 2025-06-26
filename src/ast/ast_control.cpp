@@ -253,8 +253,8 @@ Node WhileLoop::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
     DEBUG_FLOW(FlowLevel::LOW);
 
     DEBUG_LOG(LogLevel::INFO, "Evaluating WhileLoop with scope level: ", scope->getScopeLevel());
-    getScope()->debugPrint();
-    getScope()->printChildScopes();
+    // getScope()->debugPrint();
+    // getScope()->printChildScopes();
     Node val = Evaluator::evaluateWhileLoop(*condition, body.get(), scope, instanceNode);
 
     DEBUG_FLOW_EXIT();

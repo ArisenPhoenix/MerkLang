@@ -123,4 +123,5 @@ SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr
 CallableBody* UserFunction::getInvocableBody() {return body.get();}
 CallableBody* UserFunction::getBody() const {return body.get();}
 FunctionBody* UserFunction::getThisBody() {return body.get();}
+FunctionBody* UserFunction::getThisBody() const {return body.get();}
 UniquePtr<CallableBody> UserFunction::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}

@@ -44,7 +44,7 @@ UniquePtr<BaseAST> VariableAssignment::clone() const {
 
 UniquePtr<BaseAST> BinaryOperation::clone() const {
     if (!getScope()) {
-        throw MerkError("BinaryOpeation::clone getScope() is null");
+        throw MerkError("BinaryOperation::clone getScope() is null");
     }
     UniquePtr<BaseAST> clonedLeftBase = left->clone();
     auto clonedLeft = static_unique_ptr_cast<ASTStatement>(std::move(clonedLeftBase));
