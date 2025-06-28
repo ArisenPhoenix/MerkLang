@@ -16,78 +16,9 @@
 #include "core/scope.h"
  
 
-UniquePtr<VarNode> cloneVarNode(VarNode* original) {
-    return UniquePtr<VarNode>(original);
-}
+
 
 // In Scope class
-SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNames) {
-    DEBUG_FLOW(FlowLevel::MED);
-
-    auto detached = std::make_shared<Scope>(shared_from_this(), globalFunctions, globalClasses, interpretMode);
-    detached->isDetached = true;
-    detached->owner = owner+"(detached)";
-    includeMetaData(detached, true);
-    // For each free variable name, if it exists in this scope, or parent, get it and add to the vector
-    for (const auto& name : freeVarNames) {
-        if (this->hasVariable(name)) {
-            VarNode original = getVariable(name);
-            detached->declareVariable(name, cloneVarNode(original.clone()));
-        }
-        else if (auto parent = this->getParent()) {
-            // If not in the current scope, attempt to find it in the parents.
-            if (parent->hasVariable(name)) {
-                VarNode originalVar = parent->getVariable(name);
-                detached->declareVariable(name, cloneVarNode(originalVar.clone()));
-            }
-        }
-    }
-
-    DEBUG_FLOW_EXIT();
-    return detached;
-}
-
-
-SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNames) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    auto isolated = std::make_shared<Scope>(0, interpretMode, false);
-    includeMetaData(isolated, true);
-
-    for (const auto& name : freeVarNames) {
-        if (this->hasVariable(name)) {
-            isolated->declareVariable(name, cloneVarNode(getVariable(name).clone()));
-        } else if (auto parent = getParent()) {
-            if (parent->hasVariable(name)) {
-                isolated->declareVariable(name, cloneVarNode(parent->getVariable(name).clone()));
-            }
-        }
-    }
-
-    isolated->localFunctions = this->localFunctions;
-    isolated->localClasses = this->localClasses;
-    if (!isolated) {
-        throw MerkError("isolated Scope is Null");
-    }
-    DEBUG_FLOW_EXIT();
-
-    return isolated;
-}
-
-
-void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) const {
-    newScope->isDetached = thisIsDetached;
-    newScope->isClonedScope = newScope->isClonedScope ? newScope->isClonedScope : isClonedScope;
-    newScope->isCallableScope = newScope->isCallableScope ? newScope->isCallableScope : isCallableScope;
-    if (newScope->isDetached) {
-        if (newScope->owner.empty()) {
-            newScope->owner = owner;
-        } else {
-            newScope->owner = owner + "(detached)";
-        }
-    } else {
-        newScope->owner = owner;
-    }
-}
 
 SharedPtr<Scope> Scope::clone(bool strict) const {
     DEBUG_FLOW(FlowLevel::MED);

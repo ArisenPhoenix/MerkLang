@@ -29,14 +29,14 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
     Token baseToken = currentToken();
 
     if (baseToken.type != TokenType::ChainEntryPoint && baseToken.type != TokenType::Variable) {
-        throw UnexpectedTokenError(baseToken, "Expected ChainEntryPoint or Variable");
+        throw UnexpectedTokenError(baseToken, "Expected ChainEntryPoint or Variable", "Parser::parseChain");
     }
 
     advance();  // consume base token (e.g., `self`, `this`, etc.)
 
     Token punct = currentToken();
     if (punct.type != TokenType::Punctuation || (punct.value != "." && punct.value != "::")) {
-        throw UnexpectedTokenError(punct, "'.' or '::'");
+        throw UnexpectedTokenError(punct, "'.' or '::'", "Parser::parseChain");
     }
 
     chain->addElement(std::move(createChainElement(baseToken, punct, makeUnique<VariableReference>(baseToken.value, currentScope))));
@@ -49,16 +49,22 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         advance(); // move past delim/Punctuation token
 
         Token nextToken = currentToken();
-        if (nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef) {
-            throw UnexpectedTokenError(nextToken, "variable after '.' or '::'");
+        if (nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef && nextToken.type != TokenType::ClassMethodCall && nextToken.type != TokenType::ClassMethodRef) {
+            throw UnexpectedTokenError(nextToken, "variable after '.' or '::'", "Parser::parseChain");
         }
 
         bool isFunctionCall = nextToken.type == TokenType::FunctionCall;
+        bool isMethodCall = nextToken.type == TokenType::ClassMethodCall;
         UniquePtr<BaseAST> currentObject;
-        if (!isFunctionCall){
-            currentObject = makeUnique<VariableReference>(nextToken.value, currentScope);
-        } else {
+        if (isFunctionCall) {
             currentObject = parseFunctionCall();
+        }
+        if (isMethodCall){
+            auto func = parseFunctionCall();
+            currentObject = makeUnique<MethodCall>(func->getName(), std::move(func->arguments), func->getScope());
+            // func.release();
+        } else {
+            currentObject = makeUnique<VariableReference>(nextToken.value, currentScope);
         }
         
         chain->addElement(std::move(createChainElement(nextToken, delim, std::move(currentObject))));
@@ -258,14 +264,14 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
     DEBUG_FLOW(FlowLevel::HIGH);
 
     if (!expect(TokenType::ClassCall)) {
-        throw UnexpectedTokenError(currentToken(), "ClassCall");
+        throw UnexpectedTokenError(currentToken(), "ClassCall", "Parser::parseClassCall");
     }
 
     String className = currentToken().value;
     advance();  // consume class name
 
     if (!expect(TokenType::Punctuation) || currentToken().value != "(") {
-        throw UnexpectedTokenError(currentToken(), "Expected '(' after class name in instantiation");
+        throw UnexpectedTokenError(currentToken(), "Expected '(' after class name in instantiation", "Parser::parseClassCall");
     }
 
     advance();  // consume '('
@@ -286,7 +292,7 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
     }
 
     if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        throw UnexpectedTokenError(currentToken(), "Expected ')' to close class instantiation");
+        throw UnexpectedTokenError(currentToken(), "Expected ')' to close class instantiation", "Parser::parseClassCall");
     }
 
     advance();  // consume ')'
@@ -462,7 +468,7 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
 
 
     DEBUG_FLOW_EXIT();
-    throw UnexpectedTokenError(currentToken(), "Expected list or array literal.");
+    throw UnexpectedTokenError(currentToken(), "Expected list or array literal.", "parseClassLiteralCall");
 
 }
 

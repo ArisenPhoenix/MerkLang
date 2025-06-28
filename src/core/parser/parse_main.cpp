@@ -286,7 +286,7 @@ bool Parser::consume(TokenType type) {
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), "Expected Type: " + tokenTypeToString(type));
+    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), "Parser::consume");
 }
 
 bool Parser::consume(String value) {
@@ -294,7 +294,7 @@ bool Parser::consume(String value) {
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), value);
+    throw UnexpectedTokenError(currentToken(), value, "Parser::consume");
 }
 
 
@@ -313,7 +313,7 @@ bool Parser::consume(TokenType type, String val1, String val2, String val3) {
             msg += " | " + val3;
         }
     }
-    throw UnexpectedTokenError(token, msg);
+    throw UnexpectedTokenError(token, msg, "Parser::consume");
 }
 
 

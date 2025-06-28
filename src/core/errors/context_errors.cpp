@@ -39,7 +39,7 @@ NullVariableError::NullVariableError(const String& variableName)
     : ContextError("Variable '" + variableName + "' is null and cannot be accessed or assigned.") {}
 
 String NullVariableError::errorPrefix() const {
-    return highlight("Null Variable Error: ", Colors::pink);
+    return highlight("NullVariableError: ", Colors::pink);
 }
 
 String NullVariableError::errorHint() const {
@@ -52,7 +52,7 @@ VariableAlreadyDeclaredError::VariableAlreadyDeclaredError(const String& variabl
     : ContextError("Variable '" + variableName + "' has already been declared in the current context.") {}
 
 String VariableAlreadyDeclaredError::errorPrefix() const {
-    return highlight("Variable Already Declared Error: ", Colors::yellow);
+    return highlight("VariableAlreadyDeclaredError: ", Colors::yellow);
 }
 
 String VariableAlreadyDeclaredError::errorHint() const {
@@ -66,7 +66,7 @@ ImmutableVariableError::ImmutableVariableError(const String& variableName)
     : ContextError("Variable '" + variableName + "' is immutable and cannot be reassigned or updated.") {}
 
 String ImmutableVariableError::errorPrefix() const {
-    return highlight("Immutable Variable Error: ", Colors::purple);
+    return highlight("ImmutableVariableError: ", Colors::purple);
 }
 
 String ImmutableVariableError::errorHint() const {

@@ -25,14 +25,14 @@ public:
     virtual Node execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
-    virtual FunctionBody* getThisBody() = 0;
+    // virtual FunctionBody* getThisBody() = 0;
     virtual FunctionBody* getThisBody() const = 0;
 
     virtual UniquePtr<CallableBody> getBody() override = 0;
     virtual CallableBody* getBody() const override = 0;
     virtual CallableBody* getInvocableBody() override = 0;
     // virtual UniquePtr<CallableBody>& getBody() override = 0;
-
+    virtual void setCapturedScope(SharedPtr<Scope> scope) override = 0;
     virtual void setScope(SharedPtr<Scope> newScope) const override = 0;
     virtual String toString() const override = 0; 
 
@@ -55,16 +55,13 @@ public:
 
     SharedPtr<CallableSignature> toCallableSignature() override;
     
-    FunctionBody* getThisBody() override; 
+    // FunctionBody* getThisBody() override; 
     FunctionBody* getThisBody() const override;
     virtual UniquePtr<CallableBody> getBody() override;
     virtual CallableBody* getBody() const override;
     virtual CallableBody* getInvocableBody() override;
-    // UniquePtr<CallableBody>& getBody() override;
-
-    // FunctionBody* getInvocableBody() const = 0;
-    // FunctionBody* getInvocableBody() = 0;
     void setScope(SharedPtr<Scope> newScope) const override;
+    void setCapturedScope(SharedPtr<Scope> scope) override;
     String toString() const override;
 
 };
@@ -77,7 +74,6 @@ public:
     FunctionNode(SharedPtr<NativeFunction> native);
 
     FunctionNode(SharedPtr<Callable> function);
-
 
     SharedPtr<Callable> getCallable() const override;
 };

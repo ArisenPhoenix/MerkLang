@@ -278,7 +278,7 @@ Node ElseStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<
 
     validateScope(scope, "ElseStatement::evaluate");
 
-    Node val = Evaluator::evaluateElse(*body, scope);
+    Node val = Evaluator::evaluateElse(*body, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -292,7 +292,7 @@ Node ElifStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<
     }
     validateScope(scope, "ElIfStatement::evaluate", condition->toString());
 
-    Node val = Evaluator::evaluateElif(*this, scope);
+    Node val = Evaluator::evaluateElif(*this, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;

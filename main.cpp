@@ -61,10 +61,10 @@ int main(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
 
         tokenizer.printTokens((Debugger::getInstance().getLogLevel() >= LogLevel::ERROR));
-        // auto globalFunctions = getNativeFunctions(globalScope);
-        // for (auto& [name, globalFunc]: globalFunctions) {
-        //     globalScope->registerFunction(name, globalFunc);
-        // }
+        auto globalFunctions = getNativeFunctions(globalScope);
+        for (auto& [name, globalFunc]: globalFunctions) {
+            globalScope->registerFunction(name, globalFunc);
+        }
 
         // auto globalClasses = getNativeClasses(globalScope);
         // for (auto& [name, globalCls]: globalClasses) {

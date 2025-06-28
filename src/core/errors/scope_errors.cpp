@@ -39,7 +39,7 @@ VariableNotFoundError::VariableNotFoundError(const String& variableName)
     : ScopeError("Variable '" + variableName + "' not found in any accessible scope.") {}
 
 String VariableNotFoundError::errorPrefix() const {
-    return highlight("Variable Not Found Error: ", Colors::red);
+    return highlight("VariableNotFoundError: ", Colors::red);
 }
 
 String VariableNotFoundError::errorHint() const {
@@ -54,7 +54,7 @@ ImmutableVariableUpdateError::ImmutableVariableUpdateError(const String& variabl
     : ScopeError("Variable '" + variableName + "' is immutable and cannot be updated.") {}
 
 String ImmutableVariableUpdateError::errorPrefix() const {
-    return highlight("Immutable Variable Update Error: ", Colors::purple);
+    return highlight("ImmutableVariableUpdateError: ", Colors::purple);
 }
 
 String ImmutableVariableUpdateError::errorHint() const {
@@ -67,7 +67,7 @@ ChildScopeCreationError::ChildScopeCreationError()
     : ScopeError("Failed to create a child scope. Ensure sufficient memory and a valid parent scope.") {}
 
 String ChildScopeCreationError::errorPrefix() const {
-    return highlight("Child Scope Creation Error: ", Colors::orange);
+    return highlight("ChildScopeCreationError: ", Colors::orange);
 }
 
 String ChildScopeCreationError::errorHint() const {

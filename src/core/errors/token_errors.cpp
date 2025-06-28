@@ -33,7 +33,7 @@ UnknownTokenError::UnknownTokenError(const String& token, int line, int column, 
 String UnknownTokenError::errorString() const {
     std::ostringstream oss;
     oss << TokenizationError::errorString()
-        << "\n" << highlight("Unknown Token: ", Colors::blue) << highlightToken(context, token, Colors::red);
+        << "\n" << highlight("UnknownToken: ", Colors::blue) << highlightToken(context, token, Colors::red);
     return oss.str();
 }
 
@@ -54,7 +54,7 @@ OutOfBoundsError::OutOfBoundsError(int line, int column, const String& context)
 
 String OutOfBoundsError::errorString() const {
     std::ostringstream oss;
-    oss << highlight("Out of Bounds Error: ", Colors::purple) << message;
+    oss << highlight("OutofBoundsError: ", Colors::purple) << message;
 
     if (line >= 0 && column >= 0) {
         oss << "\n  " << highlight("Line: ", Colors::yellow) << line
@@ -77,7 +77,7 @@ UnmatchedQuoteError::UnmatchedQuoteError(int line, int column, const String& con
 
 String UnmatchedQuoteError::errorString() const {
     std::ostringstream oss;
-    oss << highlight("Unmatched Quote Error: ", Colors::pink) << message;
+    oss << highlight("UnmatchedQuoteError: ", Colors::pink) << message;
 
     if (line >= 0 && column >= 0) {
         oss << "\n  " << highlight("Line: ", Colors::yellow) << line

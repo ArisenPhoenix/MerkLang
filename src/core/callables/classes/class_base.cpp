@@ -216,6 +216,7 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     
 
     SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
+    placeArgsInCallScope(args, methodCallScope);
 
     auto params = parameters.clone();
 

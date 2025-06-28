@@ -81,6 +81,9 @@ UniquePtr<BaseAST> Break::clone() const {
 UniquePtr<BaseAST> Return::clone() const {
     UniquePtr<BaseAST> clonedReturnBase = returnValue->clone();
     auto clonedReturn = static_unique_ptr_cast<ASTStatement>(std::move(clonedReturnBase));
+    if (!getScope()) {
+        throw MerkError("Return Value Has No Scope For Cloning");
+    }
     return makeUnique<Return>(getScope(), std::move(clonedReturn));
 } 
 
@@ -197,25 +200,32 @@ UniquePtr<BaseAST> ClassBody::clone() const {
 
 
 UniquePtr<BaseAST> MethodBody::clone() const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    validateScope(getScope(), "MethodBody::clone");
     UniquePtr<MethodBody> newBlock = makeUnique<MethodBody>(getScope());
 
     for (const auto &child : children) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Cloning Child: ", child->toString());
         newBlock->addChild(child->clone());
     }
     newBlock->setNonStaticElements(nonStaticElements);
+    DEBUG_FLOW_EXIT();
     return newBlock;
 }
 
 
 
 UniquePtr<BaseAST> MethodDef::clone() const {
-    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!body->getScope()){
         throw MerkError("No scope present in MethodDef::clone");
     }
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
     
     auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
+    if (!getScope()) {
+        throw MerkError("MethodDef::clone -> No scope");
+    }
     auto methodDef = makeUnique<MethodDef>(name, parameters.clone(), std::move(clonedBody), callType, getScope()->clone());
     String access = getMethodAccessor();
 

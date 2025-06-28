@@ -443,7 +443,7 @@ UniquePtr<BaseAST> Parser::parseStatement() {
 
         default:
             DEBUG_FLOW_EXIT();
-            throw UnexpectedTokenError(token, "Keyword, Variable, FunctionCall, FunctionDef, ClassDef, VarDeclaration", "ClassCall");
+            throw UnexpectedTokenError(token, "Keyword, Variable, FunctionCall, FunctionDef, ClassDef, VarDeclaration", "Parser::parseStatement");
 
     }
 }

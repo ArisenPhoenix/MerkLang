@@ -21,10 +21,6 @@ Function::Function(String name, ParamList params, CallableType funcType, bool re
     : Invocable(name, params, CallableType::FUNCTION, requiresReturn, isStatic)
 {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // if (!getCapturedScope()) {
-    //     throw MerkError("Function::Function -> capturedScope is null");
-    // }
-
     DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
     DEBUG_FLOW_EXIT();
 }
@@ -32,9 +28,6 @@ Function::Function(String name, ParamList params, CallableType funcType, bool re
 UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType)
     : Function(name, parameters, CallableType::FUNCTION), body(std::move(body)) {
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
-        // if (!getCapturedScope()) {
-        //     throw MerkError("UserFunction::UserFunction -> capturedScope is null");
-        // }
 
         setSubType(funcType);
         setCallableType(CallableType::FUNCTION);
@@ -92,22 +85,15 @@ void UserFunction::setScope(SharedPtr<Scope> newScope) const {
     newScope->owner = generateScopeOwner("UserFunction", name);
     // getThisBody()->setScope(newScope);
     auto children = body->getAllAst();
-    for (auto& child: children) {
-        if (!child->getScope()) {
-            throw MerkError("UserFunction::setScope child: " + child->getAstTypeAsString() + " is scopeless 1");
-        }
-    }
     body->setScope(newScope);
-
-    auto children2 = body->getAllAst();
-    for (auto& child: children2) {
-        if (!child->getScope()) {
-            throw MerkError("UserFunction::setScope child: " + child->getAstTypeAsString() + " is scopeless 2");
-        }
-    }
 
     DEBUG_FLOW_EXIT();
     // getBody()->setScope(newScope);
+}
+
+void UserFunction::setCapturedScope(SharedPtr<Scope> newScope) {
+    capturedScope = newScope;
+    setScope(newScope);
 }
 
 String UserFunction::toString() const {return "<Function: " + getName() + ">";}
@@ -122,6 +108,6 @@ SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr
 
 CallableBody* UserFunction::getInvocableBody() {return body.get();}
 CallableBody* UserFunction::getBody() const {return body.get();}
-FunctionBody* UserFunction::getThisBody() {return body.get();}
+// FunctionBody* UserFunction::getThisBody() {return body.get();}
 FunctionBody* UserFunction::getThisBody() const {return body.get();}
 UniquePtr<CallableBody> UserFunction::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}

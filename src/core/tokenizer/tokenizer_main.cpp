@@ -336,7 +336,12 @@ Token Tokenizer::readIdentifier() {
 
     // Function Name (Immediately after `FunctionDef`
     else if (isFunction(position)) {
-        type = insideClass ? TokenType::ClassMethodCall : TokenType::FunctionCall;
+        // type = insideClass ? TokenType::ClassMethodCall : TokenType::FunctionCall;
+        if (previousToken().value == ".") {
+            type = TokenType::ClassMethodCall;
+        } else {
+            type = TokenType::FunctionCall;
+        }
         insideArgs = true;
     }
 

@@ -140,6 +140,15 @@ public:
     void printChildScopes(int indentLevel = 0) const;
     
     SharedPtr<Scope> isolateScope(const std::unordered_set<String>& freeVarNames);
+
+
+    // scope builders
+
+    SharedPtr<Scope> buildFunctionCallScope(SharedPtr<Function> func, String name);
+    SharedPtr<Scope> buildMethodCallScope(SharedPtr<Method> func, String name);
+
+    SharedPtr<Scope> buildInstanceScope(SharedPtr<ClassBase> classTemplate, String className);
+    SharedPtr<Scope> buildClassScope(FreeVars freeVarNames, String className);
     
 
 

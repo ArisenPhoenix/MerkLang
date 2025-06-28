@@ -265,20 +265,6 @@ SharedPtr<Scope> Scope::createChildScope() {
   }
 
 
-SharedPtr<Scope> Scope::makeCallScope() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    auto c = makeShared<Scope>(shared_from_this(),
-                                globalFunctions,
-                                globalClasses,
-                                interpretMode);
-    c->isCallableScope = true;
-    c->isDetached = true;
-    c->isClonedScope = true;
-    c->isRoot = false;
-    DEBUG_FLOW_EXIT();
-    return c;
-}
-
 UniquePtr<VarNode> cloneVar(VarNode* original) {
     return UniquePtr<VarNode>(original);
 }

@@ -34,7 +34,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
     }
 
     if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-        throw UnexpectedTokenError(currentToken(), "Expected ':' after 'if' condition.");
+        throw UnexpectedTokenError(currentToken(), "Expected ':' after 'if' condition.", "Parser::parseIfStatement");
     }
     advance(); // Consume ':'
 
@@ -77,7 +77,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
         }
 
         if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-            throw UnexpectedTokenError(currentToken(), "Expected ':' after 'elif' condition.");
+            throw UnexpectedTokenError(currentToken(), "Expected ':' after 'elif' condition.", "Parser::parseIfStatement");
         }
      
 
@@ -104,7 +104,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
         advance(); // Consume 'else'
 
         if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-            throw UnexpectedTokenError(currentToken(), "Expected ':' after 'else'.");
+            throw UnexpectedTokenError(currentToken(), "Expected ':' after 'else'.", "Parser::parseIfStatement");
         }
         advance(); // Consume ':'
 
@@ -138,7 +138,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
 UniquePtr<WhileLoop> Parser::parseWhileLoop() {
     // DEBUG_FLOW(FlowLevel::HIGH);
     if (currentToken().value != "while") {
-        throw UnexpectedTokenError(currentToken(), "while");
+        throw UnexpectedTokenError(currentToken(), "while", "Parser::parseWhileLoop");
     }
     advance(); // Consume 'while'
 

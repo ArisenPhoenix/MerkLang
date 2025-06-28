@@ -71,6 +71,21 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 
     if (!body->getScope()){throw MerkError("scope not present in ClassDef::evaluate in body");}
 
+    // SharedPtr<Scope> classDefCapturedScope = this->detachScope(freeVarNames);
+    // SharedPtr<Scope> classScope = classDefCapturedScope->makeCallScope();
+    // classScope->isDetached = true; // detached until ClassBase owns it
+    // classScope->owner = generateScopeOwner("ClassMainScopeClass", className);
+    // // SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope); // 
+    // this->appendChildScope(classDefCapturedScope, "ClassDef::evaluate");
+    
+    // classDefCapturedScope->owner = generateScopeOwner("ClassDef--InitialCaptured", className);
+    // classDefCapturedScope->appendChildScope(classScope);  // cls->getClassScope // place classScope inside of classDefCapturedScope
+
+    // return classScope;
+    // SharedPtr<Scope> classScope = defScope->buildClassScope(freeVarNames, name);
+    // SharedPtr<Scope> classDefCapturedScope = classScope->getParent();
+    
+
     FreeVars freeVarNames = body->collectFreeVariables();
     if (freeVarNames.size() == 0) {DEBUG_LOG(LogLevel::TRACE, "There Are No Free Variables in classdef: ", name);}
 
@@ -135,7 +150,7 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 
 Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    return Evaluator::evaluateClassBody(classCapturedScope, classScope, getScope(), accessor, getMutableChildren());
+    return Evaluator::evaluateClassBody(classCapturedScope, classScope, getScope(), accessor, getMutableChildren(), instanceNode);
 }
 
 Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
@@ -144,7 +159,7 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
     if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
 
     // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Displaying Arguments", Colors::bold_purple));
-    Vector<Node> argValues = handleArgs(callScope);
+    Vector<Node> argValues = handleArgs(callScope, instanceNode);
     if (argValues.size() < arguments.size()){
         throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");
     }
@@ -156,26 +171,6 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
     DEBUG_FLOW_EXIT();
 
     return Evaluator::evaluateClassCall(callScope, name, argValues, instanceNode);
-}
-
-Node MethodDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
-    if (!scope){
-        throw MerkError("Provided Scope to MethodDef::evaluate is null");
-    }
-
-    if (!getScope()){
-        throw MerkError("MethodDef::evaluate, scope is null");
-    }
-
-    if (!getClassScope()) {
-        throw MerkError("Class Scope was not supplied to Method: " + name);
-    }
-
-    // auto subType = callType;
-    // auto primaryType = CallableType::METHOD;
-    return Evaluator::evaluateMethodDef(scope, getScope(), getClassScope(), name, getBody(), parameters, callType, methodType);
 }
 
 Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {

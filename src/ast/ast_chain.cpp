@@ -369,6 +369,9 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
         if (currentVal.isClassInstance()) {
             auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
             currentScope = instance->getInstanceScope();
+            if (!currentScope) {
+                throw MerkError("Scope Invalid During Chain Iteration");
+            }
             instanceNode = makeShared<ClassInstanceNode>(instance);
             
             if (objType == AstType::VariableDeclaration){
@@ -383,12 +386,22 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 currentVal = elem.object->evaluate(methodScope, instanceNode);
             }
 
-            else if (objType == AstType::FunctionCall || objType == AstType::ClassMethodCall) {
+            else if (objType == AstType::FunctionCall) {
                 // elem.object->printAST(std::cout);
-                auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
-                auto args = functionCall->handleArgs(currentScope); 
-                currentVal = instance->call(elem.name, args);
+                // auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
+                // auto args = functionCall->handleArgs(currentScope); 
+                // currentVal = instance->call(elem.name, args);
+                throw MerkError("This should be a method");
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
                 
+            }
+
+            else if (objType == AstType::ClassMethodCall) {
+                elem.object->printAST(std::cout);
+                // auto methodCall = static_unique_ptr_cast<MethodCall>(std::move(elem.object->clone()));
+                // auto args = methodCall->handleArgs(currentScope); 
+                // currentVal = instance->call(elem.name, args);
+                currentVal = elem.object->evaluate(currentScope, instanceNode);
             }
             
             currentScope = elem.object->getScope();
@@ -396,7 +409,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
 
         } else {
             elem.object->printAST(std::cout);
-            currentVal = elem.object->evaluate(currentScope);
+            currentVal = elem.object->evaluate(currentScope, instanceNode);
             currentScope = elem.object->getScope();
             setLastScope(currentScope);
         }

@@ -228,6 +228,8 @@ class ComposableTypeNode : public Node {
     Vector<SharedPtr<Node>> innerTypes; // e.g., [Int], or [String, Int]
 };
 
+UniquePtr<VarNode> cloneVarNode(VarNode* original);
+
 #endif // NODE_H
 
 

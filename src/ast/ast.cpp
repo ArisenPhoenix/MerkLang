@@ -182,8 +182,8 @@ Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPt
 Node UnaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     validateScope(scope, "UnaryOperation::evaluate", op);
-
-    Node operandValue = operand->evaluate(scope);
+    
+    Node operandValue = operand->evaluate(scope, instanceNode);
     Node val = Evaluator::evaluateUnaryOperation(op, operandValue, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
@@ -199,7 +199,7 @@ void VariableDeclaration::setScope(SharedPtr<Scope> newScope) {
 void VariableReference::setScope(SharedPtr<Scope> newScope) {
     (void)newScope;
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
-    // scope = newScope;
+    scope = newScope;
 }
 
 void VariableAssignment::setScope(SharedPtr<Scope> newScope) {
@@ -242,6 +242,7 @@ Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassIn
     if (!returnValue) {
         throw RunTimeError("Return statement must have a value.");
     }
+
     auto value = returnValue->evaluate(scope, instanceNode);
 
     DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());

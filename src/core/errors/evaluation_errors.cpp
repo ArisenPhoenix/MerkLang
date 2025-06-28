@@ -36,7 +36,7 @@ UndefinedVariableError::UndefinedVariableError(const String& variableName, const
     : EvaluationError("Undefined variable: '" + variableName + "' was not declared.", context) {}
 
 String UndefinedVariableError::errorPrefix() const {
-    return highlight("Undefined Variable Error: ", Colors::red);
+    return highlight("UndefinedVariableError: ", Colors::red);
 }
 
 String UndefinedVariableError::errorHint() const {
@@ -50,7 +50,7 @@ TypeMismatchError::TypeMismatchError(const String& expected, const String& actua
         : EvaluationError("Type mismatch: expected '" + expected + "', but found '" + actual + "'.", context) {}
 
 String TypeMismatchError::errorPrefix() const {
-    return highlight("Type Mismatch Error: ", Colors::purple);
+    return highlight("TypeMismatchError: ", Colors::purple);
 }
 
 String TypeMismatchError::errorHint() const {
@@ -64,7 +64,7 @@ InvalidOperationError::InvalidOperationError(const String& operation, const Stri
     : EvaluationError("Invalid operation: '" + operation + "' cannot be performed.", context) {}
 
 String InvalidOperationError::errorPrefix() const {
-    return highlight("Invalid Operation Error: ", Colors::orange);
+    return highlight("InvalidOperationError: ", Colors::orange);
 }
 
 String InvalidOperationError::errorHint() const {
@@ -78,7 +78,7 @@ BlockEvaluationError::BlockEvaluationError(const String& message, const String& 
     : EvaluationError("Error while evaluating a block: " + message, context) {}
 
 String BlockEvaluationError::errorPrefix() const {
-    return highlight("Block Evaluation Error: ", Colors::green);
+    return highlight("BlockEvaluationError: ", Colors::green);
 }
 
 String BlockEvaluationError::errorHint() const {
@@ -92,7 +92,7 @@ BreakOutsideLoopError::BreakOutsideLoopError(const String& context)
     : EvaluationError("Break statement encountered outside of a loop.", context) {}
 
 String BreakOutsideLoopError::errorPrefix() const {
-    return highlight("Break Outside Loop Error: ", Colors::red);
+    return highlight("BreakOutsideLoopError: ", Colors::red);
 }
 
 String BreakOutsideLoopError::errorHint() const {
@@ -105,7 +105,7 @@ UnreachableCodeError::UnreachableCodeError(const String& context)
     : EvaluationError("Unreachable code was executed. This may indicate a bug.", context) {}
 
 String UnreachableCodeError::errorPrefix() const {
-    return highlight("Unreachable Code Error: ", Colors::red);
+    return highlight("UnreachableCodeError: ", Colors::red);
 }
 
 String UnreachableCodeError::errorHint() const {

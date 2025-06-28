@@ -223,12 +223,12 @@ bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
 
 
 
-Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
+Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     Vector<Node> evaluatedArgs;
 
 
     for (const auto &arg : arguments) {
-        evaluatedArgs.push_back(arg->evaluate(scope));
+        evaluatedArgs.push_back(arg->evaluate(scope, instanceNode));
     }
 
     return evaluatedArgs;

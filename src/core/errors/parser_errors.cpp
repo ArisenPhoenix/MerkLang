@@ -52,14 +52,14 @@ SyntaxError::SyntaxError(const String& message, const Token& token, const String
         : ParserError("Syntax Error: " + message, token, context) {}
 
 String SyntaxError::errorPrefix() const {
-    return highlight("Syntax Error: ", Colors::blue);
+    return highlight("SyntaxError: ", Colors::blue);
 }
 
 MissingTokenError::MissingTokenError(const Token& token, const String& context)
         : ParserError("Expected token is missing.", token, context) {}
 
 String MissingTokenError::errorPrefix() const {
-    return highlight("Missing Token Error: ", Colors::orange);
+    return highlight("MissingTokenError: ", Colors::orange);
 }
 
 String MissingTokenError::errorHint() const {
@@ -71,7 +71,7 @@ UnexpectedTokenError::UnexpectedTokenError(const Token& token, const String& exp
     : ParserError(token.value, token, context), expected(expected) {}
 
 String UnexpectedTokenError::errorPrefix() const {
-    return highlight("Unexpected Token Error: ", Colors::red);
+    return highlight("UnexpectedTokenError: ", Colors::red);
 }
 
 String UnexpectedTokenError::errorHint() const {
@@ -84,7 +84,7 @@ UnclosedBlockError::UnclosedBlockError(const Token& token)
     : ParserError("Unclosed block detected.", token) {}
 
 String UnclosedBlockError::errorPrefix() const {
-    return highlight("Unclosed Block Error: ", Colors::pink);
+    return highlight("UnclosedBlockError: ", Colors::pink);
 }
 
 String UnclosedBlockError::errorHint() const {
@@ -96,7 +96,7 @@ InvalidIndentationError::InvalidIndentationError(const Token& token)
     : ParserError("Invalid indentation.", token) {}
 
 String InvalidIndentationError::errorPrefix() const {
-    return highlight("Invalid Indentation Error: ", Colors::green);
+    return highlight("InvalidIndentationError: ", Colors::green);
 }
 
 String InvalidIndentationError::errorHint() const {

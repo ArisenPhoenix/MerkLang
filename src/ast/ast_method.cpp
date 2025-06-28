@@ -82,50 +82,37 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
 
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
-    scope->owner = generateScopeOwner("MethodCall", name);
-    Vector<Node> evaluatedArgs = handleArgs(scope);
-
-
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "HANDLED ARGS IN METHOD CALL :: EVALUATE");
-
+    
     if (!scope->hasFunction(name)){
         throw MerkError("Method: " + name + " Couldn't Be Found");
     }
-    DEBUG_LOG(LogLevel::ERROR, highlight("Found Function " + name, Colors::yellow));
-    
+
+    Vector<Node> evaluatedArgs = handleArgs(scope);
     auto optSig = scope->getFunction(name, evaluatedArgs);
 
     if (!optSig){
         throw FunctionNotFoundError(name);
     }
     SharedPtr<Method> method = std::static_pointer_cast<Method>(optSig->getCallable());
-    SharedPtr<Scope> callScope = method->getCapturedScope();
-    callScope->owner = generateScopeOwner("MethodCall", name);
-
-    callScope = callScope->makeCallScope();
-    callScope->owner = generateScopeOwner("MethodCall", name);
     
-    callScope->owner = "MethodCall:evaluate (" + name + ")";
+    if (method->getSubType() == CallableType::NATIVE) {
+        method->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
 
-    if (!callScope){
-        throw MerkError("Scope Is Not Valid In MethodCall::execute->method");
+        return method->execute(evaluatedArgs, scope, instanceNode);
     }
+
+    SharedPtr<Scope> callScope = scope->buildMethodCallScope(method, name);
+
+    if (!callScope) {throw MerkError("Scope Is Not Valid In UserFunction::execute->function");}
     
-    DEBUG_LOG(LogLevel::DEBUG, "******************************* Method Scope Set *******************************");
+    DEBUG_LOG(LogLevel::TRACE, "******************************* UserFunction Scope Set *******************************");
 
     method->placeArgsInCallScope(evaluatedArgs, callScope);
-
-    scope->appendChildScope(callScope, "MethodCall::evaluate");
     
-    method->setCapturedScope(callScope);
-    
-    if (!method->getBody()->getScope()){
-        throw ScopeError("MethodCall func->getBoby()->getScope  created an unusable scope");
-    }
-   
+    if (!method->getBody()->getScope()){throw ScopeError("MethodCall method->getBoby()->getScope  created an unusable scope");}   
 
     Node value = method->execute(evaluatedArgs, callScope, instanceNode);
+    scope->removeChildScope(callScope);
     DEBUG_FLOW_EXIT();
     return value; 
 }
@@ -155,3 +142,29 @@ void MethodBody::setNonStaticElements(Vector<Chain*> nonStaticEls){
 }
 
 bool MethodDef::isConstructor() const {return name == "construct";}
+
+
+
+Node MethodDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
+    if (!scope){
+        throw MerkError("Provided Scope to MethodDef::evaluate is null");
+    }
+
+    if (!getScope()){
+        throw MerkError("MethodDef::evaluate, scope is null");
+    }
+
+    if (!getClassScope()) {
+        throw MerkError("Class Scope was not supplied to Method: " + name);
+    }
+
+    // auto subType = callType;
+    // auto primaryType = CallableType::METHOD;
+
+    DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD DEF CALL TYPE: ", callableTypeAsString(callType));
+    DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD DEF SUB TYPE: ", callableTypeAsString(methodType));
+
+    return Evaluator::evaluateMethodDef(scope, getScope(), getClassScope(), name, getBody(), parameters, methodType, instanceNode);
+}

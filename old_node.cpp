@@ -16,7 +16,30 @@
 #include <utility>
 #include <cmath>
 
+#include "core/callables/classes/class_base.h"
 
+
+
+
+// /* ---------- helper -------------------------------------------------- */
+// void moveFrom(Node& dst, Node& src) noexcept
+// {
+//     dst.data.value = std::move(src.data.value);
+
+//     /* always re-synchronise the enum with what is *really* in the variant */
+//     dst.data.type  = deduceType(dst.data.value);
+
+//     /* copy POD flags */
+//     dst.isConst    = src.isConst;
+//     dst.isMutable  = src.isMutable;
+//     dst.isStatic   = src.isStatic;
+//     dst.isCallable = src.isCallable;
+//     dst.name       = std::move(src.name);
+
+//     /* leave src harmless */
+//     src.data.value.emplace<NullType>();
+//     src.data.type = NodeValueType::Null;
+// }
 // const bool debugNodeC = false;
 // getIsCallable
 
@@ -85,12 +108,26 @@ std::pair<VariantType, NodeValueType> validateAndCopy(const VariantType& value, 
 
 
 
+// static NodeValueType deduceType(const VariantType& v)
+// {
+//     return std::visit([](auto&& arg) -> NodeValueType
+//     {
+//         using T = std::decay_t<decltype(arg)>;
+//         if constexpr (std::is_same_v<T, int>)                       return NodeValueType::Int;
+//         else if constexpr (std::is_same_v<T, float>)                return NodeValueType::Float;
+//         else if constexpr (std::is_same_v<T, double>)               return NodeValueType::Double;
+//         else if constexpr (std::is_same_v<T, long>)                 return NodeValueType::Long;
+//         else if constexpr (std::is_same_v<T, bool>)                 return NodeValueType::Bool;
+//         else if constexpr (std::is_same_v<T, char>)                 return NodeValueType::Char;
+//         else if constexpr (std::is_same_v<T, String>)               return NodeValueType::String;
+//         else if constexpr (std::is_same_v<T, std::shared_ptr<ClassInstance>>) return NodeValueType::ClassInstance;
+//         else if constexpr (std::is_same_v<T, NullType>)             return NodeValueType::Null;
+//         else                                                        return NodeValueType::Any;
+//     }, v);
+// }
 
 
 
-NodeData::~NodeData() {
-    value = 0;
-}
 
 bool validateSingleNode(Node node, String methodName, bool debug){
     if (debug){
@@ -339,9 +376,9 @@ bool Node::getIsCallable() const {
     return isCallable; 
 }
 
-bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInstance;}
+bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInstance && std::holds_alternative<SharedPtr<ClassInstance>>(data.value);}
 
-bool Node::isClassInstance() {return data.type == NodeValueType::ClassInstance;}
+bool Node::isClassInstance() {return data.type == NodeValueType::ClassInstance && std::holds_alternative<SharedPtr<ClassInstance>>(data.value);}
 
 
 bool Node::isNumeric() const { return isInt() || isFloat() || isDouble() || isLong(); }
@@ -399,6 +436,18 @@ bool Node::toBool() const {
     return std::get<bool>(data.value);
 }
 
+
+// ClassInstanceNode Node::toClassInstance() const {
+//     if (isClassInstance()) {
+//         auto instance = std::get<SharedPtr<ClassInstance>>(getValue());
+//         auto instanceNode = makeShared<ClassInstanceNode>(instance);
+//         return instanceNode->getInstanceNode();
+//     }
+//     throw MerkError(name + ": is not a classInstanceNode");
+// }
+    
+
+
 String Node::toString() const {
     try {
         switch (data.type) {
@@ -428,13 +477,13 @@ String Node::toString() const {
                 return "Class";
             
             case NodeValueType::ClassInstance:
-                return "<ClassInstance>" + name;
+                return "<ClassInstance>("+name+")";
             case NodeValueType::Callable:
-                return "<Callable>" + name;
+                return "<Callable";
             case NodeValueType::UNKNOWN:
                 return "UNKNOWN";
             case NodeValueType::Function:
-                return "<Function>" + name;
+                return "Function";
             case NodeValueType::None:
                 return "None";
             default:
@@ -520,8 +569,8 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
     if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
     if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
     // if (std::holds_alternative<NodeVector>(value)) return NodeValueType::Vector;
-    if (std::holds_alternative<NodeList>(value)) return NodeValueType::List;
-    if (std::holds_alternative<SharedPtr<ClassInstance>>(value)) return NodeValueType::ClassInstance;
+    // if (std::holds_alternative<NodeList>(value)) return NodeValueType::List;
+    // if (std::holds_alternative<SharedPtr<ClassInstanceNode>>(value)) return NodeValueType::ClassInstance;
     // if (std::holds_alternative<SharedPtr<FunctionNode>>(value)) return NodeValueType::Function;
     return NodeValueType::Any;  // Allow `Any` when the type is unknown
 } 
@@ -861,88 +910,6 @@ void VarNode::setValue(const Node& other) {
     DEBUG_LOG(LogLevel::DEBUG, "VarNode::setValue: Value updated, metadata remains unchanged.");
 }
 
-// Default Constructor
-Node::Node() : data() {
-    DEBUG_LOG(LogLevel::DEBUG, "===== Node was created with default initialization.");
-}
-
-// Copy Constructor (Handles VarNode properly)
-Node::Node(const Node& other) {
-    if (this == &other) {return;}
-
-    this->data = other.data;
-    isConst = other.isConst;
-    isMutable = other.isMutable;
-    isStatic = other.isStatic;
-    isCallable = other.isCallable;
-    name = other.name;
-
-
-    DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-constructed.");
-}
-
-// Move Constructor
-Node::Node(Node&& other) noexcept {
-    this->data = std::move(other.data);
-    other.data.type = NodeValueType::Null; // Reset moved-from object
-    isConst = other.isConst;
-    isMutable = other.isMutable;
-    isStatic = other.isStatic;
-    isCallable = other.isCallable;
-    name = other.name;
-    // DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-constructed.");
-}
-
-// Copy Assignment Operator
-Node& Node::operator=(const Node& other) {
-    if (this != &other) {
-        if (const VarNode* varNode = dynamic_cast<const VarNode*>(&other)) {
-            *this = VarNode(*varNode); // Call VarNode's copy assignment operator
-        } else {
-            data = other.data;
-            isConst = other.isConst;
-            isMutable = other.isMutable;
-            isStatic = other.isStatic;
-            isCallable = other.isCallable;
-            name = other.name;
-            DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-assigned.");
-        }
-    }
-    return *this;
-}
-
-// Move Assignment Operator
-Node& Node::operator=(Node&& other) noexcept {
-    if (this != &other) {
-        data = std::move(other.data);
-        isConst = other.isConst;
-        isMutable = other.isMutable;
-        isStatic = other.isStatic;
-        isCallable = other.isCallable;
-        name = other.name;
-        DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-assigned.");
-    }
-    return *this;
-}
-
-// Constructor accepting a VariantType
-Node::Node(const VariantType& value) {
-    setInitialValue(value);
-    validateTypeAlignment();
-}
-
-// Constructor accepting a string value and type
-Node::Node(const String& value, const String& typeStr) {
-    setInitialValue(value, typeStr);
-    validateTypeAlignment();
-}
-
-// Destructor
-Node::~Node() {
-    DEBUG_LOG(LogLevel::DEBUG, "===== Node was destroyed.");
-    // data.value._M_reset();
-}
-
 // Clone Method
 Node* Node::clone() const {
     return new Node(*this);
@@ -1004,12 +971,142 @@ LitNode& LitNode::operator=(LitNode&& other) noexcept {
 
 
 
+String LitNode::toString() const {
+    try {
+        switch (data.type) {
+            case NodeValueType::Int:
+                return std::to_string(std::get<int>(data.value));
+            case NodeValueType::Float:
+                return std::to_string(std::get<float>(data.value));
+            case NodeValueType::Double:
+                return std::to_string(std::get<double>(data.value));
+            case NodeValueType::Long:
+                return std::to_string(std::get<long>(data.value));
+            case NodeValueType::Bool:
+                return std::get<bool>(data.value) ? "true" : "false";
+            case NodeValueType::Char:
+                return std::string(1, std::get<char>(data.value));
+            case NodeValueType::String:
+                return std::get<String>(data.value);
+            case NodeValueType::Null:
+                return "null"; 
+            case NodeValueType::Uninitialized:
+                return "[Uninitialized]";
+            case NodeValueType::Any:
+                return "[Any Type]";
+            default:
+                throw RunTimeError("Unsupported type for Node toString.");
+        }
+    } catch (const std::exception& e) {
+        debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());
+        return "[Error in LitNode::toString]";
+    }
+}
 
 
 
 
+void Node::moveFrom(Node& dst, Node& src) noexcept
+    {
+        dst.data.type = src.data.type;
+
+        std::visit([&](auto& val){
+            using T = std::decay_t<decltype(val)>;
+
+            if constexpr (std::is_same_v<T, SharedPtr<ClassInstance>>)
+            {                          // <- keep both Nodes owning the same ptr
+                dst.data.value = val;  // copy
+            }
+            else
+            {                          // <- normal move
+                dst.data.value = val;
+                // src.data.value = Null;
+                // src.data.type = NodeValueType::Null;
+            }
+        }, src.data.value);
+
+        dst.isConst    = src.isConst;
+        dst.isMutable  = src.isMutable;
+        dst.isStatic   = src.isStatic;
+        dst.isCallable = src.isCallable;
+        dst.name       = src.name;
+    }
 
 
+
+NodeData::~NodeData() = default;
+
+
+// Default Constructor
+Node::Node() : data() {
+    DEBUG_LOG(LogLevel::DEBUG, "===== Node was created with default initialization.");
+}
+
+// Copy Constructor (Handles VarNode properly)
+Node::Node(const Node& other) {
+    if (this == &other) {return;}
+
+    this->data = other.data;
+    this->isConst = other.isConst;
+    this->isMutable = other.isMutable;
+    this->isStatic = other.isStatic;
+    this->isCallable = other.isCallable;
+    this->name = other.name;
+
+
+    DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-constructed.");
+}
+
+
+Node::Node(Node&& other) noexcept {
+    moveFrom(*this, other);
+}
+
+Node& Node::operator=(Node&& other) noexcept
+{
+    if (&other != this)
+        moveFrom(*this, other);
+    return *this;
+}
+
+// Copy Assignment Operator
+Node& Node::operator=(const Node& other) {
+    if (this != &other) {
+        if (const VarNode* varNode = dynamic_cast<const VarNode*>(&other)) {
+            *this = VarNode(*varNode); // Call VarNode's copy assignment operator
+        } else {
+            data = other.data;
+            this->isConst = other.isConst;
+            this->isMutable = other.isMutable;
+            this->isStatic = other.isStatic;
+            this->isCallable = other.isCallable;
+            this->name = other.name;
+            this->nodeType = other.nodeType;
+            DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-assigned.");
+        }
+    }
+    return *this;
+}
+
+
+
+// Constructor accepting a VariantType
+Node::Node(const VariantType& value) {
+    setInitialValue(value);
+    validateTypeAlignment();
+}
+
+// Constructor accepting a string value and type
+Node::Node(const String& value, const String& typeStr) {
+    setInitialValue(value, typeStr);
+    validateTypeAlignment();
+}
+
+// Destructor
+Node::~Node() {
+    DEBUG_LOG(LogLevel::DEBUG, "===== Node was destroyed.");
+    // data.value._M_reset();
+}
 
 
 // VarNode Default Constructor
@@ -1053,8 +1150,14 @@ VarNode::VarNode(const Node& parentNode, bool isConst, bool isMutable, bool isSt
 }
 
 // VarNode Copy Constructor
-VarNode::VarNode(const VarNode& other) : Node(other) {
+VarNode::VarNode(const VarNode& other): Node(other) {
     nodeType = "VarNode";
+
+    if (isClassInstance()) {
+        auto& sp = std::get<SharedPtr<ClassInstance>>(data.value);
+        std::cerr << "VarNode @" << this << " holds @" << sp.get()
+                << " use_count=" << sp.use_count() << '\n';
+    }
 
     this->isConst = other.isConst;
     this->isMutable = other.isMutable;
@@ -1062,16 +1165,34 @@ VarNode::VarNode(const VarNode& other) : Node(other) {
     this->isCallable = other.isCallable;
     this->name = other.name;
     this->nodeType = other.nodeType;
+    this->data.value = other.data.value;
+    this->data.type = other.data.type;
+
+    if (isClassInstance()) {
+        auto& sp = std::get<SharedPtr<ClassInstance>>(data.value);
+        std::cerr << "VarNode @" << this << " holds @" << sp.get()
+                << " use_count=" << sp.use_count() << '\n';
+    }
 }
 
 // VarNode Move Constructor
-VarNode::VarNode(VarNode&& other) noexcept : Node(std::move(other)) {
+VarNode::VarNode(VarNode&& other) noexcept 
+    : Node(std::move(other)) {
+
     this->isConst = other.isConst;
     this->isMutable = other.isMutable;
     this->isStatic = other.isStatic;
     this->isCallable = other.isCallable;
     this->name = other.name;
     this->nodeType = other.nodeType;
+    if (isClassInstance()) {
+        auto& sp = std::get<SharedPtr<ClassInstance>>(data.value);
+        std::cerr << "VarNode @" << this << " holds @" << sp.get()
+                << " use_count=" << sp.use_count() << '\n';
+    }
+    
+    this->data.value = other.data.value;
+    this->data.type = other.data.type;
 }
 
 // Copy Assignment Operator
@@ -1084,47 +1205,21 @@ VarNode& VarNode::operator=(const VarNode& other) {
 
 // Move Assignment Operator
 VarNode& VarNode::operator=(VarNode&& other) noexcept {
-    if (this != &other) {
-        Node::operator=(std::move(other));
+    if (this != &other)
+        {
+            Node::operator=(std::move(other));   // let base handle payload
+            isConst    = other.isConst;
+            isMutable  = other.isMutable;
+            isStatic   = other.isStatic;
+            isCallable = other.isCallable;
+            name       = std::move(other.name);
+            nodeType   = std::move(other.nodeType);
+        }
+        return *this;
     }
-    return *this;
-}
 
 VarNode* VarNode::clone() const {
     return new VarNode(*this);
-}
-
-
-String LitNode::toString() const {
-    try {
-        switch (data.type) {
-            case NodeValueType::Int:
-                return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Float:
-                return std::to_string(std::get<float>(data.value));
-            case NodeValueType::Double:
-                return std::to_string(std::get<double>(data.value));
-            case NodeValueType::Long:
-                return std::to_string(std::get<long>(data.value));
-            case NodeValueType::Bool:
-                return std::get<bool>(data.value) ? "true" : "false";
-            case NodeValueType::Char:
-                return std::string(1, std::get<char>(data.value));
-            case NodeValueType::String:
-                return std::get<String>(data.value);
-            case NodeValueType::Null:
-                return "null"; 
-            case NodeValueType::Uninitialized:
-                return "[Uninitialized]";
-            case NodeValueType::Any:
-                return "[Any Type]";
-            default:
-                throw RunTimeError("Unsupported type for Node toString.");
-        }
-    } catch (const std::exception& e) {
-        debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());
-        return "[Error in LitNode::toString]";
-    }
 }
 
 
@@ -1158,10 +1253,98 @@ VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<No
 
     validateTypeAlignment();
 }
-
-
-
-
 UniquePtr<VarNode> cloneVarNode(VarNode* original) {
     return UniquePtr<VarNode>(original);
 }
+
+
+
+
+
+
+
+// // // Move Constructor
+// Node::Node(Node&& other) noexcept {
+//     // std::cerr << "MOVING Node @" << this << "  from @" << &other << " name is: " << other.name << '\n';
+//     // DEBUG_LOG(LogLevel::ERROR, );
+//     DEBUG_LOG(LogLevel::ERROR,highlight("MOVING Node @", Colors::pink), this, "  from @", &other, " name is: ", other.name);
+//     if (std::holds_alternative<std::shared_ptr<ClassInstance>>(other.data.value))
+//     {
+//         this->data.value = std::get<std::shared_ptr<ClassInstance>>(other.data.value);   // copy
+//         this->data.type = NodeValueType::ClassInstance;
+//     }
+//     else
+//     {
+//         this->data.value = std::move(other.data.value);                                  // move
+//         other.data.type = NodeValueType::Null; // Reset moved-from object
+//     }
+//     // this->data = std::move(other.data);
+//     // other.data.type = NodeValueType::Null; // Reset moved-from object
+//     this->isConst = other.isConst;
+//     this->isMutable = other.isMutable;
+//     this->isStatic = other.isStatic;
+//     this->isCallable = other.isCallable;
+//     this->name = other.name;
+//     // DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-constructed.");
+// }
+
+
+// Node& Node::operator=(Node&& other) noexcept
+// {
+//     if (this == &other) return *this;
+
+//     isConst    = other.isConst;
+//     isMutable  = other.isMutable;
+//     isStatic   = other.isStatic;
+//     isCallable = other.isCallable;
+//     name       = other.name;
+//     data.type       = other.data.type;
+
+//     if (other.data.type == NodeValueType::ClassInstance &&
+//         std::holds_alternative<std::shared_ptr<ClassInstance>>(other.data.value))
+//     {
+//         data.value = std::get<std::shared_ptr<ClassInstance>>(other.data.value); // copy
+//     }
+//     else
+//     {
+//         // data.value = std::move(other.data.value);                                // move
+//         data.value = other.data.value;
+//         other.data.value.emplace<NullType>();
+//         other.data.type = NodeValueType::Null;
+//     }
+//     return *this;
+// }
+
+// Node::Node(Node&& other) noexcept
+//     : isConst   (other.isConst),
+//       isMutable (other.isMutable),
+//       isStatic  (other.isStatic),
+//       isCallable(other.isCallable),
+//       name      (std::move(other.name))
+// {
+//     /* copy trivial flags … */
+
+//     // 1) move/copy the variant first
+//     if (std::holds_alternative<std::shared_ptr<ClassInstance>>(other.data.value))
+//     {
+//         data.value = std::get<std::shared_ptr<ClassInstance>>(other.data.value);   // copy
+//     }
+//     else
+//     {
+//         data.value = std::move(other.data.value);                                  // move
+//     }
+
+//     // 2) synchronise the enum with what the variant actually contains
+//     data.type = std::visit([](auto&& arg) -> NodeValueType {
+//         using T = std::decay_t<decltype(arg)>;
+//         if constexpr (std::is_same_v<T, std::shared_ptr<ClassInstance>>) return NodeValueType::ClassInstance;
+//         else if constexpr (std::is_same_v<T, int>)          return NodeValueType::Int;
+//         else if constexpr (std::is_same_v<T, float>)        return NodeValueType::Float;
+//         /* … all other alternatives … */
+//         else                                                return NodeValueType::Null;
+//     }, data.value);
+
+//     /* invalidate the source */
+//     other.data.value.emplace<NullType>();
+//     other.data.type = NodeValueType::Null;
+// }

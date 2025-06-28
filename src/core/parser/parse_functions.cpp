@@ -33,7 +33,7 @@ ParamList Parser::handleParameters(TokenType type){
                 return params;
             }
             if (currentToken().type != TokenType::Parameter) {
-                throw UnexpectedTokenError(currentToken(), "parameter name");
+                throw UnexpectedTokenError(currentToken(), "parameter name", "Parser::handleParameters");
             }
 
             String paramName = currentToken().value;
@@ -71,7 +71,7 @@ ParamList Parser::handleParameters(TokenType type){
         } while (true);
 
         if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-            throw SyntaxError("Expected ')' after parameters.", currentToken());
+            throw UnexpectedTokenError(currentToken(), ") after parameters", "Parser::handleParameters");
         }
     }
     DEBUG_FLOW_EXIT();
@@ -167,17 +167,18 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
 }
 
 UniquePtr<FunctionCall> Parser::parseFunctionCall() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Entering parseFunctionCall with", currentToken().toColoredString());
 
-    if (!expect(TokenType::FunctionCall)) {
-        throw UnexpectedTokenError(currentToken(), "FunctionCall");
+    if (currentToken().type != TokenType::FunctionCall && currentToken().type != TokenType::ClassMethodCall) {
+        throw UnexpectedTokenError(currentToken(), "FunctionCall, ClassMethodCall", "Parser::parseFunctionCall");
     }
 
     String functionName = currentToken().value;
     advance();  // Consume function name
 
     if (!expect(TokenType::Punctuation) || currentToken().value != "(") {
-        throw UnexpectedTokenError(currentToken(), "'(' after function name", "parseFunctionCall");
+        throw UnexpectedTokenError(currentToken(), "'(' after function name", "Parser::parseFunctionCall");
     }
 
     advance();  // Consume '('
@@ -203,7 +204,7 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
 
     // Ensure proper function call closure
     if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        throw UnexpectedTokenError(currentToken(), ")", "parseFunctionCall");
+        throw UnexpectedTokenError(currentToken(), ")", "Parser::parseFunctionCall");
     }
     advance();  // Consume ')'
 

@@ -128,7 +128,7 @@ public:
     String toString() const override {return "<" + astTypeToString(getAstType()) + "name" + getName() + ">";}
     String getName() const {return name;}
     // virtual UniquePtr<CallableBody> getBody() const = 0;
-    Vector<Node> handleArgs(SharedPtr<Scope> scope) const;
+    Vector<Node> handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
 };
