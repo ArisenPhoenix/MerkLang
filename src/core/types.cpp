@@ -235,7 +235,10 @@ String getTokenDescription(TokenType type) {
         case TokenType::AccessorVariable: return "An Member Variable of an Object";
 
         case TokenType::ChainEntryPoint: return "The Beginning of a Chain to be resolved within the Parser, Ex: 'self.x', 'singleton::method', 'obj.<method>'";
-
+        case TokenType::LeftBracket: return "LeftBracket For Typing Lists";
+        case TokenType::RightBracket: return "RightBracket For Typing Lists";
+        case TokenType::LeftArrow: return "LeftArrow For Typing Arrays";
+        case TokenType::RightArrow: return "RightArrow For Typing Arrays";
         default: return "Unknown or invalid token.";
     }
 }

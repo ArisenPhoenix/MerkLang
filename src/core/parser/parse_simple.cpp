@@ -27,7 +27,7 @@
 UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseVariableDeclaration: Entering with token: ", currentToken().toColoredString());
-
+    
     // Determine reassignability
     bool isConst = false;
     Token startToken = currentToken(); // should be var / const
@@ -44,7 +44,8 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
         isConst = startToken.value == "const";
         advance();  // Consume 'var' or 'const'
     } else {
-        throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
+        // throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
+        throw UnexpectedTokenError(startToken, "var, const", "Parser::parseVariableDeclaration");
     }
 
     Token variableToken = currentToken();
@@ -52,18 +53,19 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     advance(); //consume variable name
 
     // std::optional<NodeValueType> typeTag = parseStaticType();
-    if (currentToken().type == TokenType::Operator || currentToken().type == TokenType::Type || currentToken().type == TokenType::LeftBracket) {
-        ResolvedType type = parseResolvedType();
-        DEBUG_LOG(LogLevel::PERMISSIVE, "RESOLVED TYPE: ", type.toString());
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Token After Resolution: ", currentToken());
+    Token potentialType = currentToken();
+    ResolvedType type = ResolvedType("Any");
+
+    if (consumeIf(TokenType::Punctuation, ":")) {
+        type = parseResolvedType();
     }
-    std::optional<NodeValueType> typeTag = std::nullopt;
+
+    std::optional<NodeValueType> typeTag = std::nullopt;   // used until ResolvedType is integrated into the Node system
 
     Token assignment = currentToken();    
 
-    // Expects an assignment operator
     if (assignment.type != TokenType::VarAssignment) {
-        throw MerkError("Expected ':=' or '=' for variable declaration. Token: " + assignment.toString());
+        throw UnexpectedTokenError(assignment, "=, :=", "Parser::parseVariableDeclaration");
     }
 
     bool isMutable = (assignment.value == "=");
@@ -138,7 +140,6 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
 UniquePtr<ASTStatement> Parser::parseExpression() {
     DEBUG_LOG(LogLevel::PERMISSIVE, "Parser: Entering parseExpression with token: ", currentToken().toString());
     Token token = currentToken();
-    // auto token = currentToken();
     if (check(TokenType::LeftBracket, "[") || check(TokenType::LeftArrow, "<") || check(TokenType::Operator, "{")){
         return parseClassLiteralCall();
     }

@@ -45,10 +45,9 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
     while (currentToken().type == TokenType::Punctuation && (currentToken().value == "." || currentToken().value == "::")) {
 
         Token delim = currentToken(); // store for later
+        Token nextToken = advance(); // move past delim/Punctuation token
 
-        advance(); // move past delim/Punctuation token
-
-        Token nextToken = currentToken();
+        // Token nextToken = currentToken();
         if (nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef && nextToken.type != TokenType::ClassMethodCall && nextToken.type != TokenType::ClassMethodRef) {
             throw UnexpectedTokenError(nextToken, "variable after '.' or '::'", "Parser::parseChain");
         }
@@ -73,27 +72,40 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
 
     Token maybeAssignmentOrType = currentToken(); // placeholder for special logic
     bool isAssignment = maybeAssignmentOrType.type == TokenType::VarAssignment;
-    bool isColonType = maybeAssignmentOrType.value == ":";
     bool isMutable = maybeAssignmentOrType.value == "=";
-
-
-    if (isAssignment){
-        advance(); // consume `=` or `:=`
-    }
 
     std::optional<NodeValueType> typeTag = std::nullopt;
 
+    // auto potentialType = currentToken();
+    ResolvedType type = ResolvedType("Any");
+
+    
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
+
+    if (isAssignment){
+        maybeAssignmentOrType = advance(); // consume `=` or `:=`
+    }
+    
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "maybeAssignmentOrType: ", maybeAssignmentOrType.toColoredString());
+
+
     if (isDeclaration || isAssignment){
         if (maybeAssignmentOrType.type == TokenType::Punctuation) { // means there is a type association
-
-            if (isColonType && peek().type == TokenType::Type) {
-                typeTag = parseStaticType();
-                isMutable = currentToken(). value == "=";
+            if (consumeIf(TokenType::Punctuation, ":")) {
+                type = parseResolvedType();
+                isMutable = currentToken().value == "=";
                 advance(); //consume mutability type
             }
+            
         }
         auto& last = chain->getLast();
-         UniquePtr<ASTStatement> rhs = parseExpression();  // gets the expression or value in which to assign variable to later
+        UniquePtr<ASTStatement> rhs = parseExpression();  // gets the expression or value in which to assign variable to later
+        // auto rhs = nullptr;
         if (isDeclaration) {
             bool isStatic = typeTag.has_value();
             if (last.type == TokenType::Variable) {

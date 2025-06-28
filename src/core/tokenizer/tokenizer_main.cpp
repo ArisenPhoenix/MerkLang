@@ -495,7 +495,13 @@ bool Tokenizer::handleOptionalType(Vector<Token>& tokens) {
                 tokens.emplace_back(TokenType::Punctuation, ":", line, colonCol);
                 tokens.emplace_back(TokenType::Type, typeStr, line, typeCol);
                 return true;
-            } else if (typeContainers.count(source[position])) {
+            } 
+            // else if (source[position] == ':' && typeContainers.count(peek())) {
+            //     tokens.emplace_back(TokenType::Punctuation, ":", line, colonCol);
+            // } 
+            
+            else if (typeContainers.count(source[position])) {
+                tokens.emplace_back(TokenType::Punctuation, ":", line, colonCol);
                 return true;
             } else {
                 throw TokenizationError("Expected a capitalized type after ':'", line, column, currentLineText);
