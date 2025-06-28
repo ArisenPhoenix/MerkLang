@@ -168,20 +168,21 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
 
 UniquePtr<FunctionCall> Parser::parseFunctionCall() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Entering parseFunctionCall with", currentToken().toColoredString());
+    Token controllingToken = currentToken();
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Entering parseFunctionCall with", controllingToken.toColoredString());
 
-    if (currentToken().type != TokenType::FunctionCall && currentToken().type != TokenType::ClassMethodCall) {
-        throw UnexpectedTokenError(currentToken(), "FunctionCall, ClassMethodCall", "Parser::parseFunctionCall");
+    if (controllingToken.type != TokenType::FunctionCall && controllingToken.type != TokenType::ClassMethodCall) {
+        throw UnexpectedTokenError(controllingToken, "FunctionCall, ClassMethodCall", "Parser::parseFunctionCall");
     }
 
-    String functionName = currentToken().value;
-    advance();  // Consume function name
+    String functionName = controllingToken.value;
+    controllingToken = advance();  // Consume function name
 
-    if (!expect(TokenType::Punctuation) || currentToken().value != "(") {
-        throw UnexpectedTokenError(currentToken(), "'(' after function name", "Parser::parseFunctionCall");
+    if (!expect(TokenType::Punctuation) || controllingToken.value != "(") {
+        throw UnexpectedTokenError(controllingToken, "'(' after function name", "Parser::parseFunctionCall");
     }
 
-    advance();  // Consume '('
+    controllingToken = advance();  // Consume '('
 
     // Parse function arguments
     Vector<UniquePtr<ASTStatement>> arguments;
@@ -204,6 +205,7 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
 
     // Ensure proper function call closure
     if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
+        displayNextTokens(currentToken().value, 5);
         throw UnexpectedTokenError(currentToken(), ")", "Parser::parseFunctionCall");
     }
     advance();  // Consume ')'
@@ -218,17 +220,19 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
 UniquePtr<ASTStatement> Parser::parseReturnStatement() {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parseReturnStatement: Entering with token: ", currentToken().toString());
-
-    if (!expect(TokenType::Keyword) || currentToken().value != "return") {
-        throw SyntaxError("Expected 'return' keyword.", currentToken());
+    Token controllingToken = currentToken();
+    DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parseReturnStatement: Entering with token: ", controllingToken.toColoredString());
+    
+    if (!expect(TokenType::Keyword) || controllingToken.value != "return") {
+        throw SyntaxError("Expected 'return' keyword.", controllingToken);
     }
 
-    advance(); // Consume `return`
+    controllingToken = advance(); // Consume `return`
 
     // Ensure the return statement has a value
-    if (currentToken().type == TokenType::Newline || currentToken().type == TokenType::EOF_Token) {
-        throw SyntaxError("Return statement must return a value.", currentToken());
+
+    if (controllingToken.type == TokenType::Newline || controllingToken.type == TokenType::EOF_Token || controllingToken.type == TokenType::Dedent) {
+        throw SyntaxError("Return statement must return a value.", controllingToken);
     }
 
     // Parse the return expression

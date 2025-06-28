@@ -452,7 +452,9 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
 
 
     if (!leftVal.isValid()) {
-        throw MerkError("Left Hand Side of ChainOperation is invalid");
+        // throw MerkError("Left Hand Side of ChainOperation is invalid");
+        DEBUG_LOG(LogLevel::TRACE, "Left Hand Side of ChainOperation is INVALID", leftVal);
+
     } else {
         DEBUG_LOG(LogLevel::TRACE, "Left Hand Side of ChainOperation is Valid", leftVal);
     }

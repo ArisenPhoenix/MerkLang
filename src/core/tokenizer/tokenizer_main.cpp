@@ -345,7 +345,7 @@ Token Tokenizer::readIdentifier() {
         insideArgs = true;
     }
 
-    else if (isFunction(value) && previousToken().type != TokenType::VarDeclaration){
+    else if (isFunction(value) && previousToken().type != TokenType::VarAssignment){
         type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
     }
 
@@ -367,21 +367,6 @@ Token Tokenizer::readIdentifier() {
     else if (keywords.count(value)) {
         type = TokenType::Keyword;
     }
-
-    // Control Flow Keywords
-    // else if (value == "if" || value == "elif" || value == "else") {
-    //     type = TokenType::Keyword;
-    // }
-
-    // // Recognize import-related keywords:
-    // else if (value == "import" || value == "from") {
-    //     type = TokenType::Keyword;
-    // }
-
-    // // Loop Keywords
-    // else if (value == "for" || value == "while" || value == "break" || value == "return" || value == "continue") {
-    //     type = TokenType::Keyword;
-    // }
 
     // Boolean Literals
     else if (value == "true" || value == "false") {

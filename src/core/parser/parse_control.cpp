@@ -77,7 +77,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
         }
 
         if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-            throw UnexpectedTokenError(currentToken(), "Expected ':' after 'elif' condition.", "Parser::parseIfStatement");
+            throw UnexpectedTokenError(currentToken(), "':' after 'elif' condition.", "Parser::parseIfStatement");
         }
      
 
@@ -104,7 +104,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
         advance(); // Consume 'else'
 
         if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-            throw UnexpectedTokenError(currentToken(), "Expected ':' after 'else'.", "Parser::parseIfStatement");
+            throw UnexpectedTokenError(currentToken(), "':' after 'else'.", "Parser::parseIfStatement");
         }
         advance(); // Consume ':'
 
@@ -137,18 +137,20 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
 
 UniquePtr<WhileLoop> Parser::parseWhileLoop() {
     // DEBUG_FLOW(FlowLevel::HIGH);
-    if (currentToken().value != "while") {
+
+    Token controllingToken = currentToken();
+    if (controllingToken.value != "while") {
         throw UnexpectedTokenError(currentToken(), "while", "Parser::parseWhileLoop");
     }
-    advance(); // Consume 'while'
+    controllingToken = advance(); // Consume 'while'
 
     auto condition = parseExpression(); // Parse the loop condition
     if (!condition) {
         throw MissingTokenError(currentToken());
     }
-
-    if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-        throw MissingTokenError(currentToken());
+    controllingToken = currentToken();
+    if (controllingToken.type != TokenType::Punctuation || controllingToken.value != ":") {
+        throw MissingTokenError(controllingToken);
     }
     advance(); // Consume ':'
 

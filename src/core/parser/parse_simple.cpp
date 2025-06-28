@@ -50,17 +50,16 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
 
     Token variableToken = currentToken();
 
-    advance(); //consume variable name
+    Token potentialType = advance(); //consume variable name
 
     // std::optional<NodeValueType> typeTag = parseStaticType();
-    Token potentialType = currentToken();
     ResolvedType type = ResolvedType("Any");
+    std::optional<NodeValueType> typeTag = std::nullopt;   // used until ResolvedType is integrated into the Node system
 
     if (consumeIf(TokenType::Punctuation, ":")) {
         type = parseResolvedType();
     }
 
-    std::optional<NodeValueType> typeTag = std::nullopt;   // used until ResolvedType is integrated into the Node system
 
     Token assignment = currentToken();    
 
@@ -97,20 +96,14 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseVariableAssignment: Entering with token: ", currentToken().toColoredString());
 
-    Token startToken = currentToken();
+    // Token startToken = currentToken();
+    Token variableToken = currentToken();
 
-    if (!(startToken.type == TokenType::Variable || startToken.type == TokenType::ChainEntryPoint)) {
+    if (!(variableToken.type == TokenType::Variable || variableToken.type == TokenType::ChainEntryPoint)) {
         throw MerkError("Expected an identifier for variable assignment.");
     }
-    // if (startToken.type == TokenType::ChainEntryPoint) {
-    //     return parseChain();
-    // }
 
-    Token variableToken = currentToken();
-    // Token variableToken = handleAttributNotation();
-    advance();
-
-    Token assignment = currentToken();
+    Token assignment = advance(); // consume variable
 
     if (assignment.type != TokenType::VarAssignment || 
         (assignment.value != "=" && assignment.value != ":=")) {
@@ -125,7 +118,6 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
         throw MerkError("Failed to parse value for assignment to " + variableToken.value);
     }
 
-    // DEBUG_LOG(LogLevel::DEBUG, "Parser: Created VariableAssignment for ", variableToken.toString(), "\n");
     auto varAssign = makeUnique<VariableAssignment>(
         variableToken.value,
         std::move(valueNode),
@@ -133,7 +125,6 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
     );
     DEBUG_FLOW_EXIT();
     return varAssign;
-    // return variableToken.type == TokenType::Variable ? std::move(varAssign) : makeUnique<AttributeAssignment>(AttributeAssignment(std::move(varAssign)));
  
 }
 
@@ -281,6 +272,10 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     }
 
     else if (token.type == TokenType::Argument){
+        if (peek().value == ".") {
+            tokens[position].type = TokenType::ChainEntryPoint;
+            return parseChainOp();
+        }
 
         auto varRefNode = makeUnique<VariableReference>(token.value, currentScope);
         advance(); // consume Argument
@@ -452,20 +447,20 @@ UniquePtr<BaseAST> Parser::parseStatement() {
 UniquePtr<ASTStatement> Parser::parseBreakStatement() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
-    DEBUG_LOG(LogLevel::TRACE, "Parser: parseBreakStatement with token: ", currentToken().toString());
+    Token controllingToken = currentToken();
+
+    DEBUG_LOG(LogLevel::TRACE, "Parser: parseBreakStatement with token: ", controllingToken.toColoredString());
 
     if (!isInsideLoop()) {
         throw MerkError("Break statement not allowed outside of a loop.");
     }
 
 
-    advance(); // Consume 'break'
+    controllingToken = advance(); // Consume 'break'
 
-    if (position < tokens.size() &&
-        currentToken().type != TokenType::Newline &&
-        currentToken().type != TokenType::EOF_Token) {
+    if (position < tokens.size() && controllingToken.type != TokenType::Newline && controllingToken.type != TokenType::Dedent && controllingToken.type != TokenType::EOF_Token) {
         DEBUG_FLOW_EXIT();
-        throw UnexpectedTokenError(currentToken(), "");
+        throw UnexpectedTokenError(controllingToken, "");
     }
     DEBUG_FLOW_EXIT();
     return makeUnique<Break>(currentScope);
@@ -475,23 +470,21 @@ UniquePtr<ASTStatement> Parser::parseBreakStatement() {
 
 UniquePtr<ASTStatement> Parser::parseContinueStatement() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
-    DEBUG_LOG(LogLevel::TRACE, "Parser: parseContinueStatement with token: ", currentToken().toString());
+    Token controllingToken = currentToken();
+    DEBUG_LOG(LogLevel::TRACE, "Parser: parseContinueStatement with token: ", controllingToken.toString());
 
     if (!isInsideLoop()) {
         throw MerkError("Continue statement not allowed outside of a loop.");
     }
     
-    DEBUG_LOG(LogLevel::INFO, "Parsing break statement at token: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::INFO, "Parsing break statement at token: ", controllingToken.toString());
 
 
-    advance(); // Consume 'continue'
+    controllingToken = advance(); // Consume 'continue'
 
-    if (position < tokens.size() &&
-        currentToken().type != TokenType::Newline &&
-        currentToken().type != TokenType::EOF_Token) {
+    if (position < tokens.size() && controllingToken.type != TokenType::Newline && controllingToken.type != TokenType::Dedent && controllingToken.type != TokenType::EOF_Token) {
         DEBUG_FLOW_EXIT();
-        throw UnexpectedTokenError(currentToken(), "");
+        throw UnexpectedTokenError(controllingToken, "");
     }
     DEBUG_FLOW_EXIT();
     return makeUnique<Continue>(currentScope);

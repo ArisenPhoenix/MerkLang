@@ -165,7 +165,7 @@ namespace Evaluator {
         // DEBUG_LOG(LogLevel::DEBUG, highlight("VariableAssignmentNode updated: Name =", Colors::bg_bright_magenta), name, ", New Value =", resolvedVariable);
 
         DEBUG_FLOW_EXIT();
-        return resolvedVariable; // Return the new value for debugging or chaining
+        return Node(); // Return the new value for debugging or chaining
     }
 
 

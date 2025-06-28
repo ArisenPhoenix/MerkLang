@@ -29,12 +29,11 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
     Token baseToken = currentToken();
 
     if (baseToken.type != TokenType::ChainEntryPoint && baseToken.type != TokenType::Variable) {
-        throw UnexpectedTokenError(baseToken, "Expected ChainEntryPoint or Variable", "Parser::parseChain");
+        throw UnexpectedTokenError(baseToken, "ChainEntryPoint or Variable", "Parser::parseChain");
     }
 
-    advance();  // consume base token (e.g., `self`, `this`, etc.)
+    Token punct = advance();  // consume base token (e.g., `self`, `this`, etc.)
 
-    Token punct = currentToken();
     if (punct.type != TokenType::Punctuation || (punct.value != "." && punct.value != "::")) {
         throw UnexpectedTokenError(punct, "'.' or '::'", "Parser::parseChain");
     }
@@ -47,8 +46,7 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         Token delim = currentToken(); // store for later
         Token nextToken = advance(); // move past delim/Punctuation token
 
-        // Token nextToken = currentToken();
-        if (nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef && nextToken.type != TokenType::ClassMethodCall && nextToken.type != TokenType::ClassMethodRef) {
+        if (nextToken.type != TokenType::Argument && nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef && nextToken.type != TokenType::ClassMethodCall && nextToken.type != TokenType::ClassMethodRef) {
             throw UnexpectedTokenError(nextToken, "variable after '.' or '::'", "Parser::parseChain");
         }
 
@@ -74,25 +72,12 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
     bool isAssignment = maybeAssignmentOrType.type == TokenType::VarAssignment;
     bool isMutable = maybeAssignmentOrType.value == "=";
 
-    std::optional<NodeValueType> typeTag = std::nullopt;
-
-    // auto potentialType = currentToken();
+    std::optional<NodeValueType> typeTag = std::nullopt;  //This will later go the way of the dodos
     ResolvedType type = ResolvedType("Any");
-
-    
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
 
     if (isAssignment){
         maybeAssignmentOrType = advance(); // consume `=` or `:=`
     }
-    
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "potentialType: ", maybeAssignmentOrType.toColoredString());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Passed Iteration", "isConst: ", isConst, "isAssignment:", isAssignment, "isDeclaration:", isDeclaration, "maybeAssignmentOrType: ", maybeAssignmentOrType.toColoredString());
-
 
     if (isDeclaration || isAssignment){
         if (maybeAssignmentOrType.type == TokenType::Punctuation) { // means there is a type association
@@ -105,7 +90,6 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         }
         auto& last = chain->getLast();
         UniquePtr<ASTStatement> rhs = parseExpression();  // gets the expression or value in which to assign variable to later
-        // auto rhs = nullptr;
         if (isDeclaration) {
             bool isStatic = typeTag.has_value();
             if (last.type == TokenType::Variable) {
@@ -211,37 +195,37 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
 
     String methodDefType = token.value;
     DEBUG_LOG(LogLevel::INFO, highlight("Function Type: ", Colors::red), methodDefType);
-    advance(); // Consume 'def' or 'function'
+    Token controllingToken = advance(); // Consume 'def' or 'function'
 
 
-    if (currentToken().type != TokenType::ClassMethodRef) {
-        throw SyntaxError("Expected function name.", currentToken());
+    if (controllingToken.type != TokenType::ClassMethodRef) {
+        throw SyntaxError("Expected function name.", controllingToken);
     }
 
-    String methodName = currentToken().value;
+    String methodName = controllingToken.value;
     DEBUG_LOG(LogLevel::DEBUG, highlight("METHOD NAME: ", Colors::pink), highlight(methodName, Colors::blue));
-    advance(); // Consume method name
+    controllingToken = advance(); // Consume method name
 
-    if (currentToken().type != TokenType::Punctuation || currentToken().value != "(") {
-        throw SyntaxError("Expected '(' after method name.", currentToken());
+    if (controllingToken.type != TokenType::Punctuation || controllingToken.value != "(") {
+        throw SyntaxError("Expected '(' after method name.", controllingToken);
     }
 
-    advance(); // Consume '('
+    controllingToken = advance(); // Consume '('
 
     ParamList parameters = handleParameters();
     
-    advance(); // Consume ')'
+    controllingToken = advance(); // Consume ')'
 
-    if (!expect(TokenType::Punctuation) || currentToken().value != ":") {
-        throw SyntaxError("Expected ':' after method definition.", currentToken());
+    if (!expect(TokenType::Punctuation) || controllingToken.value != ":") {
+        throw SyntaxError("Expected ':' after method definition.", controllingToken);
     }
     
-    advance(); // Consume ':'
+    controllingToken = advance(); // Consume ':'
 
     UniquePtr<CodeBlock> bodyBlock = parseBlock();
 
     if (!bodyBlock) {
-        throw SyntaxError("Methodbody block could not be parsed.", currentToken());
+        throw SyntaxError("Methodbody block could not be parsed.", controllingToken);
     }
 
     UniquePtr<MethodBody> methodBlock = makeUnique<MethodBody>(std::move(bodyBlock));
@@ -280,13 +264,13 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
     }
 
     String className = currentToken().value;
-    advance();  // consume class name
+    Token controllingToken = advance();  // consume class name
 
-    if (!expect(TokenType::Punctuation) || currentToken().value != "(") {
-        throw UnexpectedTokenError(currentToken(), "Expected '(' after class name in instantiation", "Parser::parseClassCall");
+    if (!expect(TokenType::Punctuation) || controllingToken.value != "(") {
+        throw UnexpectedTokenError(controllingToken, "Expected '(' after class name in instantiation", "Parser::parseClassCall");
     }
 
-    advance();  // consume '('
+    controllingToken = advance();  // consume '('
 
     Vector<UniquePtr<ASTStatement>> arguments;
     while (!expect(TokenType::Punctuation) || currentToken().value != ")") {
@@ -302,9 +286,9 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
             break;
         }
     }
-
-    if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        throw UnexpectedTokenError(currentToken(), "Expected ')' to close class instantiation", "Parser::parseClassCall");
+    controllingToken = currentToken();
+    if (!expect(TokenType::Punctuation) || controllingToken.value != ")") {
+        throw UnexpectedTokenError(controllingToken, "Expected ')' to close class instantiation", "Parser::parseClassCall");
     }
 
     advance();  // consume ')'
@@ -320,33 +304,33 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     DEBUG_FLOW(FlowLevel::HIGH);
     insideClass = true;
     // Expect the 'Class' keyword.
-    Token token = currentToken();
-    if (token.type != TokenType::ClassDef) {
-        throw SyntaxError("Expected 'Class' keyword.", token);
+    Token controllingToken = currentToken();
+    if (controllingToken.type != TokenType::ClassDef) {
+        throw SyntaxError("Expected 'Class' keyword.", controllingToken);
     }
-    DEBUG_LOG(LogLevel::DEBUG, "got class keyword: ", token.toString());
-    advance(); // Consume 'Class'
+    DEBUG_LOG(LogLevel::DEBUG, "got class keyword: ", controllingToken.toString());
+    controllingToken = advance(); // Consume 'Class'
     
     // Next token should be the class name.
-    if (currentToken().type != TokenType::ClassRef) {
-        throw SyntaxError("Expected class name after 'Class'.", currentToken());
+    if (controllingToken.type != TokenType::ClassRef) {
+        throw SyntaxError("Expected class name after 'Class'.", controllingToken);
     }
 
-    DEBUG_LOG(LogLevel::DEBUG, "got class name: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::DEBUG, "got class name: ", controllingToken.toString());
 
     String className = currentToken().value;
-    advance(); // Consume class name
+    controllingToken = advance(); // Consume class name
 
     // Expect a colon after the class name.
-    if (!expect(TokenType::Punctuation) || currentToken().value != ":") {
-        throw SyntaxError("Expected ':' after class name.", currentToken());
+    if (!expect(TokenType::Punctuation) || controllingToken.value != ":") {
+        throw SyntaxError("Expected ':' after class name.", controllingToken);
     }
-    advance(); // Consume ':'
-    DEBUG_LOG(LogLevel::DEBUG, "got class end ':' : ", currentToken().toString());
+    controllingToken = advance(); // Consume ':'
+    DEBUG_LOG(LogLevel::DEBUG, "got class end ':' : ", controllingToken.toString());
 
     // Expect a newline.
-    if (currentToken().type != TokenType::Newline) {
-        throw SyntaxError("Expected newline after class header.", currentToken());
+    if (controllingToken.type != TokenType::Newline) {
+        throw SyntaxError("Expected newline after class header.", controllingToken);
     }
     // advance(); // Consume newline
     processNewLines();
@@ -368,17 +352,19 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
 
     ParamList classParams;
     while (currentToken().type != TokenType::Dedent && currentToken().type != TokenType::EOF_Token) {
-
+        
         if (processNewLines()){ // if there were blank lines, then go again
             continue;
         }
 
-        if (currentToken().type == TokenType::VarDeclaration) {
+        controllingToken = currentToken();
+
+        if (controllingToken.type == TokenType::VarDeclaration) {
             auto attr = parseProtectedClassAttributes();
             classBody->addChild(std::move(attr));
         }
 
-        else if (currentToken().type == TokenType::ClassMethodDef) {
+        else if (controllingToken.type == TokenType::ClassMethodDef) {
             if (!foundConstructor) {
                 if (peek().value != "construct") {
                     throw SyntaxError("The first method in a class must be 'construct'.", currentToken());
@@ -393,7 +379,7 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
                 }
             } 
             else if (peek().value == "construct"){
-                if (currentToken().value == "def"){
+                if (controllingToken.value == "def"){
                     throw MerkError("Attempting to reassign the constructor using the def keyword");
                 }
                 auto constructor = parseClassInitializer();

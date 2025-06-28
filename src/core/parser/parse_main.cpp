@@ -282,7 +282,6 @@ Token Parser::peek(int number){
 
 bool Parser::consume(TokenType type) {
     if (currentToken().type == type) { // match only checks the type here because no value is provided
-        // return previousToken(); // Return the matched token
         advance();
         return true;
     }
