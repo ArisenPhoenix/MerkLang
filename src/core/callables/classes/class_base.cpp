@@ -221,10 +221,20 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     auto params = parameters.clone();
 
     SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(self);
+    SharedPtr<Scope> instanceScope = self->getInstanceScope();
+
+    // methodCallScope->appendChildScope(instanceScope);
+    // placeArgsInCallScope(args, methodCallScope);
+    instanceScope->appendChildScope(methodCallScope);
+    
 
     auto method = std::static_pointer_cast<Method>(methodOpt->getCallable());
-    method->execute(args, methodCallScope, instanceNode); 
-
+    
+    method->execute(args, methodCallScope, instanceNode);
+    instanceScope->removeChildScope(methodCallScope);
+    if (capturedScope) {
+        capturedScope->appendChildScope(instanceScope);
+    } 
     isConstructed = true;
 }
     
@@ -307,7 +317,7 @@ Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, Shar
 
 
 Node ClassInstance::call(String name, Vector<Node> args) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     auto methodSig = getInstanceScope()->getFunction(name, args);
     auto method = methodSig->getCallable();
 
@@ -324,7 +334,7 @@ Node ClassInstance::call(String name, Vector<Node> args) {
 
 
 Node ClassInstance::getField(const String& fieldName, TokenType type) const {    // specific to what kind of member i.e var/method
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     if (!isConstructed) {
         throw MerkError("Attempted to access field '" + fieldName + "' before construct() completed.");
@@ -350,7 +360,7 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
 }
 
 Node ClassInstance::getField(const String& fieldName) const {                    // assumes a variable
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
 
     DEBUG_FLOW_EXIT();
@@ -396,7 +406,7 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : Callab
 
 ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     : CallableNode(callableNode) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     auto instance = std::get<SharedPtr<Callable>>(data.value);
     if (!instance) {
         throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");
@@ -408,15 +418,15 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
 
 
 SharedPtr<Callable> ClassInstanceNode::getCallable() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     auto val = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<ClassInstance>>(data.value));
     DEBUG_FLOW_EXIT();
     return val;
 }
 
 SharedPtr<Scope> ClassInstanceNode::getScope() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Instance Type: ", toString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "Current Instance Type: ", toString());
 
     auto instance = getInstance();
     DEBUG_FLOW_EXIT();
@@ -428,16 +438,16 @@ SharedPtr<Scope> ClassInstanceNode::getInstanceScope() {
 }
 
 SharedPtr<ClassInstance> ClassInstanceNode::getInstance() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Instance Type: ", this);
+    // DEBUG_LOG(LogLevel::NONE, "Current Instance Type: ", this);
     auto val = std::get<SharedPtr<ClassInstance>>(data.value); 
     auto instance = std::static_pointer_cast<ClassInstance>(val);
     return instance;
 }
 
 ClassInstanceNode ClassInstanceNode::getInstanceNode() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     SharedPtr<ClassInstance> raw = getInstance();
     auto val = ClassInstanceNode(raw);

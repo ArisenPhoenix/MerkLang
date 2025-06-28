@@ -25,7 +25,7 @@
 
 
 FunctionBody::FunctionBody(SharedPtr<Scope> scope) : CallableBody(scope) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     if (!scope) {
         throw MerkError("FunctionBody::FunctionBody -> given scope is null");
     }
@@ -41,7 +41,7 @@ FunctionBody::FunctionBody(SharedPtr<Scope> scope) : CallableBody(scope) {
 
 FunctionBody::FunctionBody(UniquePtr<CodeBlock>&& block)
     : CallableBody(std::move(block)) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
     DEBUG_LOG(LogLevel::DEBUG, "Creating FunctionBody with scope level: ", scope->getScopeLevel());
     if (!getScope()) {
@@ -52,7 +52,7 @@ FunctionBody::FunctionBody(UniquePtr<CodeBlock>&& block)
 
 
 Node FunctionBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     Node val = Evaluator::evaluateFunction(getMutableChildren(), scope, instanceNode);
     
     DEBUG_FLOW_EXIT();
@@ -63,7 +63,7 @@ Node FunctionBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 
 FunctionRef::FunctionRef(String name, SharedPtr<Scope> scope)
     : CallableRef(name, scope) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
         branch = "CallableRef";
     DEBUG_FLOW_EXIT();
@@ -73,7 +73,7 @@ FunctionRef::FunctionRef(String name, SharedPtr<Scope> scope)
 
 FunctionDef::FunctionDef(String name, ParamList parameters, UniquePtr<FunctionBody> body, CallableType funcType, SharedPtr<Scope> scope)
     : CallableDef(name, std::move(parameters), std::move(body), funcType, scope) {
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
         DEBUG_LOG(LogLevel::DEBUG, "FuncType: ", callableTypeAsString(callType));
         DEBUG_FLOW_EXIT();
@@ -82,7 +82,7 @@ FunctionDef::FunctionDef(String name, ParamList parameters, UniquePtr<FunctionBo
 
 FunctionCall::FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
     : CallableCall(functionName, std::move(arguments), scope) {
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
         if (this->name.empty()) {
             throw MerkError("FunctionCall constructed with empty name");
@@ -93,10 +93,10 @@ FunctionCall::FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> 
 
 
 UniquePtr<BaseAST> FunctionDef::clone() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::clone -> CLONING FunctionDef");
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    // DEBUG_LOG(LogLevel::VERY_HIGH, "FunctionDef::clone -> CLONING FunctionDef");
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::clone -> Clone Successful");
+    // DEBUG_LOG(LogLevel::VERY_HIGH, "FunctionDef::clone -> Clone Successful");
 
     auto clonedBody = static_unique_ptr_cast<FunctionBody>(std::move(clonedBodyBase));
 
@@ -109,7 +109,7 @@ UniquePtr<BaseAST> FunctionDef::clone() const {
 
 
 Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     auto freeVarNames = body->collectFreeVariables();
 
     if (callType == CallableType::FUNCTION){
@@ -141,20 +141,13 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     defScope->isCallableScope = true;
     defScope->owner = generateScopeOwner("FunctionDef", name);
     
-    // Create a new UserFunction instance
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::evaluate -> cloning function body");
-
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
 
     if (!body->getScope()){
         DEBUG_LOG(LogLevel::ERROR, "Body's Scope is null in FunctionDef::evaluate()");
         throw MerkError("Scope not present in FunctionDef::evaluate(scope)");
     }
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::evaluate -> ClonedBodyBase Was Cloned Successfully");
-
-    auto clonedBody = static_unique_ptr_cast<FunctionBody>(std::move(clonedBodyBase));
-    DEBUG_LOG(LogLevel::PERMISSIVE, "New Body Was Properly Cast to FunctionBody");
- 
+    auto clonedBody = static_unique_ptr_cast<FunctionBody>(std::move(clonedBodyBase)); 
     if (!clonedBody->getScope()){
         DEBUG_LOG(LogLevel::ERROR, "Body's Scope is null in FunctionDef::evaluate()");
         throw MerkError("Scope not present in FunctionDef::evaluate(scope) of clonedBody");
@@ -165,14 +158,11 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     DEBUG_LOG(LogLevel::DEBUG, "FunctionDef::evaluate -> parameters -> ", parameters.toString());
 
     SharedPtr<Function> func = makeShared<UserFunction>(name, std::move(clonedBody), parameters, callType);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "SharedPtr<Function> Was Properly Created");
-
     
     auto funcSig = func->toCallableSignature();
 
     scope->registerFunction(name, funcSig);
     func->setCapturedScope(defScope);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::evaluate -> funcSig registerd");
 
     if (!defScope){
         DEBUG_FLOW_EXIT();
@@ -184,12 +174,7 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
         throw MerkError("Function body is null in FunctionDef::evaluate");
     }
 
-    
-    // func->setScope(defScope);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::evaluate -> Captured Scope was Set for function");
-
     if (!func->getCapturedScope()) {throw MerkError("The Captured Definition Scope for the function created was not set properly");}
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::evaluate -> func's captured scope was set successfully");
 
     FunctionNode funcNode(func);
 
@@ -198,7 +183,7 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
+    DEBUG_FLOW(FlowLevel::VERY_HIGH); 
     // throw MerkError("Hit it");
     if (!scope) {
         throw MerkError("scope passed to FunctionCall::evaluate is null");
@@ -216,7 +201,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
         throw FunctionNotFoundError(name);
     }
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Found Function", name);
+    // DEBUG_LOG(LogLevel::VERY_HIGH, "Found Function", name);
 
     SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
 

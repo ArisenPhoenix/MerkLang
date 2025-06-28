@@ -1,6 +1,7 @@
 #include "core/callables/functions/native_function.h"
 #include "core/types.h"
 #include "core/scope.h"
+#include "utilities/debugger.h"
 
 NativeFunction::NativeFunction(
     String name,
@@ -18,6 +19,12 @@ Node NativeFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPt
     if (!nativeImpl) {
         throw MerkError("NativeFunction has no implementation.");
     }
+
+    // placeArgsInCallScope(args, scope);
+
+    for (auto& arg : args) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "CURRENT ARG IN NATIVE FUNCTION: ", highlight(arg.toString(), Colors::pink));
+    } 
      
     return nativeImpl(args, scope, instanceNode);
 }

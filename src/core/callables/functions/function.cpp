@@ -20,14 +20,14 @@
 Function::Function(String name, ParamList params, CallableType funcType, bool requiresReturn, bool isStatic)
     : Invocable(name, params, CallableType::FUNCTION, requiresReturn, isStatic)
 {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
     DEBUG_FLOW_EXIT();
 }
 
 UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType)
     : Function(name, parameters, CallableType::FUNCTION), body(std::move(body)) {
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
 
         setSubType(funcType);
         setCallableType(CallableType::FUNCTION);
@@ -38,7 +38,7 @@ UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList 
 
 Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     if (!scope){
         throw MerkError("UserFunction::execute -> Starting Scope Null in: ");
     }
@@ -59,7 +59,7 @@ Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_un
 FunctionBody::~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();} 
 
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     SharedPtr<CallableSignature> funcSig = makeShared<CallableSignature>(
         shared_from_this(), getCallableType()
@@ -78,7 +78,7 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
 }
 
 void UserFunction::setScope(SharedPtr<Scope> newScope) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     if (!newScope) {
         throw MerkError("No newScope in UserFunction::setScope");
     }

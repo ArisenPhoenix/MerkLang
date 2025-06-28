@@ -186,32 +186,45 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
 
     // Parse function arguments
     Vector<UniquePtr<ASTStatement>> arguments;
-    while (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        DEBUG_LOG(LogLevel::INFO, "parsing function argument");
+    while (currentToken().value != ")") {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "parsing function argument: ", currentToken().toColoredString());
+        if (currentToken().value == ")") {
+            throw MerkError("current token is ')' in parseFunctionCall");
+        }
         auto argument = parseExpression();
         if (!argument) {
             throw SyntaxError("Invalid function argument.", currentToken());
         }
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Token After Parsing Argument: ", currentToken().toColoredString());
+        DEBUG_LOG(LogLevel::PERMISSIVE, "[Parser::parseFunctionCall] Parsed argument: ", argument->toString());
 
-        DEBUG_LOG(LogLevel::INFO, "[Parser::parseFunctionCall] Parsed argument: ", argument->toString());
         arguments.push_back(std::move(argument));        
 
-        if (expect(TokenType::Punctuation) && currentToken().value == ",") {
-            advance();  // Consume ','
+        if (currentToken().value == ",") {
+            controllingToken = advance();  // Consume ','
         } else {
             break;  // No more arguments
         }
     }
 
-    // Ensure proper function call closure
-    if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        displayNextTokens(currentToken().value, 5);
+
+    DEBUG_LOG(LogLevel::PERMISSIVE, "TOKEN AFTER PARSING ARGUMENTS: ", currentToken().toColoredString());
+    if (currentToken().value != ")") {
         throw UnexpectedTokenError(currentToken(), ")", "Parser::parseFunctionCall");
     }
-    advance();  // Consume ')'
-
-    DEBUG_LOG(LogLevel::INFO, "[Parser::parseFunctionCall] Completed parsing function call '", functionName,
-             "' with ", arguments.size(), " arguments.");
+    controllingToken = advance();  // Consume ')'
+    // Ensure proper function call closure
+    // if (!expect(TokenType::Punctuation) || currentToken().value != ")") {    // when a functioncall is an argument the ')' gets lost for some reason
+    //     // processNewLines();
+    //     if (previousToken().value != ")") {
+    //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Last Token: ", previousToken().toColoredString());
+    //         displayNextTokens(currentToken().value, 10);
+    //         throw UnexpectedTokenError(currentToken(), ")", "Parser::parseFunctionCall");
+    //     }
+        
+    // } else {
+    //     advance();  // Consume ')'
+    // }
     
     DEBUG_FLOW_EXIT();
     return makeUnique<FunctionCall>(functionName, std::move(arguments), currentScope);

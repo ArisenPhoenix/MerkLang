@@ -115,6 +115,10 @@ void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope>
     ArgumentList args;
 
     for (auto& evaluated: evaluatedArgs) {
+        // if (name == "print" && evaluated.isClassInstance()) {
+        //     DEBUG_LOG(LogLevel::PERMISSIVE, evaluated);
+        //     throw MerkError("evaluated args for function print");
+        // }
         args.addPositionalArg(evaluated);
     }
     auto finalArgs = args.bindTo(parameters);

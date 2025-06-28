@@ -414,7 +414,7 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
     auto primaryType = callableTypeAsString(funcMethSig->getCallableType());
     auto subType = callableTypeAsString(funcMethSig->getSubType());
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Current ", primaryType, " Being Registered: ", funcMethName, " Type: ", primaryType, " SubType: ", subType);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current ", primaryType, " Being Registered: ", funcMethName, " Type: ", primaryType, " SubType: ", subType);
     if (!funcMethSig){
         throw MerkError("Not a Method Signature");
     }
@@ -426,7 +426,7 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
             auto& previous = previousOpt.value();
             bool replaced = false;
             for (auto& prev: previous) {
-                DEBUG_LOG(LogLevel::PERMISSIVE, "Checking Parameter Matches");
+                // DEBUG_LOG(LogLevel::PERMISSIVE, "Checking Parameter Matches");
                 if (prev->matches(funcMethSig->getParameterTypes())){
                     
                     prev = funcMethSig;

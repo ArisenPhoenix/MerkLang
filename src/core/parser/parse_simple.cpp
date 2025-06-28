@@ -25,8 +25,8 @@
 
 
 UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseVariableDeclaration: Entering with token: ", currentToken().toColoredString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseVariableDeclaration: Entering with token: ", currentToken().toColoredString());
     
     // Determine reassignability
     bool isConst = false;
@@ -93,8 +93,8 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
 }
 
 UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseVariableAssignment: Entering with token: ", currentToken().toColoredString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseVariableAssignment: Entering with token: ", currentToken().toColoredString());
 
     // Token startToken = currentToken();
     Token variableToken = currentToken();
@@ -129,18 +129,21 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
 }
 
 UniquePtr<ASTStatement> Parser::parseExpression() {
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Parser: Entering parseExpression with token: ", currentToken().toString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "Parser: Entering parseExpression with token: ", currentToken().toString());
     Token token = currentToken();
     if (check(TokenType::LeftBracket, "[") || check(TokenType::LeftArrow, "<") || check(TokenType::Operator, "{")){
         return parseClassLiteralCall();
     }
+    // processNewLines();
+    DEBUG_FLOW_EXIT();
     return parseBinaryExpression(0);
 }
 
 // Though a bit of a misnomer, it was named BinaryExpression or BinaryOperation due to how it only handles two values at a time (or one)
 UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseBinaryExpression: Entering with token: ", currentToken().toColoredString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseBinaryExpression: Entering with token: ", currentToken().toColoredString());
 
     auto left = parsePrimaryExpression();
     if (!left) {
@@ -189,12 +192,12 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
 }
 
 UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     // processNewLines();
 
     Token token = currentToken();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toColoredString());
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toColoredString());
 
     if (check(TokenType::LeftBracket, "[") || check(TokenType::LeftArrow, "<") || check(TokenType::Operator, "{")){
         return parseClassLiteralCall();
@@ -300,8 +303,8 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 }
 
 UniquePtr<BaseAST> Parser::parseStatement() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseStatement: Entering with token: ", currentToken().toColoredString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseStatement: Entering with token: ", currentToken().toColoredString());
 
     Token token = currentToken();
     // auto token = currentToken();
@@ -445,7 +448,7 @@ UniquePtr<BaseAST> Parser::parseStatement() {
 }
 
 UniquePtr<ASTStatement> Parser::parseBreakStatement() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     Token controllingToken = currentToken();
 
@@ -469,7 +472,7 @@ UniquePtr<ASTStatement> Parser::parseBreakStatement() {
 
 
 UniquePtr<ASTStatement> Parser::parseContinueStatement() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     Token controllingToken = currentToken();
     DEBUG_LOG(LogLevel::TRACE, "Parser: parseContinueStatement with token: ", controllingToken.toString());
 

@@ -136,7 +136,7 @@ namespace Evaluator {
     }
 
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
         
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
 
@@ -170,10 +170,37 @@ namespace Evaluator {
 
 
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        DEBUG_FLOW();
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Variable: ", name);
         auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
 
-        auto& variable =  scope->getVariable(name);  // Keep it as VarNode reference
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Passed: ");
+        // scope->debugPrint();
+        // scope->printChildScopes();
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used: ");
+        // instanceScope->debugPrint();
+        // instanceScope->printChildScopes();
+
+        // DEBUG_LOG(LogLevel::NONE, "Has instanceNode: ", (instanceNode ? "True" : "False"));
+
+        // if (instanceScope->hasVariable(name)) {
+        //     auto& variable = instanceScope->getVariable(name);
+        //     return variable;
+        // } else {
+        //     auto& variable =  scope->getVariable(name);  // Keep it as VarNode reference
+        //     return variable;
+        // }
+
+        
+
+        auto& variable = scope->getVariable(name);
+        if (name == "extra" && variable.getValue() != Node(5).getValue()) {
+            throw MerkError("extra is not 5");
+        }
+
+        if (name == "extra") {
+            throw MerkError("extra was found but didn't throw");
+        }
 
         // Ensure the variable is valid
         if (!variable.isValid()) {
@@ -191,8 +218,10 @@ namespace Evaluator {
     
     Node evaluateFunction(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         // (void)instanceNode;
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
         MARK_UNUSED_MULTI(scope, instanceNode);
+
+        auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
 
         Node lastValue;
             for (const auto& child : children) {
@@ -205,7 +234,7 @@ namespace Evaluator {
                 );
                                 
                 // child->getScope()->debugPrint();
-                lastValue = child->evaluate(scope, instanceNode);
+                lastValue = child->evaluate(instanceScope, instanceNode);
     
                
                 if (!lastValue.isValid()){
@@ -252,7 +281,7 @@ namespace Evaluator {
 
 
     Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
         auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         DEBUG_LOG(LogLevel::TRACE, "evaluateIf");
         if (ifStatement.getCondition()->evaluate(instanceScope, instanceNode).toBool()) {
@@ -321,7 +350,7 @@ namespace Evaluator {
 
         auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
 
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "WHILE LOOP SCOPE");
+        // DEBUG_LOG(LogLevel::NONE, "WHILE LOOP SCOPE");
         // instanceScope->debugPrint();
         // instanceScope->printChildScopes();
 
@@ -461,12 +490,32 @@ namespace Evaluator {
     // }
     
     Node evaluateMethodBody(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> methodScope, SharedPtr<ClassInstanceNode> instanceNode){
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
         if (!instanceNode){throw MerkError("Evaluator::evaluateMethod has no instanceNode");}
+
+        
 
         Node lastValue;
         for (const auto& child : children) {
-            lastValue = child->evaluate(methodScope, instanceNode);
+            if (child->getAstType() == AstType::FunctionCall) {
+                auto other = static_unique_ptr_cast<FunctionCall>(child->clone());
+                if (other->getName() == "print") {
+                    auto tempScope = instanceNode->getInstanceScope();
+                    // tempScope->appendChildScope(methodScope);
+                    other->printAST(std::cout);
+                    lastValue = child->evaluate(methodScope, instanceNode);
+                    tempScope->debugPrint();
+                    tempScope->printChildScopes();
+                    // tempScope->removeChildScope(methodScope);
+                    DEBUG_LOG(LogLevel::PERMISSIVE, "LAST VALUE: ", lastValue);
+                    throw MerkError("Called Print Within Method");
+                }
+            } else {
+                lastValue = child->evaluate(methodScope, instanceNode);
+            }
+
+            // lastValue = child->evaluate(methodScope, instanceNode);
+            
 
             if (!lastValue.isValid()){
                 continue;
@@ -479,7 +528,7 @@ namespace Evaluator {
 
     Node evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> classScope, SharedPtr<Scope> generatedScope, String accessor, Vector<UniquePtr<BaseAST>>& children, SharedPtr<ClassInstanceNode> instanceNode) {
         (void)instanceNode;
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
 
         if (!classCapturedScope) {throw MerkError("Class Captured Scope Was Not Set On Body");}
 
@@ -550,7 +599,7 @@ namespace Evaluator {
 
     Node evaluateClassCall(SharedPtr<Scope> callScope, String className, Vector<Node> argValues, SharedPtr<ClassInstanceNode> instanceNode) {
         (void)instanceNode;
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
         
 
         auto classOpt = callScope->getClass(className);
@@ -612,7 +661,7 @@ namespace Evaluator {
 
         if (callType == CallableType::FUNCTION){
             FreeVars tempFreeVars = freeVarNames;
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "freeVarNames before param check: ", highlight(joinUnorderedSetStrings(freeVarNames, ", "), Colors::bg_cyan));
+            // DEBUG_LOG(LogLevel::NONE, "freeVarNames before param check: ", highlight(joinUnorderedSetStrings(freeVarNames, ", "), Colors::bg_cyan));
             for (auto& param : parameters){
                 auto it = tempFreeVars.find(param.getName()); // find a matching param name
                 if (it != tempFreeVars.end()){                // indicates a match

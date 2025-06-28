@@ -59,7 +59,7 @@ String UserMethod::toString() const {
 UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType)
     : Method(std::move(name), std::move(params), CallableType::METHOD, false, false), body(std::move(body))
 {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     DEBUG_LOG(LogLevel::TRACE, "Method created: ", getName());
     setCapturedScope(scope);
     setSubType(callType);
@@ -72,7 +72,7 @@ UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body
 
 UserMethod::UserMethod(Function&& function)
     : Method(function.getName(), std::move(function.parameters), CallableType::METHOD, false) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     body = std::make_unique<MethodBody>(function.getCapturedScope());
 
@@ -89,7 +89,7 @@ UserMethod::UserMethod(Function&& function)
 }
 
 UserMethod::UserMethod(UserMethod& method) : Method(method) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     body = static_unique_ptr_cast<MethodBody>(method.body->clone());
     capturedScope = method.capturedScope;
@@ -117,7 +117,7 @@ void UserMethod::setScope(SharedPtr<Scope> newScope) const {
 
 
 SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     
     SharedPtr<CallableSignature> methodSig = makeShared<CallableSignature>(
@@ -136,19 +136,23 @@ SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
     return methodSig;
 }
 
+
+
 Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
-    // SharedPtr<Scope> callScope = scope->buildFunctionCallScope()
-    // SharedPtr<Scope> callSCope = scope->isolateScope();
+    auto instanceScope = instanceNode->getInstanceScope();
     auto callScope = scope;
-    callScope->owner = generateScopeOwner("MethodExecutor", name);
-
 
     DEBUG_LOG(LogLevel::PERMISSIVE, "UserMethod::execute -> callScope: ");
     callScope->debugPrint();
     callScope->printChildScopes();
+
+
+    if (name == "get_x") {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x ======================================================================================");
+    }
     
     // placeArgsInCallScope(args, callScope);
     
@@ -163,13 +167,65 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unus
         String matches = callScope == capturedScope ? "true" : "false";
 
         Node val = body->evaluate(callScope, instanceNode);
+        // instanceScope->removeChildScope(callScope);
         DEBUG_FLOW_EXIT();
+        if (name == "get_x") {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x value ============", val);
+        }
         return val;
     } catch (const ReturnException& e) {
         DEBUG_FLOW_EXIT();
+        if (name == "get_x") {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x value ============", e.getValue());
+        }
+        // instanceScope->removeChildScope(callScope);
         return e.getValue();
     }
 }
+
+// Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+//     (void)args;
+//     DEBUG_FLOW(FlowLevel::NONE);
+
+//     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
+    
+//     callScope->owner = generateScopeOwner("MethodExecutor", name);
+    
+//     // placeArgsInCallScope(args, callScope);
+    
+//     try {
+
+//         if (!callScope){throw MerkError("Method " + name +" Has No Captured Scope:");}
+
+//         auto capturedScope = getCapturedScope();
+
+//         if (!callScope){throw MerkError("Method " + name +" Has No Call Scope:");}
+
+//         String matches = callScope == capturedScope ? "true" : "false";
+
+//         Node val = body->evaluate(callScope, instanceNode);
+//         DEBUG_FLOW_EXIT();
+//         return val;
+//     } catch (const ReturnException& e) {
+//         DEBUG_FLOW_EXIT();
+//         return e.getValue();
+//     }
+// }
+
+// void UserMethod::setCapturedScope(SharedPtr<Scope> scope) {
+//     if (!scope) {
+//         throw MerkError("Cannot set a null scope in UserMethod::setCapturedScope.");
+//     }
+//     capturedScope = scope;
+//     capturedScope->owner = generateScopeOwner("MethodCapturedScope", name);
+//     body->setScope(capturedScope);
+// }
+
+// SharedPtr<Scope> UserMethod::getCapturedScope() const {
+//     return capturedScope;
+// }
+
+// UniquePtr<CallableBody>& UserMethod::getBody() { return static_unique_ptr_cast<CallableBody>(body); }
 
 CallableBody* UserMethod::getInvocableBody() {return body.get();}
 CallableBody* UserMethod::getBody() const {return body.get();}

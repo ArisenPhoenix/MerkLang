@@ -529,7 +529,7 @@ void Parser::displayNextTokens(String baseTokenName, size_t number, String locat
 
 ResolvedType Parser::parseResolvedType() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseResolvedType: Entering with token: ", currentToken().toColoredString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseResolvedType: Entering with token: ", currentToken().toColoredString());
 
     if (consumeIf(TokenType::Operator, "<")) {
         auto inner = parseResolvedType();

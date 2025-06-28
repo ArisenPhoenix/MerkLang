@@ -8,7 +8,7 @@
 
 // Builds a simple shell scope for callables with only globalFunctions and globalClasses
 SharedPtr<Scope> Scope::makeCallScope() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     auto c = makeShared<Scope>(shared_from_this(),
                                 globalFunctions,
                                 globalClasses,
@@ -52,7 +52,7 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
 
 // creates a standalone scope with only freevariables and local functions/classes
 SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNames) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     auto isolated = std::make_shared<Scope>(0, interpretMode, false);
     includeMetaData(isolated, true);
 

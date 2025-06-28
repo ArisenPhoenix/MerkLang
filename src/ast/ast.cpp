@@ -105,7 +105,7 @@ UnaryOperation::UnaryOperation(const String& op, UniquePtr<ASTStatement> operand
 // Calculation Constructors
 BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left, UniquePtr<ASTStatement> right, SharedPtr<Scope> scope)
     : ASTStatement(scope), op(op), left(std::move(left)), right(std::move(right)) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     if (!scope) {
         throw MerkError("The Scope Passed to BinaryOperation::BinaryOperation is null");
     }
@@ -117,7 +117,7 @@ BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left,
 
 
 Node LiteralValue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     MARK_UNUSED_MULTI(scope);
     // validateScope(scope, "LiteralValue", toString());
     Node val =  Evaluator::evaluateLiteral(value, _isString, _isBool);
@@ -162,7 +162,7 @@ Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shared
 
 // Computation Evaluations
 Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     validateScope(scope, "BinaryOperation::evaluate", left->toString() + " " + op + " " + right->toString());
     validateLeftAndRightAST(left, right, "BinaryOperation", op);
@@ -209,7 +209,7 @@ void VariableAssignment::setScope(SharedPtr<Scope> newScope) {
 }
 
 void BinaryOperation::setScope(SharedPtr<Scope> newScope) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     if (!newScope) {
         throw MerkError("BinaryOperation::setScope -> scope is null");
@@ -228,7 +228,7 @@ void UnaryOperation::setScope(SharedPtr<Scope> newScope) {
 
 
 void Return::setScope(SharedPtr<Scope> newScope) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     scope = newScope;
     if (returnValue){
@@ -238,7 +238,7 @@ void Return::setScope(SharedPtr<Scope> newScope) {
 }
 
 Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const  {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     if (!returnValue) {
         throw RunTimeError("Return statement must have a value.");
     }
@@ -266,7 +266,7 @@ Continue::Continue(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 Node Continue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     // (void)scope;
     MARK_UNUSED_MULTI(scope);
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     throw ContinueException();
 }
 

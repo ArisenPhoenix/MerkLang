@@ -65,7 +65,7 @@ void Accessor::setScope(SharedPtr<Scope> scope) {(void)scope;}
 
 
 Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     
     if (!defScope) {throw MerkError("No Scope Was Found in ClassDef::evaluate()");}
 
@@ -106,10 +106,7 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
     
     cls->setCapturedScope(classDefCapturedScope);
-    // cls->setParameters(classBase)
-    DEBUG_LOG(LogLevel::PERMISSIVE, "SETTING CLASSSIG PARAMS");
     cls->setParameters(parameters.clone());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Params: ", cls->getParameters());
     if (!cls->getCapturedScope()) {throw MerkError("CapturedScope was not set correctly on the ClassBase.");}
 
     auto* classBody = static_cast<ClassBody*>(getBody());
@@ -149,16 +146,16 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     return Evaluator::evaluateClassBody(classCapturedScope, classScope, getScope(), accessor, getMutableChildren(), instanceNode);
 }
 
 Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     if (!callScope){throw MerkError("Initial Scope Failed in ClassCall::evaluate()");}
     if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
 
-    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Displaying Arguments", Colors::bold_purple));
+    // DEBUG_LOG(LogLevel::NONE, highlight("Displaying Arguments", Colors::bold_purple));
     Vector<Node> argValues = handleArgs(callScope, instanceNode);
     if (argValues.size() < arguments.size()){
         throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");
@@ -175,7 +172,7 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
 
 Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     if (!instanceNode || !instanceNode->isClassInstance()) throw MerkError("No instance provided to Accessor");
 

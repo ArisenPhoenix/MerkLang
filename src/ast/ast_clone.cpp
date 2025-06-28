@@ -200,12 +200,11 @@ UniquePtr<BaseAST> ClassBody::clone() const {
 
 
 UniquePtr<BaseAST> MethodBody::clone() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     validateScope(getScope(), "MethodBody::clone");
     UniquePtr<MethodBody> newBlock = makeUnique<MethodBody>(getScope());
 
     for (const auto &child : children) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Cloning Child: ", child->toString());
         newBlock->addChild(child->clone());
     }
     newBlock->setNonStaticElements(nonStaticElements);
@@ -216,7 +215,7 @@ UniquePtr<BaseAST> MethodBody::clone() const {
 
 
 UniquePtr<BaseAST> MethodDef::clone() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     if (!body->getScope()){
         throw MerkError("No scope present in MethodDef::clone");
     }

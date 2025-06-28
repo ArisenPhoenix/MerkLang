@@ -228,7 +228,19 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassIns
 
 
     for (const auto &arg : arguments) {
-        evaluatedArgs.push_back(arg->evaluate(scope, instanceNode));
+        if (name == "print"){
+            DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Evaluating print function arg: ", Colors::pink));
+            arg->printAST(std::cout);
+            if (arg->getAstTypeAsString() == "Unknown") {
+                throw MerkError("Unknown AstType");
+            }
+        }
+        auto val = arg->evaluate(scope, instanceNode);
+        if (val.toString() == "<ClassInstance>Square") {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "Failed Eval: ", val);
+            throw MerkError("ClassInstance didn't resolve correctly");
+        }
+        evaluatedArgs.push_back(val);
     }
 
     return evaluatedArgs;

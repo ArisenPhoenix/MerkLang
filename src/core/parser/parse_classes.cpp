@@ -22,7 +22,7 @@ ChainElement createChainElement(const Token& token, const Token& delim, UniquePt
 }
 
 UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::NONE);
     DEBUG_LOG(LogLevel::DEBUG, "Chain Is Parsing as a Declaration: ", isDeclaration);
     
     auto chain = makeUnique<Chain>(currentScope);
@@ -47,7 +47,7 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         Token nextToken = advance(); // move past delim/Punctuation token
 
         if (nextToken.type != TokenType::Argument && nextToken.type != TokenType::Variable && nextToken.type != TokenType::FunctionCall && nextToken.type != TokenType::FunctionRef && nextToken.type != TokenType::ClassMethodCall && nextToken.type != TokenType::ClassMethodRef) {
-            throw UnexpectedTokenError(nextToken, "variable after '.' or '::'", "Parser::parseChain");
+            throw UnexpectedTokenError(nextToken, "(evaluable to node) after '.' or '::'", "Parser::parseChain");
         }
 
         bool isFunctionCall = nextToken.type == TokenType::FunctionCall;
@@ -58,14 +58,23 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         }
         if (isMethodCall){
             auto func = parseFunctionCall();
+            DEBUG_LOG(LogLevel::PERMISSIVE, "PARSED METHOD CALL");
             currentObject = makeUnique<MethodCall>(func->getName(), std::move(func->arguments), func->getScope());
-            // func.release();
         } else {
             currentObject = makeUnique<VariableReference>(nextToken.value, currentScope);
         }
         
         chain->addElement(std::move(createChainElement(nextToken, delim, std::move(currentObject))));
-        advance();  // move to next delimiter or assignment
+
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Current Token After Parsing Chain Element: ", currentToken().toColoredString());
+        // if (currentToken().value != "," && currentToken().value != ")") { //in case this is an argument to another function
+        //     advance();  // move to next delimiter or assignment
+        // }
+
+        if (currentToken().type != TokenType::Punctuation) { //in case this is an argument to another function
+            advance();  // move to next delimiter or assignment
+        }
+        
     }
 
     Token maybeAssignmentOrType = currentToken(); // placeholder for special logic
@@ -118,7 +127,7 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
 
 
 UniquePtr<ChainOperation> Parser::parseChainOp() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     
     bool isDeclaration = currentToken().type == TokenType::VarDeclaration;
     bool isConst = false;
@@ -426,9 +435,9 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
 
 
 UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     Token token = currentToken();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseClassLiteralCall: Entering with token: ", currentToken().toColoredString());
+    DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseClassLiteralCall: Entering with token: ", currentToken().toColoredString());
 
     if (consumeIf(TokenType::LeftBracket, "[")) {
         Vector<UniquePtr<ASTStatement>> elements;

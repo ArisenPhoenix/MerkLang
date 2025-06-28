@@ -28,8 +28,11 @@ MethodBody::~MethodBody() {
 }
 
 MethodCall::~MethodCall() {
-    getScope()->clear();
-    DEBUG_LOG(LogLevel::TRACE, "Destroying MethodCall:" + name);
+    if (getScope()) {
+        getScope()->clear();
+        DEBUG_LOG(LogLevel::TRACE, "Destroying MethodCall:" + name);    
+    }
+    
 }
 
 
@@ -67,7 +70,7 @@ MethodCall::MethodCall(String name, Vector<UniquePtr<ASTStatement>> arguments, S
 
 SharedPtr<Scope> MethodDef::getClassScope() const {return classScope;}
 Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     if (!callScope){
         throw MerkError("There Is No callScope provided to MethodBody::evaluate");
     }
@@ -81,10 +84,14 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
 }
 
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     
     if (!scope->hasFunction(name)){
         throw MerkError("Method: " + name + " Couldn't Be Found");
+    }
+
+    if (name == "get_x") {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x ======================================================================================");
     }
 
     Vector<Node> evaluatedArgs = handleArgs(scope);
@@ -94,25 +101,34 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
         throw FunctionNotFoundError(name);
     }
     SharedPtr<Method> method = std::static_pointer_cast<Method>(optSig->getCallable());
-    
+
     if (method->getSubType() == CallableType::NATIVE) {
         method->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
 
         return method->execute(evaluatedArgs, scope, instanceNode);
     }
 
+
     SharedPtr<Scope> callScope = scope->buildMethodCallScope(method, name);
+    
+
 
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserFunction::execute->function");}
     
-    DEBUG_LOG(LogLevel::TRACE, "******************************* UserFunction Scope Set *******************************");
+    // DEBUG_LOG(LogLevel::TRACE, "******************************* UserFunction Scope Set *******************************");
 
     method->placeArgsInCallScope(evaluatedArgs, callScope);
-    
+    // scope->appendChildScope(callScope);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD CALL SCOPE: ");
+    callScope->debugPrint();
+    callScope->printChildScopes();
     if (!method->getBody()->getScope()){throw ScopeError("MethodCall method->getBoby()->getScope  created an unusable scope");}   
 
     Node value = method->execute(evaluatedArgs, callScope, instanceNode);
-    scope->removeChildScope(callScope);
+    if (name == "get_x") {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x value ================================", value);
+    }
+    // scope->removeChildScope(callScope);
     DEBUG_FLOW_EXIT();
     return value; 
 }
@@ -146,7 +162,7 @@ bool MethodDef::isConstructor() const {return name == "construct";}
 
 
 Node MethodDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     if (!scope){
         throw MerkError("Provided Scope to MethodDef::evaluate is null");
@@ -159,12 +175,6 @@ Node MethodDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
     if (!getClassScope()) {
         throw MerkError("Class Scope was not supplied to Method: " + name);
     }
-
-    // auto subType = callType;
-    // auto primaryType = CallableType::METHOD;
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD DEF CALL TYPE: ", callableTypeAsString(callType));
-    DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD DEF SUB TYPE: ", callableTypeAsString(methodType));
 
     return Evaluator::evaluateMethodDef(scope, getScope(), getClassScope(), name, getBody(), parameters, methodType, instanceNode);
 }
