@@ -18,6 +18,15 @@ ChainElement createChainElement(const Token& token, const Token& delim, UniquePt
     elem.delimiter = delim.value;
     elem.type = token.type;
     elem.object = std::move(obj);
+
+    if (elem.name == "var") {
+        throw MerkError("Chain Element is named var");
+    }
+
+    if (elem.object->getAstType() == AstType::CallableCall) {
+        auto temp = static_unique_ptr_cast<VariableReference>(elem.object->clone());
+        throw MerkError("Cannot use CallableCall as a Chain Element");
+    }
     return elem;
 }
 
@@ -67,9 +76,6 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         chain->addElement(std::move(createChainElement(nextToken, delim, std::move(currentObject))));
 
         DEBUG_LOG(LogLevel::PERMISSIVE, "Current Token After Parsing Chain Element: ", currentToken().toColoredString());
-        // if (currentToken().value != "," && currentToken().value != ")") { //in case this is an argument to another function
-        //     advance();  // move to next delimiter or assignment
-        // }
 
         if (currentToken().type != TokenType::Punctuation) { //in case this is an argument to another function
             advance();  // move to next delimiter or assignment

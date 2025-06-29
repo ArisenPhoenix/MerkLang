@@ -90,10 +90,6 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
         throw MerkError("Method: " + name + " Couldn't Be Found");
     }
 
-    if (name == "get_x") {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x ======================================================================================");
-    }
-
     Vector<Node> evaluatedArgs = handleArgs(scope);
     auto optSig = scope->getFunction(name, evaluatedArgs);
 
@@ -110,24 +106,15 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
 
 
     SharedPtr<Scope> callScope = scope->buildMethodCallScope(method, name);
-    
-
 
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserFunction::execute->function");}
     
     // DEBUG_LOG(LogLevel::TRACE, "******************************* UserFunction Scope Set *******************************");
 
     method->placeArgsInCallScope(evaluatedArgs, callScope);
-    // scope->appendChildScope(callScope);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD CALL SCOPE: ");
-    callScope->debugPrint();
-    callScope->printChildScopes();
     if (!method->getBody()->getScope()){throw ScopeError("MethodCall method->getBoby()->getScope  created an unusable scope");}   
 
     Node value = method->execute(evaluatedArgs, callScope, instanceNode);
-    if (name == "get_x") {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x value ================================", value);
-    }
     // scope->removeChildScope(callScope);
     DEBUG_FLOW_EXIT();
     return value; 

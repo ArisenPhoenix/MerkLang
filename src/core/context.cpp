@@ -37,6 +37,7 @@ void Context::updateVariable(const String& name, const Node& newValue) {
 
     auto it = variables.find(name);
     if (it == variables.end()) {
+        DEBUG_LOG(LogLevel::ERROR, "From Context");
         throw VariableNotFoundError(name);
     }
     VarNode& currentVar = *(it->second);

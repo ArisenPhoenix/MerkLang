@@ -36,45 +36,6 @@ CallableBody* CallableBody::toCallableBody() {
     return static_cast<CallableBody*>(this);
 }
 
-UniquePtr<BaseAST> CallableBody::clone() const {
-    UniquePtr<CallableBody> newBlock = makeUnique<CallableBody>(getScope());
-
-    for (const auto &child : children) {
-        newBlock->addChild(child->clone());
-    }
-    
-    return newBlock;
-
-}
-
-
-UniquePtr<BaseAST> CallableDef::clone() const {
-    ParamList clonedParams;
-    for (auto& param: parameters){
-        clonedParams.addParameter(ParamNode(param));
-    }
-
-    UniquePtr<CallableBody> clonedBodyBase = static_unique_ptr_cast<CallableBody>(body->clone());
-    
-
-    UniquePtr<CallableDef> calDef = std::make_unique<CallableDef>(name, clonedParams, std::move(clonedBodyBase), callType, getScope());
-    return calDef;
-}
-
-UniquePtr<BaseAST> CallableCall::clone() const {
-    Vector<UniquePtr<ASTStatement>> clonedArgs;
-    for (auto& arg : arguments){
-        UniquePtr<ASTStatement> argBase = static_unique_ptr_cast<ASTStatement>(arg->clone());
-        clonedArgs.emplace_back(std::move(argBase));
-    }
-    UniquePtr<CallableCall> calCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
-    return calCall;
-}
-
-UniquePtr<BaseAST> CallableRef::clone() const {
-    UniquePtr<CallableRef> calRef = std::make_unique<CallableRef>(name, getScope());
-    return calRef;
-}
 
 CallableDef::~CallableDef() = default;
 CallableCall::~CallableCall() = default;
@@ -225,21 +186,8 @@ bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
 
 Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     Vector<Node> evaluatedArgs;
-
-
     for (const auto &arg : arguments) {
-        if (name == "print"){
-            DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Evaluating print function arg: ", Colors::pink));
-            arg->printAST(std::cout);
-            if (arg->getAstTypeAsString() == "Unknown") {
-                throw MerkError("Unknown AstType");
-            }
-        }
         auto val = arg->evaluate(scope, instanceNode);
-        if (val.toString() == "<ClassInstance>Square") {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "Failed Eval: ", val);
-            throw MerkError("ClassInstance didn't resolve correctly");
-        }
         evaluatedArgs.push_back(val);
     }
 

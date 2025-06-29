@@ -171,36 +171,9 @@ namespace Evaluator {
 
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Variable: ", name);
         auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
 
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Passed: ");
-        // scope->debugPrint();
-        // scope->printChildScopes();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used: ");
-        // instanceScope->debugPrint();
-        // instanceScope->printChildScopes();
-
-        // DEBUG_LOG(LogLevel::NONE, "Has instanceNode: ", (instanceNode ? "True" : "False"));
-
-        // if (instanceScope->hasVariable(name)) {
-        //     auto& variable = instanceScope->getVariable(name);
-        //     return variable;
-        // } else {
-        //     auto& variable =  scope->getVariable(name);  // Keep it as VarNode reference
-        //     return variable;
-        // }
-
-        
-
         auto& variable = scope->getVariable(name);
-        if (name == "extra" && variable.getValue() != Node(5).getValue()) {
-            throw MerkError("extra is not 5");
-        }
-
-        if (name == "extra") {
-            throw MerkError("extra was found but didn't throw");
-        }
 
         // Ensure the variable is valid
         if (!variable.isValid()) {
@@ -470,24 +443,6 @@ namespace Evaluator {
         DEBUG_FLOW_EXIT();
         throw BreakException();
     }
-
-
-    // Vector<Node> evaluateFunctionArguments(const Vector<UniquePtr<ASTStatement>>& argumentNodes, const SharedPtr<Scope>& scope) {
-    //     DEBUG_FLOW(FlowLevel::MED);
-    //     Vector<Node> evaluatedArguments;
-
-    //     for (const auto& argNode : argumentNodes) {
-    //         if (!argNode) {
-    //             throw MerkError("Null argument node encountered during evaluation.");
-    //         }
-
-    //         // Evaluate each argument node in the given scope
-    //         Node evaluatedArg = argNode->evaluate(scope);
-    //         evaluatedArguments.push_back(evaluatedArg);
-    //     }
-    //     DEBUG_FLOW_EXIT();
-    //     return evaluatedArguments;
-    // }
     
     Node evaluateMethodBody(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> methodScope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::NONE);
@@ -497,26 +452,7 @@ namespace Evaluator {
 
         Node lastValue;
         for (const auto& child : children) {
-            if (child->getAstType() == AstType::FunctionCall) {
-                auto other = static_unique_ptr_cast<FunctionCall>(child->clone());
-                if (other->getName() == "print") {
-                    auto tempScope = instanceNode->getInstanceScope();
-                    // tempScope->appendChildScope(methodScope);
-                    other->printAST(std::cout);
-                    lastValue = child->evaluate(methodScope, instanceNode);
-                    tempScope->debugPrint();
-                    tempScope->printChildScopes();
-                    // tempScope->removeChildScope(methodScope);
-                    DEBUG_LOG(LogLevel::PERMISSIVE, "LAST VALUE: ", lastValue);
-                    throw MerkError("Called Print Within Method");
-                }
-            } else {
-                lastValue = child->evaluate(methodScope, instanceNode);
-            }
-
-            // lastValue = child->evaluate(methodScope, instanceNode);
-            
-
+            lastValue = child->evaluate(methodScope, instanceNode);
             if (!lastValue.isValid()){
                 continue;
             }

@@ -40,6 +40,71 @@ String nodeTypeToString(NodeValueType type) {
     }
 } 
 
+
+// enum class AstType {
+//     Base,
+//     AST,
+//     Literal,
+//     VariableDeclaration,
+//     VariableAssignment,
+//     VariableReference,
+//     ParameterAssignment,
+
+//     BinaryOperation,
+//     Block,
+//     Conditional,
+//     IfStatement,
+//     ElseStatement,
+//     ElifStatement,
+//     WhileLoop,
+//     CodeBlock,
+    
+//     Break,
+//     Return,
+//     Continue,
+//     LoopBlock,
+
+//     CallableBody,
+//     CallableDefinition,
+//     CallableReference,
+//     CallableCall,
+
+//     Function,
+//     FunctionBlock,
+//     FunctionCall,
+//     NativeFunction,
+//     UserFunction,
+//     FunctionDefinition,
+//     FunctionReference,
+
+//     ClassDefinition,
+//     ClassCall,
+//     ClassReference,
+//     ClassBlock,
+
+//     ClassMethodBlock,
+//     ClassMethodDef,
+//     ClassMethodRef,
+//     ClassMethodCall,
+
+//     AttributeDeclaration,
+//     AttributeReference,
+//     AttributeAssignment,
+
+//     Chain,
+//     ChainOperation,
+//     Accessor,
+
+//     Unknown,
+//     NoOp,
+
+//     // Structures
+//     KeyValueStructure,
+//     Enum,
+
+//     ImportStatement
+// };
+
 String astTypeToString(AstType type) {
     switch (type) {
         case AstType::Base: return highlight("Base - shouldn't be present", Colors::bold_red);
@@ -92,7 +157,10 @@ String astTypeToString(AstType type) {
         case AstType::ChainOperation: return highlight("ChainOperation", Colors::bg_green);
         case AstType::Accessor: return highlight("Accessor", Colors::red);
 
-
+        case AstType::CallableBody: return highlight("CallableBody", Colors::bold_red);
+        case AstType::CallableCall: return highlight("CallableCall", Colors::bold_red);
+        case AstType::CallableDefinition: return highlight("CallableDefinition", Colors::bold_red);
+        case AstType::CallableReference: return highlight("CallableReference", Colors::bold_red);
         case AstType::Function: return "Function";
         case AstType::NoOp: return highlight("NoOp", Colors::light_gray);
 

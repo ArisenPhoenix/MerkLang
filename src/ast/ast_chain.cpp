@@ -358,10 +358,19 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
     }
     index ++;
 
+
+    if (baseElem.object->getAstType() == AstType::Unknown) {
+        throw MerkError("Unknown AST Type Found In Chain...see above");
+    }
+
     for (size_t i = index; i < elements.size(); ++i) {
         const auto& elem = elements[i];
-        
         AstType objType = elem.object->getAstType();
+
+        DEBUG_LOG(LogLevel::DEBUG, "Chain Evaluating: ", elem.name, "of:", astTypeToString(elem.object->getAstType()));
+        if (objType == AstType::Unknown) {
+            throw MerkError("Unknown AST Type Found In Chain...see above");
+        }
         if (currentVal.isClassInstance()) {
             auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
             currentScope = instance->getInstanceScope();
@@ -369,85 +378,51 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 throw MerkError("Scope Invalid During Chain Iteration");
             }
             instanceNode = makeShared<ClassInstanceNode>(instance);
-            
-            if (objType == AstType::VariableDeclaration){
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
-            } 
 
-            else if (objType == AstType::VariableAssignment) {
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
-            }
-            
-            else if (objType == AstType::VariableReference) {
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
-            }
 
-            else if (objType == AstType::FunctionCall) {
-                if (elem.name == "print") {
-                    elem.object->printAST(std::cout);
-                }
-                
-                // auto functionCall = static_unique_ptr_cast<FunctionCall>(std::move(elem.object->clone()));
-                // auto args = functionCall->handleArgs(currentScope); 
-                // currentVal = instance->call(elem.name, args);
-                // throw MerkError("This should be a method");
+            switch (objType)
+            {
+            case AstType::VariableDeclaration:
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+                break;
+
+            case AstType::VariableAssignment:
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+                break;
+
+            case AstType::VariableReference:
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+                break;
+            
+            case AstType::FunctionCall:
                 currentVal = elem.object->evaluate(currentScope, instanceNode);
-                if (currentVal.isClassInstance()) {
-                    auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
-                    currentScope = instance->getInstanceScope();
-                    if (!currentScope) {
-                        throw MerkError("Scope Invalid During Chain Iteration");
-                    }
-                    instanceNode = makeShared<ClassInstanceNode>(instance);
-                    currentScope = instanceNode->getInstanceScope();
-                }
-                
-            }
+                break;
 
-            else if (objType == AstType::ClassMethodCall) {
-                // elem.object->printAST(std::cout);
-                // auto methodCall = static_unique_ptr_cast<MethodCall>(std::move(elem.object->clone()));
-                // auto args = methodCall->handleArgs(currentScope); 
-                // currentVal = instance->call(elem.name, args);
-
+            case AstType::ClassMethodCall:
                 currentVal = elem.object->evaluate(currentScope, instanceNode);
-                if (currentVal.isClassInstance()) {
-                    auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
-                    currentScope = instance->getInstanceScope();
-                    if (!currentScope) {
-                        throw MerkError("Scope Invalid During Chain Iteration");
-                    }
-                    instanceNode = makeShared<ClassInstanceNode>(instance);
-                    currentScope = instanceNode->getInstanceScope();
-                }
-                // if (elem.name == "other") {
-                //     elem.object->printAST(std::cout);
-                //     throw MerkError("other was called");
-                // }
+                break;
+
+            case AstType::CallableCall: 
+                {
+                    auto method = static_unique_ptr_cast<MethodCall>(elem.object->clone());
+                    throw MerkError("CallableCall should not be possible when creating structures");
+                    currentVal = elem.object->evaluate(currentScope, instanceNode);
+                } 
+                break;
+                
+            default:
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+                break;
             }
             
-            // currentScope = elem.object->getScope();
+            currentScope = elem.object->getScope();
             setLastScope(currentScope);
 
         } else {
-            elem.object->printAST(std::cout);
-            if (elem.name == "print") {
-                throw MerkError("print Was Called");
-            }
+            DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));
+
             currentVal = elem.object->evaluate(currentScope, instanceNode);
-            if (currentVal.isClassInstance()) {
-                    auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
-                    currentScope = instance->getInstanceScope();
-                    if (!currentScope) {
-                        throw MerkError("Scope Invalid During Chain Iteration");
-                    }
-                    instanceNode = makeShared<ClassInstanceNode>(instance);
-                    currentScope = instanceNode->getInstanceScope();
-                }
-            else {
-                currentScope = elem.object->getScope();
-            }
-            
+            currentScope = elem.object->getScope();
             setLastScope(currentScope);
         }
     }

@@ -144,17 +144,6 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unus
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
     auto instanceScope = instanceNode->getInstanceScope();
     auto callScope = scope;
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "UserMethod::execute -> callScope: ");
-    callScope->debugPrint();
-    callScope->printChildScopes();
-
-
-    if (name == "get_x") {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x ======================================================================================");
-    }
-    
-    // placeArgsInCallScope(args, callScope);
     
     try {
 
@@ -169,15 +158,9 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unus
         Node val = body->evaluate(callScope, instanceNode);
         // instanceScope->removeChildScope(callScope);
         DEBUG_FLOW_EXIT();
-        if (name == "get_x") {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x value ============", val);
-        }
         return val;
     } catch (const ReturnException& e) {
         DEBUG_FLOW_EXIT();
-        if (name == "get_x") {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "EXECUTING get_x value ============", e.getValue());
-        }
         // instanceScope->removeChildScope(callScope);
         return e.getValue();
     }

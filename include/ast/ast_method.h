@@ -77,7 +77,7 @@ public:
     ~MethodCall();
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     AstType getAstType() const override { return AstType::ClassMethodCall;}
-
+    UniquePtr<BaseAST> clone() const override;
 };
 
     

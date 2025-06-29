@@ -328,6 +328,7 @@ void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDec
         } else if (auto parent = parentScope.lock()) {
             parent->setVariable(name, std::move(value), isDeclaration);  // Delegate to parent scope
         } else {
+            DEBUG_LOG(LogLevel::ERROR, "From Scope::setVariable");
             throw VariableNotFoundError(name);
         }
     }
@@ -359,7 +360,7 @@ void Scope::updateVariable(const String& name, const Node& value) {
         return;
     }
 
-    DEBUG_LOG(LogLevel::DEBUG, highlight("Scope Data Before Error", Colors::pink));
+    DEBUG_LOG(LogLevel::ERROR, "From Scope::updateVariable");
     throw VariableNotFoundError(name);
 }
 
@@ -378,7 +379,7 @@ VarNode& Scope::getVariable(const String& name) {
         return parent->getVariable(name);
     }
 
-    
+    DEBUG_LOG(LogLevel::ERROR, "From Scope::getVariable");
     throw VariableNotFoundError(name);
 }
 

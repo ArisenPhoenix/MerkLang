@@ -152,7 +152,10 @@ Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Share
 Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    // validateScope(scope, "VariableReference::evluate", "Name = " + name);
+    validateScope(scope, "VariableReference::evluate", "Name = " + name);
+    if (name == "var") {
+        throw MerkError("Tried to Reference Variable named 'var'");
+    }
 
     VarNode& varRef = Evaluator::evaluateVariableReference(name, scope, instanceNode); 
     DEBUG_FLOW_EXIT();
