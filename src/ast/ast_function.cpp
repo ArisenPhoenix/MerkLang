@@ -185,49 +185,39 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH); 
     // throw MerkError("Hit it");
-    if (!scope) {
-        throw MerkError("scope passed to FunctionCall::evaluate is null");
-    }
+    if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
     
-    Vector<Node> evaluatedArgs = handleArgs(scope, instanceNode);
+    NodeList evaluatedArgs = handleArgs(scope, instanceNode);
 
-    if (!scope->hasFunction(name)){
-        throw MerkError("Function: " + name + " Couldn't Be Found");
-    }
+    if (!scope->hasFunction(name)){throw MerkError("Function: " + name + " Couldn't Be Found");}
     
     auto optSig = scope->getFunction(name, evaluatedArgs);
     
-    if (!optSig){
-        throw FunctionNotFoundError(name);
-    }
-
-    // DEBUG_LOG(LogLevel::VERY_HIGH, "Found Function", name);
+    if (!optSig){throw FunctionNotFoundError(name);}
 
     SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
 
 
     if (func->getSubType() == CallableType::NATIVE) {
         func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
-
-        return func->execute(evaluatedArgs, scope, instanceNode);
-    }
+        return func->execute(evaluatedArgs, scope, instanceNode);}
 
     SharedPtr<Scope> callScope = scope->buildFunctionCallScope(func, func->getName());
 
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserFunction::execute->function");}
     
     DEBUG_LOG(LogLevel::TRACE, "******************************* UserFunction Scope Set *******************************");
-
-    func->placeArgsInCallScope(evaluatedArgs, callScope);
     
     if (!func->getBody()->getScope()){throw ScopeError("FunctionCall func->getBoby()->getScope  created an unusable scope");}
    
-    // scope->appendChildScope(callScope, "FunctionCall::evaluate");
     if (!callScope) {
         throw MerkError("FunctionCall:evaluate callScope being passed to func->execute is null");
     }
     
     Node value = func->execute(evaluatedArgs, callScope);
+
+
+    // cleanup
     scope->removeChildScope(callScope);
 
     DEBUG_FLOW_EXIT();

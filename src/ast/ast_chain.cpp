@@ -342,7 +342,6 @@ void ChainOperation::setScope(SharedPtr<Scope> newScope) {
 Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
-    printAST(std::cout);
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
     int index = resolutionStartIndex;
 
@@ -399,16 +398,18 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 break;
 
             case AstType::ClassMethodCall:
-                currentVal = elem.object->evaluate(currentScope, instanceNode);
+            {
+                DEBUG_LOG(LogLevel::PERMISSIVE, highlight("methodScope passed to method call ============================================================", Colors::bg_bright_yellow));
+                // methodScope->debugPrint();
+                // currentScope->appendChildScope(methodScope, false);
+                // auto methodCall = static_unique_ptr_cast<MethodCall>(elem.object->clone());
+                // if (method)
+                // currentVal = method->evaluate(currentScope, instanceNode);
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
+                // currentScope = 
+                // currentScope->removeChildScope(methodScope);
                 break;
-
-            case AstType::CallableCall: 
-                {
-                    auto method = static_unique_ptr_cast<MethodCall>(elem.object->clone());
-                    throw MerkError("CallableCall should not be possible when creating structures");
-                    currentVal = elem.object->evaluate(currentScope, instanceNode);
-                } 
-                break;
+            }
                 
             default:
                 currentVal = elem.object->evaluate(methodScope, instanceNode);
@@ -532,7 +533,7 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
     //         return leftVal;
     //     // }
     // }
-    // DEBUG_FLOW_EXIT();
+    DEBUG_FLOW_EXIT();
     // throw MerkError("Unknown chain operation kind.");
     return leftVal;
 }

@@ -96,6 +96,24 @@ CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType 
   DEBUG_FLOW_EXIT();
 }
 
+Vector<Chain*> CallableBody::getNonStaticElements() {
+    if (nonStaticElements.size() > 0) {
+        return nonStaticElements;
+    }
+    return {};
+}
+
+bool CallableBody::getIsStatic() {
+    return getNonStaticElements().size() > 0;
+}
+
+void CallableBody::setNonStaticElements(Vector<Chain*> nonStaticEls){
+    // if (!nonStaticEls.size()) {
+    //     throw MerkError("Cannot set nonStaticEls to nullptr");
+    // }
+    nonStaticElements = nonStaticEls;
+}
+
 
 
 void CallableSignature::setCallableType(CallableType functionType) { 
@@ -185,12 +203,21 @@ bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
 
 
 Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     Vector<Node> evaluatedArgs;
+    // if (scope->hasChildren()){
+    //     scope = scope->getChildren()[0];
+    // }
     for (const auto &arg : arguments) {
+        if (name == "other" && arg->getAstType() == AstType::BinaryOperation && !scope->hasVariable("otherValue")) {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used For Evaluating Args");
+            scope->debugPrint();
+            throw MerkError("Binary Operation will not compute without 'otherValue'");
+        }
         auto val = arg->evaluate(scope, instanceNode);
         evaluatedArgs.push_back(val);
     }
-
+    DEBUG_FLOW_EXIT();
     return evaluatedArgs;
 }
 

@@ -86,10 +86,9 @@ SharedPtr<Scope> Scope::buildFunctionCallScope(SharedPtr<Function> func, String 
     auto callScope = capturedScope->makeCallScope();
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserFunction::execute->function");}
     callScope->owner = generateScopeOwner("FuncCall", name);
-    this->appendChildScope(callScope);                       // appending for recursion
+    this->appendChildScope(callScope, false);                       // appending for recursion
     return callScope;
 }
-
 
 SharedPtr<Scope> Scope::buildMethodCallScope(SharedPtr<Method> method, String name) {
     SharedPtr<Scope> capturedScope = method->getCapturedScope();
@@ -98,9 +97,9 @@ SharedPtr<Scope> Scope::buildMethodCallScope(SharedPtr<Method> method, String na
     capturedScope->owner = generateScopeOwner("MethodCallCaptured", name);
 
     auto callScope = capturedScope->makeCallScope();
-    if (!callScope) {throw MerkError("Scope Is Not Valid In UserMethod::execute->method");}
+    if (!callScope) {throw MerkError("Scope Is Not Valid In UserMethod::execute->Method");}
     callScope->owner = generateScopeOwner("MethodCall", name);
-    this->appendChildScope(callScope);                       // appending for recursion
+    this->appendChildScope(callScope, false);                       // appending for recursion
     return callScope;
 }
 

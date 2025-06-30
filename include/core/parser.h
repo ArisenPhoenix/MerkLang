@@ -107,6 +107,7 @@ private:
 
     Token handleAttributNotation();
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
+    Vector<UniquePtr<ASTStatement>> parseArguments();
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
     void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
     ResolvedType parseResolvedType();

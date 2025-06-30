@@ -166,6 +166,44 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
     return functionNode;
 }
 
+
+Vector<UniquePtr<ASTStatement>> Parser::parseArguments() {
+    Vector<UniquePtr<ASTStatement>> arguments;
+    if (consumeIf(TokenType::Punctuation, "(")) {
+        while (currentToken().value != ")") {
+            DEBUG_LOG(LogLevel::DEBUG, "parsing function argument: ", currentToken().toColoredString());
+            if (currentToken().value == ")") {
+                throw MerkError("current token is ')' in parseFunctionCall");
+            }
+            auto argument = parseExpression();
+            if (!argument) {
+                throw SyntaxError("Invalid function argument.", currentToken());
+            }
+            DEBUG_LOG(LogLevel::DEBUG, "Token After Parsing Argument: ", currentToken().toColoredString());
+
+            arguments.push_back(std::move(argument));        
+
+            if (currentToken().value == ",") {
+                advance();  // Consume ','
+            } else {
+                break;  // No more arguments
+            }
+        }
+    } else {
+        throw UnexpectedTokenError(currentToken(), "(", "Parser::parseArguments");
+    }
+
+    if (currentToken().value != ")") {
+        throw UnexpectedTokenError(currentToken(), ")", "Parser::parseFunctionCall");
+    }
+    advance();  // Consume ')'
+    
+    DEBUG_LOG(LogLevel::DEBUG, "TOKEN AFTER PARSING ARGUMENTS: ", currentToken().toColoredString());
+
+    return arguments;
+}
+
+
 UniquePtr<FunctionCall> Parser::parseFunctionCall() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     Token controllingToken = currentToken();
@@ -180,36 +218,10 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
         throw UnexpectedTokenError(controllingToken, "'(' after function name", "Parser::parseFunctionCall");
     }
 
-    controllingToken = advance();  // Consume '('
-
     // Parse function arguments
-    Vector<UniquePtr<ASTStatement>> arguments;
-    while (currentToken().value != ")") {
-        DEBUG_LOG(LogLevel::DEBUG, "parsing function argument: ", currentToken().toColoredString());
-        if (currentToken().value == ")") {
-            throw MerkError("current token is ')' in parseFunctionCall");
-        }
-        auto argument = parseExpression();
-        if (!argument) {
-            throw SyntaxError("Invalid function argument.", currentToken());
-        }
-        DEBUG_LOG(LogLevel::DEBUG, "Token After Parsing Argument: ", currentToken().toColoredString());
+    auto arguments = parseArguments();
 
-        arguments.push_back(std::move(argument));        
-
-        if (currentToken().value == ",") {
-            controllingToken = advance();  // Consume ','
-        } else {
-            break;  // No more arguments
-        }
-    }
-
-
-    DEBUG_LOG(LogLevel::DEBUG, "TOKEN AFTER PARSING ARGUMENTS: ", currentToken().toColoredString());
-    if (currentToken().value != ")") {
-        throw UnexpectedTokenError(currentToken(), ")", "Parser::parseFunctionCall");
-    }
-    controllingToken = advance();  // Consume ')'
+    
     
     DEBUG_FLOW_EXIT();
     return makeUnique<FunctionCall>(functionName, std::move(arguments), currentScope);

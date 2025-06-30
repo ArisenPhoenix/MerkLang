@@ -13,6 +13,7 @@ class MethodDef;
 class Callable;
 class MethodBody;
 class FunctionBody;
+class Chain;
 
  
 class CallableSignature {
@@ -78,6 +79,17 @@ public:
 
     // CatchAll
     CallableBody* toCallableBody();
+
+    bool getIsStatic();
+
+    void setNonStaticElements(Vector<Chain*> nonStaticEls);
+
+    Vector<Chain*> getNonStaticElements();
+    friend class MethodBody;
+    friend class FunctionBody;
+
+protected:
+    Vector<Chain*> nonStaticElements = {};
     
 };
 
@@ -108,6 +120,7 @@ public:
     ParamList getParameters() {return parameters;}
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
+    
     
 };
 

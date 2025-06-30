@@ -49,7 +49,7 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
 
     auto& params = methodDef->getParameters();
     bool isAccessorDeclared = !params.empty() && params[0].getName() == accessor;
-    Vector<Chain*> nonStaticElements;
+    Vector<Chain*> nonStaticElements = {};
     auto allAst = methodDef->getBody()->getAllAst(true);
 
     auto chains = ASTUtils::collectMatching(
@@ -90,7 +90,7 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
                 }
             }
 
-            // Right side (optional)
+            // Right side (if exists)
             auto* rhs = chainOp->getRightSide();
             if (rhs && rhs->getAstType() == AstType::Chain) {
                 auto* chainR = static_cast<Chain*>(rhs);

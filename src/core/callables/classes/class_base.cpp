@@ -114,7 +114,7 @@ void ClassBase::setScope(SharedPtr<Scope> newScope) const {
 }
 
 SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     if (!getCapturedScope()) {
         throw MerkError("Captured Scope in ClassBase::toCallableSignature is null");
@@ -205,6 +205,7 @@ SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
 }
 
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!getInstanceScope()->hasFunction("construct")) {
         throw MerkError("A construct method must be implemented in class: " + getName());
     }
@@ -214,28 +215,21 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
         throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");
     }
     
-
-    SharedPtr<Scope> methodCallScope = getInstanceScope()->makeCallScope();
-    placeArgsInCallScope(args, methodCallScope);
+    auto method = std::static_pointer_cast<Method>(methodOpt->getCallable());
+    SharedPtr<Scope> methodCallScope = self->getInstanceScope()->buildMethodCallScope(method, method->getName());
 
     auto params = parameters.clone();
 
     SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(self);
     SharedPtr<Scope> instanceScope = self->getInstanceScope();
-
-    // methodCallScope->appendChildScope(instanceScope);
-    // placeArgsInCallScope(args, methodCallScope);
-    instanceScope->appendChildScope(methodCallScope);
     
-
-    auto method = std::static_pointer_cast<Method>(methodOpt->getCallable());
-    
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance::contruct -> methodCallScope");
+   
     method->execute(args, methodCallScope, instanceNode);
     instanceScope->removeChildScope(methodCallScope);
-    if (capturedScope) {
-        capturedScope->appendChildScope(instanceScope);
-    } 
+    
     isConstructed = true;
+    DEBUG_FLOW_EXIT();
 }
     
 Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
@@ -278,7 +272,7 @@ void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = sc
 
 // Optional: override call() to auto-instantiate when the class is "called"
 Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     (void)args;
 
     if (!scope){

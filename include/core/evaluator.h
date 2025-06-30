@@ -21,6 +21,7 @@ class IfStatement;
 class FunctionBlock;
 class ClassInstanceNode;
 class CallableBody;
+class MethodBody;
 
 class Scope;
 
@@ -49,7 +50,7 @@ namespace Evaluator {
     Node evaluateMethodBody(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> methodScope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     Node evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> classScope, SharedPtr<Scope> generatedScope, String accessor, Vector<UniquePtr<BaseAST>>& children, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     Node evaluateClassCall(SharedPtr<Scope> callScope, String className, Vector<Node> argValues, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
-    Node evaluateMethodDef(SharedPtr<Scope> passedScope, SharedPtr<Scope> ownScope, SharedPtr<Scope> classScope, String methodName, CallableBody* body, ParamList parameters, CallableType callType, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    Node evaluateMethodDef(SharedPtr<Scope> passedScope, SharedPtr<Scope> ownScope, SharedPtr<Scope> classScope, String methodName, MethodBody* body, ParamList parameters, CallableType callType, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     // Node evaluateMethod(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope);
 
     [[noreturn]] Node evaluateBreak();

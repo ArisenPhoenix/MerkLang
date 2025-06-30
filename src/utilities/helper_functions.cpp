@@ -122,3 +122,19 @@ String joinUnorderedSetStrings(const std::unordered_set<String>& input, const St
     }
     return oss.str();
 }
+
+String joinVectorNodeStrings(const NodeList& nodes, const String& delimiter) {
+    std::ostringstream oss;
+    bool first = true;
+
+    for (const auto& val : nodes) { 
+        if (!val.isValid() && !first) {
+            oss << delimiter << " ";
+            oss << val.toString();
+            first = false;
+        }
+    }
+    return oss.str();
+}
+// NodeList evaluatedArgs2 = handleArgs(scope, instanceNode);
+    

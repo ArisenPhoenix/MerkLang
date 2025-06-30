@@ -40,14 +40,10 @@ void ClassDef::setClassAccessor(String accessorName){accessor = accessorName;}
 String ClassDef::getClassAccessor() {return accessor;}
     
 ParamList& ClassDef::getParameters() {return parameters;}
-ParamList& MethodDef::getParameters() {return parameters;}
 
-const ParamList& MethodDef::getParameters() const {return parameters;}
-
-
-Vector<Chain*> MethodBody::getNonStaticElements() {
-    return nonStaticElements;
-}
+// Vector<Chain*> MethodBody::getNonStaticElements() {
+//     return nonStaticElements;
+// }
 
 
 void ClassBody::setAccessor(String& classAccessor) {accessor = classAccessor;}
@@ -65,7 +61,7 @@ void Accessor::setScope(SharedPtr<Scope> scope) {(void)scope;}
 
 
 Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     
     if (!defScope) {throw MerkError("No Scope Was Found in ClassDef::evaluate()");}
 
@@ -146,12 +142,12 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     return Evaluator::evaluateClassBody(classCapturedScope, classScope, getScope(), accessor, getMutableChildren(), instanceNode);
 }
 
 Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::NONE);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!callScope){throw MerkError("Initial Scope Failed in ClassCall::evaluate()");}
     if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
 

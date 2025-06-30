@@ -2,6 +2,7 @@
 #include <unordered_set>
 
 #include "core/types.h"
+#include "core/errors.h"
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
@@ -242,13 +243,19 @@ void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
     DEBUG_FLOW(FlowLevel::LOW);
     if (shared_from_this().use_count() == 0)
     throw std::runtime_error("Oops: calling shared_from_this() on a non‑shared object!");
-    
-    childScope->parentScope = shared_from_this();
-    childScope->scopeLevel = getScopeLevel() + 1;
+    if (!this->has(childScope)){
+        childScope->parentScope = shared_from_this();
+        childScope->scopeLevel = getScopeLevel() + 1;
+        childScopes.push_back(childScope);
+    } 
+    // else {
+    //     throw MerkError("Circular dependency found for " + childScope->formattedScope());
+    // }
+
     childScope->isDetached = false;
     childScope->owner = owner;
     includeMetaData(childScope, false);
-    childScopes.push_back(childScope);
+    
     if (update) {
         childScope->updateChildLevelsRecursively();
     }
@@ -365,21 +372,28 @@ void Scope::updateVariable(const String& name, const Node& value) {
 }
 
 VarNode& Scope::getVariable(const String& name) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "in scope: ", getScopeLevel(), "DEBUG DATA BELOW:");
+    context.debugPrint();
+
     if (auto variable = context.getVariable(name)) {
-        return variable->get();
+        return variable.value();
     }
 
     // Delegate to parent scope if it exists
     if (auto parent = parentScope.lock()) {
-        if (parent.get() == this) { 
-            throw MerkError("Scope::getVariable: Parent scope is same as current scope (cyclic reference).");
-        }
-        DEBUG_LOG(LogLevel::TRACE, "[Scope::getVariable] Variable '", name, "' not found in scope level ", 
-                 getScopeLevel(), ". Checking parent scope.");
+        // if (parent.get() == this) { 
+        //     throw MerkError("Scope::getVariable: Parent scope is same as current scope (cyclic reference).");
+        // }
+        // DEBUG_LOG(LogLevel::TRACE, "[Scope::getVariable] Variable '", name, "' not found in scope level ", 
+        //          getScopeLevel(), ". Checking parent scope.");
         return parent->getVariable(name);
     }
 
     DEBUG_LOG(LogLevel::ERROR, "From Scope::getVariable");
+    if (hasVariable(name)) {
+        throw MerkError("The Variable Lives Here, yet it is not getting pulled");
+    }
     throw VariableNotFoundError(name);
 }
 

@@ -57,16 +57,22 @@ String& Callable::getQualifiedName() {
 
 Callable::Callable(String name, ParamList params, CallableType callType)
     : name(std::move(name)), parameters(std::move(params)), callType(callType) {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    
         if (callableTypeAsString(callType) == "Unknown"){
             throw MerkError("Failed to instantiate callType at Callable::Callable instantiation");
         }
+        DEBUG_FLOW_EXIT();
     }
+        
 
 Callable::Callable(String name, ParamList params, CallableType callType, bool requiresReturn, bool isStatic)
     : name(std::move(name)), parameters(std::move(params)), callType(callType), requiresReturn(requiresReturn), isStatic(isStatic) {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (callableTypeAsString(callType) == "Unknown"){
             throw MerkError("Failed to instantiate callType at Callable::Callable with requiresReturn instantiation");
         }
+        DEBUG_FLOW_EXIT();
     }
 
 
@@ -102,7 +108,7 @@ SharedPtr<Callable> CallableNode::getCallable() const {
     return std::get<SharedPtr<Callable>>(data.value);
 }
 
-void CallableNode::setInternalScope(SharedPtr<Scope> scope) { internalScope = scope; }
+void CallableNode::setInternalScope(SharedPtr<Scope> scope) { internalScope = scope; internalScope->owner = generateScopeOwner("InternalScope", name);}
 SharedPtr<Scope> CallableNode::getInternalScope() const { return internalScope; }
 
 String CallableNode::toString() const {
@@ -111,6 +117,7 @@ String CallableNode::toString() const {
 
 
 void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope> callScope) const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     parameters.verifyArguments(evaluatedArgs);
     ArgumentList args;
 
@@ -121,11 +128,29 @@ void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope>
         // }
         args.addPositionalArg(evaluated);
     }
+
+    DEBUG_LOG(LogLevel::PERMISSIVE, "========================================================== ARGS ADDED TO CALLABLE", args.toString());
     auto finalArgs = args.bindTo(parameters);
+    if (name == "other") {
+        DEBUG_LOG(LogLevel::PERMISSIVE, highlight("OTHER IS BEING CALLED ====================================================================================", Colors::bg_bright_blue));
+        String argsString = "";
+        for (auto& arg: evaluatedArgs) {
+            argsString += arg.toString();
+            if (arg == evaluatedArgs[evaluatedArgs.size() - 1]) {
+                argsString += "";
+            } else {
+                argsString += ", ";
+            }
+        }
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Args provided: ", highlight(argsString, Colors::bg_bright_cyan));
+    }
+    
     for (size_t i = 0; i < parameters.size(); ++i) {
         VarNode paramVar(finalArgs[i]);
         callScope->declareVariable(parameters[i].getName(), makeUnique<VarNode>(paramVar));
     }
+
+    DEBUG_FLOW_EXIT();
 }
 
 

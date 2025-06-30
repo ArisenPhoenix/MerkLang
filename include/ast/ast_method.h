@@ -33,10 +33,10 @@ public:
     // virtual UniquePtr<BaseAST> clone() const override;
     Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
-    void setNonStaticElements(Vector<Chain*> nonStaticEls);
+    // void setNonStaticElements(Vector<Chain*> nonStaticEls);
     AstType getAstType() const override { return AstType::ClassMethodBlock;}
-    bool getIsStatic();
-    Vector<Chain*> getNonStaticElements();
+    // bool getIsStatic();
+    // Vector<Chain*> getNonStaticElements();
     // UniquePtr<BaseAST> clone() const override;
 };
 
@@ -68,6 +68,7 @@ public:
     SharedPtr<Scope> getClassScope() const;
     bool isConstructor() const;
     void setNonStaticElements(Vector<Chain*> nonStaticEls);
+    Vector<Chain*> getNonStaticElements();
 
 };
 

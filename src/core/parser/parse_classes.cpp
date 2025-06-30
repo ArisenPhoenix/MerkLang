@@ -238,12 +238,18 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
     controllingToken = advance(); // Consume ':'
 
     UniquePtr<CodeBlock> bodyBlock = parseBlock();
+    
 
     if (!bodyBlock) {
         throw SyntaxError("Methodbody block could not be parsed.", controllingToken);
     }
 
     UniquePtr<MethodBody> methodBlock = makeUnique<MethodBody>(std::move(bodyBlock));
+    methodBlock->getScope()->owner = generateScopeOwner("MethodDef", methodName);
+    for (auto& child : methodBlock->getChildren()) {
+        auto astType = child->getAstTypeAsString();
+        child->getScope()->owner = generateScopeOwner("MethodBody<" + astType + ">", methodName);
+    }
 
     DEBUG_LOG(LogLevel::INFO, "MethodBody type: ", typeid(*methodBlock).name());
     
@@ -265,6 +271,8 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
         methodType,  
         currentScope
     );
+
+    methodDef->getScope()->owner = generateScopeOwner("MethodDef", methodName);
     
     DEBUG_FLOW_EXIT();
     return methodDef;
@@ -285,28 +293,8 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
         throw UnexpectedTokenError(controllingToken, "Expected '(' after class name in instantiation", "Parser::parseClassCall");
     }
 
-    controllingToken = advance();  // consume '('
 
-    Vector<UniquePtr<ASTStatement>> arguments;
-    while (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        auto arg = parseExpression();
-        if (!arg) {
-            throw SyntaxError("Invalid argument to class constructor", currentToken());
-        }
-        arguments.push_back(std::move(arg));
-
-        if (expect(TokenType::Punctuation) && currentToken().value == ",") {
-            advance();
-        } else {
-            break;
-        }
-    }
-    controllingToken = currentToken();
-    if (!expect(TokenType::Punctuation) || controllingToken.value != ")") {
-        throw UnexpectedTokenError(controllingToken, "Expected ')' to close class instantiation", "Parser::parseClassCall");
-    }
-
-    advance();  // consume ')'
+    Vector<UniquePtr<ASTStatement>> arguments = parseArguments();
 
     return makeUnique<ClassCall>(className, std::move(arguments), currentScope);
 }
@@ -361,6 +349,8 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     if (!classBody->getScope()){
         throw MerkError("ClassBody Was Not provided a valid Scope around line 371 in Parser::parseClassDefinition");
     }
+
+    classBody->getScope()->owner = generateScopeOwner("ClassDef", className);
 
     bool foundConstructor = false;
     String accessor;
@@ -433,7 +423,7 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
         throw MerkError("No viable scope present in Parser::parseClassDefinition");
     }
     UniquePtr<ASTStatement> classDefNode = makeUnique<ClassDef>(className, std::move(classParams), std::move(classBody), accessor, currentScope);
-
+    classDefNode->getScope()->owner = generateScopeOwner("ClassDef", className);
     DEBUG_FLOW_EXIT();
     insideClass = false;
     return classDefNode;

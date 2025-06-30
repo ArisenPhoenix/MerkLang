@@ -242,6 +242,9 @@ UniquePtr<BaseAST> MethodDef::clone() const {
     auto methodDef = makeUnique<MethodDef>(name, parameters.clone(), std::move(clonedBody), callType, getScope()->clone());
     String access = getMethodAccessor();
 
+    clonedBody->setNonStaticElements(nonStaticElements);
+    methodDef->setNonStaticElements(nonStaticElements);
+
     methodDef->setMethodAccessor(access);
 
     DEBUG_FLOW_EXIT();
@@ -266,6 +269,15 @@ UniquePtr<BaseAST> CallableBody::clone() const {
     for (const auto &child : children) {
         newBlock->addChild(child->clone());
     }
+
+    if (nonStaticElements.size() > 0) {
+        newBlock->setNonStaticElements(nonStaticElements);
+    }
+
+    else {
+        newBlock->setNonStaticElements({});
+    }
+
     
     return newBlock;
 
@@ -282,6 +294,7 @@ UniquePtr<BaseAST> CallableDef::clone() const {
     
 
     UniquePtr<CallableDef> calDef = std::make_unique<CallableDef>(name, clonedParams, std::move(clonedBodyBase), callType, getScope());
+
     return calDef;
 }
 

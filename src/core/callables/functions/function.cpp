@@ -39,9 +39,9 @@ UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList 
 Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
     DEBUG_FLOW(FlowLevel::NONE);
-    if (!scope){
-        throw MerkError("UserFunction::execute -> Starting Scope Null in: ");
-    }
+    if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
+
+    placeArgsInCallScope(args, scope);
 
     Node value;
     try {
@@ -56,7 +56,7 @@ Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_un
     throw MerkError("Function did not return a value.");
 }
 
-FunctionBody::~FunctionBody(){DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();} 
+FunctionBody::~FunctionBody(){if (getScope()) {DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();}} 
 
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::NONE);
@@ -67,9 +67,7 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
 
     funcSig->setSubType(getSubType());
 
-    if (funcSig->getCallableType() == CallableType::DEF) {
-        throw MerkError("Primary Callable Type is: " + callableTypeAsString(funcSig->getCallableType()));
-    }
+    if (funcSig->getCallableType() == CallableType::DEF) {throw MerkError("Primary Callable Type is: " + callableTypeAsString(funcSig->getCallableType()));}
 
     funcSig->setParameters(parameters.clone());
  
@@ -79,9 +77,7 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
 
 void UserFunction::setScope(SharedPtr<Scope> newScope) const {
     DEBUG_FLOW(FlowLevel::NONE);
-    if (!newScope) {
-        throw MerkError("No newScope in UserFunction::setScope");
-    }
+    if (!newScope) {throw MerkError("No newScope in UserFunction::setScope");}
     newScope->owner = generateScopeOwner("UserFunction", name);
     // getThisBody()->setScope(newScope);
     auto children = body->getAllAst();

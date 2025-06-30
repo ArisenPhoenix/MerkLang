@@ -21,10 +21,7 @@ Node NativeFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPt
     }
 
     // placeArgsInCallScope(args, scope);
-
-    for (auto& arg : args) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "CURRENT ARG IN NATIVE FUNCTION: ", highlight(arg.toString(), Colors::pink));
-    } 
+    // joinVectorNodeStrings(args);
      
     return nativeImpl(args, scope, instanceNode);
 }
