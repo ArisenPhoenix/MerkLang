@@ -120,6 +120,8 @@ public:
     ParamList getParameters() {return parameters;}
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
+
+    void setScope(SharedPtr<Scope> newScope);
     
     
 };
@@ -144,6 +146,7 @@ public:
     Vector<Node> handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
+    void setScope(SharedPtr<Scope>) override;
 };
 
 

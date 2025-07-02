@@ -24,9 +24,7 @@ class LiteralValue : public ASTStatement {
 public:
     explicit LiteralValue(
         LitNode value, 
-        SharedPtr<Scope> scope,
-        bool isString,
-        bool isBool
+        SharedPtr<Scope> scope
     );
 
     String toString() const override;
@@ -39,8 +37,6 @@ public:
 
 private:
     LitNode value;
-    bool _isString;
-    bool _isBool;
 };
 
 class VariableDeclaration : public ASTStatement {

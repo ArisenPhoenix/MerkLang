@@ -27,7 +27,7 @@ class Scope;
 
 namespace Evaluator {
    
-    Node evaluateLiteral(Node value, bool isString, bool isBool);
+    Node evaluateLiteral(Node value);
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode containsMetaData, std::optional<NodeValueType> typeTag, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);

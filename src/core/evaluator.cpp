@@ -100,9 +100,7 @@ void evaluatingFor(const Node& value, const String& methodName, int scopeLevel =
 
 namespace Evaluator {
 
-    Node evaluateLiteral(Node value, bool isString, bool isBool){
-        (void)isString;
-        (void)isBool;
+    Node evaluateLiteral(Node value){
         DEBUG_FLOW(FlowLevel::LOW);
         return value;
     }

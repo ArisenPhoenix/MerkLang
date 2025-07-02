@@ -19,15 +19,13 @@
 
 // The printAST method is mostly for debugging and verification purposes. It is useful for identification of bugs and visualizing the structure
 String scopeLevelAsString(SharedPtr<Scope> scope, String astCaller) {
-    String scopeString = scope ? std::to_string(scope->getScopeLevel()) : "Error Getting Scope For " + astCaller;
-    return "Scope Level " + scopeString;
+    String scopeString = scope ? " " + std::to_string(scope->getScopeLevel()) : " Error Getting Scope For " + astCaller;
+    return " Scope Level " + scopeString;
 }
 
 // AST Basic
 String LiteralValue::toString() const {
     return getAstTypeAsString() + "(value=" + value.toString() +
-        ", isString=" + (_isString ? "true" : "false") +
-        ", isBool=" + (_isBool ? "true" : "false") +
         scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";;
 }
 

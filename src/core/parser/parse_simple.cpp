@@ -211,9 +211,9 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 
         auto literalVal = makeUnique<LiteralValue>(
             nodeLiteral,
-            currentScope,
-            token.type == TokenType::String,
-            token.type == TokenType::Bool
+            currentScope
+            // token.type == TokenType::String,
+            // token.type == TokenType::Bool
         );
 
         advance();  // Consume Literal Value

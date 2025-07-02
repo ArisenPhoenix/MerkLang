@@ -149,10 +149,9 @@ ElseStatement::ElseStatement(UniquePtr<CodeBlock> body, SharedPtr<Scope> scope)
 // Control Flow Constructors
 ConditionalBlock::ConditionalBlock(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope)
     : ASTStatement(scope), condition(std::move(condition)) {
-        DEBUG_FLOW(FlowLevel::VERY_LOW);
-        if (!getCondition()){
-            throw MerkError("ConditionalBlock missing condition in ConditionalBlock constructor.");
-        }
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        // validateScope(getScope(), "ConditionalBlock::ConditionalBlock", condition->toString());
+        if (!getCondition()){throw MerkError("ConditionalBlock missing condition in ConditionalBlock constructor.");}
         branch = "Conditional";
         DEBUG_FLOW_EXIT();
     }
@@ -301,9 +300,7 @@ Node ElifStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<
 Node IfStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
     DEBUG_LOG(LogLevel::TRACE, highlight("Validating IfStatement", Colors::red));
-    if (!condition){
-        throw MerkError("IfStatement missing condition.");
-    }
+    if (!condition){throw MerkError("IfStatement missing condition.");}
     validateScope(scope, "IfStatement::evaluate", condition->toString());
 
     Node val = Evaluator::evaluateIf(*this, scope, instanceNode);
@@ -314,9 +311,7 @@ Node IfStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 
 void CodeBlock::setScope(SharedPtr<Scope> newScope) {
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting CodeBlock Scope", Colors::blue));
-    if (!newScope){
-        throw MerkError("CodeBlock's updated Scope is null");
-    }
+    if (!newScope){throw MerkError("CodeBlock's updated Scope is null");}
     scope = newScope;
 
     Vector<SharedPtr<Scope>> childScopes = getScope()->getChildren();
