@@ -108,27 +108,30 @@ namespace Evaluator {
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, std::optional<NodeValueType> typeTag, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         (void)instanceNode;
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
-        DEBUG_LOG(LogLevel::TRACE, "Evaluating Variable Declaration");
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Evaluating Variable Declaration");
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+        
+        VarNode resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
 
-        VarNode resolvedVariable;
-        AstType valueNodeType = valueNode->getAstType();
-        if (valueNodeType == AstType::VariableReference || valueNodeType == AstType::Literal){
-            resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
-        } else {
-            resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
-        }
-        size_t before = instanceScope->getContext().getVariables().size();
-    
-        instanceScope->declareVariable(var.toString(), makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic));
-
-        if (!resolvedVariable.isValid()) {
-            throw MerkError("Invalid node returned during VariableDeclaration evaluation.");
+        String varName = var.toString();
+        auto varNode = makeUnique<VarNode>(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic);
+        
+        
+        if (!resolvedVariable.isValid()) {throw MerkError("Invalid node returned during VariableDeclaration evaluation.");}
+        if (varName == "newValue") {
+            DEBUG_LOG(LogLevel::PERMISSIVE, highlight(varName + " is being decalared into scope", Colors::bg_white));
+            instanceScope->debugPrint();
         }
 
-        if (instanceScope->getContext().getVariables().size() == before) {
-            throw MerkError("No Varialbes Declared");
-        } 
+        // if (varName == "otherValue") {
+        //     DEBUG_LOG(LogLevel::PERMISSIVE, highlight(varName + " is being decalared into scope", Colors::bg_white));
+        //     instanceScope->debugPrint();
+        //     throw MerkError("otherValue declared");
+        // }
+        // size_t before = instanceScope->getContext().getVariables().size();
+        instanceScope->declareVariable(varName, std::move(varNode));
+        // if (instanceScope->getContext().getVariables().size() == before) {throw MerkError("No Varialbes Declared");} 
+        
         DEBUG_FLOW_EXIT();
         return resolvedVariable;
     }
@@ -139,7 +142,7 @@ namespace Evaluator {
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         auto workingScope = instanceScope->hasVariable(name) ? instanceScope : scope;
 
-        VarNode resolvedVariable = VarNode(value->evaluate(workingScope, instanceNode));
+        VarNode resolvedVariable = VarNode(value->evaluate(scope, instanceNode)); // keep evaluation scope as the provided scope for proper scope resolution and propagation
 
         DEBUG_LOG(LogLevel::TRACE, "========================");
         DEBUG_LOG(LogLevel::TRACE, "Assigning: ", resolvedVariable, "To scope");

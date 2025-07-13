@@ -323,6 +323,8 @@ SharedPtr<Scope> Scope::getParent() const {
 
 void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration) {
     DEBUG_FLOW(FlowLevel::LOW);
+    
+
     if (isDeclaration) {
         if (context.hasVariable(name)) {
             throw MerkError("DEBUG Scope::setVariable:  Variable '" + name + "' is already declared in this scope.");
@@ -336,6 +338,7 @@ void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDec
             parent->setVariable(name, std::move(value), isDeclaration);  // Delegate to parent scope
         } else {
             DEBUG_LOG(LogLevel::ERROR, "From Scope::setVariable");
+            
             throw VariableNotFoundError(name);
         }
     }
@@ -345,12 +348,17 @@ void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDec
 void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
     DEBUG_FLOW(FlowLevel::LOW);
     DEBUG_LOG(LogLevel::TRACE, "DEBUG Scope::declareVariable: Declaring variable: ", name, " = ", value, " | In Scope Level: ", this->getScopeLevel());
-
+    if (owner == "ClassBase(Square)" && name != "x" && name != "y" && scopeLevel == 3) {throw MerkError("ClassBase(Square) attempted to allow in a non instance variable: " + name);}
     // Set the variable in the current context (not parent or child)
     if (context.hasVariable(name)) {
         DEBUG_LOG(LogLevel::DEBUG, "SCOPE: ", owner, "SCOPE LEVEL: ", scopeLevel);
-        throw VariableAlreadyDeclaredError(name);
+        if (disregardDeclarations) {
+            context.setVariable(name, std::move(value));
+            return;
+        }
+        throw VariableAlreadyDeclaredError(name, shared_from_this());
     }
+    
     context.setVariable(name, std::move(value));
     DEBUG_FLOW_EXIT();
 }

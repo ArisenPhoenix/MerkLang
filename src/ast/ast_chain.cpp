@@ -366,21 +366,29 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
         const auto& elem = elements[i];
         AstType objType = elem.object->getAstType();
 
-        DEBUG_LOG(LogLevel::DEBUG, "Chain Evaluating: ", elem.name, "of:", astTypeToString(elem.object->getAstType()));
-        if (objType == AstType::Unknown) {
-            throw MerkError("Unknown AST Type Found In Chain...see above");
-        }
+        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("current scope before chain element evaluation ============================================================", Colors::bg_bright_yellow));
+        // currentScope->debugPrint();
+        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("method scope before chain element evaluation ============================================================", Colors::bg_bright_yellow));
+        // methodScope->debugPrint();
+        // DEBUG_LOG(LogLevel::DEBUG, "Chain Evaluating: ", elem.name, "of:", astTypeToString(elem.object->getAstType()));
+
+        if (objType == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
+        if (!currentVal.isValid()) {throw MerkError("Cannot Chain off of a null return value");}
+
         if (currentVal.isClassInstance()) {
             auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
             currentScope = instance->getInstanceScope();
-            if (!currentScope) {
-                throw MerkError("Scope Invalid During Chain Iteration");
-            }
+            if (!currentScope) {throw MerkError("Scope Invalid During Chain Iteration");}
+
             instanceNode = makeShared<ClassInstanceNode>(instance);
 
 
             switch (objType)
             {
+            // case AstType::ChainOperation:
+            //     currentVal = elem.object->evaluate(currentScope, instanceNode);
+            //     throw MerkError("Evaluated ChainOperation");
+            //     break;
             case AstType::VariableDeclaration:
                 currentVal = elem.object->evaluate(methodScope, instanceNode);
                 break;
@@ -399,20 +407,15 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
 
             case AstType::ClassMethodCall:
             {
-                DEBUG_LOG(LogLevel::PERMISSIVE, highlight("methodScope passed to method call ============================================================", Colors::bg_bright_yellow));
-                // methodScope->debugPrint();
-                // currentScope->appendChildScope(methodScope, false);
-                // auto methodCall = static_unique_ptr_cast<MethodCall>(elem.object->clone());
-                // if (method)
-                // currentVal = method->evaluate(currentScope, instanceNode);
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
-                // currentScope = 
-                // currentScope->removeChildScope(methodScope);
+                // auto methodCall = static_cast<MethodCall*>(elem.object.get());
+                // currentVal = instance->call(elem.name, methodCall->handleArgs(currentScope, instanceNode));
+                currentVal = elem.object->evaluate(currentScope, instanceNode);
+
                 break;
             }
                 
             default:
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
+                currentVal = elem.object->evaluate(currentScope, instanceNode);
                 break;
             }
             
@@ -423,9 +426,12 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));
 
             currentVal = elem.object->evaluate(currentScope, instanceNode);
+            
             currentScope = elem.object->getScope();
             setLastScope(currentScope);
         }
+        
+
     }
     DEBUG_FLOW_EXIT();
     return currentVal;

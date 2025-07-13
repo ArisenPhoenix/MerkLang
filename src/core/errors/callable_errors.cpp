@@ -1,6 +1,7 @@
 #include "core/types.h"
 #include "core/callables/param_node.h"
 #include "core/errors.h"
+#include "utilities/helper_functions.h"
 
 
 
@@ -11,7 +12,7 @@ ArgumentError::ArgumentError(const String& functionName, size_t expected, size_t
                         " arguments, but " + std::to_string(received) + " were provided."),
         functionName(functionName), expectedSize(expected), receivedSize(received) {}
 
-ArgumentError::ArgumentError(const String& functionName, ParamList parameters, Vector<Node> arguments): EvaluationError("Function '" + functionName + "' expects "){
+ArgumentError::ArgumentError(const String& functionName, ParamList parameters, Vector<Node> arguments): EvaluationError("Function '" + functionName + "' expects " + parameters.toShortString() + " got: " + joinVectorNodeStrings(arguments)){
 
 }
 

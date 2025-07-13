@@ -84,9 +84,9 @@ UniquePtr<BaseAST> Break::clone() const {
 
 UniquePtr<BaseAST> Return::clone() const {
     validateScope(getScope(), "Return::clone->getScope");
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Return->getScope was validated");
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->getScope was validated");
     UniquePtr<BaseAST> clonedReturnBase = returnValue->clone();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Return->returnValue was cloned");
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->returnValue was cloned");
     auto clonedReturn = static_unique_ptr_cast<ASTStatement>(std::move(clonedReturnBase));
     clonedReturn->setScope(getScope());
     validateScope(clonedReturn->getScope(), "Return::clone -> clonedReturn->getScope");
@@ -100,11 +100,6 @@ UniquePtr<BaseAST> ConditionalBlock::clone() const {
     auto clonedCond = static_unique_ptr_cast<ConditionalBlock>(std::move(clonedCondBase));
     clonedCond->setScope(getScope());
     validateScope(clonedCond->getScope(), "ConditionalBlock::clone -> clonedCond->getScope");
-
-    // ConditionalBlock(std::move(clonedCondBase), getScope());
-    // ConditionalBlock()
-    // return ConditionalBlock::create(std::move(clonedCond), getScope());
-    
     return clonedCond;
 }
 

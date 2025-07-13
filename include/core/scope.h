@@ -57,6 +57,7 @@ public:
     bool isCallableScope = false;
     bool isClonedScope = false;
     String owner = "";
+    bool disregardDeclarations = false;
 
     // Vector<String> protectedMembers;
     // void setProtectedMembers(Vector<String> protectedMems);

@@ -206,14 +206,10 @@ SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
 
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    if (!getInstanceScope()->hasFunction("construct")) {
-        throw MerkError("A construct method must be implemented in class: " + getName());
-    }
+    if (!getInstanceScope()->hasFunction("construct")) {throw MerkError("A construct method must be implemented in class: " + getName());}
 
     auto methodOpt = getInstanceScope()->getFunction("construct", args);
-    if (!methodOpt) {
-        throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");
-    }
+    if (!methodOpt) {throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");}
     
     auto method = std::static_pointer_cast<Method>(methodOpt->getCallable());
     SharedPtr<Scope> methodCallScope = self->getInstanceScope()->buildMethodCallScope(method, method->getName());

@@ -1,5 +1,6 @@
 #include "core/types.h"
 #include "core/errors.h"
+#include "core/scope.h"
 
 ContextError::ContextError(const String& message)
     : MerkError(message) {}
@@ -50,6 +51,9 @@ String NullVariableError::errorHint() const {
 
 VariableAlreadyDeclaredError::VariableAlreadyDeclaredError(const String& variableName)
     : ContextError("Variable '" + variableName + "' has already been declared in the current context.") {}
+
+VariableAlreadyDeclaredError::VariableAlreadyDeclaredError(const String& variableName, SharedPtr<Scope> currentScope)
+    : ContextError("Variable '" + variableName + "has already been declared in scope: " + std::to_string(currentScope->getScopeLevel()) + " | owner: " + currentScope->owner) {}
 
 String VariableAlreadyDeclaredError::errorPrefix() const {
     return highlight("VariableAlreadyDeclaredError: ", Colors::yellow);

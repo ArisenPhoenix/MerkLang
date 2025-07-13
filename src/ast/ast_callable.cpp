@@ -208,15 +208,21 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassIns
     // if (scope->hasChildren()){
     //     scope = scope->getChildren()[0];
     // }
+
+    SharedPtr<Scope> throwAwayScope = scope->detachScope({});
+    throwAwayScope->disregardDeclarations = true;
+    scope->appendChildScope(throwAwayScope);
     for (const auto &arg : arguments) {
         if (name == "other" && arg->getAstType() == AstType::BinaryOperation && !scope->hasVariable("otherValue")) {
             DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used For Evaluating Args");
             scope->debugPrint();
             throw MerkError("Binary Operation will not compute without 'otherValue'");
         }
-        auto val = arg->evaluate(scope, instanceNode);
+        auto val = arg->evaluate(throwAwayScope, instanceNode);
         evaluatedArgs.push_back(val);
     }
+
+    scope->removeChildScope(throwAwayScope);
     DEBUG_FLOW_EXIT();
     return evaluatedArgs;
 }

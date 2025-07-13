@@ -83,26 +83,44 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     DEBUG_FLOW(FlowLevel::PERMISSIVE); 
     if (!instanceNode) {throw MerkError("MethodCall::evaluate -> no instanceNode passed");}
     if (!scope) {throw MerkError("MethodCall::evaluate -> scope passed to is null");}
+    auto scopeParent = scope->getParent();
 
     auto instanceScope = instanceNode->getInstanceScope();
+    
     if (!instanceScope) {throw MerkError("MethodCall::evaluate -> instanceScope is null");}
-    auto scopeParent = scope->getParent();
-    if (!instanceScope->has(scope) && !scope->has(instanceScope)) {instanceScope->appendChildScope(scope);}
-    
+    // if (!instanceScope->has(scope) && !scope->has(instanceScope)) {instanceScope->appendChildScope(scope);}
     if (!instanceScope->hasFunction(name)){throw MerkError("Method: " + name + " Couldn't Be Found");}
-    
-    // auto argScope = scope->isolateScope({});
-    // auto argScope = scope->makeCallScope();
+
+    SharedPtr<Scope> methodCallScope = instanceScope->createChildScope();
+    // SharedPtr<Scope> tempScope = scope->detachScope({});
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Scope Before Arg Evaluation", Colors::bg_bright_green));
+    // scope->debugPrint();
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Scope's Parent Before Arg Evaluation", Colors::bg_bright_green));
+    // scope->getParent()->debugPrint();
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Instance Scope's Parent Before Arg Evaluation", Colors::bg_bright_green));
+    // instanceScope->debugPrint();
+
+    SharedPtr<Scope> tempScope = scope->isolateScope({});
+    // scope->removeChildScope(tempScope);
+
+    // if (tempScope == instanceScope) {throw MerkError("Instance Scope and passed scope are the same");}
 
     
-    
-    NodeList evaluatedArgs = handleArgs(scope, instanceNode);
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Scope's Parent Before Arg Evaluation", Colors::bg_bright_green));
+    // scope->getParent()->debugPrint();
+
+    NodeList evaluatedArgs = handleArgs(tempScope, instanceNode);
+
+    // scope->appendChildScope(tempScope);
     auto str = joinVectorNodeStrings(evaluatedArgs);
     DEBUG_LOG(LogLevel::PERMISSIVE, highlight("EVALUTED ARGS ============ " + str + " ============", Colors::bg_blue));
     
     auto optSig = instanceScope->getFunction(name, evaluatedArgs);
     
-    if (!optSig){throw FunctionNotFoundError(name);}
+    if (!optSig) {throw FunctionNotFoundError(name);}
 
     SharedPtr<Method> method = std::static_pointer_cast<Method>(optSig->getCallable());
     DEBUG_LOG(LogLevel::PERMISSIVE, "Method CapturedScope");
@@ -119,15 +137,15 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
         method->execute(evaluatedArgs, scope, instanceNode);
     }
 
-    SharedPtr<Scope> callScope = scope->buildMethodCallScope(method, method->getName());
-
+    SharedPtr<Scope> callScope = methodCallScope->buildMethodCallScope(method, method->getName());
+    callScope->removeChildScope(methodCallScope);
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserFunction::execute->function");}
     
     DEBUG_LOG(LogLevel::TRACE, "******************************* UserFunction Scope Set *******************************");
 
     // method->placeArgsInCallScope(evaluatedArgs, callScope);
     
-    if (!method->getBody()->getScope()){throw ScopeError("FunctionCall func->getBoby()->getScope  created an unusable scope");}
+    if (!method->getBody()->getScope()) {throw ScopeError("FunctionCall func->getBoby()->getScope  created an unusable scope");}
     if (!callScope) {throw MerkError("FunctionCall:evaluate callScope being passed to func->execute is null");}
 
     DEBUG_LOG(LogLevel::PERMISSIVE, "Call Scope passed for execution");
@@ -139,9 +157,55 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     // scope->removeChildScope(callScope);
     
     instanceScope->removeChildScope(scope);
+    scope->removeChildScope(methodCallScope);
+    scope->removeChildScope(callScope);
     scope->setParent(scopeParent);
     DEBUG_FLOW_EXIT();
     return value; 
+
+    // DEBUG_FLOW(FlowLevel::PERMISSIVE); 
+    // // throw MerkError("Hit it");
+    // if (!instanceNode) {throw MerkError("MethodCall::evaluate -> no instanceNode passed");}
+    // if (!scope) {throw MerkError("MethodCall::evaluate -> scope passed to is null");}
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope BEING PASSED TO handleArgs:");
+    // scope->debugPrint();
+    
+    // NodeList evaluatedArgs = handleArgs(scope, instanceNode);
+
+    // if (!scope->hasFunction(name)) {throw MerkError("Method: " + name + " Couldn't Be Found");}
+    
+    // auto optSig = scope->getFunction(name, evaluatedArgs);
+    
+    // if (!optSig){throw FunctionNotFoundError(name);}
+
+    // SharedPtr<Method> func = std::static_pointer_cast<Method>(optSig->getCallable());
+
+
+    // if (func->getSubType() == CallableType::NATIVE) {
+    //     func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+    //     return func->execute(evaluatedArgs, scope, instanceNode);}
+
+    // SharedPtr<Scope> callScope = scope->buildMethodCallScope(func, func->getName());
+
+    // if (!callScope) {throw MerkError("Scope Is Not Valid In UserMethod::execute->function");}
+    
+    // DEBUG_LOG(LogLevel::TRACE, "******************************* UserMethod Scope Set *******************************");
+    
+    // if (!func->getBody()->getScope()){throw ScopeError("MethodCall method->getBoby()->getScope  created an unusable scope");}
+   
+    // if (!callScope) {
+    //     throw MerkError("MethodCall:evaluate callScope being passed to func->execute is null");
+    // }
+    
+    // Node value = func->execute(evaluatedArgs, callScope, instanceNode);
+
+
+    // // cleanup
+    // scope->removeChildScope(callScope);
+
+    // DEBUG_FLOW_EXIT();
+    // return value; 
 }
 void MethodDef::setClassScope(SharedPtr<Scope> scope) {
     if (!scope) {

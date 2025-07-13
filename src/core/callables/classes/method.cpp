@@ -142,6 +142,7 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
     
     callScope->owner = generateScopeOwner("MethodExecutor", name);
+    if (callScope == instanceNode->getInstanceScope()) {throw MerkError("callScope cannot be the same as instanceScope");}
     
     placeArgsInCallScope(args, callScope);
     
@@ -157,21 +158,12 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_
 
         Node val = body->evaluate(callScope, instanceNode);
 
-        // if (name == "other") {
-        //     throw MerkError("Return did not execute, returned value is: " + val.toString());
-        // }
         DEBUG_FLOW_EXIT();
-        return val;
+        return Node();
     } catch (const ReturnException& e) {
         auto val = e.getValue();
         DEBUG_FLOW_EXIT();      
-        // if (name == "other" && !val.isClassInstance()) {
-        //     throw MerkError("The value returned is not a class instance, it's: " + val.toString());
-        // }  else if (name == "other") {
-        //     throw MerkError("The value returned is: " + val.toString());
-        // }
         return val;
-        // throw MerkError("Return Called");
     }
 }
 

@@ -272,7 +272,7 @@ public:
 class VariableAlreadyDeclaredError : public ContextError {
 public:
     explicit VariableAlreadyDeclaredError(const String& variableName);
-
+    explicit VariableAlreadyDeclaredError(const String& variableName, SharedPtr<Scope> currentScope);
     String errorPrefix() const override;
 
     String errorHint() const override;

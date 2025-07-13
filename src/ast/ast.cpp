@@ -229,8 +229,8 @@ void UnaryOperation::setScope(SharedPtr<Scope> newScope) {
 
 void Return::setScope(SharedPtr<Scope> newScope) {
     DEBUG_FLOW(FlowLevel::NONE);
-    if (!getScope()) {throw MerkError("Return::setScope -> getScope() returned null");}
     scope = newScope;
+    if (!getScope()) {throw MerkError("Return::setScope -> getScope() returned null");}
     if (returnValue) {returnValue->setScope(newScope);}
     DEBUG_FLOW_EXIT();
 }
@@ -253,7 +253,7 @@ Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassIn
 
     auto value = returnValue->evaluate(scope, instanceNode);
 
-    DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
+    // DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
 
     DEBUG_FLOW_EXIT();
     throw ReturnException(value);  // Immediately exit function with value
@@ -264,7 +264,7 @@ Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassIn
 
 Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
     : ASTStatement(scope), returnValue(std::move(value)) {
-        validateScope(scope, "Return::Return", returnValue->toString());
+        // validateScope(scope, "Return::Return", returnValue->toString());
     }
 
 
