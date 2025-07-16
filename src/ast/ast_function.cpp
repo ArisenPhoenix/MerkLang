@@ -222,9 +222,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 
 Node FunctionRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {    
     auto optSig = scope->getFunction(name);
-    if (optSig.size() == 0) {
-        throw RunTimeError("Function '" + name + "' not found.");
-    }
+    if (optSig.size() == 0) { throw RunTimeError("Function '" + name + "' not found.");}
 
     SharedPtr<Function> funcs = std::static_pointer_cast<Function>(optSig.front()->getCallable());
 

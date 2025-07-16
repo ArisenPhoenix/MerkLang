@@ -348,7 +348,7 @@ void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDec
 void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
     DEBUG_FLOW(FlowLevel::LOW);
     DEBUG_LOG(LogLevel::TRACE, "DEBUG Scope::declareVariable: Declaring variable: ", name, " = ", value, " | In Scope Level: ", this->getScopeLevel());
-    if (owner == "ClassBase(Square)" && name != "x" && name != "y" && scopeLevel == 3) {throw MerkError("ClassBase(Square) attempted to allow in a non instance variable: " + name);}
+    // if (owner == "ClassBase(Square)" && name != "x" && name != "y" && scopeLevel == 3) {throw MerkError("ClassBase(Square) attempted to allow in a non instance variable: " + name);}
     // Set the variable in the current context (not parent or child)
     if (context.hasVariable(name)) {
         DEBUG_LOG(LogLevel::DEBUG, "SCOPE: ", owner, "SCOPE LEVEL: ", scopeLevel);

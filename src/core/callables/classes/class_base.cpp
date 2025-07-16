@@ -28,15 +28,10 @@ ClassBase::ClassBase(String otherName, String otherAccessor, SharedPtr<Scope> te
 }
 
 ClassBase::~ClassBase() {
-    if (getClassScope()){
-        getClassScope().reset();
-    }
-    if (getCapturedScope()){
-        getCapturedScope().reset();
-
-    }
-
+    if (getClassScope()){getClassScope().reset();}
+    if (getCapturedScope()){getCapturedScope().reset();}
 }
+
 // Add a method to the class by storing its signature in the class scope.
 // Here it's assumed that setVariable will store a Node that wraps the method signature.
 void ClassBase::addMethod(const String& name, SharedPtr<Method> method) {
@@ -48,9 +43,7 @@ void ClassBase::addMethod(const String& name, SharedPtr<Method> method) {
 SharedPtr<Callable> ClassBase::getMethod(const String& name) {
     auto methods = classScope->getFunction(name);
     auto method = methods.front();
-    if (method){
-        return method->getCallable();
-    }
+    if (method) {return method->getCallable();}
     throw FunctionNotFoundError(name);
 }
 
@@ -66,17 +59,13 @@ Node ClassBase::getMember(const String& name) {
 }
 
 void ClassBase::setCapturedScope(SharedPtr<Scope> scope) {
-    if (!scope){
-        throw MerkError("New Scope provided to ClassBase is null");
-    }
+    if (!scope){throw MerkError("New Scope provided to ClassBase is null");}
     capturedScope = scope;
     initialCapturedScope = scope;
 }
 
 void ClassBase::setClassScope(SharedPtr<Scope> scope) {
-    if (!scope){
-        throw MerkError("New ClassScope provided to ClassBase is null");
-    }
+    if (!scope){throw MerkError("New ClassScope provided to ClassBase is null");}
     classScope = scope;
     capturedScope = scope;
     classScope->owner = generateScopeOwner("ClassBase", name);
@@ -84,20 +73,15 @@ void ClassBase::setClassScope(SharedPtr<Scope> scope) {
 }
 
 SharedPtr<Scope> ClassBase::getCapturedScope() const {
-    if (auto captured = capturedScope.lock()) {
-        return captured;
-    }
+    if (auto captured = capturedScope.lock()) {return captured;}
 
-    if (initialCapturedScope) {
-        return initialCapturedScope;
-    }
+    if (initialCapturedScope) {return initialCapturedScope;}
+
     return nullptr;
 }
 SharedPtr<Scope> ClassBase::getClassScope() const {return classScope;}
 
-String ClassBase::toString() const {
-    return "ClassBase()";
-};
+String ClassBase::toString() const {return "ClassBase()";}
 
 Node ClassBase::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
@@ -116,17 +100,11 @@ void ClassBase::setScope(SharedPtr<Scope> newScope) const {
 SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
-    if (!getCapturedScope()) {
-        throw MerkError("Captured Scope in ClassBase::toCallableSignature is null");
-    }
+    if (!getCapturedScope()) {throw MerkError("Captured Scope in ClassBase::toCallableSignature is null");}
 
-    if (!getClassScope()) {
-        throw MerkError("Class Scope is null in ClassBase::toCallableSignature");
-    }
+    if (!getClassScope()) {throw MerkError("Class Scope is null in ClassBase::toCallableSignature");}
 
-    if (!getCapturedScope()->has(getClassScope())){
-        throw MerkError("CallBase::toCallableSignature -> Captured Scope Does Not Own Class Scope");
-    }
+    if (!getCapturedScope()->has(getClassScope())){throw MerkError("CallBase::toCallableSignature -> Captured Scope Does Not Own Class Scope");}
 
 
     // Clone captured scope (the one with free variables)
@@ -134,9 +112,7 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
 
     // Clone parameters
     ParamList clonedParams;
-    for (const auto& param : parameters) {
-        clonedParams.addParameter(param.copy());
-    }
+    for (const auto& param : parameters) {clonedParams.addParameter(param.copy());}
 
     this->setParameters(clonedParams);
     // setCapturedScope
@@ -159,9 +135,7 @@ ClassInstance::ClassInstance(const String& name, SharedPtr<Scope> capturedScope,
     : Callable(name, params, CallableType::INSTANCE), capturedScope(capturedScope), instanceScope(instanceScope), accessor(accessor) {
         instanceScope->owner = generateScopeOwner("ClassInstance", name);
         auto startingScopeCheck = getCapturedScope()->getParent();
-        if (!startingScopeCheck) {
-            throw MerkError("Could Not Get Defining Scope For Class Instance");
-        }
+        if (!startingScopeCheck) {throw MerkError("Could Not Get Defining Scope For Class Instance");}
 }
 
 
@@ -199,10 +173,7 @@ String ClassInstance::toString() const {
     return "<Instance of " + getName() + ">";
 }
 
-SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {
-    // stub for later implementation
-    throw MerkError("Instances are not directly callable unless '__call__' is defined.");
-}
+SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {throw MerkError("Instances are not directly callable unless '__call__' is defined.");}
 
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
@@ -220,7 +191,26 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     SharedPtr<Scope> instanceScope = self->getInstanceScope();
     
     DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance::contruct -> methodCallScope");
-   
+    
+    auto methodBody = method->getBody();
+    auto ast = methodBody->getAllAst();
+    auto instanceMembers = ASTUtils::collectMatching(ast, 
+    [](const BaseAST* node) {
+            return node->getAstType() == AstType::VariableDeclaration;
+        }, false, false);
+    
+
+    if (instanceMembers.size() == 0) {
+        throw MerkError("No members found in construct");
+    }
+    ClassMembers vars;
+    for (auto* member : instanceMembers) {
+        auto decMember = static_cast<const VariableDeclaration*>(member);
+        auto varName = decMember->getName();
+        vars.emplace(varName, varName);
+    }
+
+    instanceScope->setClassMembers(vars);
     method->execute(args, methodCallScope, instanceNode);
     instanceScope->removeChildScope(methodCallScope);
     

@@ -12,17 +12,13 @@ void ArgumentList::addNamedArg(const String& name, const Node& arg) {
 }
 
 Node ArgumentList::getArg(size_t i) const {
-    if (i >= positionalArgs.size()) {
-        throw RunTimeError("Argument index out of range.");
-    }
+    if (i >= positionalArgs.size()) {throw RunTimeError("Argument index out of range.");}
     return positionalArgs[i];
 }
 
 Node ArgumentList::getNamedArg(const String& name) const {
     auto it = namedArgs.find(name);
-    if (it == namedArgs.end()) {
-        throw RunTimeError("Named argument not found: " + name);
-    }
+    if (it == namedArgs.end()) {throw RunTimeError("Named argument not found: " + name);}
     return it->second;
 }
 
@@ -63,9 +59,7 @@ Vector<Node> ArgumentList::bindTo(const ParamList& params, bool allowDefaults) c
     // Bind varargs (as Vector<Node>)
     if (variadic) {
         Vector<Node> varArgs;
-        for (size_t i = fixedCount; i < positionalArgs.size(); ++i) {
-            varArgs.push_back(positionalArgs[i]);
-        }
+        for (size_t i = fixedCount; i < positionalArgs.size(); ++i) {varArgs.push_back(positionalArgs[i]);}
 
         // Named varargs not supported for now (complex edge case)
         boundArgs.push_back(Node(varArgs));  // Wrap in Node later as a NativeList/etc

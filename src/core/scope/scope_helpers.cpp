@@ -178,7 +178,22 @@ void Scope::printContext(int depth) const {
 
 
 
+ClassMembers Scope::getClassMembers() const {
+    return classMembers;
+}
 
+bool Scope::hasMember(String& varName) {
+    for (auto& [var, data] : classMembers) {
+        if (var == varName) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Scope::setClassMembers(ClassMembers members) {
+    classMembers = members;
+}
 
 void Scope::setScopeLevel(int newLevel) {
     scopeLevel = newLevel;

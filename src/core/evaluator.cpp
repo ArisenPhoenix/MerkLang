@@ -109,8 +109,11 @@ namespace Evaluator {
         (void)instanceNode;
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         DEBUG_LOG(LogLevel::PERMISSIVE, "Evaluating Variable Declaration");
+    
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-        
+        bool usingInstanceScope = instanceScope != scope;
+    
+        // SharedPtr<Scope> instanceScope = scope;
         VarNode resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
 
         String varName = var.toString();
@@ -118,19 +121,15 @@ namespace Evaluator {
         
         
         if (!resolvedVariable.isValid()) {throw MerkError("Invalid node returned during VariableDeclaration evaluation.");}
-        if (varName == "newValue") {
-            DEBUG_LOG(LogLevel::PERMISSIVE, highlight(varName + " is being decalared into scope", Colors::bg_white));
-            instanceScope->debugPrint();
+
+        
+        if (usingInstanceScope && instanceScope->hasMember(varName)) {
+            instanceScope->declareVariable(varName, std::move(varNode));
         }
 
-        // if (varName == "otherValue") {
-        //     DEBUG_LOG(LogLevel::PERMISSIVE, highlight(varName + " is being decalared into scope", Colors::bg_white));
-        //     instanceScope->debugPrint();
-        //     throw MerkError("otherValue declared");
-        // }
-        // size_t before = instanceScope->getContext().getVariables().size();
-        instanceScope->declareVariable(varName, std::move(varNode));
-        // if (instanceScope->getContext().getVariables().size() == before) {throw MerkError("No Varialbes Declared");} 
+        else {
+            scope->declareVariable(varName, std::move(varNode));
+        }   
         
         DEBUG_FLOW_EXIT();
         return resolvedVariable;
@@ -601,7 +600,7 @@ namespace Evaluator {
 
         auto params = classTemplate->getParameters().clone();
 
-        instanceScope->owner = generateScopeOwner("ClassInstance", classTemplate->getName());
+        // instanceScope->owner = generateScopeOwner("ClassInstance", classTemplate->getName()); 
         SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classTemplate->getQualifiedName(), capturedScope, instanceScope, params, classTemplate->getQualifiedAccessor());
 
         instance->construct(argValues, instance); 
@@ -646,9 +645,7 @@ namespace Evaluator {
 
         SharedPtr<Scope> defScope = passedScope->isolateScope(freeVarNames);
         if (!defScope){DEBUG_FLOW_EXIT();throw MerkError("Defining Scope for FunctionDef::evaluate is null");}
-        if (!defScope){
-            throw MerkError("defScope created in MethodDef::evaluate is null");
-        }
+        if (!defScope){throw MerkError("defScope created in MethodDef::evaluate is null");}
 
         defScope->isCallableScope = true;
         defScope->owner = generateScopeOwner("MethodDef", methodName); 
@@ -691,6 +688,16 @@ namespace Evaluator {
         method->setScope(defScope);
         // auto capturedScope = passedScope->detachScope(freeVarNames);
         method->setCapturedScope(defScope);
+        if (!method->getCapturedScope()) {throw MerkError("No Captured Scope for method: " + methodName);}
+        // if (methodName == "other") {
+        //     defScope->debugPrint();
+        //     defScope->printChildScopes();
+        //     auto captured = method->getCapturedScope();
+        //     captured->debugPrint();
+        //     captured->printChildScopes();
+        //     throw MerkError("printed Captured Scope");
+        // }
+        
 
         auto methodSig = method->toCallableSignature();
         DEBUG_LOG(LogLevel::TRACE, "SETTING METHOD SIG PARAMS FOR ", methodName);

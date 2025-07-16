@@ -409,7 +409,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             {
                 // auto methodCall = static_cast<MethodCall*>(elem.object.get());
                 // currentVal = instance->call(elem.name, methodCall->handleArgs(currentScope, instanceNode));
-                currentVal = elem.object->evaluate(currentScope, instanceNode);
+                currentVal = elem.object->evaluate(methodScope, instanceNode);
 
                 break;
             }

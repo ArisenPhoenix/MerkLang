@@ -8,9 +8,7 @@ Callable::Callable(Method& method){
     requiresReturn = method.requiresReturn;
     parameters = method.parameters;
     name = method.name;
-    if (callableTypeAsString(callType) == "Unknown"){
-        throw MerkError("Failed to instantiate callType at Callable::Callable copy from method instantiation");
-    }
+    if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable copy from method instantiation");}
 }
 
 Callable::Callable(Function& function){
@@ -18,9 +16,7 @@ Callable::Callable(Function& function){
     requiresReturn = function.requiresReturn;
     parameters = function.parameters;
     name = function.name;
-    if (callableTypeAsString(callType) == "Unknown"){
-        throw MerkError("Failed to instantiate callType at Callable::Callable copy from function instantiation");
-    }
+    if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable copy from function instantiation");}
 }
 
 Callable::Callable(Callable& callable)
@@ -30,9 +26,7 @@ Callable::Callable(Callable& callable)
       callType(callable.callType),
       requiresReturn(callable.requiresReturn)
 {
-    if (callableTypeAsString(callType) == "Unknown"){
-        throw MerkError("Failed to instantiate callType at Callable::Callable copy from callable instantiation");
-    }
+    if (callableTypeAsString(callType) == "Unknown") {throw MerkError("Failed to instantiate callType at Callable::Callable copy from callable instantiation");}
 }
 
 
@@ -57,22 +51,18 @@ String& Callable::getQualifiedName() {
 
 Callable::Callable(String name, ParamList params, CallableType callType)
     : name(std::move(name)), parameters(std::move(params)), callType(callType) {
-        DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::MED);
     
-        if (callableTypeAsString(callType) == "Unknown"){
-            throw MerkError("Failed to instantiate callType at Callable::Callable instantiation");
-        }
-        DEBUG_FLOW_EXIT();
+    if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable instantiation");}
+    DEBUG_FLOW_EXIT();
     }
         
 
 Callable::Callable(String name, ParamList params, CallableType callType, bool requiresReturn, bool isStatic)
     : name(std::move(name)), parameters(std::move(params)), callType(callType), requiresReturn(requiresReturn), isStatic(isStatic) {
-        DEBUG_FLOW(FlowLevel::MED);
-        if (callableTypeAsString(callType) == "Unknown"){
-            throw MerkError("Failed to instantiate callType at Callable::Callable with requiresReturn instantiation");
-        }
-        DEBUG_FLOW_EXIT();
+    DEBUG_FLOW(FlowLevel::MED);
+    if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable with requiresReturn instantiation");}
+    DEBUG_FLOW_EXIT();
     }
 
 
@@ -111,9 +101,7 @@ SharedPtr<Callable> CallableNode::getCallable() const {
 void CallableNode::setInternalScope(SharedPtr<Scope> scope) { internalScope = scope; internalScope->owner = generateScopeOwner("InternalScope", name);}
 SharedPtr<Scope> CallableNode::getInternalScope() const { return internalScope; }
 
-String CallableNode::toString() const {
-    return "<" + nodeType + ": " + getCallable()->toString() + ">";
-}
+String CallableNode::toString() const {return "<" + nodeType + ": " + getCallable()->toString() + ">";}
 
 
 void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope> callScope) const {
@@ -122,10 +110,6 @@ void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope>
     ArgumentList args;
 
     for (auto& evaluated: evaluatedArgs) {
-        // if (name == "print" && evaluated.isClassInstance()) {
-        //     DEBUG_LOG(LogLevel::PERMISSIVE, evaluated);
-        //     throw MerkError("evaluated args for function print");
-        // }
         args.addPositionalArg(evaluated);
     }
 

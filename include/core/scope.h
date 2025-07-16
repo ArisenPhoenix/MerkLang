@@ -14,12 +14,16 @@ class ClassBase;
 class ClassSignature;
 
 
+using ClassMembers = std::unordered_map<String, String>;
+
 class Scope : public std::enable_shared_from_this<Scope> {
 private:
     WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
     int scopeLevel;                      // The level of the scope in the hierarchy
     static inline size_t liveScopeCount = 0;
     static inline size_t totalScopeCreated = 0;
+    ClassMembers classMembers;   //map for future uses
+
 public:
     static void printScopeReport() {
         std::cout << "----------------------------" << std::endl;
@@ -50,6 +54,11 @@ public:
     std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
     std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
 
+    
+
+    ClassMembers getClassMembers() const;
+    void setClassMembers(ClassMembers);
+    bool hasMember(String&);
     int currentLine;
     int currentColumn;
 
