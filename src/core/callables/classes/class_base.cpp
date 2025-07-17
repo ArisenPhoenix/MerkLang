@@ -175,6 +175,27 @@ String ClassInstance::toString() const {
 
 SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {throw MerkError("Instances are not directly callable unless '__call__' is defined.");}
 
+ClassMembers ClassInstance::getInstanceVarsFromConstructor(SharedPtr<Method> method) {
+    auto methodBody = method->getBody();
+    auto ast = methodBody->getAllAst();
+    auto instanceMembers = ASTUtils::collectMatching(ast, 
+    [](const BaseAST* node) {
+            return node->getAstType() == AstType::VariableDeclaration;
+        }, false, false);
+    
+
+    ClassMembers vars;
+    for (auto* member : instanceMembers) {
+        auto decMember = static_cast<const VariableDeclaration*>(member);
+        auto varName = decMember->getName();
+        vars.emplace(varName, varName);
+    }
+
+
+    return vars;
+
+}
+
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!getInstanceScope()->hasFunction("construct")) {throw MerkError("A construct method must be implemented in class: " + getName());}
@@ -192,23 +213,7 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     
     DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance::contruct -> methodCallScope");
     
-    auto methodBody = method->getBody();
-    auto ast = methodBody->getAllAst();
-    auto instanceMembers = ASTUtils::collectMatching(ast, 
-    [](const BaseAST* node) {
-            return node->getAstType() == AstType::VariableDeclaration;
-        }, false, false);
-    
-
-    if (instanceMembers.size() == 0) {
-        throw MerkError("No members found in construct");
-    }
-    ClassMembers vars;
-    for (auto* member : instanceMembers) {
-        auto decMember = static_cast<const VariableDeclaration*>(member);
-        auto varName = decMember->getName();
-        vars.emplace(varName, varName);
-    }
+    auto vars = getInstanceVarsFromConstructor(method);
 
     instanceScope->setClassMembers(vars);
     method->execute(args, methodCallScope, instanceNode);

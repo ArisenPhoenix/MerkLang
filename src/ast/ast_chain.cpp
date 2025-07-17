@@ -358,19 +358,11 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
     index ++;
 
 
-    if (baseElem.object->getAstType() == AstType::Unknown) {
-        throw MerkError("Unknown AST Type Found In Chain...see above");
-    }
+    if (baseElem.object->getAstType() == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
 
     for (size_t i = index; i < elements.size(); ++i) {
         const auto& elem = elements[i];
         AstType objType = elem.object->getAstType();
-
-        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("current scope before chain element evaluation ============================================================", Colors::bg_bright_yellow));
-        // currentScope->debugPrint();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("method scope before chain element evaluation ============================================================", Colors::bg_bright_yellow));
-        // methodScope->debugPrint();
-        // DEBUG_LOG(LogLevel::DEBUG, "Chain Evaluating: ", elem.name, "of:", astTypeToString(elem.object->getAstType()));
 
         if (objType == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
         if (!currentVal.isValid()) {throw MerkError("Cannot Chain off of a null return value");}
@@ -385,41 +377,46 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
 
             switch (objType)
             {
-            // case AstType::ChainOperation:
-            //     currentVal = elem.object->evaluate(currentScope, instanceNode);
-            //     throw MerkError("Evaluated ChainOperation");
-            //     break;
             case AstType::VariableDeclaration:
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
-                break;
-
+                {
+                    auto varDec = static_cast<VariableDeclaration*>(elem.object.get());
+                    auto varName = varDec->getName();
+                    auto varNode = varDec->getVariable();
+                    instance->declareField(varName, varDec->getExpression()->evaluate(methodScope, instanceNode));
+                    currentScope->addMember(varName);  // ensures downstream logic will correctly resolve
+                    // currentVal = elem.object->evaluate(methodScope, instanceNode);
+                    break;
+                }
             case AstType::VariableAssignment:
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
-                break;
-
+                {
+                    auto varAss = static_cast<VariableAssignment*>(elem.object.get());
+                    auto varName = varAss->getName();
+                    instance->updateField(varName, varAss->getExpression()->evaluate(methodScope, instanceNode));
+                    // currentVal = elem.object->evaluate(methodScope, instanceNode);
+                    break;
+                }
             case AstType::VariableReference:
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
-                break;
+                {
+                    auto varRef = static_cast<VariableReference*>(elem.object.get());
+                    currentVal = instance->getField(varRef->getName());
+                    DEBUG_LOG(LogLevel::PERMISSIVE, "GETTING VARIABLE REFERENCE");
+                    // currentVal = elem.object->evaluate(methodScope, instanceNode);
+                    break;
+                }
             
-            case AstType::FunctionCall:
-                currentVal = elem.object->evaluate(currentScope, instanceNode);
-                break;
-
             case AstType::ClassMethodCall:
-            {
-                // auto methodCall = static_cast<MethodCall*>(elem.object.get());
-                // currentVal = instance->call(elem.name, methodCall->handleArgs(currentScope, instanceNode));
-                currentVal = elem.object->evaluate(methodScope, instanceNode);
+                {
+                    currentVal = elem.object->evaluate(methodScope, instanceNode);
 
-                break;
-            }
+                    break;
+                }
                 
             default:
                 currentVal = elem.object->evaluate(currentScope, instanceNode);
+                currentScope = elem.object->getScope();
                 break;
             }
             
-            currentScope = elem.object->getScope();
             setLastScope(currentScope);
 
         } else {

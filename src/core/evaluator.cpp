@@ -139,7 +139,8 @@ namespace Evaluator {
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-        auto workingScope = instanceScope->hasVariable(name) ? instanceScope : scope;
+        // auto workingScope = instanceScope->hasVariable(name) ? instanceScope : scope;
+        auto workingScope = instanceScope->hasMember(name) ? instanceScope : scope;
 
         VarNode resolvedVariable = VarNode(value->evaluate(scope, instanceNode)); // keep evaluation scope as the provided scope for proper scope resolution and propagation
 
@@ -158,42 +159,30 @@ namespace Evaluator {
 
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
-        auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-
-        
-        // scope->debugPrint();
-        // scope->printChildScopes();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used: ");
-        // instanceScope->debugPrint();
-        // instanceScope->printChildScopes();
-
-        // DEBUG_LOG(LogLevel::NONE, "Has instanceNode: ", (instanceNode ? "True" : "False"));
-
-        // if (instanceScope->hasVariable(name)) {
-        //     auto& variable = instanceScope->getVariable(name);
-        //     return variable;
-        // } else {
-        //     auto& variable =  scope->getVariable(name);  // Keep it as VarNode reference
-        //     return variable;
+        auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : nullptr;
+        auto workingScope = scope;
+        auto parent = scope->getParent();
+        // auto instanceScope = instanceNode->getInstanceScope();
+        // auto instanceScope = insta
+        // if (instanceScope) {
+        //     auto instanceScope = instanceNode->getInstanceScope();
+        //     if (workingScope != instanceScope) {
+        //         scope->appendChildScope(instanceScope, false);
+        //     }
+        //     workingScope = instanceScope;
+        //     // instanceScope->appendChildScope(scope, false);
         // }
 
-
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Passed: ");
-        // scope->debugPrint();
-        // scope->printChildScopes();
-        DEBUG_LOG(LogLevel::PERMISSIVE, "InstanceScope Passed: ");
-        // instanceScope->debugPrint();
-        // instanceScope->printChildScopes();
-        // if (!scope->hasVariable(name) && name == "otherValue") {
-        //     // throw VariableNotFoundError(name);
-        //     throw MerkError("Doesn't have the variable");
-        // }
-
-        // if (scope->hasVariable(name) && name == "otherValue") {
-        //     throw MerkError("Has the variable");
+        // if (name == "x") {
+        //     DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Scopes for VarRef");
+        //     scope->debugPrint();
+        //     if (instanceNode) {
+        //         instanceNode->getInstanceScope()->debugPrint();
+        //     }
+        //     throw MerkError("Got X");
         // }
         
-        auto& variable = scope->getVariable(name);
+        auto& variable = workingScope->getVariable(name);
 
         // Ensure the variable is valid
         if (!variable.isValid()) {
@@ -201,8 +190,14 @@ namespace Evaluator {
             throw NullVariableError(name);
         }
 
-        DEBUG_LOG(LogLevel::INFO, "VariableReferenceNode resolved: Name=", name, 
-                ", Value=", variable.toString());
+        // scope->removeChildScope(workingScope);
+        if (instanceScope) {
+            scope->removeChildScope(workingScope);
+
+
+            // instanceScope->removeChildScope(workingScope);
+        }
+        scope->setParent(parent);
 
         DEBUG_FLOW_EXIT();
         return variable;

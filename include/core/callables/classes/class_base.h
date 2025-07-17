@@ -120,6 +120,7 @@ public:
     SharedPtr<Scope> getInstanceScope();
     void setInstanceScope(SharedPtr<Scope> scope); 
     void setScope(SharedPtr<Scope> newScope) const override;
+    ClassMembers getInstanceVarsFromConstructor(SharedPtr<Method>);
 
 
 };

@@ -14,7 +14,6 @@ class ClassBase;
 class ClassSignature;
 
 
-using ClassMembers = std::unordered_map<String, String>;
 
 class Scope : public std::enable_shared_from_this<Scope> {
 private:
@@ -59,6 +58,8 @@ public:
     ClassMembers getClassMembers() const;
     void setClassMembers(ClassMembers);
     bool hasMember(String&);
+    void addMember(String&);
+    void addMember(String&, String&);
     int currentLine;
     int currentColumn;
 

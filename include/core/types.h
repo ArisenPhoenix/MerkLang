@@ -283,6 +283,10 @@ using VariantType = std::variant<
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
 
+
+using ClassMembers = std::unordered_map<String, String>;
+
+
 // Function to map types in VariantType to NodeValueType
 template <typename T>
 constexpr NodeValueType getNodeTypeFromType() {

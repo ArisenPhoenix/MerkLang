@@ -176,7 +176,13 @@ void Scope::printContext(int depth) const {
     DEBUG_FLOW_EXIT();
 }
 
+void Scope::addMember(String& varName) {
+    classMembers.emplace(varName, varName);
 
+}
+void Scope::addMember(String& varName, String& var) {
+    classMembers.emplace(varName, var);
+}
 
 ClassMembers Scope::getClassMembers() const {
     return classMembers;
