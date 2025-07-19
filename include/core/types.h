@@ -302,16 +302,19 @@ constexpr NodeValueType getNodeTypeFromType() {
         return NodeValueType::Bool;
     else if constexpr (std::is_same_v<T, String>)
         return NodeValueType::String;
-    // else if constexpr (std::is_same_v<T, Vector<Node>>) // Replace with actual `Node`
-    //     return NodeValueType::Vector;
-    // else if constexpr (std::is_same_v<T, SharedPtr<Vector<Node>>>) // Replace with actual `Node`
-        // return NodeValueType::Shared_Vector;
+    else if constexpr (std::is_same_v<T, SharedPtr<ListNode>>) 
+        return NodeValueType::List;
+    else if constexpr (std::is_same_v<T, SharedPtr<ArrayNode>>) 
+        return NodeValueType::Array;
     else if constexpr (std::is_same_v<T, std::nullptr_t>)
         return NodeValueType::Null;
     else if constexpr (std::is_same_v<T, UninitializedType>)
         return NodeValueType::Uninitialized;
-    else
-        throw RunTimeError("Unsupported type in VariantType.");
+    else {return NodeValueType::Any;}
+    // else if constexpr (std::is_same_v<T, NodeValueType::Any>)
+    //     return NodeValueType::Any;
+    // else
+    //     throw RunTimeError("Unsupported type in VariantType.");
 }
 
 

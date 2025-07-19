@@ -372,7 +372,9 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             currentScope = instance->getInstanceScope();
             if (!currentScope) {throw MerkError("Scope Invalid During Chain Iteration");}
 
-            instanceNode = makeShared<ClassInstanceNode>(instance);
+            // instanceNode = makeShared<ClassInstanceNode>(instance);
+            instanceNode = instance->getInstanceNode();
+            // instanceNode = instance->getNode
 
 
             switch (objType)

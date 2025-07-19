@@ -34,6 +34,7 @@ String nodeTypeToString(NodeValueType type) {
         case NodeValueType::ClassInstance: return highlight("ClassInstance", Colors::red);
         case NodeValueType::List: return highlight("ClassInstance<List>", Colors::bold_white);
         case NodeValueType::Array: return highlight("ClassInstance<Array>", Colors::bold_white);
+        
 
         default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
 

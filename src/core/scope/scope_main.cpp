@@ -399,9 +399,7 @@ VarNode& Scope::getVariable(const String& name) {
     }
 
     DEBUG_LOG(LogLevel::ERROR, "From Scope::getVariable");
-    if (hasVariable(name)) {
-        throw MerkError("The Variable Lives Here, yet it is not getting pulled");
-    }
+    if (hasVariable(name)) {throw MerkError("The Variable Lives Here, yet it is not getting pulled");}
     throw VariableNotFoundError(name);
 }
 
@@ -438,11 +436,10 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
     auto subType = callableTypeAsString(funcMethSig->getSubType());
 
     // DEBUG_LOG(LogLevel::PERMISSIVE, "Current ", primaryType, " Being Registered: ", funcMethName, " Type: ", primaryType, " SubType: ", subType);
-    if (!funcMethSig){
-        throw MerkError("Not a Method Signature");
-    }
+    if (!funcMethSig){throw MerkError("Not a Method Signature");}
 
-    DEBUG_LOG(LogLevel::DEBUG, "FUNC TYPE: ", primaryType, " FUNC SUB_TYPE: ", subType, " FUNC NAME: ", funcMethName);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "FUNC TYPE: ", primaryType, " FUNC SUB_TYPE: ", subType, " FUNC NAME: ", funcMethName);
+
     if (funcMethSig->getSubType() == CallableType::NATIVE) {
         auto previousOpt = lookupFunction(funcMethName);
         if (previousOpt){
@@ -523,10 +520,13 @@ void Scope::registerFunction(const String& name, SharedPtr<UserFunction> functio
 
 void Scope::registerFunction(const String& name, SharedPtr<Callable> anyCallable) {
     DEBUG_FLOW(FlowLevel::MED);
-    if (anyCallable->getCallableType() == CallableType::CLASS) {
-        throw MerkError("Cannot Register A Class Into Function Registry");
-    }
+    if (anyCallable->getCallableType() == CallableType::CLASS) {throw MerkError("Cannot Register A Class Into Function Registry");}
+    DEBUG_LOG(LogLevel::PERMISSIVE, "anyCallType: ", callableTypeAsString(anyCallable->getCallableType()), "anySubType: ", callableTypeAsString(anyCallable->getSubType()));
+    // throw MerkError("Got AnyCallable Meta");
     auto signature = anyCallable->toCallableSignature();
+    auto other = signature->getCallable();
+    DEBUG_LOG(LogLevel::PERMISSIVE, "otherCallType: ", callableTypeAsString(other->getCallableType()), "otherSubType: ", callableTypeAsString(other->getSubType()));
+    if (other->getCallableType() != anyCallable->getCallableType() || other->getSubType() != anyCallable->getSubType()) {throw MerkError("starting method and signature held method meta don't match");}
     handleFunctionRegistration(name, signature);
 
     DEBUG_FLOW_EXIT();
@@ -656,98 +656,53 @@ std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) 
 
 void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Registering Class: ", name);
+    // throw MerkError("Registering class " + name);
+    if (!classBase) {throw MerkError("registerClass called with null ClassBase for: " + name);}
+    if (auto clsOpt = lookupClass(name); clsOpt && clsOpt.value()) {throw MerkError("Class '" + name + "' is already defined in this scope.");}
+    if (!classBase->getCapturedScope()) {throw MerkError("No Captured Scope was set in class: " + name);}
+    if (!classBase->getCapturedScope()->has(classBase->getClassScope())) {throw MerkError("Class Scope is Not A CHILD OF CAPTURED SCOPE");}
 
-    if (!classBase) {
-        throw MerkError("registerClass called with null ClassBase for: " + name);
-    }
-
-    if (auto clsOpt = lookupClass(name); clsOpt && clsOpt.value()) {
-        throw MerkError("Class '" + name + "' is already defined in this scope.");
-    }
-
-    if (!classBase->getCapturedScope()->has(classBase->getClassScope())) {
-        throw MerkError("Class Scope is Not A CHILD OF CAPTURED SCOPE");
-    }
     auto sig = std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature());
     
-
-
-    if (!sig) {
-        throw MerkError("ClassSignature is null when registering: " + name);
-    }
+    if (!sig) {throw MerkError("ClassSignature is null when registering: " + name);}
 
     
 
     localClasses[name] = std::move(sig);
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Added class to localClasses");
     DEBUG_FLOW_EXIT();
 }
 
-// void Scope::registerClass(String& name, SharedPtr<ClassSignature> classSig) const {
-//     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
-//     if (!classSig) {
-//         throw MerkError("registerClass called with null ClassBase for: " + name);
-//     }
-
-//     if (auto clsOpt = lookupClass(name); clsOpt && clsOpt.value()) {
-//         throw MerkError("Class '" + name + "' is already defined in this scope.");
-//     }
-
-//     // auto sig = std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature());
-    
-
-
-//     // if (!sig) {
-//     //     throw MerkError("ClassSignature is null when registering: " + name);
-//     // }
-
-    
-
-//     localClasses[name] = std::move(const_cast<ClassSignature>(classSig));
-//     DEBUG_FLOW_EXIT();
-// }
-
 
 std::optional<SharedPtr<ClassSignature>> Scope::getClass(const String& name) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (auto className = lookupClass(name); className) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Got Class: ", name);
+        DEBUG_FLOW_EXIT();
         return className;
     }
 
     if (globalClasses) {
         auto globalClass = globalClasses->getClass(name);
-        if (globalClass) return globalClass;
+        if (globalClass) {
+            // DEBUG_LOG(LogLevel::PERMISSIVE, "#2 Got Class: ", name);
+            DEBUG_FLOW_EXIT();
+            return globalClass;
+        };
     }
 
     auto parent = parentScope.lock();
     if (parent) {
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "#3 Got Class: ", name);
+        DEBUG_FLOW_EXIT();
         return parent->getClass(name);
     }
 
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "#4 Got Class: ", name);
+    DEBUG_FLOW_EXIT();
     return std::nullopt;
 }
-
-
-// std::optional<SharedPtr<ClassSignature>> Scope::getClass(const String& name) {
-
-//     if (auto className = lookupClass(name)){
-//         return className;
-//     }
-//     if (auto className = globalClasses->getClass(name)){
-//         return className;
-//         // if (className.has_value()) {
-            
-//         // }
-        
-//     }
-//     if (globalClasses->hasClass(name)) {
-//         return globalClasses->getClass(name);
-//     }
-//     auto parent = parentScope.lock();
-//     if (parent) {
-//         return parent->getClass(name);
-//     }
-//     throw MerkError("Class: " + name + " Does Not Exist.");
-// }
 
 
 bool Scope::hasClass(const String& name) const {

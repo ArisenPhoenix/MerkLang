@@ -2,6 +2,7 @@
 #include "core/types.h"
 #include "core/callables/callable.h"
 #include "core/callables/classes/class_base.h"
+#include "core/callables/classes/node_structures.h"
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "core/errors.h"
@@ -250,13 +251,9 @@ void Node::setInitialValue(const String& value, const String& typeStr) {
 void Node::setValue(const VariantType& newValue) {
     DEBUG_LOG(LogLevel::DEBUG, "[Debug] Node::setValue() - Setting new value with type:", nodeTypeToString(getNodeValueType(newValue)));
 
-    if (isConst) {
-        throw MerkError("Cannot reassign a constant Node.");
-    }
+    if (isConst) {throw MerkError("Cannot reassign a constant Node.");}
 
-    if (isStatic && data.type != getNodeValueType(newValue)) {
-        throw MerkError("Cannot reassign a statically typed Node with a different type.");
-    }
+    if (isStatic && data.type != getNodeValueType(newValue)) {throw MerkError("Cannot reassign a statically typed Node with a different type.");}
 
     NodeValueType newType = getNodeValueType(newValue);
 
@@ -402,43 +399,38 @@ bool Node::toBool() const {
 String Node::toString() const {
     try {
         switch (data.type) {
-            case NodeValueType::Int:
-                return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Number:
-                return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Float:
-                return std::to_string(std::get<float>(data.value));
-            case NodeValueType::Double:
-                return std::to_string(std::get<double>(data.value));
-            case NodeValueType::Long:
-                return std::to_string(std::get<long>(data.value));
-            case NodeValueType::Bool:
-                return std::get<bool>(data.value) ? "true" : "false";
-            case NodeValueType::Char:
-                return std::string(1, std::get<char>(data.value));
-            case NodeValueType::String:
-                return std::get<String>(data.value);
-            case NodeValueType::Null:
-                return "null"; 
-            case NodeValueType::Uninitialized:
-                return "<Uninitialized>";
-            case NodeValueType::Any:
-                return "Any";
-            case NodeValueType::Class:
-                return "Class";
+            case NodeValueType::Int: return std::to_string(std::get<int>(data.value));
+            case NodeValueType::Number: return std::to_string(std::get<int>(data.value));
+            case NodeValueType::Float: return std::to_string(std::get<float>(data.value));
+            case NodeValueType::Double: return std::to_string(std::get<double>(data.value));
+            case NodeValueType::Long: return std::to_string(std::get<long>(data.value));
+            case NodeValueType::Bool: return std::get<bool>(data.value) ? "true" : "false";
+            case NodeValueType::Char: return std::string(1, std::get<char>(data.value));
+            case NodeValueType::String: return std::get<String>(data.value);
+            case NodeValueType::Null: return "null"; 
+            case NodeValueType::Uninitialized: return "<Uninitialized>";
+            case NodeValueType::Any: return "Any";
+            case NodeValueType::Class: return "Class";
             
-            case NodeValueType::ClassInstance:
+            case NodeValueType::ClassInstance: {
+                if (name == "List") {
+                    auto list = std::get<SharedPtr<ClassInstance>>(data.value);
+                    return list->getField("vector").toString();
+                }
                 return "<ClassInstance>" + name;
-            case NodeValueType::Callable:
-                return "<Callable>" + name;
-            case NodeValueType::UNKNOWN:
-                return "UNKNOWN";
-            case NodeValueType::Function:
-                return "<Function>" + name;
-            case NodeValueType::None:
-                return "None";
-            default:
-                throw MerkError("Unsupported type for Node toString.");
+            }
+            case NodeValueType::List: {
+                auto list = std::get<SharedPtr<ListNode>>(data.value);
+                // throw MerkError("Sent out List String");
+                return list->toString();
+            };
+            case NodeValueType::Array: return "Array";
+                
+            case NodeValueType::Callable: return "<Callable>" + name;
+            case NodeValueType::UNKNOWN: return "UNKNOWN";
+            case NodeValueType::Function: return "<Function>" + name;
+            case NodeValueType::None: return "None";
+            default: throw MerkError("Unsupported type for Node toString.");
         }
     } catch (const std::exception& e) {
         debugLog(true, highlight("[Error] Exception in Node::toString():", Colors::red), e.what());
@@ -519,8 +511,8 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
     if (std::holds_alternative<String>(value)) return NodeValueType::String;
     if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
     if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
-    // if (std::holds_alternative<NodeVector>(value)) return NodeValueType::Vector;
-    if (std::holds_alternative<NodeList>(value)) return NodeValueType::List;
+    // if (std::holds_alternative<ListNode>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::List;}
+    if (std::holds_alternative<SharedPtr<ListNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::List;};
     if (std::holds_alternative<SharedPtr<ClassInstance>>(value)) return NodeValueType::ClassInstance;
     // if (std::holds_alternative<SharedPtr<FunctionNode>>(value)) return NodeValueType::Function;
     return NodeValueType::Any;  // Allow `Any` when the type is unknown
@@ -544,6 +536,14 @@ void Node::setInitialValue(const VariantType& value) {
         },
         value
     );
+}
+
+
+bool Node::isList() const {
+    if (name == "List" && data.type != NodeValueType::List) {
+        throw MerkError("List is not a List Type");
+    }
+    return data.type == NodeValueType::List;
 }
 
 
@@ -1025,6 +1025,9 @@ VarNode::VarNode(const VariantType& value, bool isConst, bool isMutable, bool is
     this->isConst = isConst;
     this->isMutable = isMutable;
     this->isStatic = isStatic;
+    // if (this->data.type == NodeValueType::List || getNodeValueType(value) == NodeValueType::List) {
+    //     throw MerkError("Found List");
+    // }
 }
 
 // VarNode Constructor accepting String value and type

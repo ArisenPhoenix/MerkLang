@@ -35,7 +35,9 @@ void Method::setClassScope(SharedPtr<Scope> newClassScope) {
 
 
 Method::~Method() {
-    capturedScope->clear();
+    if (capturedScope) {
+        capturedScope->clear();
+    }
     
 }
 
@@ -65,9 +67,7 @@ UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body
     setSubType(callType);
 
 
-    if (subType == CallableType::METHOD) {
-        throw MerkError("Method Sub Type cannot be Method from Full Constructor");
-    }
+    if (subType == CallableType::METHOD) {throw MerkError("Method Sub Type cannot be Method from Full Constructor");}
 }
 
 UserMethod::UserMethod(Function&& function)
@@ -83,9 +83,7 @@ UserMethod::UserMethod(Function&& function)
     setCapturedScope(function.getCapturedScope());
     setCallableType(CallableType::METHOD);
     setSubType(function.getSubType());
-    if (subType == CallableType::METHOD) {
-        throw MerkError("Method Sub Type cannot be Method from Function&");
-    }
+    if (subType == CallableType::METHOD) {throw MerkError("Method Sub Type cannot be Method from Function&");}
 }
 
 UserMethod::UserMethod(UserMethod& method) : Method(method) {
@@ -97,9 +95,7 @@ UserMethod::UserMethod(UserMethod& method) : Method(method) {
     setCallableType(CallableType::METHOD);
     setSubType(method.getSubType());
 
-    if (subType == CallableType::METHOD) {
-        throw MerkError("Method Sub Type cannot be Method from UserMethod&");
-    }
+    if (subType == CallableType::METHOD) {throw MerkError("Method Sub Type cannot be Method from UserMethod&");}
 }
 
 SharedPtr<CallableSignature> UserMethod::toCallableSignature(SharedPtr<UserMethod> method) {
@@ -120,15 +116,11 @@ SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     
-    SharedPtr<CallableSignature> methodSig = makeShared<CallableSignature>(
-        shared_from_this(), getCallableType()
-    );
+    SharedPtr<CallableSignature> methodSig = makeShared<CallableSignature>(shared_from_this(), getCallableType());
     
     methodSig->setSubType(getSubType());
     
-    if (methodSig->getCallableType() == CallableType::DEF) {
-        throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));
-    }
+    if (methodSig->getCallableType() == CallableType::DEF) {throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));}
     methodSig->setParameters(parameters.clone());
 
     // DEBUG_LOG(LogLevel::ERROR, funcSig->getParameterTypes());
@@ -148,11 +140,11 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_
     
     try {
 
-        if (!callScope){throw MerkError("Method " + name +" Has No Captured Scope:");}
+        if (!callScope) {throw MerkError("Method " + name +" Has No Captured Scope:");}
 
         auto capturedScope = getCapturedScope();
 
-        if (!callScope){throw MerkError("Method " + name +" Has No Call Scope:");}
+        if (!callScope) {throw MerkError("Method " + name +" Has No Call Scope:");}
 
         String matches = callScope == capturedScope ? "true" : "false";
 

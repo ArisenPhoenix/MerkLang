@@ -108,10 +108,14 @@ void Context::debugPrint() const {
 }
 
 void Context::clear() {
-    for (auto& [varName, var] : variables) {
+    
+    if (variables.size() > 0) {
+        for (auto& [varName, var] : variables) {
         var.reset();
     }
-    variables.clear();
+        variables.clear();
+    }
+    
 }
 
 

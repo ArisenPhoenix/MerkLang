@@ -18,6 +18,8 @@ SharedPtr<Scope> Scope::makeCallScope() {
     c->isClonedScope = true;
     c->isRoot = false;
     DEBUG_FLOW_EXIT();
+
+    // throw MerkError("made call scope");
     return c;
 }
 

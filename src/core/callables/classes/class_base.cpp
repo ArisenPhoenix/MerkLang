@@ -196,14 +196,23 @@ ClassMembers ClassInstance::getInstanceVarsFromConstructor(SharedPtr<Method> met
 
 }
 
+SharedPtr<ClassInstanceNode> ClassInstance::getInstanceNode() {
+    auto instance = std::static_pointer_cast<ClassInstance>(shared_from_this());
+    return makeShared<ClassInstanceNode>(instance);
+}
+
+
+
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!getInstanceScope()->hasFunction("construct")) {throw MerkError("A construct method must be implemented in class: " + getName());}
 
     auto methodOpt = getInstanceScope()->getFunction("construct", args);
     if (!methodOpt) {throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");}
-    
+    DEBUG_LOG(LogLevel::PERMISSIVE, "sigCallType: ", callableTypeAsString(methodOpt->getCallableType()), "sigSubType: ", callableTypeAsString(methodOpt->getSubType()));
+    // throw MerkError("Got sig Types");
     auto method = std::static_pointer_cast<Method>(methodOpt->getCallable());
+    if (!method) {throw MerkError("Class " + name + " is not valid");}
     SharedPtr<Scope> methodCallScope = self->getInstanceScope()->buildMethodCallScope(method, method->getName());
 
     auto params = parameters.clone();
@@ -212,9 +221,11 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     SharedPtr<Scope> instanceScope = self->getInstanceScope();
     
     DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance::contruct -> methodCallScope");
-    
-    auto vars = getInstanceVarsFromConstructor(method);
+    ClassMembers vars = {};
+    DEBUG_LOG(LogLevel::PERMISSIVE, "callType: ", callableTypeAsString(method->getCallableType()), " subType: ", callableTypeAsString(method->getSubType()));
+    if (method->getSubType() == CallableType::CALLABLE) {throw MerkError("Incorrect Callable subType in NativeMethod");}
 
+    DEBUG_LOG(LogLevel::PERMISSIVE, "got instance vars");
     instanceScope->setClassMembers(vars);
     method->execute(args, methodCallScope, instanceNode);
     instanceScope->removeChildScope(methodCallScope);
@@ -331,9 +342,9 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
             return getField(fieldName);
             break;
 
-        case TokenType::ClassMethodCall:
-        case TokenType::FunctionCall:
-            break;
+        // case TokenType::ClassMethodCall:
+        // case TokenType::FunctionCall:
+        //     break;
 
         default:
             throw MerkError("Unsupported field type for '" + fieldName + "'");
@@ -393,9 +404,7 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     : CallableNode(callableNode) {
     DEBUG_FLOW(FlowLevel::NONE);
     auto instance = std::get<SharedPtr<Callable>>(data.value);
-    if (!instance) {
-        throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");
-    }
+    if (!instance) {throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");}
 
     data.value = instance; 
     data.type = NodeValueType::ClassInstance;

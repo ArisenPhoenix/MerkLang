@@ -257,7 +257,9 @@ Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 
 
 CallableSignature::~CallableSignature() {
-    parameterTypes.clear();
+    if (parameterTypes.data()) {
+        parameterTypes.clear();
+    }   
 }
 
 

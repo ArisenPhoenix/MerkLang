@@ -12,6 +12,7 @@ void ListNode::append(const Node& node) { elements.push_back(node); }
 const Vector<Node>& ListNode::getElements() const { return elements; }
 Vector<Node>& ListNode::getMutableElements() { return elements; }
 String ListNode::toString() const {
+    // throw MerkError("Called ListNode::toString()");
     String repr = "[";
     for (size_t i = 0; i < elements.size(); ++i) {
         repr += elements[i].toString();
@@ -22,7 +23,7 @@ String ListNode::toString() const {
 }
 
 void ArrayNode::append(const Node& node) {
-    if (node.getType() == type) {
+    if (contains == NodeValueType::Any || node.getType() == contains) {
         elements.push_back(node);
     } else {
         throw MerkError("Type: " + node.getTypeAsString() + " is not supported in an Array<" + getTypeAsString() + ">");

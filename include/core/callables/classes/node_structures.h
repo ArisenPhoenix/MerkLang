@@ -8,7 +8,8 @@
 class ListNode {
 private:
     Vector<Node> elements;
-    NodeValueType type = NodeValueType::Any;
+    NodeValueType type = NodeValueType::List;
+    NodeValueType contains = NodeValueType::Any;
 
 public:
     ListNode();

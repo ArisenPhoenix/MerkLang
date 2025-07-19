@@ -66,10 +66,21 @@ int main(int argc, char* argv[]) {
             globalScope->registerFunction(name, globalFunc);
         }
 
-        // auto globalClasses = getNativeClasses(globalScope);
-        // for (auto& [name, globalCls]: globalClasses) {
-        //     globalScope->registerClass(name, globalCls);
-        // }
+        auto globalClasses = getNativeClasses(globalScope);
+        for (auto& [name, globalCls]: globalClasses) {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "Adding Class: ", name);
+            globalScope->registerClass(name, globalCls);
+            // if (globalScope->hasClass(name)) {throw MerkError("Class " + name + "registered");}
+            // if (!globalScope->hasClass(name)) {throw MerkError("Class " + name + " Was not properly registered");}
+            // throw MerkError("Registered Class " + name);
+            globalScope->debugPrint();
+            globalScope->printChildScopes();
+        }
+
+        if (globalClasses.size() == 0) {throw MerkError("No Global Classes exist");}
+        globalScope->debugPrint();
+
+        // throw MerkError("Global Scope created");
         // Step 5: Parse tokens into an AST
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
         Parser parser(tokens, globalScope, interpretMode, byBlock);

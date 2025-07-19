@@ -27,7 +27,7 @@ protected:
 public: 
     ClassBase(String name, String accessor, SharedPtr<Scope> classScope);
 
-    ~ClassBase();
+    virtual ~ClassBase();
     // Add a method to the class by storing its function pointer in the class scope.
     void addMethod(const String& name, SharedPtr<Method> methodSignature);
     // Retrieve a method's signature from the class scope.
@@ -118,6 +118,8 @@ public:
     virtual void updateField(const String& name, Node val) const;                 // most commonly used
     
     SharedPtr<Scope> getInstanceScope();
+    SharedPtr<ClassInstanceNode> getInstanceNode();
+    SharedPtr<ClassInstanceNode> getInstanceNode() const;
     void setInstanceScope(SharedPtr<Scope> scope); 
     void setScope(SharedPtr<Scope> newScope) const override;
     ClassMembers getInstanceVarsFromConstructor(SharedPtr<Method>);

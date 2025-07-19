@@ -137,7 +137,7 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
 
     Vector<Node> argValues = handleArgs(callScope, instanceNode);
     if (argValues.size() < arguments.size()){throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");}
-    if (argValues.size() == 0) {throw MerkError("There Are No argValues in ClassCall::evaluate.");}
+    // if (argValues.size() == 0) {throw MerkError("There Are No argValues in ClassCall::evaluate.");}
 
     DEBUG_FLOW_EXIT();
 
