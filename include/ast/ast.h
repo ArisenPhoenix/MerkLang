@@ -45,7 +45,9 @@ private:
     String name;
     VarNode variable;
     std::optional<NodeValueType> typeTag;
+    ResolvedType type;
     UniquePtr<ASTStatement> valueExpression;
+    
 
 public:
     VariableDeclaration(
@@ -55,6 +57,15 @@ public:
         std::optional<NodeValueType> typeTag = std::nullopt,
         UniquePtr<ASTStatement> valueExpression = nullptr
     );
+
+    VariableDeclaration(
+        String name,
+        VarNode variable,
+        SharedPtr<Scope> scope,
+        ResolvedType type,
+        UniquePtr<ASTStatement> valueExpression = nullptr
+    );
+    
     VariableDeclaration(UniquePtr<VariableDeclaration> varDec);
     friend class AttributeDeclaration;
     virtual String toString() const override;
@@ -161,7 +172,7 @@ public:
     String toString() const override;
     const String& getOperator() const { return op; }
     const ASTStatement* getOperand() const { return operand.get(); }
-    AstType getAstType() const override {return AstType::BinaryOperation;}
+    AstType getAstType() const override {return AstType::UnaryOperation;}
 
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     void printAST(std::ostream& os, int indent = 0) const override;

@@ -34,77 +34,38 @@ String nodeTypeToString(NodeValueType type) {
         case NodeValueType::ClassInstance: return highlight("ClassInstance", Colors::red);
         case NodeValueType::List: return highlight("ClassInstance<List>", Colors::bold_white);
         case NodeValueType::Array: return highlight("ClassInstance<Array>", Colors::bold_white);
-        
-
+        case NodeValueType::Dict: return highlight("ClassInstance<Dict>", Colors::bold_white);
+        case NodeValueType::Set: return highlight("ClassInstance<Set>", Colors::bold_white);
         default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
 
     }
-} 
+}
 
-
-// enum class AstType {
-//     Base,
-//     AST,
-//     Literal,
-//     VariableDeclaration,
-//     VariableAssignment,
-//     VariableReference,
-//     ParameterAssignment,
-
-//     BinaryOperation,
-//     Block,
-//     Conditional,
-//     IfStatement,
-//     ElseStatement,
-//     ElifStatement,
-//     WhileLoop,
-//     CodeBlock,
-    
-//     Break,
-//     Return,
-//     Continue,
-//     LoopBlock,
-
-//     CallableBody,
-//     CallableDefinition,
-//     CallableReference,
-//     CallableCall,
-
-//     Function,
-//     FunctionBlock,
-//     FunctionCall,
-//     NativeFunction,
-//     UserFunction,
-//     FunctionDefinition,
-//     FunctionReference,
-
-//     ClassDefinition,
-//     ClassCall,
-//     ClassReference,
-//     ClassBlock,
-
-//     ClassMethodBlock,
-//     ClassMethodDef,
-//     ClassMethodRef,
-//     ClassMethodCall,
-
-//     AttributeDeclaration,
-//     AttributeReference,
-//     AttributeAssignment,
-
-//     Chain,
-//     ChainOperation,
-//     Accessor,
-
-//     Unknown,
-//     NoOp,
-
-//     // Structures
-//     KeyValueStructure,
-//     Enum,
-
-//     ImportStatement
-// };
+NodeValueType stringToNodeType(String type) {
+        if (type == "String") {return NodeValueType::String;}
+        if (type == "Number") {return NodeValueType::Number;}
+        if (type == "Int") {return NodeValueType::Int;}
+        if (type == "Bool") {return NodeValueType::Bool;}
+        if (type == "Float") {return NodeValueType::Float;}
+        if (type == "Double") {return NodeValueType::Double;}
+        if (type == "Long") {return NodeValueType::Long;}
+        if (type == "Parameter") {return NodeValueType::Parameter;}
+        if (type == "Class") {return NodeValueType::Class;}
+        if (type == "Function") {return NodeValueType::Function;}
+        if (type == "Method") {return NodeValueType::Method;}
+        if (type == "Null") {return NodeValueType::Null;}
+        if (type == "Any") {return NodeValueType::Any;}
+        if (type == "None") {return NodeValueType::None;}
+        if (type == "Uninitialized") {return NodeValueType::Uninitialized;}
+        if (type == "UNKNOWN") {return NodeValueType::UNKNOWN;}
+        if (type == "Callable") {return NodeValueType::Callable;}
+        if (type == "ClassInstance") {return NodeValueType::ClassInstance;}
+        if (type == "List") {return NodeValueType::List;}
+        if (type == "Array") {return NodeValueType::Array;}
+        if (type == "Dict") {return NodeValueType::Dict;}
+        if (type == "Set") {return NodeValueType::Set;}
+        return NodeValueType::UNKNOWN;
+}
 
 String astTypeToString(AstType type) {
     switch (type) {
@@ -116,6 +77,7 @@ String astTypeToString(AstType type) {
         case AstType::ParameterAssignment: return highlight("ParameterAssignment", Colors::teal);
 
         case AstType::BinaryOperation: return highlight("BinaryOperation", Colors::bold_blue);
+        case AstType::UnaryOperation: return highlight("UnaryOperation", Colors::bold_green);
 
         case AstType::Conditional: return highlight("Conditional", Colors::bold_green);
         case AstType::IfStatement: return highlight("IfStatement", Colors::yellow);
@@ -308,23 +270,27 @@ String getTokenDescription(TokenType type) {
         case TokenType::RightBracket: return "RightBracket For Typing Lists";
         case TokenType::LeftArrow: return "LeftArrow For Typing Arrays";
         case TokenType::RightArrow: return "RightArrow For Typing Arrays";
-        default: return "Unknown or invalid token.";
+        default: return "Unknown | Invalid Token.";
     }
 }
 
 String identifierTypeToString(IdentifierType identifierType) {
-    switch (identifierType)
-    {
-    case IdentifierType::Variable: return "Variable";
-    case IdentifierType::Function: return "Function";
-    case IdentifierType::Method: return "Method";
-    case IdentifierType::Class: return "Class";
-    default: return "Unknown";
-
+    switch (identifierType) {
+        case IdentifierType::Variable: return "Variable";
+        case IdentifierType::Function: return "Function";
+        case IdentifierType::Method: return "Method";
+        case IdentifierType::Class: return "Class";
+        default: return "Unknown";
     }
 }
 
 
+ResolvedType::ResolvedType() {}
+
+// ResolvedType::ResolvedType(const ResolvedType& other) {
+//     baseType = other.baseType;
+//     inner = other.inner;
+// }
 
 ResolvedType::ResolvedType(String primaryType) {
     baseType = primaryType;
@@ -334,6 +300,11 @@ ResolvedType::ResolvedType(String primaryType, Vector<ResolvedType> innerType) {
     baseType = primaryType;
     inner = innerType;
 }
+
+
+
+void ResolvedType::setBaseType(String otherBaseType) {baseType = otherBaseType;}
+void ResolvedType::setInner(Vector<ResolvedType> otherInnerType) {inner = otherInnerType;};
 
 String ResolvedType::toString() const {
     if (inner.empty()) return baseType;
@@ -345,4 +316,26 @@ String ResolvedType::toString() const {
     }
     result += "]";
     return result;
+}
+
+
+String ResolvedType::toString() {
+    if (inner.empty()) return baseType;
+
+    String result = baseType + "[";
+    for (size_t i = 0; i < inner.size(); ++i) {
+        result += inner[i].toString();
+        if (i < inner.size() - 1) result += ", ";
+    }
+    result += "]";
+    return result;
+}
+
+bool ResolvedType::matches(const ResolvedType& other) const {
+    if (baseType != other.baseType) return false;
+    if (inner.size() != other.inner.size()) return false;
+    for (size_t i = 0; i < inner.size(); ++i) {
+        if (!inner[i].matches(other.inner[i])) return false;
+    }
+    return true;
 }

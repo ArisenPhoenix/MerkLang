@@ -61,7 +61,7 @@ String UserMethod::toString() const {
 UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType)
     : Method(std::move(name), std::move(params), CallableType::METHOD, false, false), body(std::move(body))
 {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     DEBUG_LOG(LogLevel::TRACE, "Method created: ", getName());
     setCapturedScope(scope);
     setSubType(callType);
@@ -72,7 +72,7 @@ UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body
 
 UserMethod::UserMethod(Function&& function)
     : Method(function.getName(), std::move(function.parameters), CallableType::METHOD, false) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
 
     body = std::make_unique<MethodBody>(function.getCapturedScope());
 
@@ -87,7 +87,7 @@ UserMethod::UserMethod(Function&& function)
 }
 
 UserMethod::UserMethod(UserMethod& method) : Method(method) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
 
     body = static_unique_ptr_cast<MethodBody>(method.body->clone());
     capturedScope = method.capturedScope;
@@ -113,7 +113,7 @@ void UserMethod::setScope(SharedPtr<Scope> newScope) const {
 
 
 SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
 
     
     SharedPtr<CallableSignature> methodSig = makeShared<CallableSignature>(shared_from_this(), getCallableType());
@@ -130,7 +130,7 @@ SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
 
 Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
     
     callScope->owner = generateScopeOwner("MethodExecutor", name);

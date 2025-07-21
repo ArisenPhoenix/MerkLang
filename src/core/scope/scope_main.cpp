@@ -358,7 +358,9 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
         }
         throw VariableAlreadyDeclaredError(name, shared_from_this());
     }
-    
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode is: ", value->toString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode FullType: ", value->getFullType().toString());
+    // throw MerkError("See Above");
     context.setVariable(name, std::move(value));
     DEBUG_FLOW_EXIT();
 }
@@ -380,7 +382,7 @@ void Scope::updateVariable(const String& name, const Node& value) {
 }
 
 VarNode& Scope::getVariable(const String& name) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     DEBUG_LOG(LogLevel::PERMISSIVE, "in scope: ", getScopeLevel(), "DEBUG DATA BELOW:");
     context.debugPrint();
 
@@ -390,11 +392,6 @@ VarNode& Scope::getVariable(const String& name) {
 
     // Delegate to parent scope if it exists
     if (auto parent = parentScope.lock()) {
-        // if (parent.get() == this) { 
-        //     throw MerkError("Scope::getVariable: Parent scope is same as current scope (cyclic reference).");
-        // }
-        // DEBUG_LOG(LogLevel::TRACE, "[Scope::getVariable] Variable '", name, "' not found in scope level ", 
-        //          getScopeLevel(), ". Checking parent scope.");
         return parent->getVariable(name);
     }
 
@@ -637,6 +634,7 @@ Vector<SharedPtr<CallableSignature>> Scope::getFunction(const String& name) {
 
 
 std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) const {
+    if (globalClasses->hasClass(name) ) { return globalClasses->getClass(name);}
     auto it = localClasses.find(name);
     if (it != localClasses.end())
       return it->second;
@@ -646,16 +644,16 @@ std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) 
         return found;
     }
   
-      auto cls = globalClasses->getClass(name);
-      if (cls) {
-          return cls.value();
-      }
-      return nullptr;
+    auto cls = globalClasses->getClass(name);
+    if (cls) {
+        return cls.value();
+    }
+    return std::nullopt;
   }
 
 
 void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     DEBUG_LOG(LogLevel::PERMISSIVE, "Registering Class: ", name);
     // throw MerkError("Registering class " + name);
     if (!classBase) {throw MerkError("registerClass called with null ClassBase for: " + name);}
@@ -676,30 +674,43 @@ void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
 
 
 std::optional<SharedPtr<ClassSignature>> Scope::getClass(const String& name) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    if (auto className = lookupClass(name); className) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Got Class: ", name);
-        DEBUG_FLOW_EXIT();
-        return className;
-    }
-
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    // if (globalClasses->hasClass(name) ) { return globalClasses->getClass(name);}
     if (globalClasses) {
         auto globalClass = globalClasses->getClass(name);
         if (globalClass) {
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "#2 Got Class: ", name);
             DEBUG_FLOW_EXIT();
+            
             return globalClass;
         };
     }
 
-    auto parent = parentScope.lock();
-    if (parent) {
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "#3 Got Class: ", name);
+    if (auto cls = lookupClass(name); cls) {
+        if (!cls.has_value() || !cls.value()) {throw MerkError("cls is null");}
+        // auto sig = cls.value();
+        // auto call = sig->getCallable();
+        // if (call->getSubType() != CallableType::NATIVE) {
+        //     DEBUG_LOG(LogLevel::PERMISSIVE, callableTypeAsString(call->getCallableType()), callableTypeAsString(call->getSubType()));
+        //     throw MerkError("SubType Was Not Is Not Native 1");
+        // }
         DEBUG_FLOW_EXIT();
-        return parent->getClass(name);
+        return cls;
     }
 
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "#4 Got Class: ", name);
+    auto parent = parentScope.lock();
+    if (parent) {
+        DEBUG_FLOW_EXIT();
+        auto cls = parent->getClass(name);
+        if (!cls.has_value() || !cls.value()) {throw MerkError("cls is null");}
+        // auto sig = cls.value();
+        // auto call = sig->getCallable();
+        // if (sig->getCallable()->getSubType() != CallableType::NATIVE) {
+        //     DEBUG_LOG(LogLevel::PERMISSIVE, callableTypeAsString(call->getCallableType()), callableTypeAsString(call->getSubType()));
+        //     throw MerkError("SubType Was Not Is Not Native 2");
+        // }
+        return cls;
+    }
+
     DEBUG_FLOW_EXIT();
     return std::nullopt;
 }

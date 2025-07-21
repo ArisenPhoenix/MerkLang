@@ -149,7 +149,7 @@ ElseStatement::ElseStatement(UniquePtr<CodeBlock> body, SharedPtr<Scope> scope)
 // Control Flow Constructors
 ConditionalBlock::ConditionalBlock(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope)
     : ASTStatement(scope), condition(std::move(condition)) {
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::HIGH);
         // validateScope(getScope(), "ConditionalBlock::ConditionalBlock", condition->toString());
         if (!getCondition()){throw MerkError("ConditionalBlock missing condition in ConditionalBlock constructor.");}
         branch = "Conditional";

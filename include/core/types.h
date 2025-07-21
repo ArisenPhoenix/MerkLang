@@ -155,9 +155,12 @@ enum class NodeValueType {
     Any,
     UNKNOWN,
     Scope,
-
+    Dict,
     List,
-    Array
+    Array,
+    Set,
+
+    UserDefined
 };
 
 
@@ -173,6 +176,7 @@ enum class AstType {
     ParameterAssignment,
 
     BinaryOperation,
+    UnaryOperation,
     Block,
     Conditional,
     IfStatement,
@@ -257,7 +261,9 @@ struct UninitializedType {
 using NodeList = Vector<Node>;
 class ListNode;
 class ArrayNode;
-
+class DictNode;
+class MapNode;
+class SetNode;
 
 using VariantType = std::variant<
     int,
@@ -278,8 +284,10 @@ using VariantType = std::variant<
     SharedPtr<ClassInstance>,
     SharedPtr<Scope>,
     SharedPtr<ListNode>,
-    SharedPtr<ArrayNode>
-
+    SharedPtr<ArrayNode>,
+    SharedPtr<DictNode>,
+    SharedPtr<MapNode>,
+    SharedPtr<SetNode>
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
 
@@ -319,7 +327,7 @@ constexpr NodeValueType getNodeTypeFromType() {
 
 
 String nodeTypeToString(NodeValueType type); 
-
+NodeValueType stringToNodeType(String);
 String astTypeToString(AstType type);
 
 String tokenTypeToString(TokenType type, bool colored = false);
@@ -477,9 +485,19 @@ class ResolvedType {
     String baseType;  // e.g. "Array", "List", "Schema", or "UserStruct"
     Vector<ResolvedType> inner;  // Nested for Array[Map[String, Int]]
 public:
+    ResolvedType();
+    // ResolvedType(const ResolvedType& other);
     ResolvedType(String baseType);
     ResolvedType(String baseType, Vector<ResolvedType> inner);
     String toString() const;
+    String toString();
+    void setBaseType(String);
+    void setInner(Vector<ResolvedType>);
+
+    String getBaseType() {return baseType;}
+    Vector<ResolvedType> getInnerType() {return inner;}
+    bool matches(const ResolvedType& other) const;
+
 };
 
 

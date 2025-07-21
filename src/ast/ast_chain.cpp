@@ -340,18 +340,20 @@ void ChainOperation::setScope(SharedPtr<Scope> newScope) {
 
 
 Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
     int index = resolutionStartIndex;
-
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "instanceNode: ", instanceNode);
+    // throw MerkError("Inside Chain::evaluate");
     setLastScope(currentScope);
     Node currentVal;
 
     auto& baseElem = elements[index];
     if (baseElem.object->getAstType() == AstType::Accessor){
         currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
-        
+        DEBUG_LOG(LogLevel::PERMISSIVE, currentVal);
+        // throw MerkError("At List");
     } else {
         currentVal = baseElem.object->evaluate(currentScope, instanceNode);
     }
@@ -371,11 +373,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
             currentScope = instance->getInstanceScope();
             if (!currentScope) {throw MerkError("Scope Invalid During Chain Iteration");}
-
-            // instanceNode = makeShared<ClassInstanceNode>(instance);
             instanceNode = instance->getInstanceNode();
-            // instanceNode = instance->getNode
-
 
             switch (objType)
             {
@@ -386,7 +384,6 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     auto varNode = varDec->getVariable();
                     instance->declareField(varName, varDec->getExpression()->evaluate(methodScope, instanceNode));
                     currentScope->addMember(varName);  // ensures downstream logic will correctly resolve
-                    // currentVal = elem.object->evaluate(methodScope, instanceNode);
                     break;
                 }
             case AstType::VariableAssignment:
@@ -394,7 +391,6 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     auto varAss = static_cast<VariableAssignment*>(elem.object.get());
                     auto varName = varAss->getName();
                     instance->updateField(varName, varAss->getExpression()->evaluate(methodScope, instanceNode));
-                    // currentVal = elem.object->evaluate(methodScope, instanceNode);
                     break;
                 }
             case AstType::VariableReference:
@@ -402,18 +398,22 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     auto varRef = static_cast<VariableReference*>(elem.object.get());
                     currentVal = instance->getField(varRef->getName());
                     DEBUG_LOG(LogLevel::PERMISSIVE, "GETTING VARIABLE REFERENCE");
-                    // currentVal = elem.object->evaluate(methodScope, instanceNode);
                     break;
                 }
             
             case AstType::ClassMethodCall:
                 {
+                    if (!instanceNode) {throw MerkError("No InstanceNode in Chain::evaluate -> ClassMethodCall");}
+                    DEBUG_LOG(LogLevel::PERMISSIVE, "evaluating ClassMethodCall with instanceNode");
+                    // throw MerkError("has instanceNode");
                     currentVal = elem.object->evaluate(methodScope, instanceNode);
 
                     break;
                 }
                 
             default:
+                DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));
+                // throw MerkError("Evaluating Some other structure");
                 currentVal = elem.object->evaluate(currentScope, instanceNode);
                 currentScope = elem.object->getScope();
                 break;
@@ -423,7 +423,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
 
         } else {
             DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));
-
+            throw MerkError("Evaluating Some other structure");
             currentVal = elem.object->evaluate(currentScope, instanceNode);
             
             currentScope = elem.object->getScope();
@@ -438,7 +438,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
     String hasLeft = getLeftSide() ? "true" : "false";
     String hasRight = getRightSide() ? "true" : "false";
     String hasInstanceNode = instanceNode ? "true" : "false";

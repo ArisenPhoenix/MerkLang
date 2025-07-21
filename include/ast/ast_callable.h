@@ -26,6 +26,7 @@ private:
 
 public:
     explicit CallableSignature(SharedPtr<Callable> callable, CallableType callType);
+    explicit CallableSignature(SharedPtr<Callable> callable);
     virtual ~CallableSignature();
 
     Node call(const Vector<Node>& args, SharedPtr<Scope> scope) const;

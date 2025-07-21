@@ -4,6 +4,7 @@
 #include "core/types.h"
 #include "ast/ast_callable.h"
 #include "core/callables/callable.h"
+#include "core/callables/classes/node_structures.h"
 #include "core/errors.h"
 
 class Node;
@@ -12,7 +13,6 @@ class ClassSignature;
 class FunctionSignature;
 class MethodSignature;
 class ClassBody;
-
 
 // Represents the runtime definition of a class.
 class ClassBase : public Callable {
@@ -86,11 +86,14 @@ private:
     SharedPtr<Scope> capturedScope;
     SharedPtr<Scope> instanceScope; // reference to definition (optional)
     String accessor;
-
+    SharedPtr<DataStructure> nativeData;
+    
 public:
     bool isConstructed = false;
+    
 
     ClassInstance(const String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String& accessor);
+    ClassInstance(SharedPtr<ClassBase> cls, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope);
     // ClassInstance(const String name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String accessor); // for NativeClasses
 
     ~ClassInstance() override;
@@ -124,11 +127,14 @@ public:
     void setScope(SharedPtr<Scope> newScope) const override;
     ClassMembers getInstanceVarsFromConstructor(SharedPtr<Method>);
 
-
+    void setNativeData(SharedPtr<DataStructure>);
+    SharedPtr<DataStructure> getNativeData();
 };
 
 class ClassInstanceNode : public CallableNode {
+    
 public:
+    
     ClassInstanceNode(SharedPtr<ClassInstance> callable);
     ClassInstanceNode(SharedPtr<CallableNode> callable);
 
@@ -139,6 +145,8 @@ public:
     SharedPtr<Callable> getCallable() const override;
 
     String toString() const override;
+
+    
 };
 
 
@@ -157,5 +165,18 @@ public:
 
     Node call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 };
+
+
+
+// class ScopeCallBackNode : public BaseAST {
+
+//     SharedPtr<Scope> scope;
+//     std::function<Node(NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn;
+
+// public:
+//     Node evaluate() const override;
+//     AstType getAstType() const override {return AstType::Base;}
+    
+// };
 
 #endif // CLASS_BASE_H

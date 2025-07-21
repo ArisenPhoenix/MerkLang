@@ -61,7 +61,7 @@ void Accessor::setScope(SharedPtr<Scope> scope) {(void)scope;}
 
 
 Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     
     if (!defScope) {throw MerkError("No Scope Was Found in ClassDef::evaluate()");}
 
@@ -126,18 +126,17 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     return Evaluator::evaluateClassBody(classCapturedScope, classScope, getScope(), accessor, getMutableChildren(), instanceNode);
 }
 
 Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     if (!callScope) {throw MerkError("Initial Scope Failed in ClassCall::evaluate()");}
     if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
 
-    Vector<Node> argValues = handleArgs(callScope, instanceNode);
+    NodeList argValues = handleArgs(callScope, instanceNode);
     if (argValues.size() < arguments.size()){throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");}
-    // if (argValues.size() == 0) {throw MerkError("There Are No argValues in ClassCall::evaluate.");}
 
     DEBUG_FLOW_EXIT();
 

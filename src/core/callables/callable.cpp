@@ -6,15 +6,17 @@
 Callable::Callable(Method& method){
     callType = method.callType;
     requiresReturn = method.requiresReturn;
-    parameters = method.parameters;
+    parameters = method.parameters.clone();
+    subType = method.subType;
     name = method.name;
     if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable copy from method instantiation");}
 }
 
 Callable::Callable(Function& function){
     callType = function.callType;
+    subType = function.subType;
     requiresReturn = function.requiresReturn;
-    parameters = function.parameters;
+    parameters = function.parameters.clone();
     name = function.name;
     if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable copy from function instantiation");}
 }
@@ -22,10 +24,14 @@ Callable::Callable(Function& function){
 Callable::Callable(Callable& callable)
     : std::enable_shared_from_this<Callable>(), // explicitly initialize the base
       name(callable.name),
-      parameters(callable.parameters),
+      parameters(callable.parameters.clone()),
       callType(callable.callType),
+      subType(callable.subType),
       requiresReturn(callable.requiresReturn)
-{
+      
+{   
+    // if (callable.getName().size()) { throw MerkError("Constructor for callable is NULL: " + callable.getName());}
+    // if (!callable.getName().size()) { throw MerkError("Constructor for callable is NULL: ");}
     if (callableTypeAsString(callType) == "Unknown") {throw MerkError("Failed to instantiate callType at Callable::Callable copy from callable instantiation");}
 }
 
@@ -84,6 +90,7 @@ CallableNode::CallableNode(SharedPtr<Callable> callable, String callableType ) {
     nodeType = callableType + "(" + callable->name + ")";
     isCallable = true;
     name = callable->name;
+    // data.fullType;
 }
 
 CallableNode::CallableNode(SharedPtr<CallableNode> callableNode) {
@@ -92,6 +99,7 @@ CallableNode::CallableNode(SharedPtr<CallableNode> callableNode) {
     nodeType = callableNode->nodeType + "(" + callableNode->name + ")";
     isCallable = true;
     name = callableNode->name;
+    data.fullType = callableNode->getFullType();
 }
 
 SharedPtr<Callable> CallableNode::getCallable() const {

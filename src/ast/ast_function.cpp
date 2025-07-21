@@ -90,7 +90,7 @@ FunctionCall::FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> 
 
 
 UniquePtr<BaseAST> FunctionDef::clone() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::clone -> CLONING FunctionDef");
     validateScope(getScope(), "FunctionDef::clone");
     validateScope(body->getScope(), "FunctionDef::clone", body->toString());
@@ -109,7 +109,7 @@ UniquePtr<BaseAST> FunctionDef::clone() const {
 
 
 Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     auto freeVarNames = body->collectFreeVariables();
     
     if (callType == CallableType::FUNCTION){
@@ -179,7 +179,7 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
+    DEBUG_FLOW(FlowLevel::HIGH); 
     // throw MerkError("Hit it");
     if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
     

@@ -24,7 +24,8 @@ String& ClassBase::getQualifiedAccessor() {return accessor;}
 void ClassBase::setParameters(ParamList params) {parameters = params;}
 
 ClassBase::ClassBase(String otherName, String otherAccessor, SharedPtr<Scope> templateScope)
-    : Callable(otherName, ParamList(), CallableType::CLASS), accessor(otherAccessor), classScope(templateScope){    
+    : Callable(otherName, ParamList(), CallableType::CLASS), accessor(otherAccessor), classScope(templateScope){
+        setSubType(CallableType::CLASS);    
 }
 
 ClassBase::~ClassBase() {
@@ -81,7 +82,7 @@ SharedPtr<Scope> ClassBase::getCapturedScope() const {
 }
 SharedPtr<Scope> ClassBase::getClassScope() const {return classScope;}
 
-String ClassBase::toString() const {return "ClassBase()";}
+String ClassBase::toString() const {return "Class(" + name + ") <Params>" + parameters.toShortString();}
 
 Node ClassBase::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
@@ -98,7 +99,7 @@ void ClassBase::setScope(SharedPtr<Scope> newScope) const {
 }
 
 SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
 
     if (!getCapturedScope()) {throw MerkError("Captured Scope in ClassBase::toCallableSignature is null");}
 
@@ -131,28 +132,25 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
 }
  
 
-ClassInstance::ClassInstance(const String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String& accessor)
-    : Callable(name, params, CallableType::INSTANCE), capturedScope(capturedScope), instanceScope(instanceScope), accessor(accessor) {
+ClassInstance::ClassInstance(const String& name, SharedPtr<Scope> captScope, SharedPtr<Scope> instScope, ParamList params, const String& access)
+    : Callable(name, params, CallableType::INSTANCE), capturedScope(captScope), instanceScope(instScope), accessor(access) {
         instanceScope->owner = generateScopeOwner("ClassInstance", name);
         auto startingScopeCheck = getCapturedScope()->getParent();
-        if (!startingScopeCheck) {throw MerkError("Could Not Get Defining Scope For Class Instance");}
+        if (!startingScopeCheck) {throw MerkError("Could Not Get Defining Scope For Class Instance");} 
 }
 
 
-// ClassInstance::ClassInstance(const String name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String accessor)
-//     : Callable(name, params, CallableType::INSTANCE), capturedScope(capturedScope), instanceScope(instanceScope), accessor(accessor) {
-//         instanceScope->owner = generateScopeOwner("ClassInstance", name);
-//         // auto startingScopeCheck = getCapturedScope()->getParent();
-//         // if (!startingScopeCheck) {
-//         //     throw MerkError("Could Not Get Defining Scope For Class Instance");
-//         // }
-//     }
-
+ClassInstance::ClassInstance(SharedPtr<ClassBase> cls, SharedPtr<Scope> captScope, SharedPtr<Scope> instScope)
+    : Callable(cls->name, cls->parameters.clone(), CallableType::INSTANCE), capturedScope(captScope), instanceScope(instScope), accessor(cls->getAccessor()) {
+    subType = cls->getSubType();
+    instanceScope->owner = generateScopeOwner("ClassInstance", name);
+    auto startingScopeCheck = getCapturedScope()->getParent();
+    if (!startingScopeCheck) {throw MerkError("Could Not Get Defining Scope For Class Instance");} 
+        // classTemplate->getQualifiedName(), capturedScope, instanceScope, params, classTemplate->getQualifiedAccessor()
+}
 
 SharedPtr<Scope> ClassInstance::getCapturedScope() const {
-    if (capturedScope) {
-        return capturedScope;
-    }
+    if (capturedScope) {return capturedScope;}
 
     throw MerkError("CapturedScope No Longer Exists in ClassInstance " + name);
 }
@@ -170,7 +168,19 @@ void ClassInstance::setScope(SharedPtr<Scope> newScope) const {
 }
 
 String ClassInstance::toString() const {
-    return "<Instance of " + getName() + ">";
+    if (getSubType() == CallableType::NATIVE) {
+        if (nativeData) {
+            return nativeData->toString();
+        } else {
+            throw MerkError("No NATIVE DATA AVAILABLE FOR: " + name);
+        }
+    }
+    
+
+    // if (name == "Array" && !nativeData) {
+    //     throw MerkError("None");
+    // }
+    return "<ClassInstance>" + name;
 }
 
 SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {throw MerkError("Instances are not directly callable unless '__call__' is defined.");}
@@ -204,7 +214,7 @@ SharedPtr<ClassInstanceNode> ClassInstance::getInstanceNode() {
 
 
 void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     if (!getInstanceScope()->hasFunction("construct")) {throw MerkError("A construct method must be implemented in class: " + getName());}
 
     auto methodOpt = getInstanceScope()->getFunction("construct", args);
@@ -249,7 +259,12 @@ Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope, [[m
 ClassSignature::ClassSignature(SharedPtr<ClassBase> classBaseData)
 : CallableSignature(classBaseData, CallableType::CLASS), accessor(classBaseData->getAccessor())
  {
-    
+    // if (callableTypeAsString(classBaseData->getSubType()) == "Unknown") { throw MerkError("SubType is Unknown for ClassBase to ClassSignature");}
+    setSubType(classBaseData->getSubType());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classBase:", "CallableType: ", callableTypeAsString(classBaseData->getCallableType()), "SubType: ", callableTypeAsString(classBaseData->getSubType()));
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
+    // throw MerkError("See Above");
+    // if (getSubType() != CallableType::NATIVE) {throw MerkError("SubType is not Native");}
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
     DEBUG_FLOW_EXIT();
 }
@@ -259,9 +274,7 @@ ClassSignature::~ClassSignature() = default;
 
 String ClassSignature::getAccessor() const { return accessor; }
 
-SharedPtr<ClassBase> ClassSignature::getClassDef() const {
-    return std::dynamic_pointer_cast<ClassBase>(getCallable());
-}
+SharedPtr<ClassBase> ClassSignature::getClassDef() const {return std::dynamic_pointer_cast<ClassBase>(getCallable());}
 
 SharedPtr<Scope> ClassInstance::getInstanceScope() {return instanceScope;}
 void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = scope;};
@@ -274,15 +287,11 @@ void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = sc
 
 // Optional: override call() to auto-instantiate when the class is "called"
 Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     (void)args;
 
-    if (!scope){
-        throw MerkError("Scope passed is no longer valid");
-    }
-    if (!instanceScope) {
-        throw MerkError("Class Scope passed is no longer valid");
-    }
+    if (!scope){throw MerkError("Scope passed is no longer valid");}
+    if (!instanceScope) {throw MerkError("Class Scope passed is no longer valid");}
 
     SharedPtr<ClassBase> classBase = std::static_pointer_cast<ClassBase>(getCallable());
     if (!classBase) {
@@ -363,6 +372,9 @@ Node ClassInstance::getField(const String& fieldName) const {                   
     return getInstanceScope()->getVariable(fieldName);
 }                     
 
+
+
+
 void ClassInstance::declareField(const String& fieldName, const Node& var) {             // probably only used in dynamic construction of a class
     if (var.isValid()){ 
         UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
@@ -386,7 +398,16 @@ void ClassInstance::updateField(const String& fieldName, Node val) const {      
     }
 }                 
 
+void ClassInstance::setNativeData(SharedPtr<DataStructure> incoming) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    nativeData = incoming;
+    if (!nativeData) {
+        throw MerkError("Native Data Wasn't Set");
+    }
+    DEBUG_FLOW_EXIT();
 
+}
+SharedPtr<DataStructure> ClassInstance::getNativeData() {return nativeData;}
 
 
 ClassInstance::~ClassInstance() {
@@ -398,7 +419,11 @@ ClassInstance::~ClassInstance() {
 ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : CallableNode(callable, "ClassInstance") {
     data.type = NodeValueType::ClassInstance;
     data.value = callable;
+    name = callable->getName();
+    
 }
+
+
 
 ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     : CallableNode(callableNode) {
@@ -408,6 +433,8 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
 
     data.value = instance; 
     data.type = NodeValueType::ClassInstance;
+    // name = callableNode->getCallable()->getName();
+
 }
 
 
@@ -420,8 +447,6 @@ SharedPtr<Callable> ClassInstanceNode::getCallable() const {
 
 SharedPtr<Scope> ClassInstanceNode::getScope() {
     DEBUG_FLOW(FlowLevel::NONE);
-    // DEBUG_LOG(LogLevel::NONE, "Current Instance Type: ", toString());
-
     auto instance = getInstance();
     DEBUG_FLOW_EXIT();
     return instance->getInstanceScope();

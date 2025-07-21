@@ -172,7 +172,7 @@ std::ostream& operator<<(std::ostream& os, const Node& node) {
     SharedPtr<Scope> scope = nullptr;
 
     // Display the type
-    os << ", Type: " << (node.name.empty() ? nodeTypeToString(node.getType()) : nodeTypeToString(node.getType()) + "(" + node.name + ")");
+    os << ", Type: " << (nodeTypeToString(node.getType()) + "(" + node.name + ")" + " FullType: " + node.getFullType().toString());
     if (node.getType() == NodeValueType::ClassInstance){
         auto instance = std::get<SharedPtr<ClassInstance>>(node.getValue());
         scope = instance->getInstanceScope();        
@@ -397,6 +397,10 @@ bool Node::toBool() const {
 }
 
 String Node::toString() const {
+    // auto type = getType();
+    // DEBUG_LOG(LogLevel::PERMISSIVE, nodeTypeToString(data.type));
+    // DEBUG_LOG(LogLevel::PERMISSIVE, nodeTypeToString(type));
+
     try {
         switch (data.type) {
             case NodeValueType::Int: return std::to_string(std::get<int>(data.value));
@@ -411,30 +415,28 @@ String Node::toString() const {
             case NodeValueType::Uninitialized: return "<Uninitialized>";
             case NodeValueType::Any: return "Any";
             case NodeValueType::Class: return "Class";
+            case NodeValueType::Method: return "Method";
             
             case NodeValueType::ClassInstance: {
-                if (name == "List") {
-                    auto list = std::get<SharedPtr<ClassInstance>>(data.value);
-                    return list->getField("vector").toString();
-                }
-                return "<ClassInstance>" + name;
+                DEBUG_LOG(LogLevel::PERMISSIVE, "Got A Class Instance");
+                auto inst = std::get<SharedPtr<ClassInstance>>(data.value);
+                return inst->toString();
             }
             case NodeValueType::List: {
-                auto list = std::get<SharedPtr<ListNode>>(data.value);
-                // throw MerkError("Sent out List String");
-                return list->toString();
+                DEBUG_LOG(LogLevel::PERMISSIVE, "Got A Class Instance");
+                return std::get<SharedPtr<ListNode>>(data.value)->toString();
             };
-            case NodeValueType::Array: return "Array";
-                
+            case NodeValueType::Array: return "Array";                
             case NodeValueType::Callable: return "<Callable>" + name;
             case NodeValueType::UNKNOWN: return "UNKNOWN";
             case NodeValueType::Function: return "<Function>" + name;
             case NodeValueType::None: return "None";
-            default: throw MerkError("Unsupported type for Node toString.");
+            default: {
+                return highlight("Error: Unsupported Type For Node toString.'                    '" + nodeTypeToString(data.type), Colors::red) + "  " + toString();
+            }
         }
     } catch (const std::exception& e) {
-        debugLog(true, highlight("[Error] Exception in Node::toString():", Colors::red), e.what());
-        return "[Error in Node::toString]";
+        return "[Error in Node::toString] " + nodeTypeToString(data.type) + " " + e.what();
     }
     
 }
@@ -511,17 +513,16 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
     if (std::holds_alternative<String>(value)) return NodeValueType::String;
     if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
     if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
-    // if (std::holds_alternative<ListNode>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::List;}
-    if (std::holds_alternative<SharedPtr<ListNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::List;};
+    if (std::holds_alternative<SharedPtr<ListNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::List;}
     if (std::holds_alternative<SharedPtr<ClassInstance>>(value)) return NodeValueType::ClassInstance;
     // if (std::holds_alternative<SharedPtr<FunctionNode>>(value)) return NodeValueType::Function;
     return NodeValueType::Any;  // Allow `Any` when the type is unknown
 } 
 
 void Node::validateTypeAlignment() const {
-    if (data.type == NodeValueType::Null) {
-        throw MerkError("Invalid Node type: Null");
-    }
+    // if (data.type == NodeValueType::Null) {
+    //     throw MerkError("Invalid Node type: Null");
+    // }
     if (data.type == NodeValueType::Any) {
         return;  // Allow Any type without restriction
     }
@@ -541,6 +542,13 @@ void Node::setInitialValue(const VariantType& value) {
 
 bool Node::isList() const {
     if (name == "List" && data.type != NodeValueType::List) {
+        throw MerkError("List is not a List Type");
+    }
+    return data.type == NodeValueType::List;
+}
+
+bool Node::isArray() const {
+    if (name == "Array" && data.type != NodeValueType::Array) {
         throw MerkError("List is not a List Type");
     }
     return data.type == NodeValueType::List;
@@ -948,6 +956,11 @@ Node* Node::clone() const {
     return new Node(*this);
 }
 
+void Node::setFullType(ResolvedType fullRType) const {
+    data.fullType.setBaseType(fullRType.getBaseType());
+    data.fullType.setInner(fullRType.getInnerType());
+}
+
 // Default constructor
 LitNode::LitNode() : Node() {
     nodeType = "LitNode";
@@ -1042,9 +1055,9 @@ VarNode::VarNode(const String& value, const String& typeStr, bool isConst, bool 
 // VarNode Constructor accepting another Node
 VarNode::VarNode(const Node& parentNode, bool isConst, bool isMutable, bool isStatic)
     : Node(parentNode) {
-    if (parentNode.getType() == NodeValueType::Null) {
-        throw MerkError("Cannot create a VarNode from an untyped (Null) parent Node.");
-    }
+    // if (parentNode.getType() == NodeValueType::Null) {
+    //     throw MerkError("Cannot create a VarNode from an untyped (Null) parent Node.");
+    // }
     nodeType = "VarNode";
 
     this->isConst = parentNode.isConst || isConst;
@@ -1162,9 +1175,46 @@ VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<No
     validateTypeAlignment();
 }
 
+VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool isMutable, ResolvedType fullType, bool isStatic)
+    : Node(value, typeStr) {
+        nodeType = "VarNode";
+        this->isConst = isConst;
+        this->isMutable = isMutable;
+        this->isStatic = fullType.getBaseType().size() || isStatic; 
+        this->data.fullType = fullType;
+        DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode FullType: ", fullType.getBaseType(), "Type: ", typeStr);
+        data.type = stringToNodeType(fullType.getBaseType());
+        if (data.type == NodeValueType::UNKNOWN) {throw MerkError("data.type is Unknown");  data.type = NodeValueType::Any;}   // Temporary solution for user defined types
+        
+        DEBUG_LOG(LogLevel::PERMISSIVE, "data.type is ", data.type);
+        validateTypeAlignment();
+}
 
+VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, ResolvedType fullType, bool isStatic)
+    :Node (parent) {
+        nodeType = "VarNode";
+        this->isConst = isConst;
+        this->isMutable = isMutable;
+        this->isStatic = fullType.getBaseType().size() || isStatic; // && parent.data.type != NodeValueType::Uninitialized;
+        this->data.fullType = fullType;
+
+        this->data.type = parent.getType();
+        
+        if (data.type == NodeValueType::UNKNOWN) {DEBUG_LOG(LogLevel::PERMISSIVE, "UNKNOWN TYPE OUTPUT: ", data.type); throw MerkError("data.type is Unknown"); data.type = NodeValueType::Any;}   // Temporary solution for user defined types
+        
+        DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode FullType: ", fullType.getBaseType(), "Type: ", parent.getTypeAsString());
+        DEBUG_LOG(LogLevel::PERMISSIVE, "data.type is ", data.type);
+        validateTypeAlignment();
+
+        // if (data.type == NodeValueType::ClassInstance) {
+        //     throw MerkError("Is A Class Instance -> BaseType: " + fullType.getBaseType());
+        // }
+    }
 
 
 UniquePtr<VarNode> cloneVarNode(VarNode* original) {
     return UniquePtr<VarNode>(original);
 }
+
+
+

@@ -119,7 +119,6 @@ void ParamNode::validateExpectedType(NodeValueType expectedType) {
 }
  
 String ParamNode::toString() const {
-    DEBUG_FLOW();
     return "ParamNode(name: " + paramName + 
            ", Expected Type: " + nodeTypeToString(data.type) + 
            ", Value: " + VarNode::toString() + 

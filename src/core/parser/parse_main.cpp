@@ -429,22 +429,12 @@ std::optional<std::type_index> getType(Token token){
 }
 
 std::optional<NodeValueType> Parser::getTypeFromString(String typeStr) {
-    if (typeStr == "Int") return NodeValueType::Int;
-    if (typeStr == "Float") return NodeValueType::Float;
-    if (typeStr == "Double") return NodeValueType::Double;
-    if (typeStr == "Long") return NodeValueType::Long;
-    if (typeStr == "Bool") return NodeValueType::Bool;
-    if (typeStr == "Char") return NodeValueType::Char;
-    if (typeStr == "String") return NodeValueType::String;
-    if (typeStr == "Vector") return NodeValueType::Vector;
-    if (typeStr == "Function") return NodeValueType::Function;
-    if (typeStr == "Class") return NodeValueType::Class;
-    if (typeStr == "Method") return NodeValueType::Method;
-    if (typeStr == "Null") return NodeValueType::Null;
-    if (typeStr == "Any") return NodeValueType::Any;
-    else {
-        return std::nullopt;
+    auto val = stringToNodeType(typeStr);
+    if (val == NodeValueType::UNKNOWN) {
+        // This will be Where user defined types are pulled from scope
+        return NodeValueType::UNKNOWN;
     }
+    else {return std::nullopt;}
 }
 
 std::optional<NodeValueType> Parser::parseStaticType() {
@@ -529,18 +519,25 @@ void Parser::displayNextTokens(String baseTokenName, size_t number, String locat
 
 ResolvedType Parser::parseResolvedType() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "DEBUG Parser::parseResolvedType: Entering with token: ", currentToken().toColoredString());
+    // For A one-off type
+    // if (consumeIf(TokenType::Type) && !check(TokenType::LeftBracket) && !check(TokenType::Operator) && !check(TokenType::Punctuation)) {
+    //     DEBUG_FLOW_EXIT();
+    //     return ResolvedType(previousToken().value);
+    // }
+
 
     if (consumeIf(TokenType::Operator, "<")) {
         auto inner = parseResolvedType();
         consume(TokenType::Operator, ">");
         return ResolvedType("Array", { inner });
     }
+
     if (consumeIf(TokenType::LeftBracket, "[")) {
         auto inner = parseResolvedType();
         consume(TokenType::RightBracket, "]");
         return ResolvedType("List", { inner });
     }
+    
     if (consumeIf(TokenType::Operator, "{")) {
         auto first = parseResolvedType();
         if (consumeIf(TokenType::Punctuation, ",")) {
@@ -552,6 +549,7 @@ ResolvedType Parser::parseResolvedType() {
             return ResolvedType("Set", { first });
         }
     }
+
     if (consumeIf(TokenType::Type)) {
         DEBUG_FLOW_EXIT();
         return ResolvedType(previousToken().value);

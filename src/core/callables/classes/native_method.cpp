@@ -11,11 +11,12 @@ NativeMethod::NativeMethod(
     SharedPtr<Scope> classScope,
     std::function<Node(NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn) 
     : Method(std::move(name), params, CallableType::METHOD), methodFn(methodFn) {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         setClassScope(classScope);
         setSubType(CallableType::NATIVE);
         if (subType != CallableType::NATIVE) {throw MerkError("SubType is not native, it is: " + callableTypeAsString(subType));}
-        // throw MerkError("nativeCallType: " + callableTypeAsString(callType) + " nativeSubType: " + callableTypeAsString(subType));
         DEBUG_LOG(LogLevel::PERMISSIVE, this->toString(), "Set With: ", parameters.toString());
+        DEBUG_FLOW_EXIT();
     }
 
 
@@ -38,17 +39,15 @@ String NativeMethod::toString() const {
 
 SharedPtr<CallableSignature> NativeMethod::toCallableSignature() {
     auto sig = makeShared<CallableSignature>(shared_from_this(), CallableType::METHOD);
-    if (subType != CallableType::NATIVE) {throw MerkError("Is Not A Native type is: " + callableTypeAsString(subType));}
+    if (getSubType() != CallableType::NATIVE) {throw MerkError("Is Not A Native type is: " + callableTypeAsString(subType));}
     sig->setParameterTypes(parameters.getParameterTypes());
-    sig->setSubType(CallableType::NATIVE);
+    sig->setSubType(getSubType());
     sig->setParameters(parameters.clone());
-    // if (sig->getCallable)
     return sig;
 }
 
 
 void NativeMethod::setCapturedScope(SharedPtr<Scope> scope){
-    // (void)scope;
     setClassScope(scope);
 };
 

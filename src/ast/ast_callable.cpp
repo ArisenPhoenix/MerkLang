@@ -83,15 +83,20 @@ CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
         branch = "Callable";
 }
 
+CallableSignature::CallableSignature(SharedPtr<Callable> newCallable)
+    : callType(newCallable->callType), subType(newCallable->subType), parameters(newCallable->parameters.clone())  {
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        if (!newCallable) {throw MerkError("Callable is NULL in: ");}
+        callable = std::move(newCallable);
+        DEBUG_FLOW_EXIT();
+}
+
 CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType callTypeAdded)
     : callable(std::move(callable)), callType(callTypeAdded)
 {
-  DEBUG_FLOW(FlowLevel::VERY_LOW);
-  callType = callTypeAdded;
-  if (callableTypeAsString(callType) == "Unknown"){
-    throw MerkError("Failed to instantiate callType at CallableSignature instantiation");
-}
-    // parameters = std::move(callable->parameters.clone());
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    callType = callTypeAdded;
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
 
   DEBUG_FLOW_EXIT();
 }
@@ -203,7 +208,7 @@ bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
 
 
 Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::HIGH);
     Vector<Node> evaluatedArgs;
     // if (scope->hasChildren()){
     //     scope = scope->getChildren()[0];
@@ -261,91 +266,3 @@ CallableSignature::~CallableSignature() {
         parameterTypes.clear();
     }   
 }
-
-
-
-
-
-
-//ORIGINAL
-
-// bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
-//     size_t paramCount = parameters.size();
-//     size_t argCount = argTypes.size();
-
-//     if (!parameters.empty() && parameters.back().isVarArgsParameter()) {
-//         if (argCount < paramCount - 1) return false;
-//     } else {
-//         if (argCount != paramCount) return false;
-//     }
-
-//     for (size_t i = 0; i < parameters.size(); ++i) {
-//         if (parameters[i].isVarArgsParameter()) break;
-
-//         NodeValueType expected = parameters[i].getType();
-//         NodeValueType provided = i < argTypes.size() ? argTypes[i] : NodeValueType::Uninitialized;
-
-//         if (expected == NodeValueType::Any || provided == NodeValueType::Uninitialized)
-//             continue;
-
-//         if (expected != provided) return false;
-//     }
-
-//     return true;
-// }
-
-
-// bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
-//     DEBUG_FLOW(FlowLevel::LOW);
-//     DEBUG_LOG(LogLevel::ERROR, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
-//     // First, check that the number of arguments matches.
-//     if (getParameterTypes().size() != argTypes.size()) {
-        
-//         DEBUG_LOG(LogLevel::ERROR, "Parameter count does not match. Expected: ", parameterTypes.size(),
-//                     ", got: ", argTypes.size());
-//         DEBUG_FLOW_EXIT();
-//         return false;
-//     }
-
-//     // Now check each parameter type.
-//     for (size_t i = 0; i < parameterTypes.size(); ++i) {
-//         NodeValueType expected = parameterTypes[i];
-//         NodeValueType provided = argTypes[i];
-//         DEBUG_LOG(LogLevel::ERROR, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
-
-//         // Allow a parameter declared as "Any" to match any argument.
-//         if (expected == NodeValueType::Any) {
-//             continue;
-//         }
-//         // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
-//         if (provided == NodeValueType::Uninitialized) {
-//             continue;
-//         }
-
-//         // Otherwise, they must match exactly.
-//         if (expected != provided) {
-//             DEBUG_LOG(LogLevel::ERROR, "Type mismatch on parameter ", i, ": expected ",
-//             nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
-//             DEBUG_LOG(LogLevel::ERROR, "Parameter Failed Expected Type Criteria, returning false");
-
-//             DEBUG_FLOW_EXIT();
-//             return false;
-//         }
-//     }
-
-//     DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
-
-//     DEBUG_FLOW_EXIT();
-//     return true;
-// }
-
-// template<typename T>
-// SharedPtr<T> CallableSignature::getCallableClonedAs() const {
-//     static_assert(std::is_base_of<Callable, T>::value, "T must derive from Callable");
-//     auto casted = std::dynamic_pointer_cast<T>(callable);
-//     if (!casted) {
-//         throw MerkError("CallableSignature::getCallableAsClone() failed: Type mismatch or null callable.");
-//     }
-//     // Perform a deep copy of the Callable object
-//     return makeShared<T>(*casted);
-// }

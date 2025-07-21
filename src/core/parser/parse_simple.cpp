@@ -49,43 +49,50 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     }
 
     Token variableToken = currentToken();
+    if (variableToken.type == TokenType::ChainEntryPoint) {throw std::logic_error("Invalid: ChainEntryPoint token passed into VarNode logic.");}
 
-    Token potentialType = advance(); //consume variable name
+    advance(); //consume variable name
 
     // std::optional<NodeValueType> typeTag = parseStaticType();
     ResolvedType type = ResolvedType("Any");
-    std::optional<NodeValueType> typeTag = std::nullopt;   // used until ResolvedType is integrated into the Node system
+    // std::optional<NodeValueType> typeTag = std::nullopt;   // used until ResolvedType is integrated into the Node system
 
     if (consumeIf(TokenType::Punctuation, ":")) {
+        // throw MerkError("parsing Type");
         type = parseResolvedType();
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Current Token Is: ", currentToken().toColoredString(), "Current Type Is: ", type.toString());
     }
+
+
+    
+    
+
+    // typeTag = getTypeFromString(type.getBaseType());
 
 
     Token assignment = currentToken();    
 
-    if (assignment.type != TokenType::VarAssignment) {
-        throw UnexpectedTokenError(assignment, "=, :=", "Parser::parseVariableDeclaration");
-    }
+    if (assignment.type != TokenType::VarAssignment) {throw UnexpectedTokenError(assignment, "=, :=", "Parser::parseVariableDeclaration");}
 
     bool isMutable = (assignment.value == "=");
     advance();  // Consume ':=' or '='
 
 
     auto valueNode = parseExpression();
-    if (!valueNode) {
-        throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);
-    }
+    if (!valueNode) {throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);}
 
     const bool isStatic = false;  
-    if (variableToken.type == TokenType::ChainEntryPoint) {
-        throw std::logic_error("Invalid: ChainEntryPoint token passed into VarNode logic.");
-    }
+    
+    
+
     auto varNode = VarNode(variableToken.value, isConst, isMutable, isStatic);
+    
     auto varDec = makeUnique<VariableDeclaration>(
         variableToken.value,
         varNode,
-        currentScope,  // Use the currentScope at the time of declaration
-        typeTag,
+        currentScope,
+        type,
+        // typeTag,
         std::move(valueNode)
     );
     DEBUG_FLOW_EXIT();

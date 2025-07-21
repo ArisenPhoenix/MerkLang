@@ -68,17 +68,8 @@ int main(int argc, char* argv[]) {
 
         auto globalClasses = getNativeClasses(globalScope);
         for (auto& [name, globalCls]: globalClasses) {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "Adding Class: ", name);
             globalScope->registerClass(name, globalCls);
-            // if (globalScope->hasClass(name)) {throw MerkError("Class " + name + "registered");}
-            // if (!globalScope->hasClass(name)) {throw MerkError("Class " + name + " Was not properly registered");}
-            // throw MerkError("Registered Class " + name);
-            globalScope->debugPrint();
-            globalScope->printChildScopes();
         }
-
-        if (globalClasses.size() == 0) {throw MerkError("No Global Classes exist");}
-        globalScope->debugPrint();
 
         // throw MerkError("Global Scope created");
         // Step 5: Parse tokens into an AST
@@ -113,11 +104,7 @@ int main(int argc, char* argv[]) {
 
     // Print the final state of the Global Scope right before exiting
     DEBUG_LOG(LogLevel::DEBUG, "");
-    // DEBUG_LOG(LogLevel::DEBUG, "==================== FINAL GLOBAL SCOPE ====================");
-    // globalScope->printChildScopes();
-
-    // DEBUG_LOG(LogLevel::DEBUG, "==================== PROGRAM TERMINATION ====================");
-    // nativeFunctions.clear();
+    DEBUG_LOG(LogLevel::DEBUG, "==================== FINAL GLOBAL SCOPE ====================");
     globalScope->printScopeReport();
     globalScope->clear();
     globalScope.reset();

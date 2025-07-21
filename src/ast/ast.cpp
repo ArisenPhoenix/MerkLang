@@ -58,9 +58,16 @@ LiteralValue::LiteralValue(LitNode value, SharedPtr<Scope> scope)
     : ASTStatement(scope), value(value) {}
 
 // Variable Constructors
-VariableDeclaration::VariableDeclaration(String name, VarNode value, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
-    : ASTStatement(scope), name(std::move(name)), variable(std::move(value)),
+VariableDeclaration::VariableDeclaration(String varName, VarNode value, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
+    : ASTStatement(scope), name(std::move(varName)), variable(std::move(value)),
         typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
+        // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
+        DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
+}
+
+VariableDeclaration::VariableDeclaration(String varName, VarNode value, SharedPtr<Scope> scope, ResolvedType resolvedType, UniquePtr<ASTStatement> valueNode)
+    : ASTStatement(scope), name(std::move(varName)), variable(std::move(value)),
+        type(resolvedType), valueExpression(std::move(valueNode)) {
         // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
         DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
 }
@@ -69,8 +76,12 @@ VariableDeclaration::VariableDeclaration(UniquePtr<VariableDeclaration> varDec) 
     name = varDec->name;
     variable = varDec->variable;
     typeTag = varDec->typeTag;
+    type = varDec->type;
     valueExpression = std::move(varDec->valueExpression);       
 }
+
+
+
 
 VariableReference::VariableReference(UniquePtr<VariableReference> varRef) : ASTStatement(varRef->getScope()) {
     name = varRef->name;
@@ -131,6 +142,11 @@ Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shar
 
     // validateScope(scope, "VariableDeclaration");
     DEBUG_LOG(LogLevel::TRACE, highlight("[VariableDeclaration::evaluate]", Colors::orange), valueExpression->toString());
+    // variable.data.fullType = type;
+    // const_cast<VarNode>(variable);
+    variable.setFullType(type);
+    // variable.setFullType(type);
+
     Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, typeTag, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
@@ -171,8 +187,10 @@ Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPt
     auto leftValue = left->evaluate(scope, instanceNode);
 
     auto rightValue = right->evaluate(scope, instanceNode);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "RightValue Type: ", right->getAstTypeAsString(), "RightValue Type: ", rightValue);
+    // throw MerkError("See above");
 
-    validateLeftAndRightNodes(leftValue, rightValue, "BinaryOperation", op);
+    // validateLeftAndRightNodes(leftValue, rightValue, "BinaryOperation", op);
 
 
     Node val = Evaluator::evaluateBinaryOperation(op, leftValue, rightValue, scope, instanceNode);

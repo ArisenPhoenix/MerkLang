@@ -4,17 +4,13 @@
  
 NativeClass::NativeClass(String name, String access, SharedPtr<Scope> classScope)
 : ClassBase(std::move(name), std::move(access), classScope) {
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Name: ", name, "Accessor: ", access);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Name: ", getName(), "Accessor: ", getAccessor());
-    // if (access.empty()) {throw MerkError("No Accessor");}
-
-    // if (name.empty()) {throw MerkError("No Name");}
+    setSubType(CallableType::NATIVE);
+    // if (callableTypeAsString(getCallableType()) != "CLASS") {throw MerkError("NativeClass is not Typed as Class");}
+    // if (callableTypeAsString(getSubType()) != "NATIVE") {throw MerkError("NativeClass is not subTyped as Native");}
 }
 
 void NativeClass::addMethod(const String& name, SharedPtr<NativeMethod> method) {
     getClassScope()->registerFunction(name, method);
-    // methodMap[name] = method;
 }
 
 void NativeClass::setConstructor(std::function<void(Vector<Node>, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> fn) {
@@ -29,14 +25,13 @@ NativeClass::~NativeClass() {
 Node NativeClass::execute(Vector<Node> args,
                 SharedPtr<Scope> scope,
                 [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const  {
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Current Class Being Registered: ", name);
-    auto inst = ClassInstance(getName(), scope, classScope, parameters, accessor);
-    auto instancePtr = makeShared<ClassInstance>(getName(), scope, classScope, parameters, accessor);
-    auto ensuredInstanceNode = makeShared<ClassInstanceNode>(instancePtr);
+    if (!instanceNode) {throw MerkError("An InstanceNode must be supplied to NativeClass::execute");}
+    // auto instancePtr = makeShared<ClassInstance>(getName(), scope, classScope, parameters, accessor);
+    // auto ensuredInstanceNode = makeShared<ClassInstanceNode>(instancePtr);
 
-    if (constructorFn) {constructorFn(args, scope, ensuredInstanceNode);}
+    if (constructorFn) {constructorFn(args, scope, instanceNode);}
 
-    return ensuredInstanceNode->getInstanceNode();
+    return instanceNode->getInstanceNode();
 }
 
 String NativeClass::toString() const  {
@@ -44,11 +39,8 @@ String NativeClass::toString() const  {
 }
 
 SharedPtr<CallableSignature> NativeClass::toCallableSignature() {
-    // CallableSignature(makeShared<NativeClass>(*this), CallableType::CLASS);
-    auto sig = makeShared<CallableSignature>(makeShared<NativeClass>(*this), CallableType::CLASS);
-    // sig->setParameterTypes(parameters.getParameterTypes());
-    sig->setParameters(getParameters().clone());
-    sig->setSubType(CallableType::NATIVE);
+    auto sig = makeShared<CallableSignature>(shared_from_this());
+
     return sig;
 }
 
@@ -62,7 +54,6 @@ SharedPtr<Scope> NativeClass::getCapturedScope() const {
         return scope;
     }
     return nullptr;
-    // return capturedScope;
 }
 
 

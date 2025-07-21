@@ -80,8 +80,8 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
 }
 
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
-    if (!instanceNode) {throw MerkError("MethodCall::evaluate -> no instanceNode passed");}
+    DEBUG_FLOW(FlowLevel::VERY_HIGH); 
+    if (!instanceNode) {throw MerkError("MethodCall::evaluate -> " + name + " no instanceNode passed");}
     if (!scope) {throw MerkError("MethodCall::evaluate -> scope passed to is null");}
     auto instanceScope = instanceNode->getInstanceScope();
 

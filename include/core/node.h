@@ -12,6 +12,7 @@
 // Struct for NodeData using a union for efficient storage
 struct NodeData {
     NodeValueType type = NodeValueType::Null; // Type of the value
+    mutable ResolvedType fullType;
     VariantType value = Null; // A std::variant to store any of the allowed types
     NodeData() = default; // Default constructor
     NodeData(const NodeData&) = default; // Copy constructor
@@ -41,11 +42,16 @@ public:
     String nodeType = "DataNode";
     String name = "";
 
+    ResolvedType getFullType() {return data.fullType;}
+    ResolvedType getFullType() const {return data.fullType;}
+
     bool isClassInstance();
     bool isClassInstance() const;
     
     // Clone Method for Proper Copying
     virtual Node* clone() const;
+
+    void setFullType(ResolvedType) const;
 
     // Default Constructor
     Node();
@@ -93,6 +99,7 @@ public:
     NodeValueType getNodeValueType(const String& typeStr, const String& valueStr);
     NodeValueType getNodeValueType(const VariantType& value);
 
+
     // Type checks
     bool isType(const NodeValueType type) const;
     bool isInt() const;
@@ -105,7 +112,7 @@ public:
     bool isValid() const;
     bool isLong() const;
     bool getIsCallable() const;
-    bool isVector() const;
+    bool isArray() const;
     bool isList() const;
 
     Node negate() const;
@@ -188,6 +195,9 @@ public:
     // // For Static Typing
     explicit VarNode(const String value, const String& type, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = false);
     explicit VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = true);
+
+    explicit VarNode(const String value, const String& type, bool isConst, bool isMutable, ResolvedType typeTag, bool isStatic = false);
+    explicit VarNode(VarNode& parent, bool isConst, bool isMutable, ResolvedType typeTag, bool isStatic = true);
     
     // Copy Constructor
     VarNode(const VarNode& other);

@@ -132,6 +132,10 @@ Vector<Token> Tokenizer::tokenize() {
                 (nextChar == '.' || (nextChar == ':' && nextNextChar == ':'))) {
                 identifier.type = TokenType::ChainEntryPoint;
             }
+
+            if (identifier.type == TokenType::Type && nextChar == '(') {
+                identifier.type = TokenType::ClassCall;
+            }
         
             tokens.push_back(identifier);
             skipWhitespace();

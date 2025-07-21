@@ -13,17 +13,6 @@ Node print(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_u
   (void)instanceNode;
   for (size_t i = 0; i < args.size(); ++i) {
         DEBUG_LOG(LogLevel::PERMISSIVE, args[i].getTypeAsString());
-        auto type = args[i].getType();
-        if (type == NodeValueType::ClassInstance && args[i].name == "List") {
-            // auto node = <ListNode>(args[i]);
-            auto node = args[i].getValue();
-            if (node.valueless_by_exception());
-        }
-        // throw MerkError("got type");
-
-        if (false) {
-            std::cout << args[i].toString();
-        }
         std::cout << args[i].toString();
         if (i < args.size() - 1) std::cout << " ";
     }
