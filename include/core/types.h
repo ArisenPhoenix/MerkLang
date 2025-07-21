@@ -326,7 +326,7 @@ constexpr NodeValueType getNodeTypeFromType() {
 }
 
 
-String nodeTypeToString(NodeValueType type); 
+String nodeTypeToString(NodeValueType type, bool colored = true); 
 NodeValueType stringToNodeType(String);
 String astTypeToString(AstType type);
 

@@ -134,7 +134,13 @@ Vector<Token> Tokenizer::tokenize() {
             }
 
             if (identifier.type == TokenType::Type && nextChar == '(') {
-                identifier.type = TokenType::ClassCall;
+                if (identifier.value == "List" || identifier.value == "Array" || identifier.value == "Dict" || identifier.value == "Set") {
+                    identifier.type = TokenType::ClassCall;
+                }
+                else {
+                    identifier.type = TokenType::FunctionCall;
+                }
+                
             }
         
             tokens.push_back(identifier);

@@ -3,39 +3,39 @@
 
 
 
-String nodeTypeToString(NodeValueType type) {
+String nodeTypeToString(NodeValueType type, bool colored) {
     switch (type) {
-        case NodeValueType::String: return highlight("String", Colors::bold_green);
-        case NodeValueType::Char: return highlight("Char", Colors::bold_green);
+        case NodeValueType::String: return colored ? highlight("String", Colors::bold_green) : "String";
+        case NodeValueType::Char: return colored ? highlight("Char", Colors::bold_green) : "Char";
 
-        case NodeValueType::Number: return highlight("Keyword", Colors::bold_blue);
-        case NodeValueType::Int: return highlight("Int", Colors::bold_blue);
-        case NodeValueType::Bool: return highlight("Bool", Colors::cyan);
-        case NodeValueType::Float: return highlight("Float", Colors::bold_blue);
-        case NodeValueType::Double: return highlight("Double", Colors::bold_blue);
-        case NodeValueType::Long: return highlight("Long", Colors::bold_blue);
+        case NodeValueType::Number: return colored ? highlight("Keyword", Colors::bold_blue) : "Keyword";
+        case NodeValueType::Int: return colored ? highlight("Int", Colors::bold_blue) : "Int";
+        case NodeValueType::Bool: return colored ? highlight("Bool", Colors::cyan) : "Bool";
+        case NodeValueType::Float: return colored ? highlight("Float", Colors::bold_blue) : "Float";
+        case NodeValueType::Double: return colored ? highlight("Double", Colors::bold_blue) : "Double";
+        case NodeValueType::Long: return colored ? highlight("Long", Colors::bold_blue) : "Long";
         
-        case NodeValueType::Vector: return highlight("Vector", Colors::yellow);
-        case NodeValueType::Shared_Vector: return highlight("Shared_Vector", Colors::yellow);
+        case NodeValueType::Vector: return colored ? highlight("Vector", Colors::yellow) : "Vector";
+        case NodeValueType::Shared_Vector: return colored ? highlight("Shared_Vector", Colors::yellow) : "Shared_Vector";
 
-        case NodeValueType::Parameter: return highlight("Parameter", Colors::bold_white);
-        case NodeValueType::Class: return highlight("Class", Colors::bold_white);
+        case NodeValueType::Parameter: return colored ? highlight("Parameter", Colors::bold_white) : "Parameter";
+        case NodeValueType::Class: return colored ? highlight("Class", Colors::bold_white) : "Class";
 
-        case NodeValueType::Function: return highlight("Function", Colors::purple);
-        case NodeValueType::Method: return highlight("Method", Colors::purple);
+        case NodeValueType::Function: return colored ? highlight("Function", Colors::purple) : "Function";
+        case NodeValueType::Method: return colored ? highlight("Method", Colors::purple) : "Method";
 
-        case NodeValueType::Null: return highlight("Null", Colors::orange);
-        case NodeValueType::Any: return highlight("Any", Colors::green);
-        case NodeValueType::None: return highlight("None", Colors::orange);
+        case NodeValueType::Null: return colored ? highlight("Null", Colors::orange) : "Null";
+        case NodeValueType::Any: return colored ? highlight("Any", Colors::green) : "Any";
+        case NodeValueType::None: return colored ? highlight("None", Colors::orange) : "None";
         
-        case NodeValueType::Uninitialized: return highlight("Uninitialized", Colors::red);
-        case NodeValueType::UNKNOWN: return highlight("Unknown", Colors::bold_red);
-        case NodeValueType::Callable: return highlight("Callable", Colors::red);
-        case NodeValueType::ClassInstance: return highlight("ClassInstance", Colors::red);
-        case NodeValueType::List: return highlight("ClassInstance<List>", Colors::bold_white);
-        case NodeValueType::Array: return highlight("ClassInstance<Array>", Colors::bold_white);
-        case NodeValueType::Dict: return highlight("ClassInstance<Dict>", Colors::bold_white);
-        case NodeValueType::Set: return highlight("ClassInstance<Set>", Colors::bold_white);
+        case NodeValueType::Uninitialized: return colored ? highlight("Uninitialized", Colors::red) : "Uninitialized";
+        case NodeValueType::UNKNOWN: return colored ? highlight("Unknown", Colors::bold_red) : "Unknown";
+        case NodeValueType::Callable: return colored ? highlight("Callable", Colors::red) : "Callable";
+        case NodeValueType::ClassInstance: return colored ? highlight("ClassInstance", Colors::red) : "ClassInstance";
+        case NodeValueType::List: return colored ? highlight("ClassInstance<List>", Colors::bold_white) : "ClassInstance<List>";
+        case NodeValueType::Array: return colored ? highlight("ClassInstance<Array>", Colors::bold_white) : "ClassInstance<Array>";
+        case NodeValueType::Dict: return colored ? highlight("ClassInstance<Dict>", Colors::bold_white) : "ClassInstance<Dict>";
+        case NodeValueType::Set: return colored ? highlight("ClassInstance<Set>", Colors::bold_white) : "ClassInstance<Set>";
         default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
 
     }

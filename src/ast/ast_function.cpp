@@ -195,7 +195,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 
 
     if (func->getSubType() == CallableType::NATIVE) {
-        func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+        func->parameters.clone().verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
         return func->execute(evaluatedArgs, scope, instanceNode);}
 
     SharedPtr<Scope> callScope = scope->buildFunctionCallScope(func, func->getName());
