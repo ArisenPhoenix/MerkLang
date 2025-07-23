@@ -11,7 +11,7 @@
 
 Node print(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
   for (size_t i = 0; i < args.size(); ++i) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, args[i].getTypeAsString());
+        // DEBUG_LOG(LogLevel::PERMISSIVE, args[i].getTypeAsString());
         std::cout << args[i].toString();
         if (i < args.size() - 1) std::cout << " ";
     }

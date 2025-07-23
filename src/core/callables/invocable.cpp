@@ -4,7 +4,7 @@
 
 Invocable::Invocable(String name, ParamList params, CallableType definedType, bool requiresReturn, bool isStatic)
 : Callable(name, params, definedType, requiresReturn, isStatic) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
     DEBUG_FLOW_EXIT();
 }
 

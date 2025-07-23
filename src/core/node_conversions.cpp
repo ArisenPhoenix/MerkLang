@@ -1,21 +1,9 @@
 #include "core/node.h"
 #include "core/types.h"
-#include "core/callables/callable.h"
-#include "core/callables/classes/class_base.h"
-#include "core/callables/classes/node_structures.h"
 #include "utilities/debugger.h"
-#include "utilities/debugging_functions.h"
 #include "core/errors.h"
 #include "core/scope.h"
 
-#include <limits>
-#include <sstream>
-#include <iostream>
-#include <variant>
-#include <tuple>
-#include <functional>
-#include <utility>
-#include <cmath>
 
 
 
@@ -41,7 +29,7 @@ bool Node::isValid() const {
 }
 
 bool Node::isType(const NodeValueType type) const {
-    return isValid() && data.type == type;
+    return data.type == type;
 }
 
 // Type checks
@@ -112,30 +100,22 @@ T Node::convertNumber() const {
 }
 
 int Node::toInt() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto res = convertNumber<int>();
-    DEBUG_FLOW_EXIT();
     return res;
 }
 
 float Node::toFloat() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto res = convertNumber<float>();
-    DEBUG_FLOW_EXIT();
     return res;
 }
 
 double Node::toDouble() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto res = convertNumber<double>();
-    DEBUG_FLOW_EXIT();
     return res;
 }
 
 long Node::toLong() const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto res = convertNumber<long>();
-    DEBUG_FLOW_EXIT();
     return res;
 }
 
@@ -146,8 +126,6 @@ SharedPtr<ListNode> Node::toList() {
         }
         return std::static_pointer_cast<ListNode>(toInstance()->getNativeData()); 
     }
-
-
     throw MerkError("Not A List");
 }
 
@@ -158,8 +136,6 @@ SharedPtr<ListNode> Node::toList() const {
         }
         return std::static_pointer_cast<ListNode>(toInstance()->getNativeData()); 
     }
-
-
     throw MerkError("Not A List");
 }
 
@@ -170,7 +146,6 @@ SharedPtr<ArrayNode> Node::toArray() {
         }
         return std::static_pointer_cast<ArrayNode>(toInstance()->getNativeData());
     }
-
     throw MerkError("Not An Array");
 }
 
@@ -181,7 +156,6 @@ SharedPtr<ArrayNode> Node::toArray() const {
         }
         return std::static_pointer_cast<ArrayNode>(toInstance()->getNativeData());
     }
-
     throw MerkError("Not An Array");
 }
 
@@ -203,41 +177,30 @@ SharedPtr<ClassInstance> Node::toInstance() {
 
 
 String Node::toString() const {
-    // auto type = getType();
-    // DEBUG_LOG(LogLevel::PERMISSIVE, nodeTypeToString(data.type));
-    // DEBUG_LOG(LogLevel::PERMISSIVE, nodeTypeToString(type));
-
     try {
         switch (data.type) {
             case NodeValueType::Char: return std::string(1, std::get<char>(data.value));
             case NodeValueType::Int: return std::to_string(std::get<int>(data.value));
-            // case NodeValueType::Number: return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Float: return std::to_string(std::get<float>(data.value));
-            case NodeValueType::Double: return std::to_string(std::get<double>(data.value));
-            case NodeValueType::Long: return std::to_string(std::get<long>(data.value));
-            case NodeValueType::Bool: return std::get<bool>(data.value) ? "true" : "false";
+            case NodeValueType::Number: return std::to_string(std::get<int>(data.value));
+            case NodeValueType::Float: return std::to_string(toFloat());
+            case NodeValueType::Double: return std::to_string(toDouble());
+            case NodeValueType::Long: return std::to_string(toLong());
+            case NodeValueType::Bool: return std::get<bool>(data.value) == true ? "true" : "false";
             
             case NodeValueType::String: return std::get<String>(data.value);
             case NodeValueType::Null: return "null"; 
             case NodeValueType::Uninitialized: return "<Uninitialized>";
-            case NodeValueType::Any: return "Any";
-            case NodeValueType::Class: return "Class";
-            case NodeValueType::Method: return "Method";
+            case NodeValueType::Any: return nodeTypeToString(data.type, false);
+            case NodeValueType::Class: return nodeTypeToString(data.type, false);
+            case NodeValueType::Method: return nodeTypeToString(data.type, false);
             
-            case NodeValueType::ClassInstance: {
-                DEBUG_LOG(LogLevel::PERMISSIVE, "Got A Class Instance");
-                auto inst = std::get<SharedPtr<ClassInstance>>(data.value);
-                return inst->toString();
-            }
-            case NodeValueType::List: {
-                DEBUG_LOG(LogLevel::PERMISSIVE, "Got A Class Instance");
-                return std::get<SharedPtr<ListNode>>(data.value)->toString();
-            };
-            case NodeValueType::Array: return "Array";                
-            case NodeValueType::Callable: return "<Callable>" + name;
+            case NodeValueType::ClassInstance: { return toInstance()->toString(); }
+            case NodeValueType::List: { return toList()->toString(); };
+            case NodeValueType::Array: return nodeTypeToString(data.type, false);              
+            case NodeValueType::Callable: return nodeTypeToString(data.type, false) + name;
             case NodeValueType::UNKNOWN: return "UNKNOWN";
-            case NodeValueType::Function: return "<Function>" + name;
-            case NodeValueType::None: return "None";
+            case NodeValueType::Function: return nodeTypeToString(data.type, false) + name;
+            case NodeValueType::None: return nodeTypeToString(data.type, false);
             default: {
                 return highlight("Error: Unsupported Type For Node toString.'                    '" + nodeTypeToString(data.type), Colors::red) + "  " + toString();
             }
@@ -256,35 +219,29 @@ String Node::toString() const {
 String LitNode::toString() const {
     try {
         switch (data.type) {
+            case NodeValueType::Char: return std::string(1, std::get<char>(data.value));
             case NodeValueType::Int: return std::to_string(std::get<int>(data.value));
             case NodeValueType::Number: return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Float: return std::to_string(std::get<float>(data.value));
-            case NodeValueType::Double: return std::to_string(std::get<double>(data.value));
-            case NodeValueType::Long: return std::to_string(std::get<long>(data.value));
-            case NodeValueType::Bool: return std::get<bool>(data.value) ? "true" : "false";
-            case NodeValueType::Char: return std::string(1, std::get<char>(data.value));
+            case NodeValueType::Float: return std::to_string(toFloat());
+            case NodeValueType::Double: return std::to_string(toDouble());
+            case NodeValueType::Long: return std::to_string(toLong());
+            case NodeValueType::Bool: return std::get<bool>(data.value) == true ? "true" : "false";
+            
             case NodeValueType::String: return std::get<String>(data.value);
             case NodeValueType::Null: return "null"; 
             case NodeValueType::Uninitialized: return "<Uninitialized>";
-            case NodeValueType::Any: return "Any";
-            case NodeValueType::Class: return "Class";
-            case NodeValueType::Method: return "Method";
+            case NodeValueType::Any: return nodeTypeToString(data.type, false);
+            case NodeValueType::Class: return nodeTypeToString(data.type, false);
+            case NodeValueType::Method: return nodeTypeToString(data.type, false);
             
-            case NodeValueType::ClassInstance: {
-                DEBUG_LOG(LogLevel::PERMISSIVE, "Got A Class Instance");
-                auto inst = std::get<SharedPtr<ClassInstance>>(data.value);
-                return inst->toString();
-            }
-            case NodeValueType::List: {
-                DEBUG_LOG(LogLevel::PERMISSIVE, "Got A Class Instance");
-                return std::get<SharedPtr<ListNode>>(data.value)->toString();
-            };
-            case NodeValueType::Array: return "Array";                
-            case NodeValueType::Callable: return "<Callable>" + name;
+            case NodeValueType::ClassInstance: { return toInstance()->toString(); }
+            case NodeValueType::List: { return toList()->toString(); };
+            case NodeValueType::Array: return nodeTypeToString(data.type, false);              
+            case NodeValueType::Callable: return nodeTypeToString(data.type, false) + name;
             case NodeValueType::UNKNOWN: return "UNKNOWN";
-            case NodeValueType::Function: return "<Function>" + name;
-            case NodeValueType::None: return "None";
-            default: throw RunTimeError("");
+            case NodeValueType::Function: return nodeTypeToString(data.type, false) + name;
+            case NodeValueType::None: return nodeTypeToString(data.type, false);
+            default: throw RunTimeError("No Accepted Variables Found");
         }
     } catch (const std::exception& e) {
         debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());

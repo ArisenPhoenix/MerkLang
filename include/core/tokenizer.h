@@ -26,12 +26,21 @@ private:
 
     bool insideClass = false;
     int classIndentLevel = 0;
+    bool pendingInlineBlock = false;   // after :;
+    bool dedentOnNextNewline = false;
 
     std::unordered_set<String> functions;
     std::unordered_set<String> classes;
 
 
     Vector<int> indentStack; // Stack to manage indentation levels
+    Vector<String> indentStackS;
+
+    void addBasicNewLine();
+    void addMinifiableNewLine();
+    void addOtherNewLine();
+
+    
 
     bool isWhitespace(char c) const;
     bool isLetter(char c) const;

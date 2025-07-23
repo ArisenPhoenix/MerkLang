@@ -1,21 +1,8 @@
 #include "core/node.h"
 #include "core/types.h"
-#include "core/callables/callable.h"
-#include "core/callables/classes/class_base.h"
-#include "core/callables/classes/node_structures.h"
 #include "utilities/debugger.h"
-#include "utilities/debugging_functions.h"
 #include "core/errors.h"
 #include "core/scope.h"
-
-#include <limits>
-#include <sstream>
-#include <iostream>
-#include <variant>
-#include <tuple>
-#include <functional>
-#include <utility>
-#include <cmath>
 
 
 
@@ -41,6 +28,7 @@ void Node::transferOwnershipFrom(Node&& other) {
     name = std::move(other.name);
     nodeType = std::move(other.nodeType);
     data = other.data;
+    setFullType(other.getFullType());
 
     updateClassInstance(*this);
 }
@@ -60,7 +48,7 @@ void Node::updateClassInstance(const Node& me) {
 void Node::applyTypeInfo(std::optional<NodeValueType> typeTag, const ResolvedType& fullType) {
     if (typeTag.has_value()) {
         data.type = typeTag.value();
-        if (getFullType().getBaseType().size() < 1) {data.fullType = fullType;}
+        if (getFullType().getBaseType().size() < 1) {setFullType(fullType);}
     } 
     
     else if (!getFullType().getBaseType().empty()) {
@@ -74,6 +62,7 @@ void Node::applyTypeInfo(std::optional<NodeValueType> typeTag, const ResolvedTyp
         DEBUG_LOG(LogLevel::PERMISSIVE, "UNKNOWN TYPE -> OUTPUT: ", getType());
         throw MerkError("data.type is Unknown");
         data.type = NodeValueType::Any;  // fallback
+        setFullType(fullType);
     }
 
     DEBUG_LOG(LogLevel::PERMISSIVE, "data.type is ", getType());
@@ -295,18 +284,19 @@ VarNode::VarNode(const VarNode& other) : Node(other) {
     this->nodeType = other.nodeType;
 
     copyFlagsFrom(other);
-    nodeType = "VarNode";
+    
     updateClassInstance(*this);
+    nodeType = "VarNode";
 }
 
 // VarNode Move Constructor
 VarNode::VarNode(VarNode&& other) noexcept : Node(std::move(other)) {
-    this->isConst = other.isConst;
-    this->isMutable = other.isMutable;
-    this->isStatic = other.isStatic;
-    this->isCallable = other.isCallable;
-    this->name = other.name;
-    this->nodeType = other.nodeType;
+    // this->isConst = other.isConst;
+    // this->isMutable = other.isMutable;
+    // this->isStatic = other.isStatic;
+    // this->isCallable = other.isCallable;
+    // this->name = other.name;
+    // this->nodeType = other.nodeType;
     updateClassInstance(*this);
 }
 
@@ -316,7 +306,7 @@ VarNode& VarNode::operator=(const VarNode& other) {
         Node::operator=(other);
     }
 
-    updateClassInstance(*this);
+    // updateClassInstance(*this);
     return *this;
 }
 
@@ -325,7 +315,7 @@ VarNode& VarNode::operator=(VarNode&& other) noexcept {
     if (this != &other) {
         Node::operator=(std::move(other));
     }
-    updateClassInstance(*this);
+    // updateClassInstance(*this);
 
     return *this;
 }
@@ -342,12 +332,15 @@ VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool i
     nodeType = "VarNode";
     this->isConst = isConst;
     this->isMutable = isMutable;
-    applyTypeInfo(typeTag, getFullType());
-
     this->isStatic = isStatic && typeTag.has_value();
-    if (typeTag.has_value()){
+
+    // applyTypeInfo(typeTag, getFullType());
+    if (typeTag.has_value()) {
         this->data.type = typeTag.value_or(NodeValueType::Any);
+        auto theType = stringToNodeType(typeStr);
+    if (theType != NodeValueType::UNKNOWN) {data.type = theType; data.fullType.setBaseType(typeStr);}
     }
+    
 
     validateTypeAlignment();
 }
@@ -361,6 +354,14 @@ VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<No
     this->isConst = isConst;
     this->isMutable = isMutable;
 
+    if (typeTag.has_value()) {
+        auto theType = typeTag.value_or(NodeValueType::Any);
+        data.type = theType;
+        if (theType == NodeValueType::UNKNOWN) {
+            data.type = NodeValueType::Any;
+        }
+    }
+
     validateTypeAlignment();
 }
 
@@ -371,13 +372,10 @@ VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool i
         this->isMutable = isMutable;
         this->isStatic = fullType.getBaseType().size() || isStatic; 
         this->data.fullType = fullType;
-
         
-        DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode FullType: ", fullType.getBaseType(), "Type: ", typeStr);
         data.type = stringToNodeType(fullType.getBaseType());
         if (data.type == NodeValueType::UNKNOWN) {throw MerkError("data.type is Unknown");  data.type = NodeValueType::Any;}   // Temporary solution for user defined types
         
-        DEBUG_LOG(LogLevel::PERMISSIVE, "data.type is ", data.type);
         validateTypeAlignment();
 }
 
@@ -387,14 +385,10 @@ VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, ResolvedType ful
         this->isConst = isConst;
         this->isMutable = isMutable;
         this->isStatic = fullType.getBaseType().size() || isStatic; // && parent.data.type != NodeValueType::Uninitialized;
-        applyTypeInfo(std::nullopt, fullType);
-
         this->data.type = parent.getType();
+        this->setFullType(fullType);
         
         if (data.type == NodeValueType::UNKNOWN) {DEBUG_LOG(LogLevel::PERMISSIVE, "UNKNOWN TYPE OUTPUT: ", data.type); throw MerkError("data.type is Unknown"); data.type = NodeValueType::Any;}   // Temporary solution for user defined types
-        
-        DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode FullType: ", fullType.getBaseType(), "Type: ", parent.getTypeAsString());
-        DEBUG_LOG(LogLevel::PERMISSIVE, "data.type is ", data.type);
         updateClassInstance(*this);
 
         validateTypeAlignment();

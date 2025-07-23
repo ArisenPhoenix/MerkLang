@@ -6,11 +6,6 @@
 #include "core/callables/classes/native_class.h"
 #include "core/callables/classes/node_structures.h"
 
-// SharedPtr<ListNode> pullList(SharedPtr<ClassInstanceNode> self, String varName) {
-//     auto instanceScope = self->getInstanceScope();
-//     auto vector = instanceScope->getVariable(varName);
-//     return std::get<SharedPtr<ListNode>>(vector.getValue());
-// };
 
 void validateSelf(SharedPtr<ClassInstanceNode> self, String className, String methodName) {
     if (!self) {throw MerkError("instance was not provided to [" + className + "] -> " + methodName);}

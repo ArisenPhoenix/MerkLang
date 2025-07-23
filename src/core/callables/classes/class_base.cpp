@@ -351,10 +351,6 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
             return getField(fieldName);
             break;
 
-        // case TokenType::ClassMethodCall:
-        // case TokenType::FunctionCall:
-        //     break;
-
         default:
             throw MerkError("Unsupported field type for '" + fieldName + "'");
     }
@@ -384,26 +380,21 @@ void ClassInstance::declareField(const String& fieldName, const Node& var) {    
 
 
 void ClassInstance::declareField(const String& fieldName, const VarNode& var) {
-    if (!instanceScope) {
-        throw MerkError("Cannot declare field: instanceScope is missing");
-    }
+    if (!instanceScope) { throw MerkError("Cannot declare field: instanceScope is missing"); }
     UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
     instanceScope->declareVariable(fieldName, std::move(newVar));
 }
 
 
 void ClassInstance::updateField(const String& fieldName, Node val) const {                // most commonly used
-    if (val.isValid()){
-        instanceScope->updateVariable(fieldName, val);
-    }
+    if (!instanceScope) { throw MerkError("Cannot declare field: instanceScope is missing"); }
+    instanceScope->updateVariable(fieldName, val);
 }                 
 
 void ClassInstance::setNativeData(SharedPtr<DataStructure> incoming) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     nativeData = incoming;
-    if (!nativeData) {
-        throw MerkError("Native Data Wasn't Set");
-    }
+    // if (!nativeData) {throw MerkError("Native Data Wasn't Set");}
     DEBUG_FLOW_EXIT();
 
 }
@@ -412,8 +403,9 @@ SharedPtr<DataStructure> ClassInstance::getNativeData() {return nativeData;}
 
 ClassInstance::~ClassInstance() {
     DEBUG_LOG(LogLevel::DEBUG, "~ClassInstance() destructor triggered");
-    getInstanceScope().reset();
-    getCapturedScope().reset();
+    getInstanceScope()->clear();
+    getCapturedScope()->clear();
+    nativeData.reset();
 }
 
 ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : CallableNode(callable, "ClassInstance") {
@@ -428,19 +420,21 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : Callab
 ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     : CallableNode(callableNode) {
     DEBUG_FLOW(FlowLevel::NONE);
-    auto instance = std::get<SharedPtr<Callable>>(data.value);
+    // auto instance = std::get<SharedPtr<Callable>>(data.value);
+    auto instance = getInstance();
     if (!instance) {throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");}
 
     data.value = instance; 
     data.type = NodeValueType::ClassInstance;
-    // name = callableNode->getCallable()->getName();
+    name = callableNode->getCallable()->getName();
 
 }
 
 
 SharedPtr<Callable> ClassInstanceNode::getCallable() const {
     DEBUG_FLOW(FlowLevel::NONE);
-    auto val = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<ClassInstance>>(data.value));
+    // auto val = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<ClassInstance>>(data.value));
+    auto val = getInstance();
     DEBUG_FLOW_EXIT();
     return val;
 }

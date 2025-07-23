@@ -85,7 +85,7 @@ CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
 
 CallableSignature::CallableSignature(SharedPtr<Callable> newCallable)
     : callType(newCallable->callType), subType(newCallable->subType), parameters(newCallable->parameters.clone())  {
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::HIGH);
         if (!newCallable) {throw MerkError("Callable is NULL in: ");}
         callable = std::move(newCallable);
         DEBUG_FLOW_EXIT();

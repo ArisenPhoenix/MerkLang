@@ -11,7 +11,7 @@ NativeMethod::NativeMethod(
     SharedPtr<Scope> classScope,
     std::function<Node(NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn) 
     : Method(std::move(name), params, CallableType::METHOD), methodFn(methodFn) {
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        DEBUG_FLOW(FlowLevel::NONE);
         setClassScope(classScope);
         setSubType(CallableType::NATIVE);
         if (subType != CallableType::NATIVE) {throw MerkError("SubType is not native, it is: " + callableTypeAsString(subType));}

@@ -84,9 +84,10 @@ Vector<Token> Tokenizer::tokenize() {
             column++;
         }
 
-        if (source[position] == '\n') {
-            // Secondary Backslash for viewing properly in the output
-            tokens.emplace_back(Token(TokenType::Newline, "NewLine", line, column));
+        if (source[position] == '\n' || source[position] == ';') {
+            String val = "";
+            source[position] == '\n' ? val += "NewLine" : val += ";";
+            tokens.emplace_back(Token(TokenType::Newline, val, line, column));
             position++;
             line++;
             column = 1;
@@ -118,13 +119,14 @@ Vector<Token> Tokenizer::tokenize() {
         // Handle compound operators first
         if ((isOperator(source[position]) || isPunctuation(source[position])) &&
             (isOperator(peek()) || isPunctuation(peek()))) {
-            tokens.push_back(readCompoundOperatorOrPunctuation());
+            // tokens.push_back();
+            readCompoundOperatorOrPunctuation();
             position += 2;
             column += 2;
             continue;
         }
         // Handle single character operators
-        else if (isOperator(source[position]) || isPunctuation(source[position])) {
+        else if (isOperator(source[position]) || isPunctuation(source[position])) { 
             tokens.push_back(readOperatorOrPunctuation());
             position++;  // Move past the single character
             column++;
@@ -158,6 +160,9 @@ Vector<Token> Tokenizer::tokenize() {
                 }
                 
             }
+            if (identifier.value == "null" && identifier.type == TokenType::Variable) {
+                identifier.type = TokenType::String;
+            }
         
             tokens.push_back(identifier);
             skipWhitespace();
@@ -183,24 +188,6 @@ Vector<Token> Tokenizer::tokenize() {
     tokens.emplace_back(TokenType::EOF_Token, "EOF", line, column);
     DEBUG_FLOW_EXIT();
     return tokens;
-}
-
-Token Tokenizer::readCompoundOperatorOrPunctuation() {
-    int startColumn = column;
-    String twoCharOp = String(1, source[position]) + peek(); // Look ahead
-    // TokenType::VarAssignment
-    if (twoCharOp == ":="){
-        return Token(TokenType::VarAssignment, twoCharOp, line, startColumn);
-    }
-    if (twoCharOp == "==" || twoCharOp == "!=" ||
-        twoCharOp == "<=" || twoCharOp == ">=" || twoCharOp == "&&" ||
-        twoCharOp == "||" || twoCharOp == "+=" || twoCharOp == "-=" ||
-        twoCharOp == "*=" || twoCharOp == "/=" || twoCharOp == "%=" || twoCharOp == "->" ) { // last one signifies return value
-        
-        return Token(TokenType::Operator, twoCharOp, line, startColumn);
-    }
-
-    throw UnknownTokenError("Unexpected compound operator: " + twoCharOp, line, column, currentLineText);
 }
 
 Token Tokenizer::readOperatorOrPunctuation() {
@@ -439,36 +426,10 @@ Token Tokenizer::readIdentifier() {
 
     DEBUG_LOG(LogLevel::DEBUG, "Exiting readIdentifier with value: ", value, " (Type: ", tokenTypeToString(type), ")");
     DEBUG_FLOW_EXIT();
-    if (value == "if" && type == TokenType::FunctionCall) {
-        throw MerkError("Got If At End");
-    }
     return Token(type, value, line, startColumn);
 }
 
-void Tokenizer::skipWhitespace() {
-    while (position < sourceLength && isWhitespace(source[position])) {
-        position++;
-        column++;
-    }
 
-    if (position >= sourceLength) {
-        OutOfBoundsError(line, column, currentLineText);
-    }
-}
-
-int Tokenizer::countLeadingSpaces(const String& line) {
-    int count = 0;
-    for (char ch : line) {
-        if (ch == ' ') {
-            count++;
-        } else if (ch == '\t') {
-            count += 4;  // Assuming 1 tab = 4 spaces
-        } else {
-            break;  // Stop at the first non-whitespace character
-        }
-    }
-    return count;
-}
 
 bool Tokenizer::isCompoundOperator(char c) const {
     // Look ahead to check for `=`
@@ -499,9 +460,6 @@ char Tokenizer::peek(size_t offset) const {
 
 
 
-bool Tokenizer::isWhitespace(char c) const {
-    return c == ' ' || c == '\t';
-}
 
 bool Tokenizer::isLetter(char c) const {
     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
