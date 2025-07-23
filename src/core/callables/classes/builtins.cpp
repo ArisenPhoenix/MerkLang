@@ -23,6 +23,13 @@ SharedPtr<DataStructure> pullNativeData(SharedPtr<ClassInstanceNode> self, Strin
 }
 
 SharedPtr<ListNode> pullList(SharedPtr<ClassInstanceNode> self) {
+    if (!self->isMutable) {
+        throw MerkError("Cannot Mutate List instance '" + self->getInstance()->getName());
+    } 
+
+    // if (self->isMutable) {
+    //     throw MerkError("Can Mutate List instance '" + self->getInstance()->getName());
+    // } 
     auto list = std::static_pointer_cast<ListNode>(pullNativeData(self, "ListNode"));
     return list;
 }
@@ -130,7 +137,13 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
         if (arg.size() != 1) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(arg));}
         auto instanceScope = self->getInstanceScope();
         auto vector = pullList(self);
-        return vector->pop(arg[0]);
+        
+        auto result = vector->pop(arg[0]);
+        if (!result.isValid()) {
+            throw MerkError("Result is invalid");
+        }
+        return result;
+        // return vector->pop(arg[0]);
     };
 
 

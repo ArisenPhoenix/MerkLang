@@ -368,7 +368,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
         if (objType == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
         if (!currentVal.isValid()) {throw MerkError("Cannot Chain off of a null return value");}
 
-        if (currentVal.isClassInstance()) {
+        if (currentVal.isInstance()) {
             auto instance = std::get<SharedPtr<ClassInstance>>(currentVal.getValue());
             currentScope = instance->getInstanceScope();
             if (!currentScope) {throw MerkError("Scope Invalid During Chain Iteration");}

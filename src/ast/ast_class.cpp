@@ -147,7 +147,7 @@ Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> ins
     (void)scope;
     DEBUG_FLOW(FlowLevel::NONE);
 
-    if (!instanceNode || !instanceNode->isClassInstance()) throw MerkError("No instance provided to Accessor");
+    if (!instanceNode || !instanceNode->isInstance()) throw MerkError("No instance provided to Accessor");
 
     ClassInstanceNode instance = instanceNode->getInstanceNode(); 
 

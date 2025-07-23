@@ -43,6 +43,7 @@ String nodeTypeToString(NodeValueType type, bool colored) {
 
 NodeValueType stringToNodeType(String type) {
         if (type == "String") {return NodeValueType::String;}
+        if (type == "Char") {return NodeValueType::Char;}
         if (type == "Number") {return NodeValueType::Number;}
         if (type == "Int") {return NodeValueType::Int;}
         if (type == "Bool") {return NodeValueType::Bool;}
@@ -147,6 +148,7 @@ String tokenTypeToString(TokenType type, bool colored) {
         case TokenType::VarDeclaration: return colored ? highlight("VarDeclaration", Colors::bold_cyan) : "VarDeclaration";
         case TokenType::Variable: return colored ? highlight("Variable", Colors::bold_cyan) : "Variable";
 
+        case TokenType::Char: return colored ? highlight("Char", Colors::green) : "Char";
         case TokenType::String: return colored ? highlight("String", Colors::green) : "String";
         case TokenType::Bool: return colored ? highlight("Bool", Colors::bold_blue) : "Bool";
         case TokenType::Number: return colored ? highlight("Number", Colors::yellow) : "Number";

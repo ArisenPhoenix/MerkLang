@@ -2,6 +2,7 @@
 #include "core/errors.h"
 
 #include "core/callables/classes/node_structures.h"
+#include "utilities/debugger.h"
 #include "algorithm"
 
 String DataStructure::getTypeAsString() const {
@@ -35,14 +36,20 @@ void ListNode::insert(const Node& index, const Node& value) {
 }
 
 Node ListNode::pop(const Node& index) {
+    // if (index.toInt() + 1 != 1) { throw MerkError("Is Not An Int " + std::to_string(index.toInt()) ); }
+    // if (elements.size() == 0) { throw MerkError("No elements"); }
+
     auto position = std::find(elements.begin(), elements.end(), elements[index.toInt()]);
-    
+    // DEBUG_LOG(LogLevel::PERMISSIVE, position.base()->toString());
     if (position != elements.end()) {
-        position.base();
         auto val = Node(position->getValue());
+        if (!val.isValid()) {throw MerkError("pop result is not valid");}
+        DEBUG_LOG(LogLevel::PERMISSIVE, val.toString());
         elements.erase(position);
         return val;
     }
+
+    throw MerkError("Returning Nothing");
     return Node();
 }
 

@@ -212,15 +212,13 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 
         
 
-    if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool) {
+    if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool || token.type == TokenType::Char) {
 
         LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
 
         auto literalVal = makeUnique<LiteralValue>(
             nodeLiteral,
             currentScope
-            // token.type == TokenType::String,
-            // token.type == TokenType::Bool
         );
 
         advance();  // Consume Literal Value

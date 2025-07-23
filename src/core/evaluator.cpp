@@ -106,7 +106,7 @@ namespace Evaluator {
     }
 
     Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode var, std::optional<NodeValueType> typeTag, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         DEBUG_LOG(LogLevel::PERMISSIVE, "Evaluating Variable Declaration");
     
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
@@ -153,7 +153,7 @@ namespace Evaluator {
     }
 
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         // auto workingScope = instanceScope->hasVariable(name) ? instanceScope : scope;
@@ -175,44 +175,15 @@ namespace Evaluator {
 
 
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : nullptr;
         auto workingScope = scope;
         auto parent = scope->getParent();
-        // auto instanceScope = instanceNode->getInstanceScope();
-        // auto instanceScope = insta
-        // if (instanceScope) {
-        //     auto instanceScope = instanceNode->getInstanceScope();
-        //     if (workingScope != instanceScope) {
-        //         scope->appendChildScope(instanceScope, false);
-        //     }
-        //     workingScope = instanceScope;
-        //     // instanceScope->appendChildScope(scope, false);
-        // }
-
-        // if (name == "x") {
-        //     DEBUG_LOG(LogLevel::PERMISSIVE, "Getting Scopes for VarRef");
-        //     scope->debugPrint();
-        //     if (instanceNode) {
-        //         instanceNode->getInstanceScope()->debugPrint();
-        //     }
-        //     throw MerkError("Got X");
-        // }
         
         auto& variable = workingScope->getVariable(name);
-
-        // Ensure the variable is valid
-        // if (!variable.isValid()) {
-        //     DEBUG_FLOW_EXIT();
-        //     throw NullVariableError(name);
-        // }
-
-        // scope->removeChildScope(workingScope);
+        DEBUG_LOG(LogLevel::PERMISSIVE, variable.toString());
         if (instanceScope) {
             scope->removeChildScope(workingScope);
-
-
-            // instanceScope->removeChildScope(workingScope);
         }
         scope->setParent(parent);
 
@@ -255,7 +226,7 @@ namespace Evaluator {
     Node evaluateBlock(const Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         (void)instanceNode;  // shouldn't be needed because other kinds of 'blocks' are used for more specific circumstances
 
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         Node lastValue;
 
         for (const auto& child : children) {
@@ -482,7 +453,7 @@ namespace Evaluator {
     }
     
     Node evaluateMethodBody(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> methodScope, SharedPtr<ClassInstanceNode> instanceNode){
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!instanceNode){throw MerkError("Evaluator::evaluateMethod has no instanceNode");}
 
         
@@ -520,7 +491,7 @@ namespace Evaluator {
 
     Node evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> classScope, SharedPtr<Scope> generatedScope, String accessor, Vector<UniquePtr<BaseAST>>& children, SharedPtr<ClassInstanceNode> instanceNode) {
         (void)instanceNode;
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
         if (!classCapturedScope) {throw MerkError("Class Captured Scope Was Not Set On Body");}
 
@@ -593,7 +564,7 @@ namespace Evaluator {
 
     Node evaluateClassCall(SharedPtr<Scope> callScope, String className, Vector<Node> argValues, SharedPtr<ClassInstanceNode> instanceNode) {
         (void)instanceNode;
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         
 
         auto classOpt = callScope->getClass(className);
@@ -636,7 +607,7 @@ namespace Evaluator {
         CallableType callType, 
         SharedPtr<ClassInstanceNode> instanceNode) {
         (void)instanceNode;
-        DEBUG_FLOW(FlowLevel::HIGH);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!passedScope){throw MerkError("Provided Scope to MethodDef::evaluate is null");}
         if (!ownScope){throw MerkError("MethodDef::evaluate, scope is null");}
         if (!classScope) {throw MerkError("Class Scope was not supplied to Method: " + methodName);}

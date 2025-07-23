@@ -109,7 +109,7 @@ void Scope::printChildScopes(int indentLevel) const {
     auto indent = String(indentLevel+2, ' ');
     int numInstances = 0;
     for (auto& [varName, var] : context.getVariables()) {
-        if (var->isClassInstance()) {
+        if (var->isInstance()) {
             numInstances += 1;
         }
     }
@@ -130,7 +130,7 @@ void Scope::printChildScopes(int indentLevel) const {
     if (numInstances > 0) {
         debugLog(true, indent, "=================== GO INSTANCE LOG ===================");
         for (auto& [varName, var] : context.getVariables()) {
-            if (var->isClassInstance()) {
+            if (var->isInstance()) {
                 auto instance = std::get<SharedPtr<ClassInstance>>(var->getValue());
                 instance->getInstanceScope()->printChildScopes(indentLevel+2);
                 instance->getCapturedScope()->printChildScopes(indentLevel+2);

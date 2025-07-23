@@ -36,6 +36,14 @@ public:
     bool isStatic = false;
     bool isCallable = false;
 
+    void copyFlagsFrom(const Node& other);
+
+    void transferOwnershipFrom(Node&& other);
+
+    void applyTypeInfo(std::optional<NodeValueType> typeTag, const ResolvedType& fullType);
+
+    void updateClassInstance(const Node& me);
+
     void setValue(const Node& other);
     void setValue(const VariantType& newValue);
     NodeValueType determineResultType(const Node& left, const Node& right) const;
@@ -45,8 +53,8 @@ public:
     ResolvedType getFullType() {return data.fullType;}
     ResolvedType getFullType() const {return data.fullType;}
 
-    bool isClassInstance();
-    bool isClassInstance() const;
+    
+
     
     // Clone Method for Proper Copying
     virtual Node* clone() const;
@@ -91,10 +99,20 @@ public:
     String getTypeAsString() const;
     virtual String toString() const;
     bool toBool() const;
-    // SharedPtr<NodeVector> toVector();
-    // SharedPtr<NodeList> toList();
+    char toChar() const;
+    SharedPtr<ListNode> toList();
+    SharedPtr<ArrayNode> toArray();
+    SharedPtr<SetNode> toSet();
+    SharedPtr<DictNode> toDict();
 
- 
+    SharedPtr<ListNode> toList() const;
+    SharedPtr<ArrayNode> toArray() const;
+    SharedPtr<SetNode> toSet() const;
+    SharedPtr<DictNode> toDict() const;
+    
+
+    SharedPtr<ClassInstance> toInstance() const;
+    SharedPtr<ClassInstance> toInstance();
     
     NodeValueType getNodeValueType(const String& typeStr, const String& valueStr);
     NodeValueType getNodeValueType(const VariantType& value);
@@ -114,6 +132,10 @@ public:
     bool getIsCallable() const;
     bool isArray() const;
     bool isList() const;
+    bool isSet() const;
+    bool isDict() const;
+    bool isInstance();
+    bool isInstance() const;
 
     Node negate() const;
     VariantType getValue() const;

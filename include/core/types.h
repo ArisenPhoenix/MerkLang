@@ -75,6 +75,7 @@ enum class TokenType {
     Identifier,
     Number,
     String,
+    Char,
     Bool,
 
     VarDeclaration,
@@ -298,31 +299,25 @@ using ClassMembers = std::unordered_map<String, String>;
 // Function to map types in VariantType to NodeValueType
 template <typename T>
 constexpr NodeValueType getNodeTypeFromType() {
-    if constexpr (std::is_same_v<T, int>)
-        return NodeValueType::Int;
-    else if constexpr (std::is_same_v<T, float>)
-        return NodeValueType::Float;
-    else if constexpr (std::is_same_v<T, double>)
-        return NodeValueType::Double;
-    else if constexpr (std::is_same_v<T, long>)
-        return NodeValueType::Long;
-    else if constexpr (std::is_same_v<T, bool>)
-        return NodeValueType::Bool;
-    else if constexpr (std::is_same_v<T, String>)
-        return NodeValueType::String;
-    else if constexpr (std::is_same_v<T, SharedPtr<ListNode>>) 
-        return NodeValueType::List;
-    else if constexpr (std::is_same_v<T, SharedPtr<ArrayNode>>) 
-        return NodeValueType::Array;
-    else if constexpr (std::is_same_v<T, std::nullptr_t>)
-        return NodeValueType::Null;
-    else if constexpr (std::is_same_v<T, UninitializedType>)
-        return NodeValueType::Uninitialized;
+    if constexpr (std::is_same_v<T, char>) return NodeValueType::Char;
+    if constexpr (std::is_same_v<T, int>) return NodeValueType::Int;
+    else if constexpr (std::is_same_v<T, float>) return NodeValueType::Float;
+    else if constexpr (std::is_same_v<T, double>) return NodeValueType::Double;
+    else if constexpr (std::is_same_v<T, long>) return NodeValueType::Long;
+    else if constexpr (std::is_same_v<T, bool>) return NodeValueType::Bool;
+    else if constexpr (std::is_same_v<T, String>) return NodeValueType::String;
+    else if constexpr (std::is_same_v<T, SharedPtr<ListNode>>)  return NodeValueType::List;
+    else if constexpr (std::is_same_v<T, SharedPtr<ArrayNode>>)  return NodeValueType::Array;
+    else if constexpr (std::is_same_v<T, std::nullptr_t>) return NodeValueType::Null;
+    else if constexpr (std::is_same_v<T, NullType>) return NodeValueType::Null;
+
+    else if constexpr (std::is_same_v<T, UninitializedType>) return NodeValueType::Uninitialized;
     else {return NodeValueType::Any;}
+
+
     // else if constexpr (std::is_same_v<T, NodeValueType::Any>)
     //     return NodeValueType::Any;
-    // else
-    //     throw RunTimeError("Unsupported type in VariantType.");
+    // else throw RunTimeError("Unsupported type in VariantType." + nodeTypeToString(T));
 }
 
 

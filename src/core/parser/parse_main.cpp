@@ -456,6 +456,7 @@ std::optional<NodeValueType> Parser::getTypeFromString(String typeStr) {
     auto val = stringToNodeType(typeStr);
     if (val == NodeValueType::UNKNOWN) {
         // This will be Where user defined types are pulled from scope
+        // throw MerkError("Unknown Type");
         return NodeValueType::UNKNOWN;
     }
     else {return std::nullopt;}

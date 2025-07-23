@@ -41,7 +41,7 @@ Node isInstanceFunc(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, 
     auto var = args[0];
     auto instance = args[1];
 
-    if (var.isClassInstance()) {
+    if (var.isInstance()) {
         auto inst = std::get<SharedPtr<ClassInstance>>(var.getValue());
         if (inst->getName() == instance.toString()) {
             return Node(true);

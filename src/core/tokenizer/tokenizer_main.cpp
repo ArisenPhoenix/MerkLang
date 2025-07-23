@@ -169,7 +169,7 @@ Vector<Token> Tokenizer::tokenize() {
             }
         } else if (isDigit(source[position])) {
             tokens.push_back(readNumber());
-        } else if (source[position] == '"') {
+        } else if (source[position] == '"' || source[position] == '\'') {
             tokens.push_back(readString());
         } else {
             DEBUG_LOG(LogLevel::DEBUG, "Unknown token at line ", line, ", column ", column, " (", source[position], ")");
@@ -253,12 +253,48 @@ Token Tokenizer::readNumber() {
 
 Token Tokenizer::readString() {
     int startColumn = column;
+String result;
 
-    // Move past the opening double-quote
+if (source[position] == '\'') {
+    position++; 
+    column++;
+
+    char value;
+    if (source[position] == '\\') {
+        position++;  // move to escaped char
+        column++;
+        switch (source[position]) {
+            case 'n': value = '\n'; break;
+            case 't': value = '\t'; break;
+            case '\\': value = '\\'; break;
+            case '\'': value = '\''; break;
+            case '"': value = '"'; break;
+            default:
+                throw UnknownTokenError(std::to_string(source[position]), line, column, currentLineText);
+        }
+    } else {
+        value = source[position];
+    }
+
+    result += value;
+
+    position++;  // move past actual char
+    column++;
+
+    if (position >= sourceLength || source[position] != '\'') {
+        throw UnmatchedQuoteError(line, column, currentLineText);
+    }
+
+    position++;  // move past closing quote
+    column++;
+
+    return Token(TokenType::Char, result, line, startColumn);
+}
+
+
     position++;
     column++;
 
-    String result;
     while (position < sourceLength && source[position] != '"') {
         if (source[position] == '\\') { // Handle escape sequences
             if (position + 1 >= sourceLength) {
