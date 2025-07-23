@@ -22,4 +22,5 @@ bool validateScope(SharedPtr<Scope> scope, String methodName, String forWhat = "
 String generateScopeOwner(String userName, String itemName);
 String joinUnorderedSetStrings(const std::unordered_set<String>& input, const String& delimiter = ",");
 String joinVectorNodeStrings(const NodeList& nodes, const String& delimiter = ",");
+String joinVectorStrings(const Vector<String>, const String& delimiter = ",");
 #endif // HELPER_FUNCTIONS_H

@@ -197,80 +197,85 @@ UniquePtr<MethodDef> Parser::parseClassInitializer() {
 
 UniquePtr<MethodDef> Parser::parseClassMethod() {
     DEBUG_FLOW(FlowLevel::HIGH);
-    Token token = currentToken();
-    DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
+    // Token token = currentToken();
+    // DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
 
-    if (token.type != TokenType::ClassMethodDef) {
-        throw SyntaxError("Expected TokenType 'def' or TokenType 'function'.", token);
-    }
+    // if (token.type != TokenType::ClassMethodDef) {
+    //     throw SyntaxError("Expected TokenType 'def' or TokenType 'function'.", token);
+    // }
 
-    if (!(token.value == "def" || token.value == "function")){
-        throw SyntaxError("Expected 'def' or 'function' keyword.", token);
-    }
+    // if (!(token.value == "def" || token.value == "function")){
+    //     throw SyntaxError("Expected 'def' or 'function' keyword.", token);
+    // }
 
-    String methodDefType = token.value;
-    DEBUG_LOG(LogLevel::INFO, highlight("Function Type: ", Colors::red), methodDefType);
-    Token controllingToken = advance(); // Consume 'def' or 'function'
+    // String methodDefType = token.value;
+    // DEBUG_LOG(LogLevel::INFO, highlight("Function Type: ", Colors::red), methodDefType);
+    // Token controllingToken = advance(); // Consume 'def' or 'function'
 
 
-    if (controllingToken.type != TokenType::ClassMethodRef) {
-        throw SyntaxError("Expected function name.", controllingToken);
-    }
+    // if (controllingToken.type != TokenType::ClassMethodRef) {
+    //     throw SyntaxError("Expected function name.", controllingToken);
+    // }
 
-    String methodName = controllingToken.value;
-    DEBUG_LOG(LogLevel::DEBUG, highlight("METHOD NAME: ", Colors::pink), highlight(methodName, Colors::blue));
-    controllingToken = advance(); // Consume method name
+    // String methodName = controllingToken.value;
+    // DEBUG_LOG(LogLevel::DEBUG, highlight("METHOD NAME: ", Colors::pink), highlight(methodName, Colors::blue));
+    // controllingToken = advance(); // Consume method name
 
-    if (controllingToken.type != TokenType::Punctuation || controllingToken.value != "(") {
-        throw SyntaxError("Expected '(' after method name.", controllingToken);
-    }
+    // if (controllingToken.type != TokenType::Punctuation || controllingToken.value != "(") {
+    //     throw SyntaxError("Expected '(' after method name.", controllingToken);
+    // }
 
-    controllingToken = advance(); // Consume '('
+    // controllingToken = advance(); // Consume '('
 
-    ParamList parameters = handleParameters();
+    // ParamList parameters = handleParameters();
     
-    controllingToken = advance(); // Consume ')'
+    // controllingToken = advance(); // Consume ')'
 
-    if (!expect(TokenType::Punctuation) || controllingToken.value != ":") {
-        throw SyntaxError("Expected ':' after method definition.", controllingToken);
-    }
+    // if (!expect(TokenType::Punctuation) || controllingToken.value != ":") {
+    //     throw SyntaxError("Expected ':' after method definition.", controllingToken);
+    // }
     
-    controllingToken = advance(); // Consume ':'
+    // controllingToken = advance(); // Consume ':'
 
-    UniquePtr<CodeBlock> bodyBlock = parseBlock();
+    // UniquePtr<CodeBlock> bodyBlock = parseBlock();
     
 
-    if (!bodyBlock) {
-        throw SyntaxError("Methodbody block could not be parsed.", controllingToken);
-    }
+    // if (!bodyBlock) {
+    //     throw SyntaxError("Methodbody block could not be parsed.", controllingToken);
+    // }
 
-    UniquePtr<MethodBody> methodBlock = makeUnique<MethodBody>(std::move(bodyBlock));
-    methodBlock->getScope()->owner = generateScopeOwner("MethodDef", methodName);
-    for (auto& child : methodBlock->getChildren()) {
-        auto astType = child->getAstTypeAsString();
-        child->getScope()->owner = generateScopeOwner("MethodBody<" + astType + ">", methodName);
-    }
+    // UniquePtr<MethodBody> methodBlock = makeUnique<MethodBody>(std::move(bodyBlock));
+    // methodBlock->getScope()->owner = generateScopeOwner("MethodDef", methodName);
+    // for (auto& child : methodBlock->getChildren()) {
+    //     auto astType = child->getAstTypeAsString();
+    //     child->getScope()->owner = generateScopeOwner("MethodBody<" + astType + ">", methodName);
+    // }
 
-    DEBUG_LOG(LogLevel::INFO, "MethodBody type: ", typeid(*methodBlock).name());
+    // DEBUG_LOG(LogLevel::INFO, "MethodBody type: ", typeid(*methodBlock).name());
     
-    CallableType methodType;
+    // CallableType methodType;
 
-    if (methodDefType == "def"){methodType = CallableType::DEF;}
+    // if (methodDefType == "def"){methodType = CallableType::DEF;}
 
-    else if (methodDefType == "function"){methodType = CallableType::FUNCTION;} 
+    // else if (methodDefType == "function"){methodType = CallableType::FUNCTION;} 
     
-    else {
-        DEBUG_LOG(LogLevel::INFO, "Method definition parsed unsuccessfully: ", methodName, ":", methodDefType);
-        throw MerkError("Function Type: " + methodDefType + " is not Valid");
-    }
+    // else {
+    //     DEBUG_LOG(LogLevel::INFO, "Method definition parsed unsuccessfully: ", methodName, ":", methodDefType);
+    //     throw MerkError("Function Type: " + methodDefType + " is not Valid");
+    // }
 
-    UniquePtr<MethodDef> methodDef = makeUnique<MethodDef>(
-        methodName,
-        std::move(parameters),
-        std::move(methodBlock),
-        methodType,  
-        currentScope
-    );
+    auto functionDef = parseFunctionDefinition();
+    auto methodName = functionDef->getName();
+
+    auto methodDef = makeUnique<MethodDef>(std::move(functionDef));
+
+    // UniquePtr<MethodDef> methodDef = makeUnique<MethodDef>(
+    //     methodName,
+    //     std::move(parameters),
+    //     std::move(methodBlock),
+    //     methodType,  
+    //     currentScope
+    // );
 
     methodDef->getScope()->owner = generateScopeOwner("MethodDef", methodName);
     
@@ -444,7 +449,7 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
             } while (consumeIf(TokenType::Punctuation, ","));
         }
 
-        consume(TokenType::RightBracket, "]");
+        consume(TokenType::RightBracket, "]", "Parser::parseClassLiteralCall -> RightBracket");
 
         auto call = makeUnique<ClassCall>("List", std::move(elements), currentScope);
         processNewLines();
@@ -461,7 +466,7 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
             } while (consumeIf(TokenType::Punctuation, ","));
         }
 
-        consume(TokenType::Operator, ">");
+        consume(TokenType::Operator, ">", "Parser::parseClassLiteralCall -> Operator");
 
         auto call = makeUnique<ClassCall>("Array", std::move(elements), currentScope);
         processNewLines();

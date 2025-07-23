@@ -215,31 +215,40 @@ std::ostream& operator<<(std::ostream& os, const Node& node) {
 void Node::setInitialValue(const String& value, const String& typeStr) {
     // DEBUG_LOG(LogLevel::DEBUGC, "Entering Node::setInitialValue 2 ARGS");
     NodeValueType nodeType = getNodeValueType(typeStr, value);
-
+    data.type = nodeType;
     switch (nodeType) {
         case NodeValueType::Int:
-            data.type = NodeValueType::Int;
             data.value = std::stoi(value);
             break;
         case NodeValueType::Float:
-            data.type = NodeValueType::Float;
             data.value = std::stof(value);
             break;
         case NodeValueType::String:
-            data.type = NodeValueType::String;
             data.value = value;
             break;
         case NodeValueType::Bool:
             if (value == "true") {
-                data.type = NodeValueType::Bool;
                 data.value = true;
             } else if (value == "false") {
-                data.type = NodeValueType::Bool;
                 data.value = false;
             } else {
                 throw MerkError("Invalid boolean string: " + value);
             }
             break;
+        case NodeValueType::Long:
+            data.value = std::stol(value);
+            break;
+        case NodeValueType::Char:
+            if (!value.empty()){
+                data.value = char(value[0]);
+            }
+            else {data.value = char(0);}
+            break;
+        case NodeValueType::None:
+        case NodeValueType::Null:
+            data.value = NullType();
+            break;
+
         default:
             throw MerkError("Unsupported NodeValueType in setInitialValue.");
     }
@@ -390,10 +399,37 @@ long Node::toLong() const {
 // }
 
 bool Node::toBool() const {
-    if (data.type != NodeValueType::Bool) {
-        throw MerkError("Cannot convert non-boolean Node to bool.");
+    // if (data.type != NodeValueType::Bool) {
+    //     throw MerkError("Cannot convert non-boolean Node to bool.");
+    // }
+
+    switch (data.type)
+    {
+    case NodeValueType::Int:
+        return std::get<int>(data.value) != 0;
+    case NodeValueType::Long:
+    case NodeValueType::Float:
+        return Node(data.value) != Node(0);
+    case NodeValueType::Char:
+        return std::get<char>(data.value);
+    case NodeValueType::String:
+        return !std::get<String>(data.value).empty();
+    case NodeValueType::None:
+    case NodeValueType::Null:
+    case NodeValueType::UNKNOWN:
+        return false;
+    
+    case NodeValueType::List:
+        return std::get<SharedPtr<ListNode>>(data.value)->getElements().size() > 0;
+    case NodeValueType::Array:
+        return std::get<SharedPtr<ArrayNode>>(data.value)->getElements().size() > 0;
+    
+    case NodeValueType::Bool:
+        return std::get<bool>(data.value);
+    default:
+        throw MerkError("No Suitable Conversion From: " + nodeTypeToString(data.type) + " to bool has yet been made");
     }
-    return std::get<bool>(data.value);
+    
 }
 
 String Node::toString() const {

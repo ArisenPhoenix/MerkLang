@@ -63,14 +63,14 @@ private:
     Token readOperatorOrPunctuation();
     Token readCompoundOperatorOrPunctuation();
 
-    void handleIndentation(Vector<Token>& tokens);
+    void handleIndentation();
+    bool handleContainers();
     void updateCurrentLineText();
-    bool isUpper(char c);
 
     char peek(size_t offset = 1) const;
 
     bool isCapitalizedType(size_t pos) const;
-    bool handleOptionalType(Vector<Token>& tokens);
+    bool handleOptionalType();
 
 
 public:
@@ -79,7 +79,7 @@ public:
         indentStack.push_back(0); // Initialize with base indent level
     }
 
-    void finalizeIndentation(Vector<Token>& tokens);
+    void finalizeIndentation();
 
     Vector<Token> tokens;
     Vector<Token> tokenize();

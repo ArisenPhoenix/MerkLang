@@ -120,7 +120,7 @@ void Tokenizer::printTokens(bool colored) const {
 }
 
 
-void Tokenizer::handleIndentation(Vector<Token>& tokens) {
+void Tokenizer::handleIndentation() {
     size_t lineStart = position;
 
     // Skip leading spaces/tabs to find the first non-whitespace character
@@ -178,7 +178,7 @@ bool Tokenizer::lastTokenWas(TokenType type, size_t offset) const {
 }
 
 
-void Tokenizer::finalizeIndentation(Vector<Token>& tokens) {                
+void Tokenizer::finalizeIndentation() {                
     while (!indentStack.empty() && indentStack.back() > 0) {
         tokens.emplace_back(TokenType::Dedent, "", line, column);
         indentStack.pop_back();

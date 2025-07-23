@@ -271,6 +271,14 @@ Token Parser::advance() {
     return currentToken();
 }
 
+
+Token Parser::lookBack(int number) {
+    position -= number;
+    Token last = currentToken();
+    position += number;
+    return last;
+}
+
 Token Parser::peek(int number){
     // ++position;
     position += number;
@@ -280,39 +288,55 @@ Token Parser::peek(int number){
     return nextToken;
 }
 
-bool Parser::consume(TokenType type) {
+bool Parser::consume(TokenType type, String value, String fromWhere) {
+    if (currentToken().type == type && currentToken().value == value) { // match only checks the type here because no value is provided
+        advance();
+        return true;
+    }
+
+    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
+}
+
+bool Parser::consume(TokenType type, String fromWhere) {
     if (currentToken().type == type) { // match only checks the type here because no value is provided
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), "Parser::consume");
+    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
 }
 
-bool Parser::consume(String value) {
+bool Parser::consume(String value, String fromWhere) {
     if (currentToken().value == value){
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), value, "Parser::consume");
+    throw UnexpectedTokenError(currentToken(), value, " Parser::consume -> " + fromWhere);
 }
 
 
-bool Parser::consume(TokenType type, String val1, String val2, String val3) {
+bool Parser::consume(TokenType type, Vector<String> values, String fromWhere) {
     Token token = currentToken();
     String val = token.value;
-    if (token.type == type && (val == val1 || val == val2 || val == val3)){
-        advance();
-        return true;
-    }
+    if (token.type == type){
+        if (values.size() > 0) {
+            for (auto& value : values) {
+                if (val == value) {
+                    advance();
+                    return true;
+                }
+            }
 
-    String msg = val1;
-    if (!val2.empty()){
-        msg += " | " + val2;
-        if (!val3.empty()){
-            msg += " | " + val3;
+        } else {
+            advance();
+            return true;
         }
     }
-    throw UnexpectedTokenError(token, msg, "Parser::consume");
+
+    String msg = tokenTypeToString(type) + " | " + joinVectorStrings(values);
+
+    displayPreviousTokens(token.value, 5, "Parser::consume");
+    displayNextTokens(token.value, 5, "Parser::consume");
+    throw UnexpectedTokenError(token, msg, "Parser::consume -> " + fromWhere);
 }
 
 
@@ -366,7 +390,7 @@ Token Parser::find(TokenType type, int limit) {
 
     position = currentPosition;
     String msg = " Expected token type " + tokenTypeToString(type) + ", but found " + lastToken.toString();
-    throw RunTimeError(msg);
+    throw MerkError(msg);
 }
 
 
@@ -496,21 +520,30 @@ void Parser::processBlankSpaces() {
 };
 
 
-bool Parser::expect(TokenType tokenType, bool strict) {
+bool Parser::expect(TokenType tokenType, bool strict, String fromWhere) {
     if (currentToken().type == tokenType){
         return true;
     }
 
     if (strict){
-        throw UnexpectedTokenError(currentToken(), tokenTypeToString(tokenType));
+        throw UnexpectedTokenError(currentToken(), tokenTypeToString(tokenType), fromWhere);
     }
     
     return false;
 }
 
 
+void Parser::displayPreviousTokens(String baseTokenName, size_t number, String location) {
+    for (size_t i = number + 1; i > 1; i--) {
+        if (int(position - i) < 0) { continue; }
+        debugLog(true, baseTokenName, " Token For ", location, " Is: ", lookBack(i).toColoredString(), "back: ", i-1);
+    }
+    debugLog(true, "Primary " + baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
+}
+
+
 void Parser::displayNextTokens(String baseTokenName, size_t number, String location) {
-    debugLog(true, baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
+    debugLog(true, "Primary " + baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
     for (size_t i = 1; i < number + 1; i++) {
         debugLog(true, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
     }
@@ -519,22 +552,16 @@ void Parser::displayNextTokens(String baseTokenName, size_t number, String locat
 
 ResolvedType Parser::parseResolvedType() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // For A one-off type
-    // if (consumeIf(TokenType::Type) && !check(TokenType::LeftBracket) && !check(TokenType::Operator) && !check(TokenType::Punctuation)) {
-    //     DEBUG_FLOW_EXIT();
-    //     return ResolvedType(previousToken().value);
-    // }
-
 
     if (consumeIf(TokenType::Operator, "<")) {
         auto inner = parseResolvedType();
-        consume(TokenType::Operator, ">");
+        consume(TokenType::Operator, ">", "Parser::parseResolvedType -> Operator");
         return ResolvedType("Array", { inner });
     }
 
     if (consumeIf(TokenType::LeftBracket, "[")) {
         auto inner = parseResolvedType();
-        consume(TokenType::RightBracket, "]");
+        consume(TokenType::RightBracket, "]", "Parser::parseResolvedType -> RightBracket");
         return ResolvedType("List", { inner });
     }
     
@@ -542,10 +569,10 @@ ResolvedType Parser::parseResolvedType() {
         auto first = parseResolvedType();
         if (consumeIf(TokenType::Punctuation, ",")) {
             auto second = parseResolvedType();
-            consume(TokenType::Operator, "}");
+            consume(TokenType::Operator, "}", "Parser::parseResolvedType -> Operator");
             return ResolvedType("Map", { first, second });
         } else {
-            consume(TokenType::Operator, "}");
+            consume(TokenType::Operator, "}", "Parser::parseResolvedType -> Operator");
             return ResolvedType("Set", { first });
         }
     }
@@ -555,7 +582,27 @@ ResolvedType Parser::parseResolvedType() {
         return ResolvedType(previousToken().value);
     }
     DEBUG_FLOW_EXIT();
-    throw MerkError("Invalid type annotation.");
+    throw MerkError("Invalid type annotation: " + currentToken().toColoredString());
 }
 
 
+
+bool Parser::validate(Token token, Vector<TokenType> types, Vector<String> values, bool requiresBoth) {
+    for (auto type : types) {
+        if (token.type == type) {
+            if (requiresBoth) {break;}
+            return true;
+        }
+    }
+    for (auto& val : values) {
+        if (token.value == val) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Parser::validate(Vector<TokenType> types, Vector<String> values, bool requiresBoth) {
+    return validate(currentToken(), types, values, requiresBoth);
+}

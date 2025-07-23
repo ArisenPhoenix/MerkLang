@@ -155,11 +155,9 @@ SharedPtr<Scope> getAssociatedScope(const Node& node) {
     }
 }
 
-void Chain::setScope(SharedPtr<Scope> scope) {
-    this->scope = scope;
-    for (auto& elem : elements) {
-        if (elem.object) elem.object->setScope(scope);
-    }
+void Chain::setScope(SharedPtr<Scope> newScope) {
+    scope = newScope;
+    for (auto& elem : elements) { if (elem.object) {elem.object->setScope(newScope);} }
 }
 void Chain::setLastScope(SharedPtr<Scope> mostRecentScope) const {
     lastScope = mostRecentScope;
@@ -331,6 +329,7 @@ void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, Shar
 
 
 void ChainOperation::setScope(SharedPtr<Scope> newScope) {
+    scope = newScope;
     lhs->setScope(newScope);
     if (rhs){
         rhs->setScope(newScope);

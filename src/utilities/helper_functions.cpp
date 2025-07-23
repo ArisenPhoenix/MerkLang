@@ -136,5 +136,19 @@ String joinVectorNodeStrings(const NodeList& nodes, const String& delimiter) {
     }
     return oss.str();
 }
+
+String joinVectorStrings(const Vector<String> nodes, const String& delimiter) {
+    std::ostringstream oss;
+    bool first = true;
+
+    for (const auto& val : nodes) { 
+        if (!val.empty() && !first) {
+            oss << delimiter << " ";
+            oss << val;
+            first = false;
+        }
+    }
+    return oss.str();
+}
 // NodeList evaluatedArgs2 = handleArgs(scope, instanceNode);
     

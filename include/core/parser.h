@@ -38,10 +38,16 @@ private:
     Token currentToken() const;
     Token advance();
 
-    bool consume(TokenType type);
-    bool consume(String value);
-    bool consume(TokenType type, String val1, String val2 = "", String val3 = "");
+    Token advanceIf(TokenType, String val = "", String fromWhere = "Parser::advanceIf");
+    Token advanceIf(String, String fromWhere = "Parser::advanceIf");
+    Token advanceIf(Vector<TokenType> types = {}, Vector<String> values = {}, String fromWhere = "Parser::advanceIf");
+
+    bool consume(TokenType type, String value, String fromWhere = "Parser::consume");
+    bool consume(TokenType type, String fromWhere = "Parser::consume");
+    bool consume(String value, String fromWhere = "Parser::consume");
+    bool consume(TokenType type, Vector<String> values = {}, String fromWhere = "Parser::consume");
     Token peek(int number = 1);
+    Token lookBack(int number = 1);
     Token find(TokenType type, int limit);
     bool existing(TokenType type, int limit);
     Token previousToken() const;
@@ -103,17 +109,17 @@ private:
     bool processNewLines();
     void processBlankSpaces();
 
-    bool expect(TokenType tokenType, bool strict = false);
+    bool expect(TokenType tokenType, bool strict = false, String fromWhere = "Parser::expect");
 
     Token handleAttributNotation();
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
     Vector<UniquePtr<ASTStatement>> parseArguments();
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
+    void displayPreviousTokens(String baseTokenName, size_t number = 4, String location = "Parser");
     void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
     ResolvedType parseResolvedType();
-    // For Future Implementation
-    // UniquePtr<ImportStatement> parseImport();
-    // Vector<UniquePtr<ImportStatement>> parseImports();
+    bool validate(Token, Vector<TokenType> types = {}, Vector<String> values = {}, bool requiresBoth = false);
+    bool validate(Vector<TokenType>, Vector<String>, bool requiresBoth = false);
     
 
 public:

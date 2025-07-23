@@ -202,7 +202,6 @@ Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPt
 Node UnaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     validateScope(scope, "UnaryOperation::evaluate", op);
-    
     Node operandValue = operand->evaluate(scope, instanceNode);
     Node val = Evaluator::evaluateUnaryOperation(op, operandValue, instanceNode);
     DEBUG_FLOW_EXIT();
@@ -214,6 +213,7 @@ Node UnaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
 void VariableDeclaration::setScope(SharedPtr<Scope> newScope) {
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
     scope = newScope;
+    valueExpression->setScope(newScope);
 }
 
 void VariableReference::setScope(SharedPtr<Scope> newScope) {
@@ -230,7 +230,6 @@ void VariableAssignment::setScope(SharedPtr<Scope> newScope) {
 
 void BinaryOperation::setScope(SharedPtr<Scope> newScope) {
     DEBUG_FLOW(FlowLevel::NONE);
-
     if (!newScope) {throw MerkError("BinaryOperation::setScope -> scope is null");}
     scope = newScope;
     left->setScope(newScope);
