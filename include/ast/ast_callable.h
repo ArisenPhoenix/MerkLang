@@ -148,6 +148,7 @@ public:
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
     void setScope(SharedPtr<Scope>) override;
+    Vector<UniquePtr<ASTStatement>> cloneArgs() const;
 };
 
 

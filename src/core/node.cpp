@@ -150,58 +150,7 @@ bool compareNumericNodes(const Node& left, const Node& right, const std::functio
     return comparator(leftValue, rightValue);
 }
 
-// Overload operator<< for Node to display detailed information
-std::ostream& operator<<(std::ostream& os, const Node& node) {
-    os << node.nodeType << "(";
-    os << "Value: ";
 
-    // Display the value
-    try {
-        os << node.toString();
-    } catch (const std::exception& e) {
-        os << "<Error retrieving value>";
-    }
-
-    SharedPtr<Scope> scope = nullptr;
-
-    // Display the type
-    os << ", Type: " << (nodeTypeToString(node.getType()) + "(" + node.name + ")" + " FullType: " + node.getFullType().toString());
-    if (node.getType() == NodeValueType::ClassInstance){
-        auto instance = std::get<SharedPtr<ClassInstance>>(node.getValue());
-        scope = instance->getInstanceScope();        
-    }
-
-    
-    // Display metadata
-    os << ", isConst: " << (node.isConst ? "true" : "false");
-    os << ", isMutable: " << (node.isMutable ? "true" : "false");
-    os << ", isStatic: " << (node.isStatic ? "true" : "false");
-
-    os << ", isCallable: " << (node.isCallable ? "true" : "false");
-    
-
-    os << ")";
-
-    if (scope){
-        os << "\n INSTANCE: " + node.name + " DATA START In Scope : " + "Scope(" + std::to_string(scope->getScopeLevel()) + ", " + scope->owner + ")\n";
-        // scope->debugPrint();
-        for (auto& [varName, var] : scope->getContext().getVariables()) {
-            os << varName << " = " << var->toString() << "\n";
-        }
-        for (auto& [funcName, funcVec] : scope->localFunctions) {
-            for (auto& func : funcVec) {
-                os << func->getCallable()->toString() << "\n";
-            }
-        }
-
-        for (auto& [className, cls] : scope->localClasses) {
-            os << cls->getCallable()->toString() << "\n";
-        }
-        
-        os << "\n INSTANCE DATA END\n\n";
-    }
-    return os;
-}
 
 
 // Overload to accept value and type as strings
@@ -259,6 +208,9 @@ void Node::setValue(const VariantType& newValue) {
 
     NodeValueType newType = getNodeValueType(newValue);
 
+    if (newType == NodeValueType::List) {throw MerkError("Is A List in setValue");}
+    // else {throw MerkError("Is Not A List, but: " + nodeTypeToString(newType) + " in setValue");}
+
     if (data.type == NodeValueType::Any) {
         // Allow assignment of any type if type is 'Any'
         data.value = newValue;
@@ -273,37 +225,16 @@ void Node::setValue(const VariantType& newValue) {
         data.value = newValue;
         data.type = NodeValueType::Null;
     } else {
-        validateTypeAlignment();
+        
         data.value = newValue;
+        data.type = newType;
+        // data.type = ;
+        validateTypeAlignment();
     }
 
     
 }
 
-void Node::setValue(const Node& other) {
-
-    // if (isConst) {
-    //     throw MerkError("Cannot reassign a constant Node.");
-    // }
-    // if (other.getType() == NodeValueType::Null) {
-    //     throw MerkError("Cannot assign a Null Node to another Node.");
-    // }
-    // if (isStatic && getType() != other.getType()) {
-    //     throw MerkError("Cannot reassign a statically-typed Node with a different type.");
-    // }
-    copyFlagsFrom(other);
-    
-
-    // Update both value and metadata (since Node allows this)
-
-    // data.value = other.getValue();
-    // data.type = other.getType();
-    // isConst = other.isConst;
-    // isMutable = other.isMutable;
-    // isStatic = other.isStatic;
-
-    DEBUG_LOG(LogLevel::DEBUG, "Node::setValue: Value and metadata updated.");
-}
 
 bool Node::toBool() const {
         switch (data.type) {
@@ -425,12 +356,7 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
 } 
 
 void Node::validateTypeAlignment() const {
-    // if (data.type == NodeValueType::Null) {
-    //     throw MerkError("Invalid Node type: Null");
-    // }
-    if (data.type == NodeValueType::Any) {
-        return;  // Allow Any type without restriction
-    }
+    if (data.type == NodeValueType::Any) { return;  /*Allow Any type without restriction*/}
 }
 
 void Node::setInitialValue(const VariantType& value) {
@@ -447,9 +373,10 @@ void Node::setInitialValue(const VariantType& value) {
         String out = e.what();
         throw MerkError("Node::getNodeValueType failed: " + out);
     }
-    
 
-    
+    if (data.type == NodeValueType::List && isInstance()) {
+        throw MerkError("When Initially Setting List value, it is an Instance");
+    }
 }
 
 // Getter for the value
@@ -752,20 +679,6 @@ String operator+(const Node& node, const String& rhs) {
 }
 
 
-void VarNode::setValue(const Node& other) {
-    if (isConst) {
-        throw MerkError("Cannot reassign a constant VarNode.");
-    }
-    if (isStatic && getType() != other.getType()) {
-        throw MerkError("Cannot reassign a statically typed VarNode with a different type.");
-    }
-
-    // Only update the value, but not the metadata (isConst, isMutable, isStatic)
-    data.value = other.getValue();
-    data.type = other.getType();
-    updateClassInstance(*this);
-    DEBUG_LOG(LogLevel::DEBUG, "VarNode::setValue: Value updated, metadata remains unchanged.");
-}
 
 
 UniquePtr<VarNode> cloneVarNode(VarNode* original) {

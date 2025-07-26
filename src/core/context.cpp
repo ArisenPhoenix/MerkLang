@@ -43,6 +43,8 @@ void Context::updateVariable(const String& name, const Node& newValue) {
     VarNode& currentVar = *(it->second);
 
     currentVar.setValue(newValue);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Set", name, "to new Value", currentVar);
+    // throw MerkError("Set to New Value: See Above");
 
     DEBUG_FLOW_EXIT();
 

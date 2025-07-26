@@ -343,6 +343,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
     SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
     int index = resolutionStartIndex;
+    
     // DEBUG_LOG(LogLevel::PERMISSIVE, "instanceNode: ", instanceNode);
     // throw MerkError("Inside Chain::evaluate");
     setLastScope(currentScope);
@@ -351,6 +352,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
     auto& baseElem = elements[index];
     if (baseElem.object->getAstType() == AstType::Accessor){
         currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
+        // if (!currentVal.isInstance()) {throw MerkError("Pulled out non instance");}
         DEBUG_LOG(LogLevel::PERMISSIVE, currentVal);
         // throw MerkError("At List");
     } else {
@@ -403,8 +405,14 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
             case AstType::ClassMethodCall:
                 {
                     if (!instanceNode) {throw MerkError("No InstanceNode in Chain::evaluate -> ClassMethodCall");}
+                    
                     DEBUG_LOG(LogLevel::PERMISSIVE, "evaluating ClassMethodCall with instanceNode");
                     // throw MerkError("has instanceNode");
+                    DEBUG_LOG(LogLevel::PERMISSIVE, currentVal);
+                    // throw MerkError("Calling method: " + elem.name);
+                    // auto methodCall = static_cast<MethodCall*>(elem.object.get());
+                    // currentVal = instance->call(elem.name, )
+                    // if (instanceNode->getInstanceScope()->localFunctions.size() == 0) {throw MerkError("attempting to call a method that doesn't exist");}
                     currentVal = elem.object->evaluate(methodScope, instanceNode);
 
                     break;

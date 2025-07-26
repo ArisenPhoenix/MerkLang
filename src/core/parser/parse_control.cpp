@@ -21,117 +21,65 @@
 
 
 UniquePtr<IfStatement> Parser::parseIfStatement() {
-    // DEBUG_FLOW(FlowLevel::HIGH);
-    if (currentToken().value != "if") {
-        throw MissingTokenError(currentToken(), "Expected 'if' keyword.");
-    }
-    advance(); // Consume 'if'
-
-    // Parse the condition
+    DEBUG_FLOW(FlowLevel::HIGH);
+    consume(TokenType::Keyword, "if", "Parser::parseIfStatement");
     auto condition = parseExpression();
-    if (!condition) {
-        throw MerkError("Parser::parseIfStatement: Failed to parse 'if' condition.");
-    }
+    if (!condition) {throw MerkError("Parser::parseIfStatement: Failed to parse 'if' condition.");}
+    consume(TokenType::Punctuation, ":", "Parser::parseIfStatement");
+    SharedPtr<Scope> conditionScope = condition->getScope();             // Controlling Statement Scope
+    SharedPtr<Scope> blocksScope = conditionScope->createChildScope();        // Controlling Body Scope
 
-    if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-        throw UnexpectedTokenError(currentToken(), "Expected ':' after 'if' condition.", "Parser::parseIfStatement");
-    }
-    advance(); // Consume ':'
-
-    auto thenBlock = parseBlock();
-
-    SharedPtr<Scope> statementsScope = currentScope;             // Controlling Statement Scope
-    SharedPtr<Scope> blocksScope = thenBlock->getScope();        // Controlling Body Scope
-
-    if (!blocksScope){
-        throw MerkError("BlockScope Does Not Exist");
-    }
-    if (!statementsScope){
-        throw MerkError("StatementScope Does Not Exist");
-    }
-
-    DEBUG_LOG(LogLevel::INFO, "If Condition In Parser: ");
+    auto thenBlock = parseBlock(blocksScope);
+    if (!thenBlock) {throw MerkError("Parser::parseIfStatement: Failed to parse 'if' block.");}
     
-    if (!thenBlock) {
-        throw MerkError("Parser::parseIfStatement: Failed to parse 'if' block.");
-    }
 
+    auto ifNode = makeUnique<IfStatement>(
+        std::move(condition),
+        std::move(thenBlock),
+        currentScope
+    );
+   
 
-    DEBUG_LOG(LogLevel::TRACE, "Parser::parseIfStatement: Parsed 'if' block. Current Scope Level: ", currentScope->getScopeLevel());
+    if (!blocksScope){throw MerkError("BlockScope Does Not Exist");}
+    if (!conditionScope){throw MerkError("StatementScope Does Not Exist");}
 
-    // Vector to hold elif nodes
-    Vector<UniquePtr<ElifStatement>> elifNodes;
-
-    DEBUG_LOG(LogLevel::DEBUG, "Processing Elifs Now");
-
-    // Parse `elif` blocks
-    while (currentToken().type == TokenType::Keyword && currentToken().value == "elif") {
-        advance(); // Consume 'elif'
-
+    while (consumeIf(TokenType::Keyword, "elif")) {
         auto elifCondition = parseExpression();
+        elifCondition->setScope(conditionScope);
 
         DEBUG_LOG(LogLevel::TRACE, highlight("Processed elifCondition", Colors::pink));
 
-        if (!elifCondition) {
-            throw MerkError("Parser::parseIfStatement: Failed to parse 'elif' condition.");
-        }
+        if (!elifCondition) { throw MerkError("Parser::parseIfStatement: Failed to parse 'elif' condition."); }
 
-        if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-            throw UnexpectedTokenError(currentToken(), "':' after 'elif' condition.", "Parser::parseIfStatement");
-        }
-     
-
-        advance(); // Consume ':'
+        consume(TokenType::Punctuation, ":", "Parser::parseIfStatement -> elif");
 
         auto elifBlock = parseBlock(blocksScope);
 
-        if (!elifBlock) {
-            throw MerkError("Parser::parseIfStatement: Failed to parse 'elif' block.");
-        }
+        if (!elifBlock) {throw MerkError("Parser::parseIfStatement: Failed to parse 'elif' block.");}
 
         // Create an ElIfStatement and add it to the vector
         auto elifNode = makeUnique<ElifStatement>(
             std::move(elifCondition),
-            std::move(elifBlock),  // Pass unique block
-            statementsScope
+            std::move(elifBlock),
+            conditionScope
         );
 
-        elifNodes.push_back(std::move(elifNode));
-    }
-
-    UniquePtr<ElseStatement> elseNode = nullptr;
-    if (currentToken().type == TokenType::Keyword && currentToken().value == "else") {
-        advance(); // Consume 'else'
-
-        if (currentToken().type != TokenType::Punctuation || currentToken().value != ":") {
-            throw UnexpectedTokenError(currentToken(), "':' after 'else'.", "Parser::parseIfStatement");
-        }
-        advance(); // Consume ':'
-
-        auto elseBlock = parseBlock(blocksScope);
-        if (!elseBlock) {
-            throw MerkError("Parser::parseIfStatement: Failed to parse 'else' block.");
-        }
-
-        elseNode = makeUnique<ElseStatement>(std::move(elseBlock), statementsScope); // Pass unique block
-        DEBUG_LOG(LogLevel::TRACE, "Parser::parseIfStatement: Parsed 'else' block. Current Scope Level: ", 
-                 currentScope->getScopeLevel());
-    }
-    auto ifNode = makeUnique<IfStatement>(
-        
-        std::move(condition),
-        std::move(thenBlock),  // Pass unique block
-        currentScope
-    );
-    
-    for (auto& elifNode : elifNodes) {
+        // elifNodes.push_back(std::move(elifNode));
         ifNode->addElifNode(std::move(elifNode));
     }
 
-    ifNode->setElseNode(std::move(elseNode));
+    if (consumeIf(TokenType::Keyword, "else")) {
+        consume(TokenType::Punctuation, ":", "Parser::parseIfStatement -> else");
 
+        auto elseBlock = parseBlock(blocksScope);
+        if (!elseBlock) { throw MerkError("Parser::parseIfStatement: Failed to parse 'else' block."); }
+        
 
-    // DEBUG_FLOW_EXIT();
+        UniquePtr<ElseStatement> elseNode = makeUnique<ElseStatement>(std::move(elseBlock), conditionScope);
+        ifNode->setElseNode(std::move(elseNode));
+    }
+
+    DEBUG_FLOW_EXIT();
     return ifNode;
 }
 

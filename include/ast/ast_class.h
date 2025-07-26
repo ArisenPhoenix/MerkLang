@@ -81,6 +81,7 @@ public:
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::ClassCall;}
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    UniquePtr<BaseAST> clone() const override;
 
 };
 

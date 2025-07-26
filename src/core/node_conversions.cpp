@@ -9,9 +9,9 @@
 
 
 bool Node::isList() const {
-    if (name == "List" && data.type != NodeValueType::List) {
-        throw MerkError("List is not a List Type");
-    }
+    // if (name == "List" && data.type != NodeValueType::List) {
+    //     throw MerkError("List is not a List Type");
+    // }
     return data.type == NodeValueType::List;
 }
 

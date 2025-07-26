@@ -105,6 +105,42 @@ SharedPtr<Scope> Scope::buildMethodCallScope(SharedPtr<Method> method, String na
     return callScope;
 }
 
+SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
+    auto instanceScope = makeCallScope();
+    includeMetaData(instanceScope, true);
+    instanceScope->owner = generateScopeOwner("ClassInstance", classScope->owner);
+
+    for (const auto& [varName, varPtr] : classScope->getContext().getVariables()) {
+        if (varPtr) {
+            if (!instanceScope->getContext().hasVariable(varName)) {
+                instanceScope->getContext().setVariable(varName, cloneVarNode(varPtr->clone()));
+            } else {
+                DEBUG_LOG(LogLevel::WARNING, "Variable already exists in instanceScope: ", varName);
+            }
+        }
+    }
+
+    // std::unordered_map<String, Vector<SharedPtr<CallableSignature>>> 
+    if (classScope->localFunctions.size() == 0) {
+        throw MerkError("There Are No Functions in Scope " + owner);
+    }
+    for (const auto& [funcName, funcSigVec] : classScope->localFunctions) {
+        instanceScope->localFunctions[funcName] = {};
+        for (auto& funcSig : funcSigVec) {
+            instanceScope->registerFunction(funcName, funcSig);
+        }
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Added func=", funcName,
+          " instanceScope localFunctions=", instanceScope->localFunctions.size());
+
+    }
+    
+    if (instanceScope->localFunctions.size() == 0) {throw MerkError("No Methods added to instanceScope");}
+
+    // auto& clonedMethods = classScope->localFunctions;
+    // instanceScope->localFunctions = clonedMethods;
+
+    return instanceScope;
+}
 
 // to be used on the ClassBase directly as it should contain all the necessary data
 SharedPtr<Scope> Scope::buildInstanceScope(SharedPtr<ClassBase> classTemplate, String className) {
@@ -112,18 +148,31 @@ SharedPtr<Scope> Scope::buildInstanceScope(SharedPtr<ClassBase> classTemplate, S
     auto capturedClone = capturedScope->clone(true);  // clone it safely
     auto classScope = classTemplate->getClassScope();
 
-    SharedPtr<Scope> instanceScope = classScope->makeInstanceScope(classScope);
-    if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
+    DEBUG_LOG(LogLevel::PERMISSIVE, "CapturedScope functions: ", capturedScope->localFunctions.size());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "CapturedScope Clone functions: ", capturedClone->localFunctions.size());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassScope functions: ", classScope->localFunctions.size());
+    
 
-    classScope->appendChildScope(instanceScope);
+    SharedPtr<Scope> instanceScope = makeInstanceScope(classScope);
+    if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
+    DEBUG_LOG(LogLevel::PERMISSIVE, "instanceScope ptr=", instanceScope.get(),
+          " classScope ptr=", classScope.get());
+
+    DEBUG_LOG(LogLevel::PERMISSIVE, "InstanceScope functions: ", instanceScope->localFunctions.size());
+    DEBUG_LOG(LogLevel::PERMISSIVE, "CallingScope functions: ", localFunctions.size());
+    
+    for (auto& [funcName, funcSig] : classScope->localFunctions) { DEBUG_LOG(LogLevel::PERMISSIVE, "ClassScope FuncName: ", funcName); }
+    for (auto& [funcName, funcSig] : localFunctions) { DEBUG_LOG(LogLevel::PERMISSIVE, "CallingScope FuncName: ", funcName); }
+    // throw MerkError("See Above");
+    classScope->appendChildScope(capturedClone);
+    
+    
     
     instanceScope->owner = generateScopeOwner("ClassInstance", className);
     auto captured = instanceScope->getParent();
     capturedClone->owner = generateScopeOwner("InstanceCaptured", className);
-    if (capturedClone->has(instanceScope)) {
-        throw MerkError("Captured Scope Already Contains InstanceScope");
-    }
-    // capturedClone->appendChildScope(instanceScope);
+    if (capturedClone->has(instanceScope)) { throw MerkError("Captured Scope Already Contains InstanceScope"); }
+    capturedClone->appendChildScope(instanceScope);
 
     return instanceScope;
 }

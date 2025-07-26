@@ -91,7 +91,14 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     auto args = handleArgs(executionScope, instanceNode);
 
     // Resolve method using evaluated arguments
-    auto methodSig = instanceScope->getFunction(name, args); // Adjust if getMethod signature differs
+    DEBUG_LOG(LogLevel::PERMISSIVE, instanceNode);
+    if (instanceNode->getCallable()) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, instanceNode->toString(), " | ", instanceNode->getCallable()->toString());
+        instanceNode->getCallable()->getCapturedScope()->debugPrint();
+        instanceNode->getCallable()->getCapturedScope()->printChildScopes();
+    }
+    // throw MerkError("Instance Node Above");
+    auto methodSig = instanceScope->getFunction(name, args);
     if (!methodSig) {throw MerkError("Method not a signature");}
     SharedPtr<Method> method = std::static_pointer_cast<Method>(methodSig->getCallable());
     if (!method) {throw MerkError("Method " + name + " not found for given arguments");}
@@ -102,15 +109,13 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
 
     instanceScope->appendChildScope(callScope, false);
     auto val = method->execute(args, callScope, instanceNode);
-    instanceScope->removeChildScope(callScope);
-
-    executionScope->removeChildScope(callScope);    
-    callScope->removeChildScope(executionScope);
     
-    instanceScope->removeChildScope(scope);
+    scope->removeChildScope(callScope);
 
     return val;
 }
+
+
 void MethodDef::setClassScope(SharedPtr<Scope> scope) {
     if (!scope) {
         DEBUG_LOG(LogLevel::ERROR, highlight("Setting MethodDef Scope Failed", Colors::yellow));

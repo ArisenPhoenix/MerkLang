@@ -15,10 +15,28 @@ class ClassSignature;
 
 
 
-class Scope : public std::enable_shared_from_this<Scope> {
+class ScopeMeta {
+public:
+    String owner = "";
+    bool isDetached = false;
+    bool isCallableScope = false;
+    bool isClonedScope = false;
+    int currentLine;
+    int currentColumn;
+    bool disregardDeclarations = false;
+    bool isRoot = false;
+    int scopeLevel;                      // The level of the scope in the hierarchy
+
+    String metaString() const;
+}; 
+
+using ScopeCache = std::unordered_map<String, Scope>; 
+
+
+
+class Scope : public ScopeMeta, public std::enable_shared_from_this<Scope> {
 private:
     WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
-    int scopeLevel;                      // The level of the scope in the hierarchy
     static inline size_t liveScopeCount = 0;
     static inline size_t totalScopeCreated = 0;
     ClassMembers classMembers;   //map for future uses
@@ -43,7 +61,7 @@ public:
 
     // // DESTRUCTOR
     ~Scope();
-    void clear();
+    void clear(bool internalCall = true);
     // // Attributes
     String formattedScope();
     SharedPtr<FunctionRegistry>  globalFunctions;
@@ -60,18 +78,7 @@ public:
     bool hasMember(String&);
     void addMember(String&);
     void addMember(String&, String&);
-    int currentLine;
-    int currentColumn;
 
-    bool isDetached = false;
-    bool isCallableScope = false;
-    bool isClonedScope = false;
-    String owner = "";
-    bool disregardDeclarations = false;
-
-    // Vector<String> protectedMembers;
-    // void setProtectedMembers(Vector<String> protectedMems);
-    // Vector<String> Scope::getProtectedMembers() const;
     // Scope Manipulation
     void attachToInstanceScope(SharedPtr<Scope> instanceScope);
     bool removeChildScope(const SharedPtr<Scope>& target);
@@ -80,6 +87,9 @@ public:
     SharedPtr<Scope> createChildScope(); // Create a child scope
     void includeMetaData(SharedPtr<Scope> newScope, bool isDetached = false) const;
     SharedPtr<Scope> makeInstanceScope(SharedPtr<Scope> classScope);
+
+
+    SharedPtr<Scope> getRoot();
 
     // Scope Management
     SharedPtr<Scope> getParent() const;  // Get the parent scope
@@ -171,7 +181,7 @@ private:
     // ClassRegistry classRegistry;               // Add class registry
 
     bool interpretMode;
-    bool isRoot;
+    // bool isRoot;
 };
 
 #endif // SCOPE_H

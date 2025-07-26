@@ -111,32 +111,26 @@ namespace Evaluator {
     
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         bool usingInstanceScope = instanceScope != scope;
-    
-        auto resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
-
+        
         String varName = var.toString();
+        
+        auto resolvedVariable = VarNode(valueNode->evaluate(scope, instanceNode));
+        // if (resolvedVariable.isInstance()) {throw MerkError("Resolved Variable is classInstance");}
+        // if (resolvedVariable.isList()) {throw MerkError("Resolved Variable is List");}
+
+        
         VarNode finalVar;
         // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic);
         if (var.getFullType().getBaseType().size()) {
+            
             finalVar = VarNode(resolvedVariable, var.isConst, var.isMutable, var.getFullType(), var.isStatic);
         }
         else {
+            
             finalVar = VarNode(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic);
         }
         // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, var.getFullType(), var.isStatic);
-        
-        if (varName == "list") {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "original VarNode: ", var);
-            DEBUG_LOG(LogLevel::PERMISSIVE, "resolved VarNode: ", resolvedVariable);
-            DEBUG_LOG(LogLevel::PERMISSIVE, "final VarNode: ", finalVar);
-            if (finalVar.getFullType().getBaseType().size()) {
-                if (finalVar.getTypeAsString() != "UNKNOWN") {
-                    DEBUG_LOG(LogLevel::PERMISSIVE, nodeTypeToString(finalVar.getType()));
-                } else {DEBUG_LOG(LogLevel::PERMISSIVE, "No Type: ", nodeTypeToString(finalVar.getType())); throw MerkError("See Above");}
-            
-            }   
-        }
-
+        // auto thing = VarNode(finalVar);
         auto varNode = makeUnique<VarNode>(finalVar);
         
         if (usingInstanceScope && instanceScope->hasMember(varName)) {
@@ -146,7 +140,22 @@ namespace Evaluator {
 
         else {
             scope->declareVariable(varName, std::move(varNode));
-        }   
+        }
+
+
+        if (varName == "list") {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "original VarNode: ", var);
+            DEBUG_LOG(LogLevel::PERMISSIVE, "resolved VarNode: ", resolvedVariable);
+            DEBUG_LOG(LogLevel::PERMISSIVE, "final VarNode: ", finalVar);
+            if (finalVar.getFullType().getBaseType().size()) {
+                if (finalVar.getTypeAsString() != "UNKNOWN") {
+                    DEBUG_LOG(LogLevel::PERMISSIVE, nodeTypeToString(finalVar.getType()));
+                } else {DEBUG_LOG(LogLevel::PERMISSIVE, "No Type: ", nodeTypeToString(finalVar.getType())); throw MerkError("See Above");}
+            
+            }
+
+            // throw MerkError("Created VarNode " + varName);
+        }
         
         DEBUG_FLOW_EXIT();
         return Node();
@@ -158,17 +167,21 @@ namespace Evaluator {
         SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         // auto workingScope = instanceScope->hasVariable(name) ? instanceScope : scope;
         auto workingScope = instanceScope->hasMember(name) ? instanceScope : scope;
+        // throw MerkError("evaluateVariableAssignment");
+        Node finalVal = value->evaluate(scope, instanceNode);
+        if (finalVal.toString() == "var") {throw MerkError("finalVal is var in evaluateVariableAssignment" );};
+        VarNode resolvedVariable = VarNode(finalVal); // keep evaluation scope as the provided scope for proper scope resolution and propagation
 
-        VarNode resolvedVariable = VarNode(value->evaluate(scope, instanceNode)); // keep evaluation scope as the provided scope for proper scope resolution and propagation
-
-        DEBUG_LOG(LogLevel::TRACE, "========================");
-        DEBUG_LOG(LogLevel::TRACE, "Assigning: ", resolvedVariable, "To scope");
-        DEBUG_LOG(LogLevel::TRACE, "========================");
-
-        // Update the variable in the scope
-        auto previousValue = workingScope->getVariable(name);
+        // if (resolvedVariable.isInstance()) {throw MerkError("Resolved Variable is classInstance");}
+        // if (resolvedVariable.isList()) {throw MerkError("Resolved Variable is List");}
+        DEBUG_LOG(LogLevel::PERMISSIVE, "========================");
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Assigning: ", resolvedVariable, "To scope");
+        DEBUG_LOG(LogLevel::PERMISSIVE, "========================");
+        
         workingScope->updateVariable(name, resolvedVariable);
 
+        workingScope->debugPrint();
+        workingScope->printChildScopes();
         DEBUG_FLOW_EXIT();
         return Node(); 
     }
@@ -179,6 +192,9 @@ namespace Evaluator {
         auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : nullptr;
         auto workingScope = scope;
         auto parent = scope->getParent();
+        // throw MerkError("evaluateVariableReference");
+
+        if (name == "var") {throw MerkError("evaluateVariableReference name is var");}
         
         auto& variable = workingScope->getVariable(name);
         DEBUG_LOG(LogLevel::PERMISSIVE, variable.toString());
@@ -256,27 +272,30 @@ namespace Evaluator {
 
 
 
-    Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
+    Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> conditionScope, SharedPtr<ClassInstanceNode> instanceNode) {
         DEBUG_FLOW(FlowLevel::NONE);
         // auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         DEBUG_LOG(LogLevel::TRACE, "evaluateIf");
-        if (ifStatement.getCondition()->evaluate(scope, instanceNode).toBool()) {
+        // auto conditionScope = scope;
+        auto bodyScope = conditionScope->createChildScope();
+        if (!bodyScope) { throw MerkError("If Has No Scope"); }
+        if (ifStatement.getCondition()->evaluate(conditionScope, instanceNode).toBool()) {
             DEBUG_FLOW_EXIT();
-            return ifStatement.getBody()->evaluate(scope, instanceNode);
+            return ifStatement.getBody()->evaluate(bodyScope, instanceNode);
         }
 
         // Evaluate 'elif' conditions
         for (const auto& elif : ifStatement.getElifs()) {
-            if (elif->getCondition()->evaluate(scope, instanceNode).toBool()) {
+            if (elif->getCondition()->evaluate(conditionScope, instanceNode).toBool()) {
                 DEBUG_FLOW_EXIT();
-                return elif->evaluate(scope, instanceNode);
+                return elif->evaluate(bodyScope, instanceNode);
             }
         }
 
         // Execute 'else' block if all conditions fail
         if (ifStatement.getElse()) {
             DEBUG_FLOW_EXIT();
-            return ifStatement.getElse()->evaluate(scope, instanceNode);
+            return ifStatement.getElse()->evaluate(bodyScope, instanceNode);
         }
 
         DEBUG_FLOW_EXIT();

@@ -5,7 +5,7 @@
 #include "core/node.h"
 
 
-class DataStructure {
+class DataStructure: public Node {
 protected:
     NodeValueType dataType;
     NodeValueType contains;

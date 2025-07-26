@@ -208,7 +208,7 @@ bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
 
 
 Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     Vector<Node> evaluatedArgs;
     // if (scope->hasChildren()){
     //     scope = scope->getChildren()[0];
@@ -218,17 +218,14 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassIns
     // throwAwayScope->disregardDeclarations = true;
     // scope->appendChildScope(throwAwayScope);
     for (const auto &arg : arguments) {
-        if (name == "other" && arg->getAstType() == AstType::BinaryOperation && !scope->hasVariable("otherValue")) {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used For Evaluating Args");
-            scope->debugPrint();
-            throw MerkError("Binary Operation will not compute without 'otherValue'");
-        }
         auto val = arg->evaluate(scope, instanceNode);
         evaluatedArgs.push_back(val);
     }
 
     // scope->removeChildScope(throwAwayScope);
     DEBUG_FLOW_EXIT();
+
+    DEBUG_LOG(LogLevel::PERMISSIVE, "CallableCall::handleArgs args", joinVectorNodeStrings(evaluatedArgs));
     return evaluatedArgs;
 }
 
@@ -236,7 +233,7 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassIns
 
 
 Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto val = Evaluator::evaluateBlock(children, scope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
@@ -249,13 +246,15 @@ Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 
 Node CallableCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
-    return Node(scope->getVariable("var"));
+    throw MerkError("Cannot Evaluate Base CallableCall");
+    // return Node(scope->getVariable("var"));
 }
 
 
 Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
-    return Node(scope->getVariable("var"));
+    throw MerkError("Cannot Evaluate Base CallableRef");
+    // return Node(scope->getVariable("var"));
 }
 
 

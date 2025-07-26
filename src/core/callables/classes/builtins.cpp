@@ -67,8 +67,12 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
         MARK_UNUSED_MULTI(self, callScope);
         validateSelf(self, className, "constructFunction");
         auto list = makeShared<ListNode>(args);
+
+        // throw MerkError("About To Set VarNode");
         auto var = VarNode(list);
-        
+        // var.data.type = NodeValueType::List;
+        DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode: ", var);
+        // throw MerkError("VarNode Above");
         var.name = className;
 
         if (!var.isList()) {throw MerkError("Var created is not a list");}
@@ -125,18 +129,16 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
 
     auto popParams = ParamList();
     auto popParam1 = ParamNode("index", NodeValueType::Int);
+    popParam1.setIsVarArgsParam(true);
     popParams.addParameter(popParam1);
-    auto popFunction = [varName](NodeList arg, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto popFunction = [varName](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
-        if (arg.size() != 1) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(arg));}
+        if (args.size() > 1) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args));}
         auto instanceScope = self->getInstanceScope();
         auto vector = pullList(self);
-        
-        auto result = vector->pop(arg[0]);
-        if (!result.isValid()) {
-            throw MerkError("Result is invalid");
-        }
+        auto arg = args.size() == 1 ? args[0] : Node();
+        Node result = vector->pop(arg);
         return result;
         // return vector->pop(arg[0]);
     };

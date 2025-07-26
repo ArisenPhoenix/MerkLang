@@ -261,8 +261,10 @@ ClassSignature::ClassSignature(SharedPtr<ClassBase> classBaseData)
  {
     // if (callableTypeAsString(classBaseData->getSubType()) == "Unknown") { throw MerkError("SubType is Unknown for ClassBase to ClassSignature");}
     setSubType(classBaseData->getSubType());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classBase:", "CallableType: ", callableTypeAsString(classBaseData->getCallableType()), "SubType: ", callableTypeAsString(classBaseData->getSubType()));
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classBase:", "CallableType: ", callableTypeAsString(classBaseData->getCallableType()), "SubType: ", callableTypeAsString(classBaseData->getSubType()));
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
+    if (getCallableType() != CallableType::CLASS) {throw MerkError("ClassSignature callableType is not CLASS");}
+    if (callableTypeAsString(getSubType()) == "Unknown") {throw MerkError("ClassSignature subType is unknown at construction");}
     // throw MerkError("See Above");
     // if (getSubType() != CallableType::NATIVE) {throw MerkError("SubType is not Native");}
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
@@ -339,7 +341,8 @@ Node ClassInstance::call(String name, Vector<Node> args) {
 
 
 Node ClassInstance::getField(const String& fieldName, TokenType type) const {    // specific to what kind of member i.e var/method
-    DEBUG_FLOW(FlowLevel::NONE);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
 
     if (!isConstructed) {
         throw MerkError("Attempted to access field '" + fieldName + "' before construct() completed.");
@@ -357,11 +360,14 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
 
 
     // return Node();
+    DEBUG_FLOW_EXIT();
     throw MerkError("Field or method '" + fieldName + "' not found in class instance. If a call was made that should take place in the ChainOperation");
 }
 
 Node ClassInstance::getField(const String& fieldName) const {                    // assumes a variable
-    DEBUG_FLOW(FlowLevel::NONE);
+    
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
 
 
     DEBUG_FLOW_EXIT();
@@ -372,23 +378,36 @@ Node ClassInstance::getField(const String& fieldName) const {                   
 
 
 void ClassInstance::declareField(const String& fieldName, const Node& var) {             // probably only used in dynamic construction of a class
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
+
     if (var.isValid()){ 
         UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
         instanceScope->declareVariable(fieldName, std::move(newVar));
     }
+
+    DEBUG_FLOW_EXIT();
 };
 
 
 void ClassInstance::declareField(const String& fieldName, const VarNode& var) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
+
     if (!instanceScope) { throw MerkError("Cannot declare field: instanceScope is missing"); }
     UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
     instanceScope->declareVariable(fieldName, std::move(newVar));
+    DEBUG_FLOW_EXIT();
 }
 
 
 void ClassInstance::updateField(const String& fieldName, Node val) const {                // most commonly used
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
+
     if (!instanceScope) { throw MerkError("Cannot declare field: instanceScope is missing"); }
     instanceScope->updateVariable(fieldName, val);
+    DEBUG_FLOW_EXIT();
 }                 
 
 void ClassInstance::setNativeData(SharedPtr<DataStructure> incoming) {
@@ -403,6 +422,16 @@ SharedPtr<DataStructure> ClassInstance::getNativeData() {return nativeData;}
 
 ClassInstance::~ClassInstance() {
     DEBUG_LOG(LogLevel::DEBUG, "~ClassInstance() destructor triggered");
+    if (instanceScope) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Destroying ClassInstance with scope owner=", instanceScope->owner, " DATA IS: ", toString());
+        DEBUG_LOG(LogLevel::PERMISSIVE,
+        "Destroying ClassInstance addr=", this,
+        " instanceScope addr=", instanceScope.get(),
+        " instanceScope.use_count=", instanceScope.use_count()
+    );
+
+    }
+    
     getInstanceScope()->clear();
     getCapturedScope()->clear();
     nativeData.reset();

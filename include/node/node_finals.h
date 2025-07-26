@@ -319,7 +319,7 @@ public:
             throw std::runtime_error("Error: Cannot change type of a statically declared parameter.");
         }
 
-        VarNode::setValue(newValue);  // ✅ Set value using wrapped VarNode
+        VarNode::setValue(newValue);
     }
 
     // ===== Getters =====

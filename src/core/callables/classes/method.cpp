@@ -134,6 +134,7 @@ Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
     
     callScope->owner = generateScopeOwner("MethodExecutor", name);
+    
     if (callScope == instanceNode->getInstanceScope()) {throw MerkError("callScope cannot be the same as instanceScope");}
     
     placeArgsInCallScope(args, callScope);

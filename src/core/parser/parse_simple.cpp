@@ -29,73 +29,61 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseVariableDeclaration: Entering with token: ", currentToken().toColoredString());
     
     // Determine reassignability
-    bool isConst = false;
+    
     Token startToken = currentToken(); // should be var / const
-    if (!(startToken.value == "var" || startToken.value == "const")) {
-        throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
-
+    if (peek().type == TokenType::ChainEntryPoint) {
+        return parseChainOp();  // this should end up as a variable declaration chain
     }
 
-    if (startToken.value == "var" || startToken.value == "const") {
-        if (peek().type == TokenType::ChainEntryPoint) {
-            return parseChainOp();  // this should end up as a variable declaration chain
-        }
-
-        isConst = startToken.value == "const";
-        advance();  // Consume 'var' or 'const'
-    } else {
-        // throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
-        throw UnexpectedTokenError(startToken, "var, const", "Parser::parseVariableDeclaration");
-    }
+    bool isConst = startToken.value == "const";
+    Vector<String> values = {"var", "const"};
+    consume(TokenType::VarDeclaration, values, "Parser::parseVariableDeclaration");
 
     Token variableToken = currentToken();
-    if (variableToken.type == TokenType::ChainEntryPoint) {throw std::logic_error("Invalid: ChainEntryPoint token passed into VarNode logic.");}
+    if (variableToken.type == TokenType::ChainEntryPoint) {throw RunTimeError("Invalid: ChainEntryPoint token passed into VarNode logic.");}
 
-    advance(); //consume variable name
+    // consume(TokenType::Variable, "Parser::parseVariableDeclaration");
+    if (!consumeIf(TokenType::Variable)) {
+        throw MerkError("Not A Variable -> Parser::parseVariableDeclaration");
+    }
+    // advance(); //consume variable name
 
     // std::optional<NodeValueType> typeTag = parseStaticType();
     ResolvedType type = ResolvedType("Any");
-    // std::optional<NodeValueType> typeTag = std::nullopt;   // used until ResolvedType is integrated into the Node system
 
     if (consumeIf(TokenType::Punctuation, ":")) {
         // throw MerkError("parsing Type");
         type = parseResolvedType();
         DEBUG_LOG(LogLevel::PERMISSIVE, "Current Token Is: ", currentToken().toColoredString(), "Current Type Is: ", type.toString());
     }
-
-
-    
-    
-
-    // typeTag = getTypeFromString(type.getBaseType());
-
-
-    Token assignment = currentToken();    
-
-    if (assignment.type != TokenType::VarAssignment) {throw UnexpectedTokenError(assignment, "=, :=", "Parser::parseVariableDeclaration");}
-
-    bool isMutable = (assignment.value == "=");
-    advance();  // Consume ':=' or '='
-
+    bool isMutable = currentToken().value == "=";
+    values = {"=", ":="};
+    consume(TokenType::VarAssignment, values, "Parser::parseVariableDeclaration");
 
     auto valueNode = parseExpression();
+    
+    
     if (!valueNode) {throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);}
 
-    const bool isStatic = false;  
+    // const bool isStatic = false;  
     
-    
-
-    auto varNode = VarNode(variableToken.value, isConst, isMutable, isStatic);
-    
+    auto varNode = VarNode(variableToken.value, isConst, isMutable, type.getBaseType().size() > 0);
+    DEBUG_LOG(LogLevel::PERMISSIVE, varNode);
+    valueNode->printAST(std::cout);
     auto varDec = makeUnique<VariableDeclaration>(
         variableToken.value,
         varNode,
         currentScope,
         type,
-        // typeTag,
         std::move(valueNode)
     );
     DEBUG_FLOW_EXIT();
+
+    
+    
+
+    varDec->printAST(std::cout);
+    // throw MerkError("Ok");
     return varDec;
 }
 
@@ -106,19 +94,22 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
     // Token startToken = currentToken();
     Token variableToken = currentToken();
 
-    if (!(variableToken.type == TokenType::Variable || variableToken.type == TokenType::ChainEntryPoint)) {
-        throw MerkError("Expected an identifier for variable assignment.");
+    if (!consumeIf(TokenType::Variable)) {
+        throw MerkError("Not A Variable -> Parser::parseVariableDeclaration");
     }
 
-    Token assignment = advance(); // consume variable
+    // Token assignment = advance(); // consume variable
+    
+    Vector<String> values = {"=", ":="};
+    consume(TokenType::VarAssignment, values, "Parser::parseVariableDeclaration");
 
-    if (assignment.type != TokenType::VarAssignment || 
-        (assignment.value != "=" && assignment.value != ":=")) {
-        throw UnexpectedTokenError(assignment, "= or :=");
-    }
+    // if (assignment.type != TokenType::VarAssignment || 
+    //     (assignment.value != "=" && assignment.value != ":=")) {
+    //     throw UnexpectedTokenError(assignment, "= or :=");
+    // }
 
 
-    advance();  // consume assignment operator
+    // advance();  // consume assignment operator
 
     auto valueNode = parseExpression();
     if (!valueNode) {
@@ -139,9 +130,7 @@ UniquePtr<ASTStatement> Parser::parseExpression() {
     DEBUG_FLOW(FlowLevel::NONE);
     // DEBUG_LOG(LogLevel::NONE, "Parser: Entering parseExpression with token: ", currentToken().toString());
     Token token = currentToken();
-    if (check(TokenType::LeftBracket, "[") || check(TokenType::LeftArrow, "<") || check(TokenType::Operator, "{")){
-        return parseClassLiteralCall();
-    }
+    if (check(TokenType::LeftBracket, "[") || check(TokenType::LeftArrow, "<") || check(TokenType::Operator, "{")) { return parseClassLiteralCall(); }
     // processNewLines();
     DEBUG_FLOW_EXIT();
     return parseBinaryExpression(0);

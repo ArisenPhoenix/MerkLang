@@ -14,8 +14,40 @@
 #include "core/registry/function_registry.h"
 #include "core/errors.h"
 #include "core/scope.h"
- 
+//  String owner = "";
+//     ClassMembers classMembers;   //map for future uses
+//     bool isDetached = false;
+//     bool isCallableScope = false;
+//     bool isClonedScope = false;
+//     int currentLine;
+//     int currentColumn;
+//     bool disregardDeclarations = false;
 
+String ScopeMeta::metaString() const {
+    std::ostringstream oss;
+    oss << "isRoot: " << (isRoot ? "true" : "false") << " | ";
+    oss << "scopeLevel: " << scopeLevel << " | ";
+    oss << "isDetached: " << (isDetached ? "true" : "false") << " | ";
+    oss << "isCallable: " << (isCallableScope ? "true" : "false") << " | ";
+    oss << "isCloned: " << (isClonedScope ? "true" : "false");
+    return oss.str();
+}
+
+
+SharedPtr<Scope> Scope::getRoot() {
+    SharedPtr<Scope> root = shared_from_this();
+    std::unordered_set<void*> visited;
+    while (root->getParent()) {
+        void* addr = root.get();
+        if (visited.count(addr)) {
+            DEBUG_LOG(LogLevel::ERROR, "Cycle detected in Scope::getRoot at scope=", addr);
+            break;
+        }
+        visited.insert(addr);
+        root = root->getParent();
+    }
+    return root;
+}
 
 
 // In Scope class
@@ -32,14 +64,16 @@ SharedPtr<Scope> Scope::clone(bool strict) const {
             throw ParentScopeNotFoundError();
         }
         newScope = std::make_shared<Scope>(0, interpretMode);
+        newScope->globalClasses = globalClasses;
+        newScope->globalFunctions = globalFunctions;
     }
 
     for (const auto& [name,var] : this->context.getVariables())
-        newScope->context.setVariable(name, UniquePtr<VarNode>(var->clone()));
+        {newScope->context.setVariable(name, UniquePtr<VarNode>(var->clone()));}
 
     newScope->localFunctions = this->localFunctions;
     newScope->localClasses = this->localClasses;
-    newScope->isClonedScope    = true;
+    newScope->isClonedScope  = true;
     includeMetaData(newScope, isDetached);
 
     DEBUG_FLOW_EXIT();
@@ -246,10 +280,13 @@ bool Scope::has(const SharedPtr<Scope>& checkScope) {
         throw MerkError("ChildScope for checking is null");
     }
     if (this == checkScope.get()) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "has(): found self match at ", this);
         return true;
     }
     for (auto& child : getChildren()) {
         if (child->has(checkScope)) {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "has(): found in child ", child.get(), " for check ", checkScope.get());
+
             return true;
         }
     }

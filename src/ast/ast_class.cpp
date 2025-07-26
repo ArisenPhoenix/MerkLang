@@ -156,9 +156,9 @@ Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> ins
 }
 
 
-ClassDef::~ClassDef() {getBody().reset();}
+ClassDef::~ClassDef() {if (getBody()) { getBody().reset(); }}
 
-ClassCall::~ClassCall() {getScope()->clear();}
+ClassCall::~ClassCall() {if (getScope()) { getScope()->clear();}}
 
 ClassBody::~ClassBody() {clear();}
 

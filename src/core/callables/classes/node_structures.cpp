@@ -15,7 +15,7 @@ String DataStructure::toString() const {
 }
 
 ListNode::~ListNode() = default;
-ListNode::ListNode() {setType(NodeValueType::List);}
+ListNode::ListNode() {setType(NodeValueType::List); data.type = NodeValueType::List;}
 
 ListNode::ListNode(Vector<Node> init) : elements(std::move(init)) {setType(NodeValueType::List);}
 bool ListNode::holdsValue() {
@@ -38,8 +38,9 @@ void ListNode::insert(const Node& index, const Node& value) {
 Node ListNode::pop(const Node& index) {
     // if (index.toInt() + 1 != 1) { throw MerkError("Is Not An Int " + std::to_string(index.toInt()) ); }
     // if (elements.size() == 0) { throw MerkError("No elements"); }
+    auto valToGet = !index.isValid() ? elements.size() - 1 : index.toInt();
 
-    auto position = std::find(elements.begin(), elements.end(), elements[index.toInt()]);
+    auto position = std::find(elements.begin(), elements.end(), elements[valToGet]);
     // DEBUG_LOG(LogLevel::PERMISSIVE, position.base()->toString());
     if (position != elements.end()) {
         auto val = Node(position->getValue());
@@ -81,6 +82,7 @@ ArrayNode::ArrayNode(Vector<Node> init, NodeValueType nodeType)
 : ListNode(init) {
     contains = nodeType;
     setType(NodeValueType::Array);
+    data.type = NodeValueType::Array;
 }
 
 

@@ -106,8 +106,8 @@ int main(int argc, char* argv[]) {
     DEBUG_LOG(LogLevel::DEBUG, "");
     DEBUG_LOG(LogLevel::DEBUG, "==================== FINAL GLOBAL SCOPE ====================");
     globalScope->printScopeReport();
-    globalScope->clear();
-    globalScope.reset();
+    // globalScope->clear(false);
+    // globalScope.reset();
     
     return 0;
 }
