@@ -20,7 +20,6 @@
 
 #include "core/callables/argument_node.h"
 
-// Argument::Argument() = default;
 
 String Argument::toString() const {
     String out = getAstTypeAsString() + "(";
@@ -55,13 +54,11 @@ Argument Argument::clone() const {
     return arg;
 }
 
-// Arguments::Arguments() = default;
 
 Arguments::Arguments(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 Arguments::Arguments(Vector<Argument> arg, SharedPtr<Scope> scope) : ASTStatement(scope), arguments(std::move(arg)) {}
 
 void Arguments::setScope(SharedPtr<Scope> newScope) {
-    // (void)newScope;
     scope = newScope;
     for (auto& arg : arguments) {
         arg.setScope(newScope);
@@ -70,19 +67,6 @@ void Arguments::setScope(SharedPtr<Scope> newScope) {
 
 
 ArgResultType Arguments::evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
-
-    // for (const auto &arg : arguments) {
-    //     auto val = arg.evaluate(scope, instanceNode);
-    //     evaluatedArgs.addPositionalArg(arg.value->evaluate(scope, instanceNode));
-    //     // evaluatedArgs.push_back(val);
-    // }
-
-    // // scope->removeChildScope(throwAwayScope);
-    // DEBUG_FLOW_EXIT();
-    
-    
-    
-    // return evaluatedArgs;
     ArgResultType evaluated;
     
     for (auto& arg : arguments) {
@@ -250,17 +234,13 @@ bool CallableSignature::getIsUserFunction() { return callType != CallableType::N
 
 Node CallableSignature::call(const ArgumentList& args, SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::LOW);
-    // scope->debugPrint();
-    // scope->printChildScopes();
     auto val = callable->execute(args, scope);
     DEBUG_FLOW_EXIT();
     return val;
 }
 
 Node CallableSignature::call(const ArgumentList& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
-    (void)args;
-    (void)scope;
-    (void)classScope;
+    MARK_UNUSED_MULTI(args, scope, classScope);
     throw MerkError("BaseClass CallableSignature has no implementation for CallableSignature::call");
 
 }
