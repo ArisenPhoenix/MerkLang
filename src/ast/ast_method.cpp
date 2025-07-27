@@ -63,7 +63,7 @@ MethodDef::MethodDef(UniquePtr<FunctionDef> funcDef)
     funcDef.reset();
 }
 
-MethodCall::MethodCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
+MethodCall::MethodCall(String name, UniquePtr<ArgumentType> arguments, SharedPtr<Scope> scope)
     : CallableCall(name, std::move(arguments), scope) {
     branch = "Callable";
 }
@@ -78,18 +78,57 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
     DEBUG_FLOW_EXIT();
     return val;
 }
+// if (!instanceNode) {throw MerkError("MethodCall::evaluate -> " + name + " no instanceNode passed");}
+    // if (!scope) {throw MerkError("MethodCall::evaluate -> scope passed to is null");}
+    // auto instanceScope = instanceNode->getInstanceScope();
+
+    // auto executionScope = scope->createChildScope();
+    // executionScope->owner = generateScopeOwner("MethodExecutor", name);
+    
+    // auto args = handleArgs(executionScope, instanceNode);
+
+    // // Resolve method using evaluated arguments
+    // auto methodSig = instanceScope->getFunction(name, args); // Adjust if getMethod signature differs
+    // if (!methodSig) {throw MerkError("Method not a signature");}
+    // SharedPtr<Method> method = std::static_pointer_cast<Method>(methodSig->getCallable());
+    // if (!method) {throw MerkError("Method " + name + " not found for given arguments");}
+
+
+    // auto callScope = executionScope->buildMethodCallScope(method, method->getName());
+
+
+    // instanceScope->appendChildScope(callScope, false);
+    // auto val = method->execute(args, callScope, instanceNode);
+    // instanceScope->removeChildScope(callScope);
+
+    // executionScope->removeChildScope(callScope);    
+    // callScope->removeChildScope(executionScope);
+    
+    // instanceScope->removeChildScope(scope);
+
+    // return val;
+
+// DEBUG_FLOW(FlowLevel::VERY_HIGH); 
+    
 
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH); 
     if (!instanceNode) {throw MerkError("MethodCall::evaluate -> " + name + " no instanceNode passed");}
     if (!scope) {throw MerkError("MethodCall::evaluate -> scope passed to is null");}
     auto instanceScope = instanceNode->getInstanceScope();
+    if (!instanceScope) {throw MerkError("No Instance Scope");}
+    // scope->appendChildScope(instanceScope, false);
+    // auto executionScope = scope->createChildScope();
+
+    // instanceScope->appendChildScope(executionScope, false);
+    // executionScope->owner = generateScopeOwner("MethodExecutor", name);
 
     auto executionScope = scope->createChildScope();
     executionScope->owner = generateScopeOwner("MethodExecutor", name);
     
     auto args = handleArgs(executionScope, instanceNode);
-
+    
+    
     // Resolve method using evaluated arguments
     DEBUG_LOG(LogLevel::PERMISSIVE, instanceNode);
     if (instanceNode->getCallable()) {
@@ -105,12 +144,17 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
 
 
     auto callScope = executionScope->buildMethodCallScope(method, method->getName());
-
-
     instanceScope->appendChildScope(callScope, false);
     auto val = method->execute(args, callScope, instanceNode);
+    instanceScope->removeChildScope(executionScope);
+
+    scope->removeChildScope(instanceScope);
+    scope->removeChildScope(executionScope);
+    // scope->removeChildScope(executionScope);
+    // // scope->removeChildScope(instanceScope);
+    // instanceScope->removeChildScope(callScope);
+    // scope->removeChildScope(callScope);
     
-    scope->removeChildScope(callScope);
 
     return val;
 }

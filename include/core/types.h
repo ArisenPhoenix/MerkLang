@@ -229,7 +229,9 @@ enum class AstType {
     KeyValueStructure,
     Enum,
 
-    ImportStatement
+    ImportStatement, 
+    Argument,
+    Arguments
 };
 
 
@@ -247,6 +249,10 @@ struct NullType {
         os << "null";
         return os;
     }
+
+    std::size_t hash() const {
+        return 0xDEADBEEF;
+    }
 };
 
 constexpr NullType Null{};
@@ -256,7 +262,9 @@ constexpr bool operator==(const NullType&, const NullType&) {return true;}
 struct UninitializedType {
     String toString() const { return "Uninitialized"; }
     constexpr bool operator==(const UninitializedType&) const { return true; }
-
+    std::size_t hash() const {
+        return 0xBAADF00D;
+    }
 };
  
 using NodeList = Vector<Node>;
@@ -274,21 +282,23 @@ using VariantType = std::variant<
     char,
     bool,
     String,
-    Vector<Node>,
-    SharedPtr<Vector<Node>>,
     NullType,
     UninitializedType,
+    
     SharedPtr<Function>,
     SharedPtr<ClassBase>,
     SharedPtr<Method>,
-    SharedPtr<Callable>,
     SharedPtr<ClassInstance>,
-    SharedPtr<Scope>,
+    SharedPtr<Callable>,
+
     SharedPtr<ListNode>,
     SharedPtr<ArrayNode>,
     SharedPtr<DictNode>,
     SharedPtr<MapNode>,
-    SharedPtr<SetNode>
+    SharedPtr<SetNode>,
+
+    Vector<Node>
+    // SharedPtr<Scope>,
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
 
@@ -308,9 +318,11 @@ constexpr NodeValueType getNodeTypeFromType() {
     else if constexpr (std::is_same_v<T, String>) return NodeValueType::String;
     else if constexpr (std::is_same_v<T, SharedPtr<ListNode>>)  return NodeValueType::List;
     else if constexpr (std::is_same_v<T, SharedPtr<ArrayNode>>)  return NodeValueType::Array;
+    else if constexpr (std::is_same_v<T, SharedPtr<DictNode>>)  return NodeValueType::Dict;
+    else if constexpr (std::is_same_v<T, SharedPtr<SetNode>>)  return NodeValueType::Set;
     else if constexpr (std::is_same_v<T, std::nullptr_t>) return NodeValueType::Null;
     else if constexpr (std::is_same_v<T, NullType>) return NodeValueType::Null;
-
+    else if constexpr (std::is_same_v<T, Vector<Node>>) return NodeValueType::Vector;
     else if constexpr (std::is_same_v<T, UninitializedType>) return NodeValueType::Uninitialized;
     else {return NodeValueType::Any;}
 
@@ -495,6 +507,32 @@ public:
 
 };
 
+
+namespace std {
+    template<>
+    struct hash<NullType> {
+        std::size_t operator()(const NullType&) const noexcept {
+            // Constant hash for all NullType values
+            return 0x9e3779b9; // some fixed random prime
+        }
+    };
+
+    template<>
+    struct hash<UninitializedType> {
+        std::size_t operator()(const UninitializedType&) const noexcept {
+            // Constant hash for all UninitializedType values
+            return 0x85ebca6b; // another fixed random prime
+        }
+    };
+}
+
+class ArgumentList;
+class Arguments;
+
+// using ArgumentType = Vector<UniquePtr<ASTStatement>>;
+using ArgumentType = Arguments;
+// using ArgResultType = Vector<Node>;
+using ArgResultType = ArgumentList;
 
 #endif // TYPES_H
 

@@ -9,7 +9,7 @@
 
 // Define native functions 
 
-Node print(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node print(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
   for (size_t i = 0; i < args.size(); ++i) {
         // DEBUG_LOG(LogLevel::PERMISSIVE, args[i].getTypeAsString());
         std::cout << args[i].toString();
@@ -20,22 +20,22 @@ Node print(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_u
 }
 
 
-Node floatFunc(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node floatFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
     return Node(args[0].toFloat());
 }
 
-Node intFunc(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node intFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
     return Node(args[0].toInt());
 }
 
-Node stringFunc(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node stringFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
     return Node(args[0].toString());
 }
 
-Node isInstanceFunc(Vector<Node> args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node isInstanceFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 2) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
 
     auto var = args[0];

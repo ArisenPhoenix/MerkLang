@@ -19,7 +19,6 @@ SharedPtr<Scope> Scope::makeCallScope() {
     c->isRoot = false;
     DEBUG_FLOW_EXIT();
 
-    // throw MerkError("made call scope");
     return c;
 }
 
@@ -70,9 +69,7 @@ SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNa
 
     isolated->localFunctions = this->localFunctions;
     isolated->localClasses = this->localClasses;
-    if (!isolated) {
-        throw MerkError("isolated Scope is Null");
-    }
+    if (!isolated) { throw MerkError("isolated Scope is Null"); }
     DEBUG_FLOW_EXIT();
 
     return isolated;
@@ -100,6 +97,7 @@ SharedPtr<Scope> Scope::buildMethodCallScope(SharedPtr<Method> method, String na
 
     auto callScope = capturedScope->makeCallScope();
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserMethod::execute->Method");}
+
     callScope->owner = generateScopeOwner("MethodCall", name);
     this->appendChildScope(callScope, false);                       // appending for recursion
     return callScope;
@@ -120,16 +118,14 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
         }
     }
 
-    // std::unordered_map<String, Vector<SharedPtr<CallableSignature>>> 
-    if (classScope->localFunctions.size() == 0) {
-        throw MerkError("There Are No Functions in Scope " + owner);
-    }
+    if (classScope->localFunctions.size() == 0) { throw MerkError("There Are No Functions in Scope " + owner); }
+
     for (const auto& [funcName, funcSigVec] : classScope->localFunctions) {
         instanceScope->localFunctions[funcName] = {};
         for (auto& funcSig : funcSigVec) {
             instanceScope->registerFunction(funcName, funcSig);
         }
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Added func=", funcName,
+        DEBUG_LOG(LogLevel::NONE, "Added func=", funcName,
           " instanceScope localFunctions=", instanceScope->localFunctions.size());
 
     }
@@ -148,25 +144,10 @@ SharedPtr<Scope> Scope::buildInstanceScope(SharedPtr<ClassBase> classTemplate, S
     auto capturedClone = capturedScope->clone(true);  // clone it safely
     auto classScope = classTemplate->getClassScope();
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "CapturedScope functions: ", capturedScope->localFunctions.size());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "CapturedScope Clone functions: ", capturedClone->localFunctions.size());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassScope functions: ", classScope->localFunctions.size());
-    
-
     SharedPtr<Scope> instanceScope = makeInstanceScope(classScope);
     if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
-    DEBUG_LOG(LogLevel::PERMISSIVE, "instanceScope ptr=", instanceScope.get(),
-          " classScope ptr=", classScope.get());
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "InstanceScope functions: ", instanceScope->localFunctions.size());
-    DEBUG_LOG(LogLevel::PERMISSIVE, "CallingScope functions: ", localFunctions.size());
-    
-    for (auto& [funcName, funcSig] : classScope->localFunctions) { DEBUG_LOG(LogLevel::PERMISSIVE, "ClassScope FuncName: ", funcName); }
-    for (auto& [funcName, funcSig] : localFunctions) { DEBUG_LOG(LogLevel::PERMISSIVE, "CallingScope FuncName: ", funcName); }
-    // throw MerkError("See Above");
     classScope->appendChildScope(capturedClone);
-    
-    
     
     instanceScope->owner = generateScopeOwner("ClassInstance", className);
     auto captured = instanceScope->getParent();

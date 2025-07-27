@@ -396,6 +396,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 }
             case AstType::VariableReference:
                 {
+                    
                     auto varRef = static_cast<VariableReference*>(elem.object.get());
                     currentVal = instance->getField(varRef->getName());
                     DEBUG_LOG(LogLevel::PERMISSIVE, "GETTING VARIABLE REFERENCE");
@@ -407,12 +408,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     if (!instanceNode) {throw MerkError("No InstanceNode in Chain::evaluate -> ClassMethodCall");}
                     
                     DEBUG_LOG(LogLevel::PERMISSIVE, "evaluating ClassMethodCall with instanceNode");
-                    // throw MerkError("has instanceNode");
-                    DEBUG_LOG(LogLevel::PERMISSIVE, currentVal);
-                    // throw MerkError("Calling method: " + elem.name);
-                    // auto methodCall = static_cast<MethodCall*>(elem.object.get());
-                    // currentVal = instance->call(elem.name, )
-                    // if (instanceNode->getInstanceScope()->localFunctions.size() == 0) {throw MerkError("attempting to call a method that doesn't exist");}
+                    // DEBUG_LOG(LogLevel::PERMISSIVE, currentVal);
                     currentVal = elem.object->evaluate(methodScope, instanceNode);
 
                     break;

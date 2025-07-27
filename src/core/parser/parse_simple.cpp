@@ -99,7 +99,7 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
     }
 
     // Token assignment = advance(); // consume variable
-    
+
     Vector<String> values = {"=", ":="};
     consume(TokenType::VarAssignment, values, "Parser::parseVariableDeclaration");
 
@@ -195,7 +195,7 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     Token token = currentToken();
     // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toColoredString());
 
-    if (check(TokenType::LeftBracket, "[") || check(TokenType::LeftArrow, "<") || check(TokenType::Operator, "{")){
+    if (check(TokenType::LeftBracket, "[") || check(TokenType::Operator, "<") || check(TokenType::Operator, "{")){
         return parseClassLiteralCall();
     }
 
@@ -232,22 +232,18 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 
     if (token.type == TokenType::Operator && (token.value == "-" || token.value == "!" || token.value == "not" || token.value == "and" || token.value == "or")) {
         String op = token.value;
-        advance(); // move past '-'
+        advance(); // move past '-' etc.
         Token current = currentToken();
         
         if (current.type != TokenType::Number && op == "-"){
             throw MerkError("Cannot Make Type " + current.typeAsString() + " a negative");
         }
 
-        // if ((op == "and" || op == "or" || op == "not" || op == "!") && 
-        // (current.type != TokenType::Number && current.type != TokenType::Bool && current.type != TokenType::String)) {
-        //     throw MerkError("Cannot Perform a Logical Operation On Type " + current.typeAsString());
-  
-        // }
         auto operand = parsePrimaryExpression(); // recursively parse next value
         DEBUG_LOG(LogLevel::ERROR, "Operand: ", operand->toString());
         return makeUnique<UnaryOperation>(op, std::move(operand), currentScope);
     }
+
     // Chain-based variable, method, class references like a.b.c or Foo::bar
     if (token.type == TokenType::ChainEntryPoint) {
         return parseChainOp();  // handles the entire chain from here
@@ -298,7 +294,6 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 
 UniquePtr<BaseAST> Parser::parseStatement() {
     DEBUG_FLOW(FlowLevel::NONE);
-    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseStatement: Entering with token: ", currentToken().toColoredString());
 
     Token token = currentToken();
     if (token.value == "else" || token.value == "elif"){

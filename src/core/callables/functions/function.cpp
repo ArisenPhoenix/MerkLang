@@ -36,7 +36,7 @@ UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList 
 
 
 
-Node UserFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node UserFunction::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
     DEBUG_FLOW(FlowLevel::NONE);
     if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
@@ -79,12 +79,10 @@ void UserFunction::setScope(SharedPtr<Scope> newScope) const {
     DEBUG_FLOW(FlowLevel::NONE);
     if (!newScope) {throw MerkError("No newScope in UserFunction::setScope");}
     newScope->owner = generateScopeOwner("UserFunction", name);
-    // getThisBody()->setScope(newScope);
     auto children = body->getAllAst();
     body->setScope(newScope);
 
     DEBUG_FLOW_EXIT();
-    // getBody()->setScope(newScope);
 }
 
 void UserFunction::setCapturedScope(SharedPtr<Scope> newScope) {
@@ -104,6 +102,5 @@ SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr
 
 CallableBody* UserFunction::getInvocableBody() {return body.get();}
 CallableBody* UserFunction::getBody() const {return body.get();}
-// FunctionBody* UserFunction::getThisBody() {return body.get();}
 FunctionBody* UserFunction::getThisBody() const {return body.get();}
 UniquePtr<CallableBody> UserFunction::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}

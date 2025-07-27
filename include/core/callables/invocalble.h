@@ -18,7 +18,7 @@ protected:
 
 public:
     Invocable(String name, ParamList params, CallableType definedType, bool requiresReturn = false, bool isStatic = true);
-    virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> self) const override = 0;
+    virtual Node execute(ArgumentList args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> self) const override = 0;
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
     virtual void setScope(SharedPtr<Scope> newScope) const override = 0;
@@ -27,9 +27,7 @@ public:
     virtual UniquePtr<CallableBody> getBody() = 0;
     virtual CallableBody* getBody() const {return nullptr;}
     virtual CallableBody* getInvocableBody() {return nullptr;}
-    
-    // virtual UniquePtr<CallableBody>& getBody() = 0;
-    
+        
     virtual void setCapturedScope(SharedPtr<Scope> scope);
     virtual SharedPtr<Scope> getCapturedScope() const;
 

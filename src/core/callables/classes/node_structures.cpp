@@ -4,6 +4,8 @@
 #include "core/callables/classes/node_structures.h"
 #include "utilities/debugger.h"
 #include "algorithm"
+#include <functional>
+
 
 String DataStructure::getTypeAsString() const {
     return nodeTypeToString(dataType);
@@ -15,9 +17,12 @@ String DataStructure::toString() const {
 }
 
 ListNode::~ListNode() = default;
-ListNode::ListNode() {setType(NodeValueType::List); data.type = NodeValueType::List;}
+ListNode::ListNode() {
+    setType(NodeValueType::Array);
+    data.type = NodeValueType::Array;
+    dataType = NodeValueType::Array;}
 
-ListNode::ListNode(Vector<Node> init) : elements(std::move(init)) {setType(NodeValueType::List);}
+ListNode::ListNode(ArgumentList init) : elements(std::move(init.getPositional())) {setType(NodeValueType::List);}
 bool ListNode::holdsValue() {
     return elements.size() > 0;
 }
@@ -78,11 +83,12 @@ void ArrayNode::append(const Node& node) {
 
 
 
-ArrayNode::ArrayNode(Vector<Node> init, NodeValueType nodeType)
+ArrayNode::ArrayNode(ArgumentList init, NodeValueType nodeType)
 : ListNode(init) {
     contains = nodeType;
     setType(NodeValueType::Array);
     data.type = NodeValueType::Array;
+    dataType = NodeValueType::Array;
 }
 
 
@@ -105,15 +111,117 @@ String ArrayNode::toString() const {
     return repr;
 }
 
-// DictNode::DictNode() {elements = {Node(0), Node(0)};}
-// DictNode::~DictNode() = default;
-// DictNode::DictNode() = default;
+DictNode::~DictNode() = default;
+DictNode::DictNode(ArgumentList init) {
+    dataType = NodeValueType::Dict;
+    data.type = NodeValueType::Dict;
+    setType(NodeValueType::Dict);
+    if (init.size() > 0) {
+        if (init.size() > 2) {throw MerkError("Too Many Values to unpack in for Dict init");}
+        auto key = init.getPositional()[0];
+        if (key.isDict()) {
+            elements = key.toDict()->elements;
+            return;
+        }
+        auto value = init.getPositional()[1];
+        elements[key] = value;
+    }
+    
 
-// DictNode::DictNode(Vector<Node> init) {
-//     for (auto& var : init) {
+}
+DictNode::DictNode() {
+    dataType = NodeValueType::Dict;
+    data.type = NodeValueType::Dict;
+    setType(NodeValueType::Dict);
+};
 
-//     }
-// }
+String DictNode::toString() const {
+    String repr = getTypeAsString() + "{";
+    for (auto& [key, val] : elements) {
+        repr += key.toString() + " : " + val.toString(); 
+    }
+    repr += "}";
+    return repr;
+}
+
+bool DictNode::holdsValue() {
+    return elements.size() > 0;
+}
 
 
-// SetNode::~SetNode() = default;
+void DictNode::set(const Node& key, const Node& value) {
+    elements[key] = value;
+}
+
+Node DictNode::pop(const Node& key) {
+    auto val = elements.find(key);
+    return val->second;
+}
+
+void DictNode::remove(const Node& key) {
+    elements.erase(key);
+}
+
+
+Node DictNode::get(const Node& key, const Node& defaultReturn) {
+    auto val = elements.find(key);
+    if (val->second.isValid()) {
+        return val->second;
+    }
+
+    return defaultReturn;
+}
+
+
+SetNode::~SetNode() = default;
+
+
+String SetNode::toString() const {
+    String repr = getTypeAsString() + "{";
+    // elements.end();
+    // elements.size();
+    // auto currentElem = elements.begin();
+    for (auto & elem : elements) {
+        repr += elem.toString();
+        repr += ", ";
+    }
+
+    repr += "}";
+    return repr;
+}
+
+bool SetNode::holdsValue() {
+    return elements.size() > 0;
+}
+
+
+
+std::size_t ListNode::hash() const {
+    size_t finalHash = 0;
+    for (auto& item : elements) {
+        finalHash ^= item.hash() + 0x9e3779b9 + (finalHash << 6) + (finalHash >> 2);
+    }
+    return finalHash;
+}
+
+
+
+std::size_t DictNode::hash() const {
+    size_t finalHash = 0;
+    for (auto& [key, val] : elements) {
+        std::size_t pairHash = key.hash() ^ (val.hash() << 1);
+        finalHash ^= pairHash + 0x9e3779b9 + (finalHash << 6) + (finalHash >> 2);
+    }
+
+    return finalHash;
+}
+
+
+std::size_t SetNode::hash() const {
+    size_t finalHash = 0;
+    for (auto& val : elements) {
+        finalHash += val.hash();
+    }
+
+    return finalHash;
+}

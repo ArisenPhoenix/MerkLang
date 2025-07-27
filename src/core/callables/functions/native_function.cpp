@@ -6,7 +6,7 @@
 NativeFunction::NativeFunction(
     String name,
     ParamList params,
-    std::function<Node(Vector<Node>, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> impl
+    std::function<Node(ArgResultType, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> impl
 
 )
     : Function(std::move(name), std::move(params), CallableType::FUNCTION),
@@ -14,14 +14,8 @@ NativeFunction::NativeFunction(
     setSubType(CallableType::NATIVE);
 }
 
-Node NativeFunction::execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
-    // (void)instanceNode;
-    if (!nativeImpl) {
-        throw MerkError("NativeFunction has no implementation.");
-    }
-
-    // placeArgsInCallScope(args, scope);
-    // joinVectorNodeStrings(args);
+Node NativeFunction::execute(ArgResultType args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    if (!nativeImpl) { throw MerkError("NativeFunction has no implementation."); }
      
     return nativeImpl(args, scope, instanceNode);
 }
@@ -31,9 +25,7 @@ SharedPtr<CallableSignature> NativeFunction::toCallableSignature() {
         shared_from_this(), getCallableType()
     );
 
-    if (!sig) {
-        throw MerkError("Native Function Callable Signatrure Was Not Created");
-    }
+    if (!sig) { throw MerkError("Native Function Callable Signatrure Was Not Created"); }
     sig->setSubType(CallableType::NATIVE);
     sig->setParameters(parameters.clone());
     return sig;

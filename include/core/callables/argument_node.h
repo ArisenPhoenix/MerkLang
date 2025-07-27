@@ -9,9 +9,9 @@
 
 class ParamList;
 
-class ArgumentList {
+class ArgumentList: public Node {
 private:
-    Vector<Node> positionalArgs;
+    NodeList positionalArgs;
     std::unordered_map<String, Node> namedArgs;
 
 public:
@@ -22,15 +22,36 @@ public:
 
     Node getArg(size_t i) const;
     Node getNamedArg(const String& name) const;
-    Vector<Node> getRemainingArgs(size_t start) const;
+    NodeList getRemainingArgs(size_t start) const;
+    NodeList getPositional();
 
     size_t positionalCount() const;
     bool hasNamedArg(const String& name) const;
 
-    Vector<Node> bindTo(const ParamList& params, bool allowDefaults = false) const;
+    NodeList bindTo(const ParamList& params, bool allowDefaults = false) const;
 
     String toString() const;
+
+    bool hasNamedArgs(String name);
+    size_t positionalCount();
+    auto begin() { return positionalArgs.begin(); }
+    auto end() { return positionalArgs.end(); }
+    auto begin() const { return positionalArgs.begin(); }
+    auto end() const { return positionalArgs.end(); }
+
+    // Add cbegin() and cend() for const iteration, c++ can be a pain
+    auto cbegin() const { return positionalArgs.cbegin(); }
+    auto cend() const { return positionalArgs.cend(); }
+
+    Node& back();
+    Node back() const;
+
+    // Access parameters by index
+    const Node& operator[](size_t index) const;
+    bool empty();
+    size_t size();
 };
+
 
 
 #endif // ARGUMENT_LIST_H

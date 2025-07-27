@@ -7,7 +7,7 @@
 
 
 // const bool debugParam = true;
-
+class ArgumentList;
 
 // ParamNode inherits from VarNode
 class ParamNode : public VarNode {
@@ -121,6 +121,7 @@ public:
 
     // Verify arguments passed to function
     void verifyArguments(Vector<Node> args);
+    void verifyArguments(ArgumentList& args);
 
     // Get parameter count
     size_t size() const { return parameters.size(); }

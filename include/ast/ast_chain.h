@@ -32,14 +32,12 @@ struct ChainElement {
     String delimiter;
     TokenType type;
     ChainElement();
-    // Move constructor
+
     ChainElement(ChainElement&& other) noexcept;
     ~ChainElement();
     void clear();
-    // Move assignment operator
-    ChainElement& operator=(ChainElement&& other) noexcept;
 
-    // Delete copy constructor (or default if you don't want accidental copies)
+    ChainElement& operator=(ChainElement&& other) noexcept;
     ChainElement(const ChainElement&) = delete;
     ChainElement& operator=(const ChainElement&) = delete;
     void printAST(std::ostream& os, int indent = 0) const;

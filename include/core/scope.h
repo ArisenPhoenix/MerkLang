@@ -111,11 +111,11 @@ public:
 
 
     void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
-    SharedPtr<CallableSignature> handleLookupFunction(String& name, const Vector<Node>& args) const;
+    SharedPtr<CallableSignature> handleLookupFunction(String& name, const ArgResultType& args) const;
     
     //// Registry Management
     //// Function Management
-    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const Vector<Node>& args) const;
+    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const ArgResultType& args) const;
     std::optional<Vector<SharedPtr<CallableSignature>>> lookupFunction(const String& name) const;
 
     const SharedPtr<FunctionRegistry> getFunctionRegistry() const;
@@ -127,7 +127,7 @@ public:
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
     void registerFunction(const String& name, SharedPtr<Callable> anyCallable);
-    SharedPtr<CallableSignature> getFunction(const String& name, const Vector<Node>& args);
+    SharedPtr<CallableSignature> getFunction(const String& name, const ArgResultType& args);
     Vector<SharedPtr<CallableSignature>> getFunction(const String& name);
 
 

@@ -98,6 +98,8 @@ public:
         (void)indent;
         os << highlight("ASTStatement", Colors::red) << "\n";
     }
+
+    // ASTStatement();
     virtual AstType getAstType() const override {return AstType::AST;}
     virtual String toString() const override {return getAstTypeAsString();}
     SharedPtr<Scope> getScope() const override;

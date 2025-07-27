@@ -9,28 +9,25 @@
 
 class NativeMethod : public Method {
 private:
-    std::function<Node(NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn;
-    // SharedPtr<Scope> classScope = nullptr;
+    std::function<Node(ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn;
 
 public:
     NativeMethod(
         String name,
         ParamList params,
         SharedPtr<Scope> classScope,
-        std::function<Node(NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn 
+        std::function<Node(ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn 
     );
 
     ~NativeMethod() override;
                 
-    Node execute(Vector<Node> args,
+    Node execute(ArgResultType args,
                  SharedPtr<Scope> callScope,
                  SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     String toString() const override;
 
     SharedPtr<CallableSignature> toCallableSignature() override;
-    // SharedPtr<CallableSignature> toCallableSignature(SharedPtr<Method> method);
-
     void setCapturedScope(SharedPtr<Scope> scope) override;
     SharedPtr<Scope> getCapturedScope() const override;
     void setScope(SharedPtr<Scope> newScope) const override;

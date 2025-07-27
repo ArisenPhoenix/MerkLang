@@ -41,9 +41,9 @@ public:
 
     void setSubType(CallableType subClassification);
     void setCallableType(CallableType primaryClassification);
-    void placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope> callScope) const;
+    void placeArgsInCallScope(ArgResultType evaluatedArgs, SharedPtr<Scope> callScope) const;
 
-    virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
+    virtual Node execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
     
     // Set and get the captured scope.
     virtual void setCapturedScope(SharedPtr<Scope> scope) = 0;

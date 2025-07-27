@@ -299,7 +299,8 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
     }
 
 
-    Vector<UniquePtr<ASTStatement>> arguments = parseArguments();
+    // Vector<UniquePtr<ASTStatement>> arguments = parseArguments();
+    auto arguments = parseAnyArgument();
 
     return makeUnique<ClassCall>(className, std::move(arguments), currentScope);
 }
@@ -441,11 +442,14 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
     DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseClassLiteralCall: Entering with token: ", currentToken().toColoredString());
 
     if (consumeIf(TokenType::LeftBracket, "[")) {
-        Vector<UniquePtr<ASTStatement>> elements;
+        // Vector<UniquePtr<ASTStatement>> elements;
+        // Vector<Argument> elements;
+        UniquePtr<ArgumentType> elements;
 
         if (!check(TokenType::RightBracket, "]")) {
             do {
-                elements.push_back(parsePrimaryExpression());
+                elements->addPositional(parsePrimaryExpression());
+                // elements.push_back(parsePrimaryExpression());
             } while (consumeIf(TokenType::Punctuation, ","));
         }
 
@@ -457,19 +461,46 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
         return call;
     }
 
-    if (consumeIf(TokenType::LeftArrow, "<")) {
-        Vector<UniquePtr<ASTStatement>> elements;
+    if (consumeIf(TokenType::Operator, "<")) {
+        UniquePtr<ArgumentType> elements;
+        // Vector<UniquePtr<ASTStatement>> elements;
 
         if (!check(TokenType::Operator, ">")) {
             do {
-                elements.push_back(parsePrimaryExpression());
+                // elements.push_back(parsePrimaryExpression());
+                elements->addPositional(parsePrimaryExpression());
             } while (consumeIf(TokenType::Punctuation, ","));
         }
 
         consume(TokenType::Operator, ">", "Parser::parseClassLiteralCall -> Operator");
 
         auto call = makeUnique<ClassCall>("Array", std::move(elements), currentScope);
+        
+        // throw MerkError("Literal Class call above");
         processNewLines();
+        DEBUG_FLOW_EXIT();
+        return call;
+    }
+
+    // String type;
+
+    if (consumeIf(TokenType::Operator, "{")) {
+        // Vector<UniquePtr<ASTStatement>> elements;
+        UniquePtr<ArgumentType> elements;
+        if (!check(TokenType::Operator, "}")) {
+            do {
+                auto expr = parsePrimaryExpression();
+                expr->printAST(std::cout);
+                elements->addPositional(std::move(expr));
+                // elements.push_back(std::move(expr));
+            } while (consumeIf(TokenType::Punctuation, ":"));
+        }
+
+        consume(TokenType::Operator, "}", "Parser::parseClassLiteralCall -> Operator");
+
+        auto call = makeUnique<ClassCall>("Dict", std::move(elements), currentScope);
+        processNewLines();
+        call->printAST(std::cout);
         DEBUG_FLOW_EXIT();
         return call;
     }

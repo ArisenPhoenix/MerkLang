@@ -41,13 +41,12 @@ public:
     
 class FunctionCall : public CallableCall {
 public:
-    FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
+    FunctionCall(String functionName, UniquePtr<ArgumentType> args, SharedPtr<Scope> scope);
 
     virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual AstType getAstType() const override { return AstType::FunctionCall;}
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
-    // String toString() const override;
 
 };
 

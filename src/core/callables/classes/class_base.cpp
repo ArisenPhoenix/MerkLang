@@ -12,6 +12,8 @@
 #include "ast/ast_validate.h"
 #include <cassert>
 
+#include "core/callables/argument_node.h"
+
 
 
 
@@ -84,7 +86,7 @@ SharedPtr<Scope> ClassBase::getClassScope() const {return classScope;}
 
 String ClassBase::toString() const {return "Class(" + name + ") <Params>" + parameters.toShortString();}
 
-Node ClassBase::execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node ClassBase::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
 
     (void) args;
@@ -172,7 +174,7 @@ String ClassInstance::toString() const {
         if (nativeData) {
             return nativeData->toString();
         } else {
-            throw MerkError("No NATIVE DATA AVAILABLE FOR: " + name);
+            // throw MerkError("No NATIVE DATA AVAILABLE FOR: " + name);
         }
     }
     
@@ -213,13 +215,13 @@ SharedPtr<ClassInstanceNode> ClassInstance::getInstanceNode() {
 
 
 
-void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance> self) {
+void ClassInstance::construct(const ArgResultType& args, SharedPtr<ClassInstance> self) {
     DEBUG_FLOW(FlowLevel::HIGH);
     if (!getInstanceScope()->hasFunction("construct")) {throw MerkError("A construct method must be implemented in class: " + getName());}
 
     auto methodOpt = getInstanceScope()->getFunction("construct", args);
     if (!methodOpt) {throw MerkError("Constructor for '" + getName() + "' does not match provided arguments.");}
-    DEBUG_LOG(LogLevel::PERMISSIVE, "sigCallType: ", callableTypeAsString(methodOpt->getCallableType()), "sigSubType: ", callableTypeAsString(methodOpt->getSubType()));
+    DEBUG_LOG(LogLevel::TRACE, "sigCallType: ", callableTypeAsString(methodOpt->getCallableType()), "sigSubType: ", callableTypeAsString(methodOpt->getSubType()));
     // throw MerkError("Got sig Types");
     auto method = std::static_pointer_cast<Method>(methodOpt->getCallable());
     if (!method) {throw MerkError("Class " + name + " is not valid");}
@@ -230,12 +232,12 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     SharedPtr<ClassInstanceNode> instanceNode = makeShared<ClassInstanceNode>(self);
     SharedPtr<Scope> instanceScope = self->getInstanceScope();
     
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassInstance::contruct -> methodCallScope");
+    DEBUG_LOG(LogLevel::TRACE, "ClassInstance::contruct -> methodCallScope");
     ClassMembers vars = {};
-    DEBUG_LOG(LogLevel::PERMISSIVE, "callType: ", callableTypeAsString(method->getCallableType()), " subType: ", callableTypeAsString(method->getSubType()));
+    DEBUG_LOG(LogLevel::TRACE, "callType: ", callableTypeAsString(method->getCallableType()), " subType: ", callableTypeAsString(method->getSubType()));
     if (method->getSubType() == CallableType::CALLABLE) {throw MerkError("Incorrect Callable subType in NativeMethod");}
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "got instance vars");
+    DEBUG_LOG(LogLevel::TRACE, "got instance vars");
     instanceScope->setClassMembers(vars);
     method->execute(args, methodCallScope, instanceNode);
     instanceScope->removeChildScope(methodCallScope);
@@ -244,7 +246,7 @@ void ClassInstance::construct(const Vector<Node>& args, SharedPtr<ClassInstance>
     DEBUG_FLOW_EXIT();
 }
     
-Node ClassInstance::execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node ClassInstance::execute(const ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
     (void)scope;
     return Node("Null");
@@ -262,7 +264,6 @@ ClassSignature::ClassSignature(SharedPtr<ClassBase> classBaseData)
     // if (callableTypeAsString(classBaseData->getSubType()) == "Unknown") { throw MerkError("SubType is Unknown for ClassBase to ClassSignature");}
     setSubType(classBaseData->getSubType());
     // DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classBase:", "CallableType: ", callableTypeAsString(classBaseData->getCallableType()), "SubType: ", callableTypeAsString(classBaseData->getSubType()));
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
     if (getCallableType() != CallableType::CLASS) {throw MerkError("ClassSignature callableType is not CLASS");}
     if (callableTypeAsString(getSubType()) == "Unknown") {throw MerkError("ClassSignature subType is unknown at construction");}
     // throw MerkError("See Above");
@@ -288,7 +289,7 @@ void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = sc
 
 
 // Optional: override call() to auto-instantiate when the class is "called"
-Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
+Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     (void)args;
 
@@ -323,7 +324,7 @@ Node ClassSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, Shar
 }
 
 
-Node ClassInstance::call(String name, Vector<Node> args) {
+Node ClassInstance::call(String name, ArgResultType args) {
     DEBUG_FLOW(FlowLevel::NONE);
     auto methodSig = getInstanceScope()->getFunction(name, args);
     auto method = methodSig->getCallable();
@@ -420,18 +421,17 @@ void ClassInstance::setNativeData(SharedPtr<DataStructure> incoming) {
 SharedPtr<DataStructure> ClassInstance::getNativeData() {return nativeData;}
 
 
+std::size_t ClassInstance::hash() const {
+    // std::size_t h1 = std::hash<int>()(static_cast<int>(nativeData->getType()));
+    std::size_t finalHash = 0;
+    if (nativeData) {
+        finalHash += nativeData->hash();
+    }
+    return finalHash;
+}
+
 ClassInstance::~ClassInstance() {
     DEBUG_LOG(LogLevel::DEBUG, "~ClassInstance() destructor triggered");
-    if (instanceScope) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Destroying ClassInstance with scope owner=", instanceScope->owner, " DATA IS: ", toString());
-        DEBUG_LOG(LogLevel::PERMISSIVE,
-        "Destroying ClassInstance addr=", this,
-        " instanceScope addr=", instanceScope.get(),
-        " instanceScope.use_count=", instanceScope.use_count()
-    );
-
-    }
-    
     getInstanceScope()->clear();
     getCapturedScope()->clear();
     nativeData.reset();

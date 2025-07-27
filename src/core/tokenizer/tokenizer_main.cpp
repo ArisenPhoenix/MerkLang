@@ -17,7 +17,7 @@ bool Tokenizer::isLogicOperator() {
 }
 
 const std::unordered_set<std::string> knownTypes = {
-    "Int", "Float", "Long", "Bool", "String", "Array", "List", "Map", "Schema", "Set"
+    "Int", "Float", "Long", "Bool", "String", "Array", "List", "Map", "Schema", "Set", "Dict"
 };
 
 
@@ -26,7 +26,7 @@ const std::unordered_set<String> keywords = {
 };
 
 const std::unordered_set<char> typeContainers = {
-    '<', '[', ']', '>'
+    '{', '<', '[', ']', '>', '}'
 };
 
 bool Tokenizer::handleContainers() {
@@ -61,6 +61,16 @@ bool Tokenizer::handleContainers() {
 
     else if (source[position] == '>') {
         tokens.push_back(Token(TokenType::Operator, ">", line, column));
+        found = true;
+    }
+
+    else if (source[position] == '{') {
+        tokens.push_back(Token(TokenType::Operator, "{", line, column));
+        found = true;
+    }
+
+    else if (source[position] == '}') {
+        tokens.push_back(Token(TokenType::Operator, "}", line, column));
         found = true;
     }
 

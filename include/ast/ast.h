@@ -238,7 +238,6 @@ public:
 
     AstType getAstType() const override { return AstType::Continue; }
     UniquePtr<BaseAST> clone() const override;
-    // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 };
         

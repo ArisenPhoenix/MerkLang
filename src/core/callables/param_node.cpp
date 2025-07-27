@@ -3,7 +3,7 @@
 #include "core/node.h"
 #include "utilities/debugger.h"
 #include "core/callables/param_node.h"
-
+#include "core/callables/argument_node.h"
 
 
 // All Constructor, not actually used but is an idea still
@@ -165,6 +165,51 @@ void ParamList::verifyArguments(Vector<Node> args) {
         }
 
         parameters[i].setValue(args[i]);
+    }
+
+    // Handle variadic parameter
+    if (variadic) {
+        if (args.size() < fixedParamCount) {
+            throw MerkError("Too few arguments for variadic function.");
+        }
+
+        // Copy variadic arguments to a new vector to store in the param
+        Vector<Node> variadicArgs(args.begin() + fixedParamCount, args.end());
+
+        // Instead of assigning a Node, you’ll store it directly in the NativeFunction
+        // This just verifies count and leaves interpretation to the function
+        parameters.back().setValue(UninitializedType());  // Optional: clear placeholder
+    }
+
+    DEBUG_FLOW_EXIT();
+}
+
+
+
+void ParamList::verifyArguments(ArgumentList& args) {
+    DEBUG_FLOW(FlowLevel::MED);
+
+    bool variadic = !parameters.empty() && parameters.back().isVarArgsParameter();
+    size_t fixedParamCount = variadic ? parameters.size() - 1 : parameters.size();
+
+    // Check fixed arguments
+    for (size_t i = 0; i < fixedParamCount; ++i) {
+        const auto& param = parameters[i];
+
+        Node arg;
+        if (i < args.positionalCount()) {
+            arg = args.getArg(i);
+        } else if (args.hasNamedArg(param.getName())) {
+            arg = args.getNamedArg(param.getName());
+        } else if (param.hasDefault()) {
+            arg = Node(param.getDefaultValue());
+        } else {
+            throw MerkError("Missing argument for parameter: " + param.getName());
+        }
+
+        // paramaters[i].setValue(arg.getValue());
+        parameters[i].setValue(arg);
+        // param.setValueFromVariant(arg.getValue());
     }
 
     // Handle variadic parameter

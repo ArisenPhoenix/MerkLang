@@ -131,6 +131,8 @@ String astTypeToString(AstType type) {
         case AstType::ImportStatement: return highlight("ImportStatement", Colors::light_blue);
 
         case AstType::AST: return highlight("AST", Colors::red);
+        case AstType::Argument: return highlight("Argument", Colors::bg_cyan);
+        case AstType::Arguments: return highlight("Arguments", Colors::bold_yellow);
 
         default: return "Unknown";
     }

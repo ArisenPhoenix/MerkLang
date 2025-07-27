@@ -9,16 +9,12 @@
 
 
 bool Node::isList() const {
-    // if (name == "List" && data.type != NodeValueType::List) {
-    //     throw MerkError("List is not a List Type");
-    // }
     return data.type == NodeValueType::List;
 }
 
 bool Node::isArray() const {
-    if (name == "Array" && data.type != NodeValueType::Array) {
-        throw MerkError("List is not a List Type");
-    }
+    if (name == "Array" && data.type != NodeValueType::Array) { throw MerkError("List is not a List Type"); }
+    
     return data.type == NodeValueType::List;
 }
 
@@ -65,6 +61,7 @@ bool Node::isSet() const {
     return data.type  == NodeValueType::Set;
 }
 bool Node::isDict() const {
+    
     return data.type == NodeValueType::Dict;
 }
 
@@ -160,6 +157,26 @@ SharedPtr<ArrayNode> Node::toArray() const {
 }
 
 
+SharedPtr<DictNode> Node::toDict() const {
+    if (data.type == NodeValueType::Dict) {
+        if (isArray()) {
+            return static_cast<SharedPtr<DictNode>>(std::get<SharedPtr<DictNode>>(data.value));
+        }
+        return std::static_pointer_cast<DictNode>(toInstance()->getNativeData());
+    }
+    throw MerkError("Not A Dict");
+}
+
+SharedPtr<DictNode> Node::toDict() {
+    if (data.type == NodeValueType::Dict) {
+        if (isArray()) {
+            return static_cast<SharedPtr<DictNode>>(std::get<SharedPtr<DictNode>>(data.value));
+        }
+        return std::static_pointer_cast<DictNode>(toInstance()->getNativeData());
+    }
+    throw MerkError("Not A Dict");
+}
+
 
 
 char Node::toChar() const {
@@ -196,7 +213,8 @@ String Node::toString() const {
             
             case NodeValueType::ClassInstance: { return toInstance()->toString(); }
             case NodeValueType::List: { return toList()->toString(); };
-            case NodeValueType::Array: return nodeTypeToString(data.type, false);              
+            case NodeValueType::Array: return nodeTypeToString(data.type, false);
+            case NodeValueType::Dict: { return toDict()->toString(); };              
             case NodeValueType::Callable: return nodeTypeToString(data.type, false) + name;
             case NodeValueType::UNKNOWN: return "UNKNOWN";
             case NodeValueType::Function: return nodeTypeToString(data.type, false) + name;

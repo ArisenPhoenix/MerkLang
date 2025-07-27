@@ -18,11 +18,6 @@ class Method;
 class Function;
 class Chain;
 
-// void applyInstanceMethodBodyAccessorScopeFix(const Vector<UniquePtr<BaseAST>>& bodyChildren, SharedPtr<Scope> classScope, const String& accessor);
-
-Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> classScope, const String& accessor);
-
-
 class ClassBody : public CallableBody {
 protected:
     SharedPtr<Scope> classScope = nullptr;
@@ -76,7 +71,7 @@ class ClassCall : public CallableCall {
     String accessor; 
 
 public:
-    ClassCall(String className, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
+    ClassCall(String className, UniquePtr<ArgumentType> args, SharedPtr<Scope> scope);
     ~ClassCall();
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::ClassCall;}

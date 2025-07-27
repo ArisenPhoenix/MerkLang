@@ -5,7 +5,8 @@
 #include <string>
 #include <sstream>
 #include "types.h"
-#include "core/callables/param_node.h" 
+#include "core/callables/param_node.h"
+#include "core/callables/argument_node.h"
 
 // Base Error Class: MerkError
 class MerkError : public RunTimeError {
@@ -359,18 +360,18 @@ private:
     size_t expectedSize;
     size_t receivedSize;
     ParamList expectedParams;
-    Vector<Node> receivedArguments;
+    NodeList receivedArguments;
 
 public:
     ArgumentError(const String& functionName, size_t expected, size_t received);
-    ArgumentError(const String& functionName, ParamList parameters, Vector<Node> arguments);
+    ArgumentError(const String& functionName, ParamList parameters, NodeList arguments);
 
     String errorPrefix() const override;
 
     String errorHint() const override;
 
     String errorString() const override;
-};
+}; 
 
 
 

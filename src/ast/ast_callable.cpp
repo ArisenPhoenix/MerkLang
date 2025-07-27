@@ -11,6 +11,7 @@
 #include "ast/ast_control.h"
 
 #include "core/callables/functions/function.h"
+
 #include "core/evaluator.h"
 #include "ast/ast_function.h"
 #include "ast/ast_method.h"
@@ -19,6 +20,121 @@
 
 #include "core/callables/argument_node.h"
 
+// Argument::Argument() = default;
+
+String Argument::toString() const {
+    String out = getAstTypeAsString() + "(";
+    if (isKeyword()) {
+        out += key->toString() + ":";
+    }
+
+    out += value->toString() + ")";
+    return out;
+}
+void Argument::setScope(SharedPtr<Scope> newScope) {
+    if (key) { key->setScope(newScope); }
+    
+    value->setScope(newScope);
+};
+Node Argument::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    if (isKeyword()) {
+        auto k = key->evaluate(scope, instanceNode);
+        auto v = value->evaluate(scope, instanceNode);
+        v.key = k.toString();
+        return v; 
+    } else {
+        return value->evaluate(scope, instanceNode);
+    }
+}
+Argument Argument::clone() const {
+    auto arg = Argument();
+    if (isKeyword()) { arg.key = std::move(key->clone()); }
+
+    arg.value = std::move(value->clone());
+    
+    return arg;
+}
+
+// Arguments::Arguments() = default;
+
+Arguments::Arguments(SharedPtr<Scope> scope) : ASTStatement(scope) {}
+Arguments::Arguments(Vector<Argument> arg, SharedPtr<Scope> scope) : ASTStatement(scope), arguments(std::move(arg)) {}
+
+void Arguments::setScope(SharedPtr<Scope> newScope) {
+    // (void)newScope;
+    scope = newScope;
+    for (auto& arg : arguments) {
+        arg.setScope(newScope);
+    }
+}
+
+
+ArgResultType Arguments::evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
+
+    // for (const auto &arg : arguments) {
+    //     auto val = arg.evaluate(scope, instanceNode);
+    //     evaluatedArgs.addPositionalArg(arg.value->evaluate(scope, instanceNode));
+    //     // evaluatedArgs.push_back(val);
+    // }
+
+    // // scope->removeChildScope(throwAwayScope);
+    // DEBUG_FLOW_EXIT();
+    
+    
+    
+    // return evaluatedArgs;
+    ArgResultType evaluated;
+    
+    for (auto& arg : arguments) {
+        if (arg.isKeyword()) {
+            auto keyVal = arg.key->evaluate(scope, instanceNode);
+            auto valVal = arg.value->evaluate(scope, instanceNode);
+            evaluated.addNamedArg(keyVal.toString(), valVal);
+        } else {
+            evaluated.addPositionalArg(arg.value->evaluate(scope, instanceNode));
+        }
+    }
+
+    return evaluated;
+}
+
+
+Node Arguments::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    MARK_UNUSED_MULTI(scope, instanceNode);
+    throw MerkError("USE EVALUATEALL to evaluate Arguments");
+};
+
+
+void Arguments::add(Argument arg) {
+    arguments.emplace_back(std::move(arg));
+}
+
+
+void Arguments::addPositional(UniquePtr<ASTStatement> val) {
+    arguments.push_back({nullptr, std::move(val)});
+}
+
+void Arguments::addKeyword(UniquePtr<ASTStatement> key, UniquePtr<ASTStatement> val) {
+    arguments.push_back({std::move(key), std::move(val)});
+}
+
+const Vector<Argument>& Arguments::getArgs() const { return arguments; }
+
+bool Arguments::hasKeywords() const {
+    for (auto &a : arguments) if (a.isKeyword()) return true;
+    return false;
+}
+
+
+// CallableCall::CallableCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
+//     : ASTStatement(scope), name(name), arguments(std::move(arguments)) {
+//         branch = "Callable";
+// }
+
+CallableCall::CallableCall(String name, UniquePtr<ArgumentType> arguments, SharedPtr<Scope> scope)
+    : ASTStatement(scope), name(name), arguments(std::move(arguments)) {
+        branch = "Callable";
+}
 
 
 // For Calling Within A Method's Context
@@ -73,10 +189,6 @@ CallableDef::CallableDef(String name, ParamList parameters, UniquePtr<CallableBo
     branch = "Callable";
 }
 
-CallableCall::CallableCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
-    : ASTStatement(scope), name(name), arguments(std::move(arguments)) {
-        branch = "Callable";
-}
 
 CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
@@ -96,7 +208,7 @@ CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType 
 {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     callType = callTypeAdded;
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
+    DEBUG_LOG(LogLevel::TRACE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
 
   DEBUG_FLOW_EXIT();
 }
@@ -136,7 +248,7 @@ bool CallableSignature::getIsUserFunction() { return callType != CallableType::N
 
 
 
-Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
+Node CallableSignature::call(const ArgumentList& args, SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::LOW);
     // scope->debugPrint();
     // scope->printChildScopes();
@@ -145,7 +257,7 @@ Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) c
     return val;
 }
 
-Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
+Node CallableSignature::call(const ArgumentList& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
     (void)args;
     (void)scope;
     (void)classScope;
@@ -207,25 +319,21 @@ bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
 
 
 
-Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+ArgResultType CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    Vector<Node> evaluatedArgs;
-    // if (scope->hasChildren()){
-    //     scope = scope->getChildren()[0];
-    // }
-
-    // SharedPtr<Scope> throwAwayScope = scope->detachScope({});
-    // throwAwayScope->disregardDeclarations = true;
-    // scope->appendChildScope(throwAwayScope);
-    for (const auto &arg : arguments) {
-        auto val = arg->evaluate(scope, instanceNode);
-        evaluatedArgs.push_back(val);
+    ArgResultType evaluatedArgs;
+    for (const auto &arg : arguments->getArgs()) {
+        auto& value = arg.value;
+        if (name == "other" && value->getAstType() == AstType::BinaryOperation && !scope->hasVariable("otherValue")) {
+            DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used For Evaluating Args");
+            scope->debugPrint();
+            throw MerkError("Binary Operation will not compute without 'otherValue'");
+        }
+        auto val = arg.evaluate(scope, instanceNode);
+        evaluatedArgs.addPositionalArg(val);
     }
 
-    // scope->removeChildScope(throwAwayScope);
-    DEBUG_FLOW_EXIT();
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "CallableCall::handleArgs args", joinVectorNodeStrings(evaluatedArgs));
+    DEBUG_LOG(LogLevel::PERMISSIVE, "evaluatedArgs: ", evaluatedArgs.toString());
     return evaluatedArgs;
 }
 
@@ -233,6 +341,7 @@ Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassIns
 
 
 Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    MARK_UNUSED_MULTI(scope, instanceNode);
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto val = Evaluator::evaluateBlock(children, scope, instanceNode);
     DEBUG_FLOW_EXIT();
@@ -240,28 +349,24 @@ Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 }
 
 Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
+    MARK_UNUSED_MULTI(scope, instanceNode);
     throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 
 Node CallableCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
+    MARK_UNUSED_MULTI(scope, instanceNode);
     throw MerkError("Cannot Evaluate Base CallableCall");
-    // return Node(scope->getVariable("var"));
 }
 
 
 Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
+    MARK_UNUSED_MULTI(scope, instanceNode);
     throw MerkError("Cannot Evaluate Base CallableRef");
-    // return Node(scope->getVariable("var"));
 }
 
 
 
 
 CallableSignature::~CallableSignature() {
-    if (parameterTypes.data()) {
-        parameterTypes.clear();
-    }   
+    if (parameterTypes.data()) { parameterTypes.clear(); }   
 }

@@ -9,6 +9,9 @@
 #include "core/types.h"
 #include <optional>
 
+#include <functional>
+
+
 // Struct for NodeData using a union for efficient storage
 struct NodeData {
     NodeValueType type = NodeValueType::Null; // Type of the value
@@ -49,10 +52,11 @@ public:
     NodeValueType determineResultType(const Node& left, const Node& right) const;
     String nodeType = "DataNode";
     String name = "";
+    String key = "";
 
     ResolvedType getFullType() {return data.fullType;}
     ResolvedType getFullType() const {return data.fullType;}
-
+    virtual std::size_t hash() const;
     
 
     
@@ -261,6 +265,16 @@ class ComposableTypeNode : public Node {
 };
 
 UniquePtr<VarNode> cloneVarNode(VarNode* original);
+
+
+namespace std {
+    template<>
+    struct hash<Node> {
+        std::size_t operator()(const Node& n) const noexcept {
+            return n.hash();
+        }
+    };
+}
 
 #endif // NODE_H
 

@@ -16,6 +16,8 @@
 #include "ast/ast_callable.h"
 #include "ast/ast_class.h"
 
+class ArgumentList;
+
 class Parser {
 private:
     Vector<Token>& tokens;
@@ -76,7 +78,6 @@ private:
     UniquePtr<BaseAST> parseStatement();
     
     std::optional<NodeValueType> getTypeFromString(String typeStr);
-    std::optional<std::type_index> getStaticType();
     void interpret(CodeBlock* CodeBlockForEvaluation) const;
     void interpret(ASTStatement* CodeBlockForEvaluation) const;
     void interpret(BaseAST* ASTStatementForEvaluation) const;
@@ -111,9 +112,9 @@ private:
 
     bool expect(TokenType tokenType, bool strict = false, String fromWhere = "Parser::expect");
 
-    Token handleAttributNotation();
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
     Vector<UniquePtr<ASTStatement>> parseArguments();
+    UniquePtr<Arguments> parseAnyArgument();
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
     void displayPreviousTokens(String baseTokenName, size_t number = 4, String location = "Parser");
     void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
@@ -130,26 +131,14 @@ public:
     bool byBlock;
     
     // Check if the parser is currently inside a loop
-    bool isInsideLoop() const {
-        return loopContextCounter > 0;
-    }
+    bool isInsideLoop() const { return loopContextCounter > 0; }
     // Increment the loop context counter (called when entering a loop)
-    void enterLoop() {
-        ++loopContextCounter;
-    }
+    void enterLoop() { ++loopContextCounter; }
 
     // Decrement the loop context counter (called when exiting a loop)
-    void exitLoop() {
-        if (loopContextCounter > 0) {
-            --loopContextCounter;
-        } else {
-            throw MerkError("Unexpected loop context underflow. This indicates a parser logic error.");
-        }
-    }
+    void exitLoop();
 
-    void setAllowScopeCreation(bool allow) {
-        allowScopecreation = allow;
-    }
+    void setAllowScopeCreation(bool allow) {  allowScopecreation = allow; }
     bool getAllowScopeCreation() const;
     
 };

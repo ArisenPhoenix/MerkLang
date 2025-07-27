@@ -22,6 +22,7 @@
 #include "core/callables/functions/function.h"
 #include "core/callables/classes/method.h"
 #include "core/scope.h"
+#include "core/callables/argument_node.h"
 
 #include <cassert>
 
@@ -146,7 +147,7 @@ Scope::~Scope() {
 void Scope::clear(bool internalCall) {
     auto weak = weak_from_this();
 
-    DEBUG_LOG(LogLevel::PERMISSIVE,
+    DEBUG_LOG(LogLevel::TRACE,
         "Destroying Scope addr=", this,
         " owner=", owner,
         " parent=", getParent() ? getParent().get() : 0,
@@ -159,12 +160,12 @@ void Scope::clear(bool internalCall) {
         String funcs;
         for (auto& [funcName, funcSigs] : localFunctions) {(void)funcSigs; funcs += ", " + funcName;}
         String classes;
-        DEBUG_LOG(LogLevel::PERMISSIVE,
+        DEBUG_LOG(LogLevel::TRACE,
                   "Destroying Instance Scope functions=", localFunctions.size(), metaString(), "Scope Address: ", formattedScope(), "Funcs: ", funcs);
     }
     context.clear();
     if (isRoot && internalCall) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, metaString(), "InternalCall: ", (internalCall ? "true": "false"));
+        DEBUG_LOG(LogLevel::TRACE, metaString(), "InternalCall: ", (internalCall ? "true": "false"));
         auto funIt = localFunctions.find("pop");
         if (funIt != localFunctions.end()) {throw MerkError("Trying To Destroy Scope containing pop Method");}
 
@@ -483,7 +484,7 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
     // DEBUG_LOG(LogLevel::PERMISSIVE, "Current ", primaryType, " Being Registered: ", funcMethName, " Type: ", primaryType, " SubType: ", subType);
     if (!funcMethSig){throw MerkError("Not a Method Signature");}
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "FUNC TYPE: ", primaryType, " FUNC SUB_TYPE: ", subType, " FUNC NAME: ", funcMethName);
+    DEBUG_LOG(LogLevel::TRACE, "FUNC TYPE: ", primaryType, " FUNC SUB_TYPE: ", subType, " FUNC NAME: ", funcMethName);
 
     if (funcMethSig->getSubType() == CallableType::NATIVE) {
         auto previousOpt = lookupFunction(funcMethName);
@@ -566,11 +567,11 @@ void Scope::registerFunction(const String& name, SharedPtr<UserFunction> functio
 void Scope::registerFunction(const String& name, SharedPtr<Callable> anyCallable) {
     DEBUG_FLOW(FlowLevel::MED);
     if (anyCallable->getCallableType() == CallableType::CLASS) {throw MerkError("Cannot Register A Class Into Function Registry");}
-    DEBUG_LOG(LogLevel::PERMISSIVE, "anyCallType: ", callableTypeAsString(anyCallable->getCallableType()), "anySubType: ", callableTypeAsString(anyCallable->getSubType()));
+    DEBUG_LOG(LogLevel::TRACE, "anyCallType: ", callableTypeAsString(anyCallable->getCallableType()), "anySubType: ", callableTypeAsString(anyCallable->getSubType()));
     // throw MerkError("Got AnyCallable Meta");
     auto signature = anyCallable->toCallableSignature();
     auto other = signature->getCallable();
-    DEBUG_LOG(LogLevel::PERMISSIVE, "otherCallType: ", callableTypeAsString(other->getCallableType()), "otherSubType: ", callableTypeAsString(other->getSubType()));
+    DEBUG_LOG(LogLevel::TRACE, "otherCallType: ", callableTypeAsString(other->getCallableType()), "otherSubType: ", callableTypeAsString(other->getSubType()));
     if (other->getCallableType() != anyCallable->getCallableType() || other->getSubType() != anyCallable->getSubType()) {throw MerkError("starting method and signature held method meta don't match");}
     handleFunctionRegistration(name, signature);
 
@@ -611,23 +612,24 @@ std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const 
   }
 
 
-std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const Vector<Node>& args) const {
+std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const ArgResultType& args) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     auto it = localFunctions.find(name);
     Vector<NodeValueType> argTypes;
 
     if (it != localFunctions.end()) {
         DEBUG_LOG(LogLevel::TRACE, "FOUND FUNCTION In lookupFunction, args not checked yet");
-        for (const auto &arg : args) {
+        for (auto &arg : args) {
             argTypes.push_back(arg.getType());
             DEBUG_LOG(LogLevel::TRACE, "ArgType: ", nodeTypeToString(arg.getType()));
         }
 
         for (auto candidate : it->second) {
-            if (candidate->matches(argTypes)){
-                DEBUG_FLOW_EXIT();
-                return candidate;
-            } 
+            return candidate;
+            // if (candidate->matches(argTypes)){
+            //     DEBUG_FLOW_EXIT();
+            //     return candidate;
+            // } 
         }
         
     }
@@ -642,7 +644,7 @@ std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& 
     return nullptr;
 }
 
-SharedPtr<CallableSignature> Scope::getFunction(const String& name, const Vector<Node>& args) {
+SharedPtr<CallableSignature> Scope::getFunction(const String& name, const ArgResultType& args) {
     DEBUG_FLOW(FlowLevel::MED);
     if (auto func = lookupFunction(name, args)) {
         return func.value();
@@ -717,7 +719,7 @@ void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
     
 
     localClasses[name] = std::move(sig);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Added class to localClasses");
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Added class to localClasses");
     DEBUG_FLOW_EXIT();
 }
 

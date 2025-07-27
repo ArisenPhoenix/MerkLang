@@ -14,14 +14,7 @@
 #include "core/registry/function_registry.h"
 #include "core/errors.h"
 #include "core/scope.h"
-//  String owner = "";
-//     ClassMembers classMembers;   //map for future uses
-//     bool isDetached = false;
-//     bool isCallableScope = false;
-//     bool isClonedScope = false;
-//     int currentLine;
-//     int currentColumn;
-//     bool disregardDeclarations = false;
+
 
 String ScopeMeta::metaString() const {
     std::ostringstream oss;
@@ -103,9 +96,7 @@ bool Scope::parentIsValid() {
 // Debugging
 void Scope::debugPrint() const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    if (scopeLevel == 0){
-        debugLog(true, highlight("\n\n======================== Start Scope::debugPrint ======================== ", Colors::cyan));
-    }
+    if (scopeLevel == 0) { debugLog(true, highlight("\n\n======================== Start Scope::debugPrint ======================== ", Colors::cyan)); }
 
     debugLog(true, 
         "Scope Level: ", scopeLevel, 
@@ -125,9 +116,7 @@ void Scope::debugPrint() const {
         child->debugPrint();
     }
 
-    if (scopeLevel == 0){
-        debugLog(true, highlight("======================== End Scope::debugPrint ======================== \n", Colors::cyan));
-    }
+    if (scopeLevel == 0) { debugLog(true, highlight("======================== End Scope::debugPrint ======================== \n", Colors::cyan)); }
 
     DEBUG_FLOW_EXIT();
 }
@@ -136,9 +125,7 @@ void Scope::debugPrint() const {
 void Scope::printChildScopes(int indentLevel) const {
     // Helper to create indentation for nested scopes
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    if (scopeLevel == 0){
-        debugLog(true, highlight("\n\n======================== Start Scope::printChildScopes ========================", Colors::cyan));
-    }
+    if (scopeLevel == 0) { debugLog(true, highlight("\n\n======================== Start Scope::printChildScopes ========================", Colors::cyan)); }
     auto parent = parentScope.lock();
     auto indent = String(indentLevel+2, ' ');
     int numInstances = 0;
@@ -280,12 +267,12 @@ bool Scope::has(const SharedPtr<Scope>& checkScope) {
         throw MerkError("ChildScope for checking is null");
     }
     if (this == checkScope.get()) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "has(): found self match at ", this);
+        DEBUG_LOG(LogLevel::TRACE, "has(): found self match at ", this);
         return true;
     }
     for (auto& child : getChildren()) {
         if (child->has(checkScope)) {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "has(): found in child ", child.get(), " for check ", checkScope.get());
+            DEBUG_LOG(LogLevel::TRACE, "has(): found in child ", child.get(), " for check ", checkScope.get());
 
             return true;
         }

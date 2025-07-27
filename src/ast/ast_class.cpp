@@ -1,6 +1,5 @@
 #include <iostream>
 #include "core/types.h"
-#include "core/callables/argument_node.h"
 #include "utilities/debugger.h"
 #include "utilities/helper_functions.h"
 #include "core/node.h"
@@ -13,6 +12,8 @@
 #include "ast/ast_chain.h"
 #include "core/callables/classes/method.h" 
 #include "core/callables/classes/class_base.h"
+#include "core/callables/argument_node.h"
+
 #include "ast/ast_class.h"
 #include "ast/exceptions.h"
 #include "ast/ast_validate.h"
@@ -28,7 +29,7 @@ ClassBody::ClassBody(SharedPtr<Scope> scope)
     : CallableBody(scope) {}
 
 
-ClassCall::ClassCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
+ClassCall::ClassCall(String name, UniquePtr<ArgumentType> arguments, SharedPtr<Scope> scope)
     : CallableCall(name, std::move(arguments), scope) {
     branch = "Classical";
 }
@@ -135,12 +136,15 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
     if (!callScope) {throw MerkError("Initial Scope Failed in ClassCall::evaluate()");}
     if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
 
-    NodeList argValues = handleArgs(callScope, instanceNode);
-    if (argValues.size() < arguments.size()){throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");}
+    auto argValues = handleArgs(callScope, instanceNode);
+    ArgResultType* args = dynamic_cast<ArgResultType*>(&argValues);
+    (void)args;
+    // ArgResultType args = static_cast<ArgResultType>(argValues);
+    // if (argValues.size() < arguments.size()){throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");}
 
     DEBUG_FLOW_EXIT();
 
-    return Evaluator::evaluateClassCall(callScope, name, argValues, instanceNode);
+    return Evaluator::evaluateClassCall(callScope, name, *args, instanceNode);
 }
 
 Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {

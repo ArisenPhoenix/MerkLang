@@ -24,7 +24,7 @@ public:
 
     std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name);
 
-    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getFunction(const String& name, const Vector<Node>& args);
+    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getFunction(const String& name, const ArgResultType& args);
 
     void debugPrint() const;
 

@@ -74,7 +74,7 @@ public:
 
 class MethodCall : public CallableCall {
 public:
-    MethodCall(String methodName, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
+    MethodCall(String methodName, UniquePtr<ArgumentType> args, SharedPtr<Scope> scope);
     ~MethodCall();
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     AstType getAstType() const override { return AstType::ClassMethodCall;}

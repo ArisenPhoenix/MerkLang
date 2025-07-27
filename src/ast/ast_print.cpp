@@ -218,13 +218,37 @@ void CallableDef::printAST(std::ostream& os, int indent) const {
 };
 
 
+String Arguments::toString() const {
+    String out = getAstTypeAsString();
+    for (auto& arg : arguments) {
+        if (arg.isKeyword()) {
+            out += arg.key->toString();
+        }
+        arg.value->toString();
+    }
+
+    return out;
+};
+
+void Arguments::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    String out;
+    for (auto& arg : arguments) {
+        out += arg.toString();
+    }
+    debugLog(true, getAstTypeAsString(), "(" + out + ")");
+
+};
+
+
 void CallableCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
     printIndent(os, indent);
-    for (const auto& arg : arguments){
-        arg->printAST(os, indent);
-    }
+    arguments->printAST(os, indent);
+    // for (const auto& arg : arguments){
+    //     arg->printAST(os, indent);
+    // }
 }
 
 void ElseStatement::printAST(std::ostream& os, int indent) const  {
@@ -376,9 +400,10 @@ void FunctionCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
     printIndent(os, indent);
-    for (const auto& arg : arguments){
-        arg->printAST(os, indent);
-    }
+    // for (const auto& arg : arguments){
+    //     arg->printAST(os, indent);
+    // }
+    arguments->printAST(os, indent);
 }
 
 // void ParameterAssignment::printAST(std::ostream& os, int indent) const {
@@ -404,10 +429,11 @@ void ClassDef::printAST(std::ostream& os, int indent) const {
 void ClassCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     std::ostringstream argString;
-    for (const auto& arg : arguments){
-        argString << arg->toString();
-    }
-    debugLog(true, getAstTypeAsString(), "(" + argString.str() + ")");
+    // for (const auto& arg : arguments){
+    //     argString << arg->toString();
+    // }
+    arguments->printAST(os, indent);
+    // debugLog(true, getAstTypeAsString(), "(" + argString.str() + ")");
 }
 
 

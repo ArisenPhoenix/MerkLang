@@ -12,18 +12,16 @@
 
 class NativeClass : public ClassBase {
 private:
-    // std::function<void(SharedPtr<ClassInstanceNode>, Vector<Node>)> constructorFn;
-    std::function<void(Vector<Node>, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> constructorFn;
-    // std::unordered_map<String, SharedPtr<NativeMethod>> methodMap;
+    std::function<void(ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> constructorFn;
  
 public:
     NativeClass(String name, String accessor, SharedPtr<Scope> classScope);
     ~NativeClass() override;
     void addMethod(const String& name, SharedPtr<NativeMethod> method);
 
-    void setConstructor(std::function<void(Vector<Node>, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> fn);
+    void setConstructor(std::function<void(ArgResultType, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> fn);
 
-    Node execute(Vector<Node> args,
+    Node execute(ArgResultType args,
                  SharedPtr<Scope> scope,
                  [[maybe_unused]] SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
@@ -34,7 +32,6 @@ public:
     void setCapturedScope(SharedPtr<Scope> scope) override;
     SharedPtr<Scope> getCapturedScope() const override;
     void setScope(SharedPtr<Scope> newScope) const override;
-    // SharedPtr<CallableSignature> toCallableSignature() const;
 };
 
 #endif //NATIVE_CLASS_H

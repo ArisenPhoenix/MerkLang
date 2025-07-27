@@ -227,6 +227,7 @@ void Node::setValue(const Node& other) {
 
 
 void Node::copyFlagsFrom(const Node& other) {
+    if (other.isDict()) {throw MerkError("other Is A List");}
     isConst = other.isConst;
     isMutable = other.isMutable;
     isStatic = getFullType().getBaseType().size() || isStatic;
@@ -262,10 +263,8 @@ void Node::transferOwnershipFrom(Node&& other) {
 void Node::updateClassInstance(const Node& me) {
     if (isInstance()) {
         // if (nodeType == "List") {throw MerkError("Instance Is List, but not raw");}
-        auto instance = std::get<SharedPtr<ClassInstance>>(me.data.value);
+        auto instance = toInstance();
         auto instanceNode = instance->getInstanceNode();
-        if (instanceNode->nodeType == "List") {throw MerkError("Instance Is List, but not raw");}
-        // if (instanceNode->nodeType != "List") {throw MerkError("Instance Is List, but not marked as a nodeType of List");}
         instanceNode->isMutable = isMutable;
         instanceNode->isStatic = isStatic;
         instanceNode->isConst = isConst;
@@ -285,6 +284,10 @@ void Node::updateClassInstance(const Node& me) {
         //     // throw MerkError("List Was Not Previously Copied Over in Node::updateClassInstance -> " + nodeType);
         // }
     }
+
+    // throw MerkError("Not An Instance");
+
+
 }
 
 void Node::applyTypeInfo(std::optional<NodeValueType> typeTag, const ResolvedType& fullType) {

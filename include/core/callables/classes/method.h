@@ -6,7 +6,6 @@
 #include "ast/ast_callable.h"
 #include "core/callables/invocalble.h"
 #include "ast/ast_method.h"
-// #include "core/callables/functions/function.h"
 #include "core/callables/invocalble.h"
 
 class Chain;
@@ -27,7 +26,7 @@ public:
     SharedPtr<Scope> getClassScope() const;
 
     virtual ~Method();
-    virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> self) const = 0;
+    virtual Node execute(ArgResultType args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> self) const = 0;
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
     
@@ -35,8 +34,6 @@ public:
     virtual UniquePtr<CallableBody> getBody() override = 0;
     virtual CallableBody* getBody() const override = 0;
     virtual CallableBody* getInvocableBody() override = 0;
-
-    // virtual UniquePtr<CallableBody>& getBody() override = 0;
 
     virtual void setScope(SharedPtr<Scope> newScope) const override = 0;
     virtual String toString() const override = 0; 
@@ -66,7 +63,7 @@ public:
 
     Vector<Chain*> getNonStaticElements();
 
-    Node execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    Node execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     SharedPtr<CallableSignature> toCallableSignature() override;
     SharedPtr<CallableSignature> toCallableSignature(SharedPtr<UserMethod> method);
 
@@ -85,70 +82,6 @@ public:
 
     SharedPtr<Callable> getCallable() const override;
 };
-
- 
-
-// class Method : public Callable {
-//     String accessor;
-//     bool isStatic = false;
-//     SharedPtr<Scope> classScope;
-
-// public:
-//     Method(String name, ParamList params, CallableType methodType, bool requiresReturn = false);
-//     bool requiresReturn = false;
-//     virtual ~Method();
-
-//     virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> self) const = 0;
-
-//     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
-//     virtual MethodBody* getBody() const { return nullptr; }
-
-//     virtual void setCapturedScope(SharedPtr<Scope> scope) = 0;
-//     virtual SharedPtr<Scope> getCapturedScope() const = 0;
-
-//     virtual void setScope(SharedPtr<Scope> newScope) const override = 0;
-//     virtual String toString() const = 0;
-
-//     void setAccessor(String access);
-//     String getAccessor();
-
-//     SharedPtr<Scope> getClassScope() const;
-//     void setClassScope(SharedPtr<Scope> newClassScope);
-
-//     bool getIsStatic();
-
-// protected:
-//     SharedPtr<Scope> capturedScope;
-// };
-
-
-// class UserMethod : public Method {
-// public:
-//     UniquePtr<MethodBody> body;
-//     UserMethod(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType, bool requiresReturn = false);
-//     UserMethod(Function&& function);  // For preparation of dynamic updates of methods in a class etc.
-//     UserMethod(UserMethod& method);
-//     virtual Node execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
-
-//     void setCapturedScope(SharedPtr<Scope> scope) override;
-//     SharedPtr<Scope> getCapturedScope() const override;
-
-//     virtual SharedPtr<CallableSignature> toCallableSignature() override;
-//     virtual SharedPtr<CallableSignature> toCallableSignature(SharedPtr<UserMethod> method);
-    
-//     String toString() const override;
-
-//     void setScope(SharedPtr<Scope> newScope) const override;
-
-//     MethodBody* getBody();
-//     MethodBody* getBody() const;
-//     Vector<Chain*> getNonStaticElements();
-
-// };
-
-
-
-
 
 
 #endif // METHOD_H

@@ -1,5 +1,6 @@
 #include "utilities/debugger.h"
 #include "core/callables/argument_node.h"
+#include "core/errors.h"
  
 
 
@@ -29,6 +30,10 @@ Vector<Node> ArgumentList::getRemainingArgs(size_t start) const {
 
 size_t ArgumentList::positionalCount() const {
     return positionalArgs.size();
+}
+
+NodeList ArgumentList::getPositional() {
+    return positionalArgs;
 }
 
 bool ArgumentList::hasNamedArg(const String& name) const {
@@ -80,4 +85,48 @@ String ArgumentList::toString() const {
     }
     result += "})";
     return result;
+}
+
+
+
+
+bool ArgumentList::hasNamedArgs(String name) {
+    return namedArgs.find(name) != namedArgs.end();
+}
+size_t ArgumentList::positionalCount() {
+    return positionalArgs.size();
+}
+
+// auto ArgumentList::begin() { return positionalArgs.begin(); }
+// auto ArgumentList::end() { return positionalArgs.end(); }
+// auto ArgumentList::begin() const { return positionalArgs.begin(); }
+// auto ArgumentList::end() const { return positionalArgs.end(); }
+
+// // Add cbegin() and cend() for const iteration, c++ can be a pain
+// auto ArgumentList::cbegin() const { return positionalArgs.cbegin(); }
+// auto ArgumentList::cend() const { return positionalArgs.cend(); }
+
+size_t ArgumentList::size() {
+    return positionalArgs.size();
+}
+
+
+Node& ArgumentList::back() {
+    return positionalArgs.back();
+}
+Node ArgumentList::back() const {
+    return positionalArgs.back();
+}
+
+
+bool ArgumentList::empty() {
+    return positionalArgs.empty() && namedArgs.empty();
+}
+// Access parameters by index
+
+const Node& ArgumentList::operator[](size_t index) const {
+    if (index >= positionalArgs.size()) {
+        throw MerkError("Parameter index out of range.");
+    }
+    return positionalArgs[index];
 }

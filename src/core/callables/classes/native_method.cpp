@@ -2,14 +2,14 @@
 
 #include "core/callables/classes/class_base.h"
 #include "core/callables/classes/native_method.h"
-
+#include "core/callables/argument_node.h"
 
 
 NativeMethod::NativeMethod(
     String name,
     ParamList params,
     SharedPtr<Scope> classScope,
-    std::function<Node(NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn) 
+    std::function<Node(ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn) 
     : Method(std::move(name), params, CallableType::METHOD), methodFn(methodFn) {
         DEBUG_FLOW(FlowLevel::NONE);
         setClassScope(classScope);
@@ -25,7 +25,7 @@ NativeMethod::~NativeMethod() {
 };
 
 Node NativeMethod::execute(
-    Vector<Node> args,
+    ArgResultType args,
     SharedPtr<Scope> callScope,
     SharedPtr<ClassInstanceNode> instanceNode) const 
 {

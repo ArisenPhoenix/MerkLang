@@ -41,6 +41,7 @@ SharedPtr<Scope> ASTStatement::getScope() const {
     return nullptr;
 }
 
+
 ASTStatement::ASTStatement(SharedPtr<Scope> scope) : scope(scope) {branch = "AST";}
 
 bool validateLeftAndRightAST(const UniquePtr<ASTStatement>& left, const UniquePtr<ASTStatement>& right, const String& methodName, String op = "") {
@@ -254,9 +255,10 @@ void Return::setScope(SharedPtr<Scope> newScope) {
 
 void CallableCall::setScope(SharedPtr<Scope> newScope) {
     scope = newScope;
-    for (auto& arg : arguments) {
-        arg->setScope(newScope);
-    }
+    // for (auto& arg : arguments) {
+    //     arg->setScope(newScope);
+    // }
+    arguments->setScope(newScope);
 }
 
 void CallableDef::setScope(SharedPtr<Scope> newScope) {

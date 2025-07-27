@@ -3,6 +3,7 @@
 #include "core/callables/functions/function.h"
 #include "core/registry/function_registry.h"
 #include "utilities/debugger.h"
+#include "core/callables/argument_node.h"
 
 
 FunctionRegistry::~FunctionRegistry() {
@@ -69,7 +70,7 @@ bool FunctionRegistry::hasFunction(const String& name) const {
     return func;
 }
 
-std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name, const Vector<Node>& args)  {
+std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name, const ArgResultType& args)  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     auto it = functions.find(name);
     if (it == functions.end() || it->second.empty()){

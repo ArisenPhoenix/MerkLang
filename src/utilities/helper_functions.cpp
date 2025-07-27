@@ -150,5 +150,4 @@ String joinVectorStrings(const Vector<String> nodes, const String& delimiter) {
     }
     return oss.str();
 }
-// NodeList evaluatedArgs2 = handleArgs(scope, instanceNode);
     

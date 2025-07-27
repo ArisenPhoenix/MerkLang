@@ -26,7 +26,6 @@ Token Tokenizer::readCompoundOperatorOrPunctuation() {
         tokens.push_back(Token(TokenType::Indent, "", line + 1, 1));
 
         position += 2;
-        // line++;
         column = 1;
 
         // Optionally skip whitespace after ; before statement

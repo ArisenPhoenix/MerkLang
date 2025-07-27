@@ -29,8 +29,6 @@ public:
     ~AstCollector();
 };
 
-// #endif // AST_COLLECTOR_H
-
     
 
 class CodeBlock : public BaseAST, AstCollector {

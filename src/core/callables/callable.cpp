@@ -112,7 +112,7 @@ SharedPtr<Scope> CallableNode::getInternalScope() const { return internalScope; 
 String CallableNode::toString() const {return "<" + nodeType + ": " + getCallable()->toString() + ">";}
 
 
-void Callable::placeArgsInCallScope(Vector<Node> evaluatedArgs, SharedPtr<Scope> callScope) const {
+void Callable::placeArgsInCallScope(ArgResultType evaluatedArgs, SharedPtr<Scope> callScope) const {
     DEBUG_FLOW(FlowLevel::MED);
     parameters.verifyArguments(evaluatedArgs);
     ArgumentList args;

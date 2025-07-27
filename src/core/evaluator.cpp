@@ -27,6 +27,7 @@
 #include "ast/ast_chain.h"
 #include "ast/ast_class.h"
 #include "ast/ast_validate.h"
+#include "core/callables/argument_node.h"
 
 
 
@@ -581,8 +582,8 @@ namespace Evaluator {
     }
     
 
-    Node evaluateClassCall(SharedPtr<Scope> callScope, String className, Vector<Node> argValues, SharedPtr<ClassInstanceNode> instanceNode) {
-        (void)instanceNode;
+    Node evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgResultType argValues, SharedPtr<ClassInstanceNode> instanceNode) {
+        MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         
 
@@ -596,22 +597,17 @@ namespace Evaluator {
 
         SharedPtr<Scope> instanceScope = callScope->buildInstanceScope(classTemplate, classTemplate->getName());
 
-        // classScope->appendChildScope(instanceScope);
         if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
 
         auto capturedScope = instanceScope->getParent();
-        // capturedClone->owner = generateScopeOwner("InstanceCaptured", classTemplate->getName());
 
         if (!capturedScope){throw MerkError("Captured Scope Does Not Exist When Instantiating class: " + classTemplate->getName());}
         if (!capturedScope->has(instanceScope)){capturedScope->printChildScopes();instanceScope->printChildScopes();throw MerkError("Instance Scope does not live in captured Scope");} 
 
         auto params = classTemplate->getParameters().clone();
 
-        // SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classTemplate->getQualifiedName(), capturedScope, instanceScope, params, classTemplate->getQualifiedAccessor());
         SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classTemplate, capturedScope, instanceScope);
-        
-        instance->construct(argValues, instance); 
-
+        instance->construct(argValues, instance);
         DEBUG_FLOW_EXIT();
         return ClassInstanceNode(instance);
     }
@@ -625,17 +621,17 @@ namespace Evaluator {
         ParamList parameters, 
         CallableType callType, 
         SharedPtr<ClassInstanceNode> instanceNode) {
-        (void)instanceNode;
+        
+        MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!passedScope){throw MerkError("Provided Scope to MethodDef::evaluate is null");}
         if (!ownScope){throw MerkError("MethodDef::evaluate, scope is null");}
-        if (!classScope) {throw MerkError("Class Scope was not supplied to Method: " + methodName);}
+        if (!classScope) {throw MerkError("Class Scope wargValuesas not supplied to Method: " + methodName);}
 
         auto freeVarNames = body->collectFreeVariables();
 
         if (callType == CallableType::FUNCTION){
             FreeVars tempFreeVars = freeVarNames;
-            // DEBUG_LOG(LogLevel::NONE, "freeVarNames before param check: ", highlight(joinUnorderedSetStrings(freeVarNames, ", "), Colors::bg_cyan));
             for (auto& param : parameters){
                 auto it = tempFreeVars.find(param.getName()); // find a matching param name
                 if (it != tempFreeVars.end()){                // indicates a match

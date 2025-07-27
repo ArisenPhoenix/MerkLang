@@ -1,6 +1,7 @@
 #include "core/types.h"
 #include "core/callables/classes/native_method.h"
 #include "core/callables/classes/native_class.h"
+#include "core/callables/argument_node.h"
  
 NativeClass::NativeClass(String name, String access, SharedPtr<Scope> classScope)
 : ClassBase(std::move(name), std::move(access), classScope) {
@@ -13,7 +14,7 @@ void NativeClass::addMethod(const String& name, SharedPtr<NativeMethod> method) 
     getClassScope()->registerFunction(name, method);
 }
 
-void NativeClass::setConstructor(std::function<void(Vector<Node>, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> fn) {
+void NativeClass::setConstructor(std::function<void(ArgResultType, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> fn) {
     constructorFn = std::move(fn);
 }
 
@@ -22,7 +23,7 @@ NativeClass::~NativeClass() {
     if (getClassScope()) {getClassScope()->clear();}
 }
 
-Node NativeClass::execute(Vector<Node> args,
+Node NativeClass::execute(ArgResultType args,
                 SharedPtr<Scope> scope,
                 [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const  {
     if (!instanceNode) {throw MerkError("An InstanceNode must be supplied to NativeClass::execute");}

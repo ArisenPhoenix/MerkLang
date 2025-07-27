@@ -5,6 +5,7 @@
 #include "core/callables/classes/native_method.h"
 #include "core/callables/classes/native_class.h"
 #include "core/callables/classes/node_structures.h"
+#include "core/callables/argument_node.h"
 
 
 void validateSelf(SharedPtr<ClassInstanceNode> self, String className, String methodName) {
@@ -21,12 +22,14 @@ SharedPtr<ListNode> pullList(SharedPtr<ClassInstanceNode> self) {
     if (!self->isMutable) {
         throw MerkError("Cannot Mutate List instance '" + self->getInstance()->getName());
     } 
-
-    // if (self->isMutable) {
-    //     throw MerkError("Can Mutate List instance '" + self->getInstance()->getName());
-    // } 
     auto list = std::static_pointer_cast<ListNode>(pullNativeData(self, "ListNode"));
     return list;
+}
+
+
+SharedPtr<DictNode> pullDict(SharedPtr<ClassInstanceNode> self) {
+    auto dict = std::static_pointer_cast<DictNode>(pullNativeData(self, "ListNode"));
+    return dict;
 }
 
 
@@ -63,7 +66,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     
     DEBUG_LOG(LogLevel::PERMISSIVE, "Got the List Class initialized");
 
-    auto constructFunction = [className, varName](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto constructFunction = [className, varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         validateSelf(self, className, "constructFunction");
         auto list = makeShared<ListNode>(args);
@@ -83,7 +86,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
         return var;
     };
 
-    auto appendFunction = [varName](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto appendFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
@@ -99,14 +102,14 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     auto removeParams = ParamList();
     auto rmParam = ParamNode("value", NodeValueType::Any);
     removeParams.addParameter(rmParam);
-    auto removeFunction = [varName](NodeList arg, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto removeFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
-        if (arg.size() != 1) {throw MerkError("Only One Argument is allowed in List.remove, provided: " + joinVectorNodeStrings(arg));}
+        if (args.size() != 1) {throw MerkError("Only One Argument is allowed in List.remove, provided: " + joinVectorNodeStrings(args.getPositional()));}
         auto instanceScope = self->getInstanceScope();
 
         auto vector = pullList(self);
-        vector->remove(arg[0]);
+        vector->remove(args[0]);
         return Node();  // None
     };
 
@@ -115,14 +118,14 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     auto insParam2 = ParamNode("value", NodeValueType::Any);
     insertParams.addParameter(insParam1);
     insertParams.addParameter(insParam2);
-    auto insertFunction = [varName](NodeList arg, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto insertFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
-        if (arg.size() != 2) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(arg));}
+        if (args.size() != 2) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));}
 
         auto instanceScope = self->getInstanceScope();
         auto vector = pullList(self);
-        vector->insert(arg[0], arg[1]);
+        vector->insert(args[0], args[1]);
         return Node();  // None
     };
 
@@ -131,10 +134,10 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     auto popParam1 = ParamNode("index", NodeValueType::Int);
     popParam1.setIsVarArgsParam(true);
     popParams.addParameter(popParam1);
-    auto popFunction = [varName](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto popFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
-        if (args.size() > 1) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args));}
+        if (args.size() > 1) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));}
         auto instanceScope = self->getInstanceScope();
         auto vector = pullList(self);
         auto arg = args.size() == 1 ? args[0] : Node();
@@ -190,7 +193,7 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
     classDefCapturedScope->appendChildScope(classScope);
     globalScope->appendChildScope(classDefCapturedScope);
 
-    auto constructFunction = [className](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto constructFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)args; (void)callScope; (void)self;
         validateSelf(self, className, "constructFunction");
         auto arr = makeShared<ListNode>(args);
@@ -202,7 +205,7 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
         return var;
     };
 
-    auto appendFunction = [className](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto appendFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 1) {throw MerkError("Method append can only accept 1 argument");}
@@ -216,18 +219,18 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
     auto removeParams = ParamList();
     auto rmParam = ParamNode("value", NodeValueType::Any);
     removeParams.addParameter(rmParam);
-    auto removeFunction = [](NodeList arg, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto removeFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
-        if (arg.size() != 1) {
-            throw MerkError("Only One Argument is allowed in List.remove, provided: " + joinVectorNodeStrings(arg));
+        if (args.size() != 1) {
+            throw MerkError("Only One Argument is allowed in List.remove, provided: " + joinVectorNodeStrings(args.getPositional()));
         }
         // auto instanceScope = self->getInstanceScope();
         // auto vector = instanceScope->getVariable("vector");
         // auto data = std::get<SharedPtr<ArrayNode>>(vector.getValue());
 
         auto vector = pullArray(self);
-        vector->remove(arg[0]);
+        vector->remove(args[0]);
         return Node();  // None
     };
 
@@ -236,18 +239,18 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
     auto insParam2 = ParamNode("value", NodeValueType::Any);
     insertParams.addParameter(insParam1);
     insertParams.addParameter(insParam2);
-    auto insertFunction = [](NodeList arg, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto insertFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
-        if (arg.size() != 2) {
-            throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(arg));
+        if (args.size() != 2) {
+            throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));
         }
         // auto instanceScope = self->getInstanceScope();
         // auto vector = instanceScope->getVariable("vector");
         // auto data = std::get<SharedPtr<ArrayNode>>(vector.getValue());
 
         auto vector = pullArray(self);
-        vector->insert(arg[0], arg[1]);
+        vector->insert(args[0], args[1]);
         return Node();  // None
     };
 
@@ -255,18 +258,18 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
     auto popParams = ParamList();
     auto popParam1 = ParamNode("index", NodeValueType::Int);
     popParams.addParameter(popParam1);
-    auto popFunction = [](NodeList arg, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto popFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
-        if (arg.size() != 1) {
-            throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(arg));
+        if (args.size() != 1) {
+            throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));
         }
         // auto instanceScope = self->getInstanceScope();
         // auto vector = instanceScope->getVariable("vector");
         // auto data = std::get<SharedPtr<ArrayNode>>(vector.getValue());
 
         auto vector = pullArray(self);
-        return vector->pop(arg[0]);
+        return vector->pop(args[0]);
         // DEBUG_LOG(LogLevel::PERMISSIVE, "Append varNode is: ", vector);
         // DEBUG_LOG(LogLevel::PERMISSIVE, "type held: ", vector.getTypeAsString());
         // return Node();  // None
@@ -294,11 +297,146 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
     return arrClass;
 }
 
+SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
+    SharedPtr<Scope> classDefCapturedScope = globalScope->detachScope({});
+    if (!classDefCapturedScope) { throw MerkError("classDefCapturedScope Was Not Made"); }
+    auto classScope = classDefCapturedScope->makeCallScope();
+    if (!classScope) {throw MerkError("Class Scope Was Not Made");}
+
+    ParamList parameters;
+    auto param = ParamNode("items", NodeValueType::Any);
+    param.setIsVarArgsParam(true);
+    parameters.addParameter(param);
+    
+    classDefCapturedScope->appendChildScope(classScope);
+    globalScope->appendChildScope(classDefCapturedScope);
+    
+
+    String className = "Dict";
+    String accessor = "dict";
+
+    auto dictClass = makeShared<NativeClass>(className, accessor, classScope);
+    if (dictClass->getSubType() != CallableType::NATIVE) {throw MerkError("NativeClass is not properly subtyped: is " + callableTypeAsString(dictClass->getSubType()));}
+
+    dictClass->setParameters(parameters);
+    dictClass->setCapturedScope(classDefCapturedScope);
+
+    String varName = DictNode::getOriginalVarName();
+    
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Got the List Class initialized");
+
+    auto constructFunction = [className, varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        MARK_UNUSED_MULTI(self, callScope);
+        validateSelf(self, className, "constructFunction");
+        // DictNode(args);
+        auto dict = makeShared<DictNode>(args);
+
+        // throw MerkError("About To Set VarNode");
+        auto var = VarNode(dict);
+        // var.data.type = NodeValueType::List;
+        DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode: ", var);
+        // throw MerkError("VarNode Above");
+        var.name = className;
+
+        if (!var.isDict()) {throw MerkError("Var created is not a dict");}
+
+        // A declarVariable is needed to properly assign a variable to the ListNode
+        // auto instanceScope = self->getInstanceScope();
+        self->getInstance()->setNativeData(dict);
+        return var;
+    };
+
+    auto setParams = ParamList();
+    auto setParam = ParamNode("key", NodeValueType::Any);
+    auto setParam2 = ParamNode("value", NodeValueType::Any);
+    setParams.addParameter(setParam);
+    setParams.addParameter(setParam2);
+
+    auto setFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        MARK_UNUSED_MULTI(self, callScope);
+        DEBUG_FLOW(FlowLevel::PERMISSIVE);
+        if (!self) {throw MerkError("Cannot run 'append' method without instance");}
+        if (args.size() != 2) {throw MerkError("Only two arguments accepted in the dict::set method");}
+        
+        // auto vector = pullList(self, varName);
+        auto dict = pullDict(self);
+        dict->set(args[0], args[1]);
+        DEBUG_FLOW_EXIT();
+        return Node();  // None
+    };
+
+    auto getParams = ParamList();
+    auto getParam = ParamNode("key", NodeValueType::Any);
+    auto getParam2 = ParamNode("defaultReturn", NodeValueType::Any);
+    getParams.addParameter(getParam);
+
+    auto getFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        MARK_UNUSED_MULTI(callScope);
+        if (!self) {throw MerkError("Cannot run 'append' method without instance");}
+        if (args.size() != 2) {throw MerkError("Only One Argument is allowed in List.remove, provided: " + joinVectorNodeStrings(args.getPositional()));}
+
+        auto dict = pullDict(self);
+        dict->get(args[0], args[1]);
+        return Node();  // None
+    };
+
+    auto popParams = ParamList();
+    auto popParam1 = ParamNode("key", NodeValueType::Any);
+    popParams.addParameter(popParam1);
+    
+    auto popFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        MARK_UNUSED_MULTI(callScope);
+        if (!self) {throw MerkError("Cannot run 'append' method without instance");}
+        if (args.size() > 1) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));}
+        auto dict = pullDict(self);
+        Node result = dict->pop(args[0]);
+        return result;
+    };
+
+    auto removeParams = ParamList();
+    auto insParam1 = ParamNode("key", NodeValueType::Int);
+    removeParams.addParameter(insParam1);
+
+    auto removeFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        MARK_UNUSED_MULTI(callScope);
+        if (!self) {throw MerkError("Cannot run 'append' method without instance");}
+        if (args.size() != 2) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));}
+
+        auto instanceScope = self->getInstanceScope();
+        auto dict = pullDict(self);
+        dict->remove(args[0]);
+        return Node();  // None
+    };
+
+
+    
+
+
+
+
+    auto constructMethod = makeShared<NativeMethod>("construct", parameters.clone(), classScope, constructFunction);
+    dictClass->addMethod("construct", constructMethod);
+
+    auto setMethod = makeShared<NativeMethod>("set", parameters, classScope, setFunction);
+    dictClass->addMethod("set", setMethod);
+
+    auto getMethod = makeShared<NativeMethod>("get", getParams, classScope, getFunction);
+    dictClass->addMethod("get", getMethod);
+
+    auto popMethod = makeShared<NativeMethod>("pop", popParams, classScope, popFunction);
+    dictClass->addMethod("pop", popMethod);
+
+    auto removeMethod = makeShared<NativeMethod>("remove", removeParams, classScope, removeFunction);
+    dictClass->addMethod("remove", removeMethod);
+
+    return dictClass;
+}
 
 
 std::unordered_map<String, NativeClassFactory> nativeClassFactories = {
     {"List", createNativeListClass},
-    {"Array", createNativeArrayClass}
+    {"Array", createNativeArrayClass},
+    {"Dict", createNativeDictClass},
 };
 
 
@@ -330,7 +468,7 @@ std::unordered_map<String, SharedPtr<ClassBase>> getAllNativeClasses(SharedPtr<S
 //     cls.setParameters(parameters);
 
 
-//     auto construct = [](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+//     auto construct = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
 //         (void)args; (void)callScope; (void)self;
 //         auto listImpl = std::make_shared<ListNode>();
 //         // callScope->declareVariable("vector", ListNode)
@@ -341,7 +479,7 @@ std::unordered_map<String, SharedPtr<ClassBase>> getAllNativeClasses(SharedPtr<S
 
 //     listClass->addMethod("construct", constructMethod);
 
-//     auto appendFunction = [](NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+//     auto appendFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
 //         (void)args; (void)callScope; (void)self;
 //         if (!self){
 //             throw MerkError("Cannot run 'append' method without instance");

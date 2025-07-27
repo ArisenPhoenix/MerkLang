@@ -8,6 +8,7 @@
 #include "ast/ast_chain.h"
 #include "ast/ast_callable.h"
 #include "core/callables/classes/method.h"
+#include "core/callables/argument_node.h"
 
 
 Method::Method(String name, ParamList params, CallableType definedType, bool requiresReturn, bool isStatic)
@@ -128,7 +129,7 @@ SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
     return methodSig;
 }
 
-Node UserMethod::execute(Vector<Node> args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)args;
     DEBUG_FLOW(FlowLevel::HIGH);
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}

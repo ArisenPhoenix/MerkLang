@@ -15,6 +15,7 @@
 #include "core/evaluator.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_function.h"
+#include "core/callables/argument_node.h"
 
 
 
@@ -79,7 +80,7 @@ FunctionDef::FunctionDef(String name, ParamList parameters, UniquePtr<FunctionBo
 }
 
 
-FunctionCall::FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
+FunctionCall::FunctionCall(String functionName, UniquePtr<ArgumentType> arguments, SharedPtr<Scope> scope)
     : CallableCall(functionName, std::move(arguments), scope) {
         DEBUG_FLOW(FlowLevel::NONE);
 
@@ -183,7 +184,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     // throw MerkError("Hit it");
     if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
     
-    NodeList evaluatedArgs = handleArgs(scope, instanceNode);
+    auto evaluatedArgs = handleArgs(scope, instanceNode);
 
     if (!scope->hasFunction(name)){throw MerkError("Function: " + name + " Couldn't Be Found");}
     
@@ -196,7 +197,8 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 
     if (func->getSubType() == CallableType::NATIVE) {
         func->parameters.clone().verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
-        return func->execute(evaluatedArgs, scope, instanceNode);}
+        return func->execute(evaluatedArgs, scope, instanceNode);
+    }
 
     SharedPtr<Scope> callScope = scope->buildFunctionCallScope(func, func->getName());
 
@@ -206,9 +208,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     
     if (!func->getBody()->getScope()){throw ScopeError("FunctionCall func->getBoby()->getScope  created an unusable scope");}
    
-    if (!callScope) {
-        throw MerkError("FunctionCall:evaluate callScope being passed to func->execute is null");
-    }
+    if (!callScope) { throw MerkError("FunctionCall:evaluate callScope being passed to func->execute is null"); }
     
     Node value = func->execute(evaluatedArgs, callScope);
 

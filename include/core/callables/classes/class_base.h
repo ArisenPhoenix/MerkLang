@@ -39,7 +39,7 @@ public:
     // Retrieve a member variable's value.
     Node getMember(const String& name);
 
-    virtual Node execute(Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    virtual Node execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     void setCapturedScope(SharedPtr<Scope> scope) override;
     void setClassScope(SharedPtr<Scope> scope);
@@ -90,15 +90,14 @@ private:
     
 public:
     bool isConstructed = false;
-    
+    std::size_t hash() const;
 
     ClassInstance(const String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String& accessor);
     ClassInstance(SharedPtr<ClassBase> cls, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope);
-    // ClassInstance(const String name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String accessor); // for NativeClasses
 
     ~ClassInstance() override;
     
-    Node execute(const Vector<Node> args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
+    Node execute(const ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
 
     SharedPtr<Scope> getCapturedScope() const override;
     void setCapturedScope(SharedPtr<Scope> scope) override;
@@ -109,8 +108,8 @@ public:
     String toString() const override;
     String getAccessor() {return accessor;} 
 
-    void construct(const Vector<Node>& args, SharedPtr<ClassInstance> classInstance);
-    Node call(String name, Vector<Node> args);
+    void construct(const ArgResultType& args, SharedPtr<ClassInstance> classInstance);
+    Node call(String name, ArgResultType args);
 
     virtual Node getField(const String& name) const;                     // assumes a variable
     virtual Node getField(const String& name, TokenType type) const;     // specific to what kind of member i.e var/method
@@ -161,22 +160,9 @@ public:
 
     SharedPtr<ClassBase> getClassDef() const;
 
-    SharedPtr<ClassInstance> instantiate(const Vector<Node>& args) const;
+    SharedPtr<ClassInstance> instantiate(const ArgResultType& args) const;
 
-    Node call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
+    Node call(const ArgResultType& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 };
-
-
-
-// class ScopeCallBackNode : public BaseAST {
-
-//     SharedPtr<Scope> scope;
-//     std::function<Node(NodeList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn;
-
-// public:
-//     Node evaluate() const override;
-//     AstType getAstType() const override {return AstType::Base;}
-    
-// };
 
 #endif // CLASS_BASE_H

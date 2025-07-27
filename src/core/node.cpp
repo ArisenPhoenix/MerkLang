@@ -3,6 +3,7 @@
 #include "core/callables/callable.h"
 #include "core/callables/classes/class_base.h"
 #include "core/callables/classes/node_structures.h"
+// #include "core/callables/argument_node.h"
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "core/errors.h"
@@ -17,11 +18,7 @@
 #include <utility>
 #include <cmath>
 
-
-// const bool debugNodeC = false;
-// getIsCallable
-
-// 1. Infer from String
+// Infer from String
 std::pair<VariantType, NodeValueType> inferFromString(const String& value) {
     if (value == "true" || value == "false") {
         return { value == "true", NodeValueType::Bool };
@@ -46,7 +43,7 @@ std::pair<VariantType, NodeValueType> inferFromString(const String& value) {
     throw MerkError("Could not infer type from string: " + value);
 }
 
-// 2. Coerce string to a given type
+// Coerce string to a given type
 std::pair<VariantType, NodeValueType> coerceStringToType(const String& value, NodeValueType type) {
     try {
         switch (type) {
@@ -72,7 +69,7 @@ std::pair<VariantType, NodeValueType> coerceStringToType(const String& value, No
     }
 }
 
-// 3. Validate and Copy
+// Validate and Copy
 std::pair<VariantType, NodeValueType> validateAndCopy(const VariantType& value, NodeValueType type) {
     auto visitor = [&](auto&& arg) -> std::pair<VariantType, NodeValueType> {
         using T = std::decay_t<decltype(arg)>;
@@ -157,6 +154,7 @@ bool compareNumericNodes(const Node& left, const Node& right, const std::functio
 void Node::setInitialValue(const String& value, const String& typeStr) {
     // DEBUG_LOG(LogLevel::DEBUGC, "Entering Node::setInitialValue 2 ARGS");
     NodeValueType nodeType = getNodeValueType(typeStr, value);
+    
     data.type = nodeType;
     switch (nodeType) {
         case NodeValueType::Int:
@@ -344,7 +342,10 @@ NodeValueType Node::getNodeValueType(const VariantType& value) {
         if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
         if (std::holds_alternative<char>(value)) return NodeValueType::Char;
         if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
+        if (std::holds_alternative<SharedPtr<ArrayNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::Array;}
         if (std::holds_alternative<SharedPtr<ListNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::List;}
+        if (std::holds_alternative<SharedPtr<SetNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::Set;}
+        if (std::holds_alternative<SharedPtr<DictNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::Dict;}
         if (std::holds_alternative<SharedPtr<ClassInstance>>(value)) return NodeValueType::ClassInstance;
         // if (std::holds_alternative<SharedPtr<FunctionNode>>(value)) return NodeValueType::Function;
         return NodeValueType::Any;  // Allow `Any` when the type is unknown
@@ -360,6 +361,7 @@ void Node::validateTypeAlignment() const {
 }
 
 void Node::setInitialValue(const VariantType& value) {
+    
     try {
         std::visit(
             [this](auto&& arg) {
@@ -373,6 +375,8 @@ void Node::setInitialValue(const VariantType& value) {
         String out = e.what();
         throw MerkError("Node::getNodeValueType failed: " + out);
     }
+
+    // if (data.type != NodeValueType::List && data.type != NodeValueType::Uninitialized && data.type != NodeValueType::String) {throw MerkError("Not Correct type of: " + nodeTypeToString(data.type) + " " + toString());}
 
     if (data.type == NodeValueType::List && isInstance()) {
         throw MerkError("When Initially Setting List value, it is an Instance");
@@ -686,4 +690,27 @@ UniquePtr<VarNode> cloneVarNode(VarNode* original) {
 }
 
 
+std::size_t Node::hash() const {
+    std::size_t h1 = std::hash<int>()(static_cast<int>(data.type));
+    std::size_t h2 = 0;
 
+    std::visit([&](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+
+        if constexpr (std::is_same_v<T, NodeList>) {
+            // Hash the vector contents
+            std::size_t combined = 0;
+            for (const auto& n : arg) {
+                combined ^= n.hash() + 0x9e3779b9 + (combined << 6) + (combined >> 2);
+            }
+            h2 = combined;
+        } else {
+            h2 = std::hash<T>()(arg);
+        }
+    }, data.value);
+
+    std::size_t h3 = std::hash<std::string>()(name);
+    std::size_t h4 = (isConst << 1) ^ (isMutable << 2) ^ (isStatic << 3);
+
+    return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3);
+}

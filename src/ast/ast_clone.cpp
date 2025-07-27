@@ -181,19 +181,31 @@ UniquePtr<BaseAST> FunctionRef::clone() const {
 }
 
 
-Vector<UniquePtr<ASTStatement>> CallableCall::cloneArgs() const {
-    if (!getScope()) {throw MerkError("Scope has died at " + astTypeToString(getAstType()) + "::clone");}
-    Vector<UniquePtr<ASTStatement>> clonedArgs;
-    for (const auto &arg : arguments) {
-        UniquePtr<BaseAST> clonedArgBase = arg->clone();
-        auto clonedArg = static_unique_ptr_cast<ASTStatement>(std::move(clonedArgBase));
-        if (clonedArg->getAstType() == AstType::CallableCall) {
-            throw MerkError("FunctionCall tried to clone a base CallableCall");
-        }
-        clonedArgs.push_back(std::move(clonedArg));
+UniquePtr<BaseAST> Arguments::clone() const {
+    auto args = makeUnique<Arguments>(getScope());
+    for (auto& arg: arguments) {
+        auto clonedArg = arg.clone();
+        args->add(std::move(clonedArg));
     }
 
-    return clonedArgs;
+    return args;
+};
+
+UniquePtr<ArgumentType> CallableCall::cloneArgs() const {
+    if (!getScope()) {throw MerkError("Scope has died at " + astTypeToString(getAstType()) + "::clone");}
+    auto clonedArgs = arguments->clone();
+    return static_unique_ptr_cast<ArgumentType>(std::move(clonedArgs));
+    // static_cast<ArgumentType>(clonedArgs);
+    // for (const auto &arg : arguments) {
+    //     UniquePtr<BaseAST> clonedArgBase = arg->clone();
+    //     auto clonedArg = static_unique_ptr_cast<ASTStatement>(std::move(clonedArgBase));
+    //     if (clonedArg->getAstType() == AstType::CallableCall) {
+    //         throw MerkError("FunctionCall tried to clone a base CallableCall");
+    //     }
+    //     clonedArgs.push_back(std::move(clonedArg));
+    // }
+
+    // return clonedArgs;
 }
 
 UniquePtr<BaseAST> FunctionCall::clone() const {
@@ -304,14 +316,19 @@ UniquePtr<BaseAST> CallableDef::clone() const {
     return calDef;
 }
 
-UniquePtr<BaseAST> CallableCall::clone() const {
-    Vector<UniquePtr<ASTStatement>> clonedArgs;
-    for (auto& arg : arguments){
-        UniquePtr<ASTStatement> argBase = static_unique_ptr_cast<ASTStatement>(arg->clone());
-        clonedArgs.emplace_back(std::move(argBase));
-    }
-    UniquePtr<CallableCall> calCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
-    return calCall;
+UniquePtr<BaseAST> CallableCall::clone() const { 
+    // Vector<UniquePtr<ASTStatement>> clonedArgs;
+    // for (auto& arg : arguments->getArgs()){
+    //     UniquePtr<ASTStatement> argBase = static_unique_ptr_cast<ASTStatement>(arg.clone());
+    //     clonedArgs.emplace_back(std::move(argBase));
+    // }
+    // UniquePtr<CallableCall> calCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
+    // return calCall;
+
+    auto args = arguments->clone();
+    auto clonedArgs = static_unique_ptr_cast<ArgumentType>(std::move(args));
+    UniquePtr<CallableCall> callCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
+    return callCall;
 }
 
 UniquePtr<BaseAST> CallableRef::clone() const {

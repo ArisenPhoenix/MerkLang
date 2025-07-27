@@ -571,7 +571,7 @@ ResolvedType Parser::parseResolvedType() {
         if (consumeIf(TokenType::Punctuation, ",")) {
             auto second = parseResolvedType();
             consume(TokenType::Operator, "}", "Parser::parseResolvedType -> Operator");
-            return ResolvedType("Map", { first, second });
+            return ResolvedType("Dict", { first, second });
         } else {
             consume(TokenType::Operator, "}", "Parser::parseResolvedType -> Operator");
             return ResolvedType("Set", { first });
@@ -606,4 +606,12 @@ bool Parser::validate(Token token, Vector<TokenType> types, Vector<String> value
 
 bool Parser::validate(Vector<TokenType> types, Vector<String> values, bool requiresBoth) {
     return validate(currentToken(), types, values, requiresBoth);
+}
+
+void Parser::exitLoop() {
+    if (loopContextCounter > 0) {
+        --loopContextCounter;
+    } else {
+        throw MerkError("Unexpected loop context underflow. This indicates a parser logic error.");
+    }
 }
