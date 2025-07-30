@@ -121,19 +121,12 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
     if (classScope->localFunctions.size() == 0) { throw MerkError("There Are No Functions in Scope " + owner); }
 
     for (const auto& [funcName, funcSigVec] : classScope->localFunctions) {
-        instanceScope->localFunctions[funcName] = {};
         for (auto& funcSig : funcSigVec) {
-            instanceScope->registerFunction(funcName, funcSig);
+            instanceScope->localFunctions.registerFunction(funcName, funcSig);
         }
-        // DEBUG_LOG(LogLevel::NONE, "Added func=", funcName,
-        //   " instanceScope localFunctions=", instanceScope->localFunctions.size());
-
     }
     
     if (instanceScope->localFunctions.size() == 0) {throw MerkError("No Methods added to instanceScope");}
-
-    // auto& clonedMethods = classScope->localFunctions;
-    // instanceScope->localFunctions = clonedMethods;
 
     return instanceScope;
 }

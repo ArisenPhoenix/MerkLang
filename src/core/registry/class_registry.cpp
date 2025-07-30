@@ -32,7 +32,7 @@ void ClassRegistry::registerClass(const String& name, SharedPtr<ClassSignature> 
     classMap[name] = classSignature;
 }
 
-std::optional<SharedPtr<ClassSignature>> ClassRegistry::getClass(const String& name) {
+std::optional<SharedPtr<ClassSignature>> ClassRegistry::getClass(const String& name) const {
     auto it = classMap.find(name);
     if (it != classMap.end()) {
         return it->second;
@@ -53,3 +53,16 @@ ClassRegistry ClassRegistry::clone() const {
     }
     return clonedClasses;
 }
+
+
+void ClassRegistry::merge(const ClassRegistry& other) {
+    for (const auto& [name, sig] : other.getClasses()) {
+        if (!hasClass(name)) {
+            classMap[name] = sig;
+        }
+    }
+}
+
+
+size_t ClassRegistry::size() { return classMap.size(); }
+size_t ClassRegistry::size() const { return classMap.size(); }

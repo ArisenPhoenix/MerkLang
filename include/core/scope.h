@@ -68,8 +68,10 @@ public:
     SharedPtr<ClassRegistry>     globalClasses;
     
     // Local Storage
-    std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
-    std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
+    // std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
+    FunctionRegistry localFunctions;
+    // std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
+    ClassRegistry localClasses;
 
     
 
@@ -110,7 +112,7 @@ public:
     void printContext(int depth = 0) const;
 
 
-    void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
+    // void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
     SharedPtr<CallableSignature> handleLookupFunction(String& name, const ArgResultType& args) const;
     
     //// Registry Management
