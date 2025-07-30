@@ -15,7 +15,7 @@ Method::Method(String name, ParamList params, CallableType definedType, bool req
     : Invocable(name, params, CallableType::METHOD, requiresReturn, isStatic)
 {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(definedType));
+    // DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(definedType));
     setSubType(definedType);
     DEBUG_FLOW_EXIT();
 }
@@ -109,7 +109,7 @@ SharedPtr<CallableSignature> UserMethod::toCallableSignature(SharedPtr<UserMetho
 
 void UserMethod::setScope(SharedPtr<Scope> newScope) const {
     newScope->owner = generateScopeOwner("UserMethod", name);
-    getBody()->setScope(newScope);
+    // getBody()->setScope(newScope);
 }
 
 

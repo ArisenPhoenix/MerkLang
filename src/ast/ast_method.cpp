@@ -73,42 +73,11 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
     DEBUG_FLOW(FlowLevel::NONE);
     if (!callScope){throw MerkError("There Is No callScope provided to MethodBody::evaluate");}
     if (!instanceNode){throw MerkError("No instanceNode was provided to MethodBody::evaluate");}
-
+    // setScope(callScope);
     auto val = Evaluator::evaluateMethodBody(getMutableChildren(), callScope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
 }
-// if (!instanceNode) {throw MerkError("MethodCall::evaluate -> " + name + " no instanceNode passed");}
-    // if (!scope) {throw MerkError("MethodCall::evaluate -> scope passed to is null");}
-    // auto instanceScope = instanceNode->getInstanceScope();
-
-    // auto executionScope = scope->createChildScope();
-    // executionScope->owner = generateScopeOwner("MethodExecutor", name);
-    
-    // auto args = handleArgs(executionScope, instanceNode);
-
-    // // Resolve method using evaluated arguments
-    // auto methodSig = instanceScope->getFunction(name, args); // Adjust if getMethod signature differs
-    // if (!methodSig) {throw MerkError("Method not a signature");}
-    // SharedPtr<Method> method = std::static_pointer_cast<Method>(methodSig->getCallable());
-    // if (!method) {throw MerkError("Method " + name + " not found for given arguments");}
-
-
-    // auto callScope = executionScope->buildMethodCallScope(method, method->getName());
-
-
-    // instanceScope->appendChildScope(callScope, false);
-    // auto val = method->execute(args, callScope, instanceNode);
-    // instanceScope->removeChildScope(callScope);
-
-    // executionScope->removeChildScope(callScope);    
-    // callScope->removeChildScope(executionScope);
-    
-    // instanceScope->removeChildScope(scope);
-
-    // return val;
-
-// DEBUG_FLOW(FlowLevel::VERY_HIGH); 
     
 
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
@@ -127,29 +96,38 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     executionScope->owner = generateScopeOwner("MethodExecutor", name);
     
     auto args = handleArgs(executionScope, instanceNode);
-    
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ARGS: ", args.toString());
     
     // Resolve method using evaluated arguments
-    DEBUG_LOG(LogLevel::PERMISSIVE, instanceNode);
-    if (instanceNode->getCallable()) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, instanceNode->toString(), " | ", instanceNode->getCallable()->toString());
-        instanceNode->getCallable()->getCapturedScope()->debugPrint();
-        instanceNode->getCallable()->getCapturedScope()->printChildScopes();
-    }
-    // throw MerkError("Instance Node Above");
     auto methodSig = instanceScope->getFunction(name, args);
     if (!methodSig) {throw MerkError("Method not a signature");}
     SharedPtr<Method> method = std::static_pointer_cast<Method>(methodSig->getCallable());
     if (!method) {throw MerkError("Method " + name + " not found for given arguments");}
 
+    auto captured = method->getCapturedScope();
+    if (!captured) { throw MerkError("Function has No CapturedScope 1"); }
 
-    auto callScope = executionScope->buildMethodCallScope(method, method->getName());
+    
+    
+
+
+    // auto callScope = executionScope->buildMethodCallScope(method, method->getName());
+    SharedPtr<Scope> callScope;
+
+    if (captured->getContext().getVariables().size() == 0) {
+        callScope = captured;
+        scope->appendChildScope(callScope, false);
+
+    } else {
+        callScope = scope->buildMethodCallScope(method, method->getName());
+    }
     instanceScope->appendChildScope(callScope, false);
     auto val = method->execute(args, callScope, instanceNode);
-    instanceScope->removeChildScope(executionScope);
+    instanceScope->removeChildScope(callScope);
 
     scope->removeChildScope(instanceScope);
-    scope->removeChildScope(executionScope);
+    instanceScope->removeChildScope(executionScope);
+    // scope->removeChildScope(executionScope);
     // scope->removeChildScope(executionScope);
     // // scope->removeChildScope(instanceScope);
     // instanceScope->removeChildScope(callScope);

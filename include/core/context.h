@@ -38,6 +38,8 @@ public:
 
     UniquePtr<Context> clone() const;
 
+    void clearVars();
+
     void clear();
 
     // Get a const reference to all variables in the current context

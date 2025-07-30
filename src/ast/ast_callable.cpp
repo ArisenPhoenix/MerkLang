@@ -21,20 +21,63 @@
 #include "core/callables/argument_node.h"
 
 
+void Argument::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
+    // if (key) { key->setScope(newScope); }
+    
+    // value->setScope(newScope);
+};
+
+
 String Argument::toString() const {
     String out = getAstTypeAsString() + "(";
-    if (isKeyword()) {
+    if (isKeyword() && key) {
         out += key->toString() + ":";
     }
 
-    out += value->toString() + ")";
+    if (value) {
+        out += value->toString() + ")";
+    } else {
+        throw MerkError("value in Arguments is null");
+    }
+
+    
     return out;
 }
-void Argument::setScope(SharedPtr<Scope> newScope) {
-    if (key) { key->setScope(newScope); }
-    
-    value->setScope(newScope);
+
+
+Argument::Argument(Argument&& other) noexcept: key(std::move(other.key)), value(std::move(other.value)) {
+    // if (other.key) {key = std::move(other.key);}
+    // else {key = nullptr;}
+}
+Argument::~Argument() {
+    clear();
+}
+void Argument::clear() {
+    value.reset();
+    key.reset();
+}
+
+Argument& Argument::operator=(Argument&& other) noexcept {
+    if (this != &other) {
+        // if (other.key) {key = std::move(other.key);}
+        // value = std::move(other.value);
+        key = std::move(other.key);
+        value = std::move(other.value);
+    }
+    return *this;
 };
+
+Argument::Argument() = default;
+
+
+
+Argument::Argument(UniquePtr<BaseAST> v) : key(nullptr), value(std::move(v)) {}
+Argument::Argument(UniquePtr<BaseAST> k, UniquePtr<BaseAST> v)
+    : key(std::move(k)), value(std::move(v)) {}
+
+
+
 Node Argument::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     if (isKeyword()) {
         auto k = key->evaluate(scope, instanceNode);
@@ -59,10 +102,11 @@ Arguments::Arguments(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 Arguments::Arguments(Vector<Argument> arg, SharedPtr<Scope> scope) : ASTStatement(scope), arguments(std::move(arg)) {}
 
 void Arguments::setScope(SharedPtr<Scope> newScope) {
-    scope = newScope;
-    for (auto& arg : arguments) {
-        arg.setScope(newScope);
-    }
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // for (auto& arg : arguments) {
+    //     arg.setScope(newScope);
+    // }
 }
 
 
@@ -74,6 +118,7 @@ ArgResultType Arguments::evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInst
             auto keyVal = arg.key->evaluate(scope, instanceNode);
             auto valVal = arg.value->evaluate(scope, instanceNode);
             evaluated.addNamedArg(keyVal.toString(), valVal);
+
         } else {
             evaluated.addPositionalArg(arg.value->evaluate(scope, instanceNode));
         }
@@ -90,16 +135,20 @@ Node Arguments::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> in
 
 
 void Arguments::add(Argument arg) {
+    // throw MerkError("Not Ready");
     arguments.emplace_back(std::move(arg));
 }
 
 
 void Arguments::addPositional(UniquePtr<ASTStatement> val) {
-    arguments.push_back({nullptr, std::move(val)});
+    if (!val) {throw MerkError("val is Null");}
+    // makeUnique<NoOpNode>(nullptr)
+    // auto arg = ;
+    arguments.push_back(Argument(std::move(val)));
 }
 
 void Arguments::addKeyword(UniquePtr<ASTStatement> key, UniquePtr<ASTStatement> val) {
-    arguments.push_back({std::move(key), std::move(val)});
+    arguments.push_back(Argument(std::move(key), std::move(val)));
 }
 
 const Vector<Argument>& Arguments::getArgs() const { return arguments; }
@@ -301,19 +350,21 @@ bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
 
 ArgResultType CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    ArgResultType evaluatedArgs;
-    for (const auto &arg : arguments->getArgs()) {
-        auto& value = arg.value;
-        if (name == "other" && value->getAstType() == AstType::BinaryOperation && !scope->hasVariable("otherValue")) {
-            DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used For Evaluating Args");
-            scope->debugPrint();
-            throw MerkError("Binary Operation will not compute without 'otherValue'");
-        }
-        auto val = arg.evaluate(scope, instanceNode);
-        evaluatedArgs.addPositionalArg(val);
-    }
+    ArgResultType evaluatedArgs = arguments->evaluateAll(scope, instanceNode);
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "evaluatedArgs: ", evaluatedArgs.toString());
+    // ArgResultType evaluatedArgs;
+    // for (const auto &arg : arguments->getArgs()) {
+    //     auto& value = arg.value;
+    //     if (name == "other" && value->getAstType() == AstType::BinaryOperation && !scope->hasVariable("otherValue")) {
+    //         DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used For Evaluating Args");
+    //         scope->debugPrint();
+    //         throw MerkError("Binary Operation will not compute without 'otherValue'");
+    //     }
+    //     auto val = arg.evaluate(scope, instanceNode);
+    //     evaluatedArgs.addPositionalArg(val);
+    // }
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "evaluatedArgs: ", evaluatedArgs.toString());
     return evaluatedArgs;
 }
 
@@ -348,5 +399,8 @@ Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 
 
 CallableSignature::~CallableSignature() {
-    if (parameterTypes.data()) { parameterTypes.clear(); }   
+    if (parameterTypes.data()) { parameterTypes.clear(); }
+    for (auto& name : parameters.getNames()) {
+        parameters.eraseByName(name);
+    } 
 }

@@ -58,44 +58,49 @@ Accessor::Accessor(String accessor, SharedPtr<Scope> scope)
     : ASTStatement(scope), accessor(std::move(accessor)) {
 }
 
-void Accessor::setScope(SharedPtr<Scope> scope) {(void)scope;}
+void Accessor::setScope([[maybe_unused]] SharedPtr<Scope> scope) {(void)scope;}
 
 
 Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     
     if (!defScope) {throw MerkError("No Scope Was Found in ClassDef::evaluate()");}
-
     if (!body->getScope()){throw MerkError("scope not present in ClassDef::evaluate in body");}
 
     FreeVars freeVarNames = body->collectFreeVariables();
     if (freeVarNames.size() == 0) {DEBUG_LOG(LogLevel::TRACE, "There Are No Free Variables in classdef: ", name);}
 
-    SharedPtr<Scope> classDefCapturedScope = defScope->detachScope(freeVarNames);
 
-    if (!classDefCapturedScope) {throw MerkError("Failed to create detachedScope in ClassDef::evaluate");}
+    SharedPtr<Scope> classDefCapturedScope = defScope->buildClassDefScope(freeVarNames, name);
+    SharedPtr<Scope> classScope = classDefCapturedScope->createChildScope();
+    if (!classDefCapturedScope){throw MerkError("classScope was not created correctly on the ClassBase.");}
+
+    // SharedPtr<Scope> classDefCapturedScope = defScope->detachScope(freeVarNames);
+    // if (!classDefCapturedScope) {throw MerkError("Failed to create detachedScope in ClassDef::evaluate");}
 
     if (!parameters.eraseByName(accessor)) {throw MerkError("No Accessor Was Provided In Class Constructor");}
 
-    SharedPtr<Scope> classScope = classDefCapturedScope->makeCallScope();
-    classScope->isDetached = true; // detached until ClassBase owns it
-    classScope->owner = generateScopeOwner("ClassMainScopeClass", name);
+    // SharedPtr<Scope> classScope = classDefCapturedScope->makeCallScope();
+    // classScope->isDetached = true; // detached until ClassBase owns it
+    // classScope->owner = generateScopeOwner("ClassMainScopeClass", name);
+    // auto classScope = classDefCapturedScope;
 
 
-    if (!classScope){throw MerkError("classScope was not created correctly on the ClassBase.");}
+    
     DEBUG_LOG(LogLevel::TRACE, highlight("Attempting captured setting on cls", Colors::yellow));
 
     SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
-    
+    cls->setClassScope(classScope);
     cls->setCapturedScope(classDefCapturedScope);
     cls->setParameters(parameters.clone());
-    if (!cls->getCapturedScope()) {throw MerkError("CapturedScope was not set correctly on the ClassBase.");}
+
+    // if (!cls->getCapturedScope()) {throw MerkError("CapturedScope was not set correctly on the ClassBase.");}
 
     auto* classBody = static_cast<ClassBody*>(getBody());
     classBody->setClassScope(classScope);
-    if (!cls->getClassScope()){throw MerkError("ClassDef::evlaute classScope is null");}
+    // if (!cls->getClassScope()){throw MerkError("ClassDef::evlaute classScope is null");}
 
-    classBody->setCapturedScope(cls->getCapturedScope());
+    // classBody->setCapturedScope(cls->getCapturedScope());
     String bodyAccess = accessor;
     classBody->setAccessor(bodyAccess);
 
@@ -109,13 +114,15 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
         throw MerkError("Class '" + name + "' must implement a 'construct' method.");
     }
     
-    classBody->setCapturedScope(nullptr);
-    classBody->setClassScope(nullptr);
-    classBody->getScope()->owner = generateScopeOwner("ClassBody", name);
-    defScope->appendChildScope(classDefCapturedScope, "ClassDef::evaluate");
-    classDefCapturedScope->isCallableScope = true;
-    classDefCapturedScope->owner = generateScopeOwner("ClassDef--InitialCaptured", name);
-    classDefCapturedScope->appendChildScope(cls->getClassScope());
+    // classBody->setCapturedScope(nullptr);
+    // classBody->setClassScope(nullptr);
+    // classBody->getScope()->owner = generateScopeOwner("ClassBody", name);
+
+
+    // defScope->appendChildScope(classDefCapturedScope, "ClassDef::evaluate");
+    // classDefCapturedScope->isCallableScope = true;
+    // classDefCapturedScope->owner = generateScopeOwner("ClassDef--InitialCaptured", name);
+    // classDefCapturedScope->appendChildScope(cls->getClassScope());
 
     defScope->registerClass(name, cls);
     
@@ -128,23 +135,20 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 
 Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
+    // setScope(classScope);
     return Evaluator::evaluateClassBody(classCapturedScope, classScope, getScope(), accessor, getMutableChildren(), instanceNode);
 }
 
 Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!callScope) {throw MerkError("Initial Scope Failed in ClassCall::evaluate()");}
     if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
 
     auto argValues = handleArgs(callScope, instanceNode);
-    ArgResultType* args = dynamic_cast<ArgResultType*>(&argValues);
-    (void)args;
-    // ArgResultType args = static_cast<ArgResultType>(argValues);
-    // if (argValues.size() < arguments.size()){throw MerkError("Arg Values and Arguments Don't Match in ClassCall::evaluate");}
 
     DEBUG_FLOW_EXIT();
 
-    return Evaluator::evaluateClassCall(callScope, name, *args, instanceNode);
+    return Evaluator::evaluateClassCall(callScope, name, argValues, instanceNode);
 }
 
 Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
@@ -162,7 +166,12 @@ Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> ins
 
 ClassDef::~ClassDef() {if (getBody()) { getBody().reset(); }}
 
-ClassCall::~ClassCall() {if (getScope()) { getScope()->clear();}}
+ClassCall::~ClassCall() {
+    if (getScope()) { getScope()->clear();}
+    if (arguments) {
+        arguments.reset();
+    }
+}
 
 ClassBody::~ClassBody() {clear();}
 

@@ -114,102 +114,13 @@ void validateInstances(const Node& current, const Node& other, int number, bool 
 void VarNode::setValue(const Node& other) {
     if (isConst) {throw MerkError("Cannot reassign a constant VarNode.");}
     if (isStatic && getType() != other.getType()) {throw MerkError("Cannot reassign a statically typed VarNode with a different type.");}
-
-
-    // auto startsAsInstance = isInstance();
-    
-    // validateInstances(*this, other, 1, startsAsInstance);
-
-    
-    
-
-    if (isInstance() && other.isInstance()) {
-        // auto instSelfParent = instSelf->getInstanceScope()->getRoot();
-        // auto otherParent = instSelf->getInstanceScope()->getRoot();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("Original Var's Scope Data ============================================", Colors::bg_yellow));
-        // instSelfParent->debugPrint();
-        // instSelfParent->printChildScopes();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, highlight("New Var's Scope Data ============================================", Colors::bg_yellow));
-        // otherParent->debugPrint();
-        // otherParent->printChildScopes();
-
-        
-        // auto clonedInst = makeShared<ClassInstance>(*otherInst);
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "SHOWING INST addresses", instSelf.get(), otherInst.get());
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "SHOWING Instance SCOPE ADDRESSES OF Instances: ", instSelf->getInstanceScope().get(), otherInst->getInstanceScope().get());
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "SHOWING Captured SCOPE ADDRESSES OF Instances: ", instSelf->getCapturedScope().get(), otherInst->getCapturedScope().get());
-
-
-        DEBUG_LOG(LogLevel::PERMISSIVE, highlight("DEBUGGING INSTANCE REASSIGNMENT ======================================", Colors::bg_yellow));
-        DEBUG_LOG(LogLevel::PERMISSIVE, this->toString(), other.toString(), "FULL: \n\n\n", *this, other);
-        int startingNumFuncs = toInstance()->getInstanceScope()->localFunctions.size();
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Current's function # ", startingNumFuncs);
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Other's function # ", other.toInstance()->getInstanceScope()->localFunctions.size());
-        auto instSelf = toInstance();
-        auto oldScope = instSelf->getInstanceScope();
-        
-        if (!oldScope) {throw MerkError("Instance Scope is Already Dead");}
-        auto parentScope = oldScope->getParent();
-        parentScope->removeChildScope(oldScope);
-        parentScope->getChildren().emplace_back(other.toInstance()->getInstanceScope());
-        parentScope->getChildren().emplace_back(oldScope);
-        // instSelf->setInstanceScope(nullptr);
-        // throw MerkError("SetInstance Scope to nullptr");
-        
-        auto otherInst = other.toInstance();
-
-        auto inst1Scope = instSelf->getInstanceScope();
-        auto inst2Scope = otherInst->getInstanceScope();
-
-        DEBUG_LOG(LogLevel::PERMISSIVE,
-        "list VarNode addr=", this,
-        " other VarNode addr=", &other,
-        " data.value.use_count=", toInstance().use_count(),
-        " other.value.use_count=", other.toInstance().use_count()
-    );
-
-
-        
-        DEBUG_LOG(LogLevel::PERMISSIVE, "instanceScope=", instSelf->getInstanceScope().get(), " parent=", instSelf->getInstanceScope()->getParent().get());
-        auto tmp = data.value;              // hold current SharedPtr alive
-        data.value = otherInst;               // overwrite
-        data.type = other.getType();
-        data.fullType = other.getFullType();
-
-        // DEBUG_LOG(LogLevel::PERMISSIVE,
-        //     "AFTER: data.value.use_count=", toInstance().use_count(),
-        //     " other.value.use_count=", other.toInstance().use_count()
-        // );
-
-        
-        instSelf = toInstance();
-        DEBUG_LOG(LogLevel::PERMISSIVE, "instanceScope=", instSelf->getInstanceScope().get(), " parent=", instSelf->getInstanceScope()->getParent().get());
-        DEBUG_LOG(LogLevel::PERMISSIVE, highlight("DEBUGGING INSTANCE REASSIGNMENT ====================================== END", Colors::bg_yellow));
-
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Reassignment Complete");
-
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "SHOWING INST addresses", toInstance().get(), otherInst.get());
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "SHOWING Instance SCOPE ADDRESSES OF Instances: ", toInstance()->getInstanceScope().get(), otherInst->getInstanceScope().get());
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "SHOWING Captured SCOPE ADDRESSES OF Instances: ", toInstance()->getCapturedScope().get(), otherInst->getCapturedScope().get());
-
-        // int endingNumFuncs = toInstance()->getInstanceScope()->localFunctions.size();
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Current's function # ", endingNumFuncs);
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Other's function # ", other.toInstance()->getInstanceScope()->localFunctions.size());
-        // if (endingNumFuncs < startingNumFuncs) { throw MerkError("Func Size decreased"); }
-
-        // if (endingNumFuncs == startingNumFuncs) {throw MerkError("Funcs didn't change");}
-        return;
-        // throw MerkError("See Above");
-        // return;
-
-    }
-
-    
     
     // Only update the value, but not the metadata (isConst, isMutable, isStatic)
-    data.value = other.getValue();
-    data.type = other.getType();
     data.fullType = other.getFullType();
+    data.type = other.getType();
+    if (getValue() == other.getValue()) {return;}
+    data.value = other.getValue();
+    
     DEBUG_LOG(LogLevel::DEBUG, "VarNode::setValue: Value updated, metadata remains unchanged.");
 }
 
@@ -218,7 +129,7 @@ void Node::setValue(const Node& other) {
     if (isConst) { throw MerkError("Cannot reassign a constant Node."); }
     if (other.getType() == NodeValueType::Null) { throw MerkError("Cannot assign a Null Node to another Node."); }
     if (isStatic && getType() != other.getType()) { throw MerkError("Cannot reassign a statically-typed Node with a different type."); }
-        
+    if (*this == other) {throw MerkError("tried to set value to itself");}
     copyFlagsFrom(other);
 
     DEBUG_LOG(LogLevel::DEBUG, "Node::setValue: Value and metadata updated.");
@@ -227,21 +138,31 @@ void Node::setValue(const Node& other) {
 
 
 void Node::copyFlagsFrom(const Node& other) {
-    if (other.isDict()) {throw MerkError("other Is A List");}
-    isConst = other.isConst;
-    isMutable = other.isMutable;
-    isStatic = getFullType().getBaseType().size() || isStatic;
-    isCallable = other.isCallable;
-    name = other.name;
-    nodeType = other.nodeType;
+    // if (other.isDict()) {throw MerkError("other Is A List");}
+    // if (*this == other) {throw MerkError("Cannot set Node to itself");}
     
-    data = other.data;
-    setFullType(other.getFullType());
-    if (data.type == NodeValueType::List && !std::holds_alternative<SharedPtr<ListNode>>(data.value)) {
-        throw MerkError("When Copying Flags the NodeValueType is List, but the value is of type: " + nodeTypeToString(data.type));
-    }
+    if (*this != other) {
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "OTHER IS STRING: ", other);
+        isConst = other.isConst;
+        isMutable = other.isMutable;
+        isStatic = getFullType().getBaseType().size() || isStatic;
+        isCallable = other.isCallable;
+        // if (getValue() == other.getValue()) {return;}
+        name = other.name;
+        nodeType = other.nodeType;
+        key = other.key;
+        
+        data = other.data;
+
+        setFullType(other.getFullType());
+        if (data.type == NodeValueType::List && !std::holds_alternative<SharedPtr<ListNode>>(data.value)) {
+            throw MerkError("When Copying Flags the NodeValueType is List, but the value is of type: " + nodeTypeToString(data.type));
+        }
+        updateClassInstance(*this);
+    } 
     
-    updateClassInstance(*this);
+    
+    
 }
 
 void Node::transferOwnershipFrom(Node&& other) {
@@ -251,11 +172,12 @@ void Node::transferOwnershipFrom(Node&& other) {
     isCallable = other.isCallable;
     name = std::move(other.name);
     nodeType = std::move(other.nodeType);
+    // if (getValue() == other.getValue()) {return;}
     data = other.data;
     setFullType(other.getFullType());
-    if (data.type == NodeValueType::List && !std::holds_alternative<SharedPtr<ListNode>>(data.value)) {
-        throw MerkError("When Copying Flags the NodeValueType is List, but the value is of type: " + nodeTypeToString(data.type));
-    }
+    // if (data.type == NodeValueType::List && !std::holds_alternative<SharedPtr<ListNode>>(data.value)) {
+    //     throw MerkError("When Copying Flags the NodeValueType is List, but the value is of type: " + nodeTypeToString(data.type));
+    // }
     updateClassInstance(*this);
 }
 
@@ -324,6 +246,8 @@ Node::Node() : data() {
 
 // Copy Constructor (Handles VarNode properly)
 Node::Node(const Node& other) {
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "OTHER IS: ", other);
+
     if (this == &other) {return;}
     copyFlagsFrom(other);
     // this->data = other.data;
@@ -359,14 +283,21 @@ Node& Node::operator=(const Node& other) {
     if (this != &other) {
         if (const VarNode* varNode = dynamic_cast<const VarNode*>(&other)) {
             *this = VarNode(*varNode); // Call VarNode's copy assignment operator
-            copyFlagsFrom(*this);
+            // copyFlagsFrom(other);
         } else {
+            // DEBUG_LOG(LogLevel::PERMISSIVE, "*THIS IS: ", *this, "ADDRESS: ", this, "STRING: ", toString());
+            // DEBUG_LOG(LogLevel::PERMISSIVE, "&OTHER IS: ", other, "ADDRESS: ", other.toString());
             
-            copyFlagsFrom(other);
-            *this = VarNode(*varNode);
-            DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-assigned.");
+            // DEBUG_LOG(LogLevel::PERMISSIVE, "*THIS IS: ", *this, "ADDRESS: ", this, "STRING: ", toString());
+            // // auto val = VarNode(*varNode);
+
+            // DEBUG_LOG(LogLevel::PERMISSIVE, "*NewVarNode IS: ", *this, "ADDRESS: ", this);
+            // // *this = val;
+            // // if (getValue().valueless_by_exception())
+            // DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-assigned.");
         }
     }
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "*THIS IS: ", *this, "ADDRESS: ", this);
     return *this;
 }
 
@@ -403,6 +334,7 @@ Node::Node(const String& value, const String& typeStr) {
 Node::~Node() {
     DEBUG_LOG(LogLevel::DEBUG, "===== Node was destroyed.");
     // data.value._M_reset();
+    data.value = 0;
 }
 
 // Clone Method
@@ -461,17 +393,21 @@ VarNode::VarNode(const Node& parentNode, bool isConst, bool isMutable, bool isSt
 
 // VarNode Copy Constructor
 VarNode::VarNode(const VarNode& other) : Node(other) {
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "OTHER IS: ", other);
+    if (other != *this) {
+        this->isConst = other.isConst;
+        this->isMutable = other.isMutable;
+        this->isStatic = other.isStatic;
+        this->isCallable = other.isCallable;
+        this->name = other.name;
+        this->nodeType = other.nodeType;
+        this->key = other.key;
+        
+
+        // copyFlagsFrom(other);
+        nodeType = "VarNode";
+    } 
     
-
-    this->isConst = other.isConst;
-    this->isMutable = other.isMutable;
-    this->isStatic = other.isStatic;
-    this->isCallable = other.isCallable;
-    this->name = other.name;
-    this->nodeType = other.nodeType;
-
-    copyFlagsFrom(other);
-    nodeType = "VarNode";
 }
 
 // VarNode Move Constructor
@@ -535,20 +471,24 @@ VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool i
 VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic)
     : Node(parent) {
     nodeType = "VarNode";
-    copyFlagsFrom(parent);
-    this->isStatic = typeTag.has_value() || isStatic;
-    this->isConst = isConst;
-    this->isMutable = isMutable;
+    // if (parent == *this) {throw MerkError("Parent is Same as This");}
+    if (parent != *this) { // this would otherwise throw on print
+        copyFlagsFrom(parent);
+        this->isStatic = typeTag.has_value() || isStatic;
+        this->isConst = isConst;
+        this->isMutable = isMutable;
 
-    if (typeTag.has_value()) {
-        auto theType = typeTag.value_or(NodeValueType::Any);
-        data.type = theType;
-        if (theType == NodeValueType::UNKNOWN) {
-            data.type = NodeValueType::Any;
+        if (typeTag.has_value()) {
+            auto theType = typeTag.value_or(NodeValueType::Any);
+            data.type = theType;
+            if (theType == NodeValueType::UNKNOWN) {
+                data.type = NodeValueType::Any;
+            }
         }
+        updateClassInstance(*this);
+        validateTypeAlignment();
     }
-    updateClassInstance(*this);
-    validateTypeAlignment();
+    
 }
 
 VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool isMutable, ResolvedType fullType, bool isStatic)

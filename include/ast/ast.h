@@ -27,12 +27,15 @@ public:
         SharedPtr<Scope> scope
     );
 
+    ~LiteralValue();
+
     String toString() const override;
 
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::Literal;}
     UniquePtr<BaseAST> clone() const override;
+    LitNode getValue();
 
 
 private:

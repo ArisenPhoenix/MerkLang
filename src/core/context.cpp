@@ -118,6 +118,11 @@ void Context::clear() {
 }
 
 
+void Context::clearVars() {
+    variables.clear();
+}
+
+
 
 
 

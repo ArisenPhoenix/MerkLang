@@ -37,8 +37,11 @@ int main(int argc, char* argv[]) {
    
     // Step 2: Read file content
     String content = readFile(filePath);
-    outputFileContents(content, 800);
+    // if (Debugger::getInstance().getLogLevel() > LogLevel::PERMISSIVE) {
+    //     outputFileContents(content, 800);
+    // }
 
+    outputFileContents(content, 800);
     // Step 3: Initialize Global Scope
     const bool interpretMode = true;
     const bool byBlock = false;
@@ -59,8 +62,10 @@ int main(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
         auto tokens = tokenizer.tokenize();
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
-
-        tokenizer.printTokens((Debugger::getInstance().getLogLevel() >= LogLevel::ERROR));
+        if (Debugger::getInstance().getLogLevel() < LogLevel::PERMISSIVE) {
+            tokenizer.printTokens(true);
+        }
+        
         auto globalFunctions = getNativeFunctions(globalScope);
         for (auto& [name, globalFunc]: globalFunctions) {
             globalScope->registerFunction(name, globalFunc);
@@ -71,12 +76,15 @@ int main(int argc, char* argv[]) {
             globalScope->registerClass(name, globalCls);
         }
 
-        // throw MerkError("Global Scope created");
         // Step 5: Parse tokens into an AST
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
+        auto start = std::chrono::high_resolution_clock::now();
         Parser parser(tokens, globalScope, interpretMode, byBlock);
         DEBUG_LOG(LogLevel::DEBUG, "\nStarting parser...");
         auto ast = parser.parse();
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = end - start;
+        
         debugLog("Parsing complete. \n");
 
         DEBUG_LOG(LogLevel::DEBUG, "Terminating Program...");
@@ -87,10 +95,13 @@ int main(int argc, char* argv[]) {
         }
 
         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
-        ast->printAST(std::cout);
-        globalScope->debugPrint();
-        globalScope->printChildScopes();
-        globalScope->printScopeReport();
+        // ast->printAST(std::cout);
+        // globalScope->debugPrint();
+        // globalScope->printChildScopes();
+        // globalScope->printScopeReport();
+        ast->clear();
+        globalScope->clear();
+        std::cout << "Execution time: " << elapsed.count() << " ms\n";
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
 
@@ -108,7 +119,8 @@ int main(int argc, char* argv[]) {
     globalScope->printScopeReport();
     // globalScope->clear(false);
     // globalScope.reset();
-    
+    // ast->clear();
+    globalScope->clear();
     return 0;
 }
 

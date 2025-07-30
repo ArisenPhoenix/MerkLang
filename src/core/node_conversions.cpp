@@ -214,7 +214,7 @@ String Node::toString() const {
             case NodeValueType::ClassInstance: { return toInstance()->toString(); }
             case NodeValueType::List: { return toList()->toString(); };
             case NodeValueType::Array: return nodeTypeToString(data.type, false);
-            case NodeValueType::Dict: { return toDict()->toString(); };              
+            case NodeValueType::Dict: { throw MerkError("Is A Dict"); return toDict()->toString(); };              
             case NodeValueType::Callable: return nodeTypeToString(data.type, false) + name;
             case NodeValueType::UNKNOWN: return "UNKNOWN";
             case NodeValueType::Function: return nodeTypeToString(data.type, false) + name;

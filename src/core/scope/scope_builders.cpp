@@ -125,8 +125,8 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
         for (auto& funcSig : funcSigVec) {
             instanceScope->registerFunction(funcName, funcSig);
         }
-        DEBUG_LOG(LogLevel::NONE, "Added func=", funcName,
-          " instanceScope localFunctions=", instanceScope->localFunctions.size());
+        // DEBUG_LOG(LogLevel::NONE, "Added func=", funcName,
+        //   " instanceScope localFunctions=", instanceScope->localFunctions.size());
 
     }
     
@@ -186,4 +186,22 @@ void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) cons
     } else {
         newScope->owner = owner;
     }
+}
+
+
+
+SharedPtr<Scope> Scope::buildFunctionDefScope(const FreeVars& freeVars, const String& funcName) {
+    auto defScope = this->isolateScope(freeVars);
+    defScope->owner = generateScopeOwner("FunctionDef", funcName);
+    return defScope;
+}
+
+SharedPtr<Scope> Scope::buildClassDefScope(const FreeVars& freeVars, const String& className) {
+    auto classCaptured = this->detachScope(freeVars);
+    auto classScope = classCaptured->makeCallScope();
+    classCaptured->owner = generateScopeOwner("ClassDefCaptured", className);
+    classScope->owner = generateScopeOwner("ClassDefScope", className);
+    classCaptured->appendChildScope(classScope);
+    this->appendChildScope(classCaptured);
+    return classScope;
 }

@@ -256,7 +256,13 @@ bool Node::toBool() const {
             case NodeValueType::ClassInstance:
                 {
                     auto inst = std::get<SharedPtr<ClassInstance>>(data.value);
-                    return inst->getNativeData()->holdsValue();
+                    auto data = inst->getNativeData();
+                    // throw MerkError("Got Data");
+                    if (data) {
+                        // throw MerkError("Got HAS DATA REALLY");
+                        return data->holdsValue();
+                    }
+                    return false;
                 }
                 
             default:
@@ -361,7 +367,7 @@ void Node::validateTypeAlignment() const {
 }
 
 void Node::setInitialValue(const VariantType& value) {
-    
+    // if (getValue() == value) {return;}
     try {
         std::visit(
             [this](auto&& arg) {
@@ -597,11 +603,13 @@ Node& Node::divEquals(const Node& other) {
 
 // Comparison Operators
 bool Node::operator==(const Node& other) const {
+    // return getValue() == other.getValue();
     if (std::holds_alternative<UninitializedType>(data.value) ||
         std::holds_alternative<UninitializedType>(other.data.value)) {
         return std::holds_alternative<UninitializedType>(data.value) &&
             std::holds_alternative<UninitializedType>(other.data.value);
     }
+
     if (data.type == NodeValueType::Null || other.data.type == NodeValueType::Null) {
         return data.type == NodeValueType::Null && other.data.type == NodeValueType::Null;
     }
@@ -642,10 +650,6 @@ bool Node::operator==(const Node& other) const {
         String out = e.what();
         throw MerkError("Node::operator== failed: " + out);
     }
-    
-
-
-    return getValue() == other.getValue();
 }
 
 bool Node::operator!=(const Node& other) const { return !(*this == other); }

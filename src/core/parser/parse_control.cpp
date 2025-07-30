@@ -45,7 +45,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
 
     while (consumeIf(TokenType::Keyword, "elif")) {
         auto elifCondition = parseExpression();
-        elifCondition->setScope(conditionScope);
+        // elifCondition->setScope(conditionScope);
 
         DEBUG_LOG(LogLevel::TRACE, highlight("Processed elifCondition", Colors::pink));
 

@@ -4,6 +4,7 @@
 #include "core/callables/classes/node_structures.h"
 #include "utilities/debugger.h"
 #include "algorithm"
+#include "core/callables/classes/class_base.h"
 #include <functional>
 
 
@@ -111,21 +112,43 @@ String ArrayNode::toString() const {
     return repr;
 }
 
-DictNode::~DictNode() = default;
+DictNode::~DictNode() {
+    elements.clear();
+};
+
+const std::unordered_map<Node, Node>& DictNode::getElements() const {
+    return elements;
+}
+
 DictNode::DictNode(ArgumentList init) {
     dataType = NodeValueType::Dict;
     data.type = NodeValueType::Dict;
     setType(NodeValueType::Dict);
-    if (init.size() > 0) {
-        if (init.size() > 2) {throw MerkError("Too Many Values to unpack in for Dict init");}
-        auto key = init.getPositional()[0];
-        if (key.isDict()) {
-            elements = key.toDict()->elements;
-            return;
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ARGUMENT LIST: ", init.toString());
+    
+    // if (init.getPositional().front().isList()) {
+    //     auto inst = init.getPositional().front().toInstance();
+    //     auto data = std::static_pointer_cast<DictNode>(inst->getNativeData());
+    //     elements = data->getElements();
+    // }
+    if (init.hasNamedArgs()) {
+        auto args = init.getNamedArgs();
+        for (auto& [key, val] : args) {
+            
+            elements[Node(key)] = Node(val);
+            // elements[key] = Node(val.getValue());
         }
-        auto value = init.getPositional()[1];
-        elements[key] = value;
     }
+    init.getNamedArgs().clear();
+    init.getPositional().clear();
+    
+    // if (init.size() > 0) {
+    //     if (init.size() > 2) {throw MerkError("Too Many Values to unpack in for Dict init");}
+    //     auto key = init.getPositional()[0];
+        
+    //     auto value = init.getPositional()[1];
+    //     elements[key] = value;
+    // }
     
 
 }
@@ -137,10 +160,13 @@ DictNode::DictNode() {
 
 String DictNode::toString() const {
     String repr = getTypeAsString() + "{";
+    // auto it = elements.end();
     for (auto& [key, val] : elements) {
-        repr += key.toString() + " : " + val.toString(); 
+        repr += key.toString() + " : " + val.toString() + ", ";
+
     }
     repr += "}";
+    repr.replace(repr.size() - 3, repr.size(), "}");
     return repr;
 }
 
@@ -150,11 +176,12 @@ bool DictNode::holdsValue() {
 
 
 void DictNode::set(const Node& key, const Node& value) {
-    elements[key] = value;
+    elements[key] = Node(value);
 }
 
 Node DictNode::pop(const Node& key) {
     auto val = elements.find(key);
+    // elements.erase(val);
     return val->second;
 }
 
@@ -165,11 +192,20 @@ void DictNode::remove(const Node& key) {
 
 Node DictNode::get(const Node& key, const Node& defaultReturn) {
     auto val = elements.find(key);
-    if (val->second.isValid()) {
-        return val->second;
-    }
+    // elements.erase(key);
+    if (val->second.isValid()) {return val->second;}
 
     return defaultReturn;
+    // throw MerkError("Entered");
+    // auto val = elements.find(key);
+    // return val->second;
+    // throw MerkError("End1");
+    // if (val->second.isValid()) {
+    //     // throw MerkError("End");
+    //     return val->second;
+    // }
+    
+    // return defaultReturn;
 }
 
 

@@ -40,9 +40,10 @@ SharedPtr<Scope> NativeFunction::getCapturedScope() const {
 }
 
 void NativeFunction::setScope(SharedPtr<Scope> newScope) const {
-    if (newScope) {
-        newScope->owner = generateScopeOwner("NativeFunction", name);
-    }
+    MARK_UNUSED_MULTI(newScope);
+    // if (newScope) {
+    //     newScope->owner = generateScopeOwner("NativeFunction", name);
+    // }
 }
 
 String NativeFunction::toString() const {

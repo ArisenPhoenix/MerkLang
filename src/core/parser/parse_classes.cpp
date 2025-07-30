@@ -67,7 +67,6 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         }
         if (isMethodCall){
             auto func = parseFunctionCall();
-            DEBUG_LOG(LogLevel::PERMISSIVE, "PARSED METHOD CALL");
             currentObject = makeUnique<MethodCall>(func->getName(), std::move(func->arguments), func->getScope());
         } else {
             currentObject = makeUnique<VariableReference>(nextToken.value, currentScope);
@@ -75,7 +74,7 @@ UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
         
         chain->addElement(std::move(createChainElement(nextToken, delim, std::move(currentObject))));
 
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Current Token After Parsing Chain Element: ", currentToken().toColoredString());
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Current Token After Parsing Chain Element: ", currentToken().toColoredString());
 
         if (currentToken().type != TokenType::Punctuation) { //in case this is an argument to another function
             advance();  // move to next delimiter or assignment
@@ -197,72 +196,6 @@ UniquePtr<MethodDef> Parser::parseClassInitializer() {
 
 UniquePtr<MethodDef> Parser::parseClassMethod() {
     DEBUG_FLOW(FlowLevel::HIGH);
-    // Token token = currentToken();
-    // DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
-
-    // if (token.type != TokenType::ClassMethodDef) {
-    //     throw SyntaxError("Expected TokenType 'def' or TokenType 'function'.", token);
-    // }
-
-    // if (!(token.value == "def" || token.value == "function")){
-    //     throw SyntaxError("Expected 'def' or 'function' keyword.", token);
-    // }
-
-    // String methodDefType = token.value;
-    // DEBUG_LOG(LogLevel::INFO, highlight("Function Type: ", Colors::red), methodDefType);
-    // Token controllingToken = advance(); // Consume 'def' or 'function'
-
-
-    // if (controllingToken.type != TokenType::ClassMethodRef) {
-    //     throw SyntaxError("Expected function name.", controllingToken);
-    // }
-
-    // String methodName = controllingToken.value;
-    // DEBUG_LOG(LogLevel::DEBUG, highlight("METHOD NAME: ", Colors::pink), highlight(methodName, Colors::blue));
-    // controllingToken = advance(); // Consume method name
-
-    // if (controllingToken.type != TokenType::Punctuation || controllingToken.value != "(") {
-    //     throw SyntaxError("Expected '(' after method name.", controllingToken);
-    // }
-
-    // controllingToken = advance(); // Consume '('
-
-    // ParamList parameters = handleParameters();
-    
-    // controllingToken = advance(); // Consume ')'
-
-    // if (!expect(TokenType::Punctuation) || controllingToken.value != ":") {
-    //     throw SyntaxError("Expected ':' after method definition.", controllingToken);
-    // }
-    
-    // controllingToken = advance(); // Consume ':'
-
-    // UniquePtr<CodeBlock> bodyBlock = parseBlock();
-    
-
-    // if (!bodyBlock) {
-    //     throw SyntaxError("Methodbody block could not be parsed.", controllingToken);
-    // }
-
-    // UniquePtr<MethodBody> methodBlock = makeUnique<MethodBody>(std::move(bodyBlock));
-    // methodBlock->getScope()->owner = generateScopeOwner("MethodDef", methodName);
-    // for (auto& child : methodBlock->getChildren()) {
-    //     auto astType = child->getAstTypeAsString();
-    //     child->getScope()->owner = generateScopeOwner("MethodBody<" + astType + ">", methodName);
-    // }
-
-    // DEBUG_LOG(LogLevel::INFO, "MethodBody type: ", typeid(*methodBlock).name());
-    
-    // CallableType methodType;
-
-    // if (methodDefType == "def"){methodType = CallableType::DEF;}
-
-    // else if (methodDefType == "function"){methodType = CallableType::FUNCTION;} 
-    
-    // else {
-    //     DEBUG_LOG(LogLevel::INFO, "Method definition parsed unsuccessfully: ", methodName, ":", methodDefType);
-    //     throw MerkError("Function Type: " + methodDefType + " is not Valid");
-    // }
 
     auto functionDef = parseFunctionDefinition();
     auto methodName = functionDef->getName();
@@ -287,16 +220,12 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
 UniquePtr<ASTStatement> Parser::parseClassCall() {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    if (!expect(TokenType::ClassCall)) {
-        throw UnexpectedTokenError(currentToken(), "ClassCall", "Parser::parseClassCall");
-    }
+    if (!expect(TokenType::ClassCall)) { throw UnexpectedTokenError(currentToken(), "ClassCall", "Parser::parseClassCall"); }
 
     String className = currentToken().value;
     Token controllingToken = advance();  // consume class name
 
-    if (!expect(TokenType::Punctuation) || controllingToken.value != "(") {
-        throw UnexpectedTokenError(controllingToken, "Expected '(' after class name in instantiation", "Parser::parseClassCall");
-    }
+    if (!expect(TokenType::Punctuation) || controllingToken.value != "(") { throw UnexpectedTokenError(controllingToken, "Expected '(' after class name in instantiation", "Parser::parseClassCall"); }
 
 
     // Vector<UniquePtr<ASTStatement>> arguments = parseArguments();
@@ -341,7 +270,7 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     if (controllingToken.type != TokenType::Newline) {
         throw SyntaxError("Expected newline after class header.", controllingToken);
     }
-    // advance(); // Consume newline
+
     processNewLines();
     DEBUG_LOG(LogLevel::DEBUG, "Processed NewLines After Class header");
     // Process indent to enter the class body.
@@ -433,18 +362,18 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     DEBUG_FLOW_EXIT();
     insideClass = false;
     return classDefNode;
-}
+} 
 
 
 UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
     DEBUG_FLOW(FlowLevel::NONE);
     Token token = currentToken();
     DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseClassLiteralCall: Entering with token: ", currentToken().toColoredString());
-
+    UniquePtr<Arguments> elements = makeUnique<Arguments>(currentScope);
     if (consumeIf(TokenType::LeftBracket, "[")) {
         // Vector<UniquePtr<ASTStatement>> elements;
         // Vector<Argument> elements;
-        UniquePtr<ArgumentType> elements;
+        // UniquePtr<ArgumentType> elements;
 
         if (!check(TokenType::RightBracket, "]")) {
             do {
@@ -462,12 +391,8 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
     }
 
     if (consumeIf(TokenType::Operator, "<")) {
-        UniquePtr<ArgumentType> elements;
-        // Vector<UniquePtr<ASTStatement>> elements;
-
         if (!check(TokenType::Operator, ">")) {
             do {
-                // elements.push_back(parsePrimaryExpression());
                 elements->addPositional(parsePrimaryExpression());
             } while (consumeIf(TokenType::Punctuation, ","));
         }
@@ -476,38 +401,48 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
 
         auto call = makeUnique<ClassCall>("Array", std::move(elements), currentScope);
         
-        // throw MerkError("Literal Class call above");
         processNewLines();
         DEBUG_FLOW_EXIT();
         return call;
     }
 
-    // String type;
 
     if (consumeIf(TokenType::Operator, "{")) {
-        // Vector<UniquePtr<ASTStatement>> elements;
-        UniquePtr<ArgumentType> elements;
+        bool isDict = false;
+
         if (!check(TokenType::Operator, "}")) {
             do {
-                auto expr = parsePrimaryExpression();
-                expr->printAST(std::cout);
-                elements->addPositional(std::move(expr));
-                // elements.push_back(std::move(expr));
-            } while (consumeIf(TokenType::Punctuation, ":"));
+                auto keyExpr = parsePrimaryExpression();
+
+                if (check(TokenType::Punctuation, ":")) {
+                    // Dict entry
+                    isDict = true;
+                    consume(TokenType::Punctuation, ":", "Parser::parseClassLiteralCall -> ':'");
+                    // auto valExpr = ;
+                    elements->addKeyword(std::move(keyExpr), parsePrimaryExpression());
+                } else {
+                    // Set entry
+                    elements->addPositional(std::move(keyExpr));
+                }
+            } while (consumeIf(TokenType::Punctuation, ","));
         }
 
         consume(TokenType::Operator, "}", "Parser::parseClassLiteralCall -> Operator");
 
-        auto call = makeUnique<ClassCall>("Dict", std::move(elements), currentScope);
+        auto call = makeUnique<ClassCall>(
+            isDict ? "Dict" : "Set", 
+            std::move(elements), 
+            currentScope
+        );
+
         processNewLines();
-        call->printAST(std::cout);
+        // call->printAST(std::cout);
         DEBUG_FLOW_EXIT();
+        // call.release();
+        // throw MerkError("Testing");
         return call;
     }
 
-
     DEBUG_FLOW_EXIT();
     throw UnexpectedTokenError(currentToken(), "Expected list or array literal.", "parseClassLiteralCall");
-
 }
-

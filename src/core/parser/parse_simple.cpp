@@ -68,8 +68,6 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     // const bool isStatic = false;  
     
     auto varNode = VarNode(variableToken.value, isConst, isMutable, type.getBaseType().size() > 0);
-    DEBUG_LOG(LogLevel::PERMISSIVE, varNode);
-    valueNode->printAST(std::cout);
     auto varDec = makeUnique<VariableDeclaration>(
         variableToken.value,
         varNode,
@@ -79,10 +77,6 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     );
     DEBUG_FLOW_EXIT();
 
-    
-    
-
-    varDec->printAST(std::cout);
     // throw MerkError("Ok");
     return varDec;
 }

@@ -84,7 +84,7 @@ public:
 class ClassInstance : public Callable { 
 private:
     SharedPtr<Scope> capturedScope;
-    SharedPtr<Scope> instanceScope; // reference to definition (optional)
+    mutable SharedPtr<Scope> instanceScope; // reference to definition (optional)
     String accessor;
     SharedPtr<DataStructure> nativeData;
     

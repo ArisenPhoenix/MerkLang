@@ -32,7 +32,7 @@ UniquePtr<BaseAST> VariableDeclaration::clone() const {
 }
 
 UniquePtr<BaseAST> VariableReference::clone() const {
-    validateScope(getScope(), "VariableReference::clone", name);
+    // validateScope(getScope(), "VariableReference::clone", name);
     return makeUnique<VariableReference>(name, getScope());
 } 
 
@@ -43,7 +43,7 @@ UniquePtr<BaseAST> VariableAssignment::clone() const {
 } 
 
 UniquePtr<BaseAST> BinaryOperation::clone() const {
-    validateScope(getScope(), "BinaryOperation::clone->getScope");
+    // validateScope(getScope(), "BinaryOperation::clone->getScope");
 
     UniquePtr<BaseAST> clonedLeftBase = left->clone();
     auto clonedLeft = static_unique_ptr_cast<ASTStatement>(std::move(clonedLeftBase));
@@ -68,11 +68,6 @@ UniquePtr<BaseAST> CodeBlock::clone() const {
     UniquePtr<CodeBlock> newBlock = makeUnique<CodeBlock>(getScope());
 
     for (const auto &child : children) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Current CodeBlock Child Being cloned", child->toString());
-        if (!child->getScope()) {
-            child->printAST(std::cout);
-            throw MerkError("Child Has No Valid Scope");
-        }
         newBlock->addChild(child->clone());
     }
     return newBlock;
@@ -83,23 +78,23 @@ UniquePtr<BaseAST> Break::clone() const {
 }
 
 UniquePtr<BaseAST> Return::clone() const {
-    validateScope(getScope(), "Return::clone->getScope");
+    // validateScope(getScope(), "Return::clone->getScope");
     // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->getScope was validated");
     UniquePtr<BaseAST> clonedReturnBase = returnValue->clone();
     // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->returnValue was cloned");
     auto clonedReturn = static_unique_ptr_cast<ASTStatement>(std::move(clonedReturnBase));
-    clonedReturn->setScope(getScope());
-    validateScope(clonedReturn->getScope(), "Return::clone -> clonedReturn->getScope");
+    // clonedReturn->setScope(getScope());
+    // validateScope(clonedReturn->getScope(), "Return::clone -> clonedReturn->getScope");
     
     return makeUnique<Return>(getScope(), std::move(clonedReturn));
 } 
 
 UniquePtr<BaseAST> ConditionalBlock::clone() const {
-    validateScope(getScope(), "ConditionalBlock::clone", condition->toString());
+    // validateScope(getScope(), "ConditionalBlock::clone", condition->toString());
     UniquePtr<BaseAST> clonedCondBase = condition->clone();
     auto clonedCond = static_unique_ptr_cast<ConditionalBlock>(std::move(clonedCondBase));
-    clonedCond->setScope(getScope());
-    validateScope(clonedCond->getScope(), "ConditionalBlock::clone -> clonedCond->getScope");
+    // clonedCond->setScope(getScope());
+    // validateScope(clonedCond->getScope(), "ConditionalBlock::clone -> clonedCond->getScope");
     return clonedCond;
 }
 
@@ -166,11 +161,11 @@ UniquePtr<BaseAST> FunctionBody::clone() const {
     UniquePtr<FunctionBody> newBlock = std::make_unique<FunctionBody>(getScope());
 
     for (const auto &child : children) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Current FunctionBody child being cloned: ", child->toString());
-        if (!child->getScope()) {
-            child->printAST(std::cout);
-            throw MerkError("Child Has No Valid Scope");
-        }
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Current FunctionBody child being cloned: ", child->toString());
+        // if (!child->getScope()) {
+        //     // child->printAST(std::cout);
+        //     // throw MerkError("Child Has No Valid Scope");
+        // }
         newBlock->addChild(child->clone());
     }
     return newBlock;
@@ -184,15 +179,14 @@ UniquePtr<BaseAST> FunctionRef::clone() const {
 UniquePtr<BaseAST> Arguments::clone() const {
     auto args = makeUnique<Arguments>(getScope());
     for (auto& arg: arguments) {
-        auto clonedArg = arg.clone();
-        args->add(std::move(clonedArg));
+        args->add(arg.clone());
     }
 
     return args;
 };
 
 UniquePtr<ArgumentType> CallableCall::cloneArgs() const {
-    if (!getScope()) {throw MerkError("Scope has died at " + astTypeToString(getAstType()) + "::clone");}
+    // if (!getScope()) {throw MerkError("Scope has died at " + astTypeToString(getAstType()) + "::clone");}
     auto clonedArgs = arguments->clone();
     return static_unique_ptr_cast<ArgumentType>(std::move(clonedArgs));
     // static_cast<ArgumentType>(clonedArgs);

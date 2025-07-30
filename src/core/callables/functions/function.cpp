@@ -17,11 +17,11 @@
 
 
 
-Function::Function(String name, ParamList params, CallableType funcType, bool requiresReturn, bool isStatic)
+Function::Function(String name, ParamList params, [[maybe_unused]] CallableType funcType, bool requiresReturn, bool isStatic)
     : Invocable(name, params, CallableType::FUNCTION, requiresReturn, isStatic)
 {
     DEBUG_FLOW(FlowLevel::NONE);
-    DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
+    // DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
     DEBUG_FLOW_EXIT();
 }
 
@@ -76,18 +76,19 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
 }
 
 void UserFunction::setScope(SharedPtr<Scope> newScope) const {
+    MARK_UNUSED_MULTI(newScope);
     DEBUG_FLOW(FlowLevel::NONE);
-    if (!newScope) {throw MerkError("No newScope in UserFunction::setScope");}
-    newScope->owner = generateScopeOwner("UserFunction", name);
-    auto children = body->getAllAst();
-    body->setScope(newScope);
+    // if (!newScope) {throw MerkError("No newScope in UserFunction::setScope");}
+    // newScope->owner = generateScopeOwner("UserFunction", name);
+    // auto children = body->getAllAst();
+    // body->setScope(newScope);
 
     DEBUG_FLOW_EXIT();
 }
 
 void UserFunction::setCapturedScope(SharedPtr<Scope> newScope) {
     capturedScope = newScope;
-    setScope(newScope);
+    // setScope(newScope);
 }
 
 String UserFunction::toString() const {return "<Function: " + getName() + ">";}

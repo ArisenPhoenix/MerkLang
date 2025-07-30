@@ -97,7 +97,8 @@ Node ClassBase::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unus
 
 
 void ClassBase::setScope(SharedPtr<Scope> newScope) const {
-    (void)newScope;
+    MARK_UNUSED_MULTI(newScope);
+    // (void)newScope;
 }
 
 SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
@@ -107,7 +108,7 @@ SharedPtr<CallableSignature> ClassBase::toCallableSignature() {
 
     if (!getClassScope()) {throw MerkError("Class Scope is null in ClassBase::toCallableSignature");}
 
-    if (!getCapturedScope()->has(getClassScope())){throw MerkError("CallBase::toCallableSignature -> Captured Scope Does Not Own Class Scope");}
+    // if (!getCapturedScope()->has(getClassScope())){throw MerkError("CallBase::toCallableSignature -> Captured Scope Does Not Own Class Scope");}
 
 
     // Clone captured scope (the one with free variables)
@@ -166,7 +167,8 @@ void ClassInstance::setCapturedScope(SharedPtr<Scope> scope) {
 }
 
 void ClassInstance::setScope(SharedPtr<Scope> newScope) const {
-    (void)newScope;
+    MARK_UNUSED_MULTI(newScope);
+    instanceScope = newScope;
 }
 
 String ClassInstance::toString() const {
@@ -216,7 +218,7 @@ SharedPtr<ClassInstanceNode> ClassInstance::getInstanceNode() {
 
 
 void ClassInstance::construct(const ArgResultType& args, SharedPtr<ClassInstance> self) {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!getInstanceScope()->hasFunction("construct")) {throw MerkError("A construct method must be implemented in class: " + getName());}
 
     auto methodOpt = getInstanceScope()->getFunction("construct", args);
@@ -325,7 +327,7 @@ Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, Sha
 
 
 Node ClassInstance::call(String name, ArgResultType args) {
-    DEBUG_FLOW(FlowLevel::NONE);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto methodSig = getInstanceScope()->getFunction(name, args);
     auto method = methodSig->getCallable();
 
@@ -440,15 +442,14 @@ ClassInstance::~ClassInstance() {
 ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : CallableNode(callable, "ClassInstance") {
     data.type = NodeValueType::ClassInstance;
     data.value = callable;
-    name = callable->getName();
-    
+    name = callable->getName();    
 }
 
 
 
 ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     : CallableNode(callableNode) {
-    DEBUG_FLOW(FlowLevel::NONE);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     // auto instance = std::get<SharedPtr<Callable>>(data.value);
     auto instance = getInstance();
     if (!instance) {throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");}

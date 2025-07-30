@@ -58,8 +58,8 @@ SharedPtr<Scope> NativeClass::getCapturedScope() const {
 }
 
 
-void NativeClass::setScope(SharedPtr<Scope>) const {
-
+void NativeClass::setScope(SharedPtr<Scope> newScope) const {
+    MARK_UNUSED_MULTI(newScope);
 }
 
 

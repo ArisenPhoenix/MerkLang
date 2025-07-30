@@ -21,6 +21,22 @@ public:
     UniquePtr<BaseAST> key;   // nullptr if positional
     UniquePtr<BaseAST> value; // always set
 
+    Argument();
+
+    Argument(Argument&& other) noexcept;
+    ~Argument();
+    void clear();
+
+    Argument& operator=(Argument&& other) noexcept;
+    Argument(const Argument&) = delete;
+    Argument& operator=(const Argument&) = delete;
+    void printAST(std::ostream& os, int indent = 0) const;
+
+    // Argument();
+    Argument(UniquePtr<BaseAST> k, UniquePtr<BaseAST> v);
+    Argument(UniquePtr<BaseAST> v);
+    // Argument(UniquePtr<BaseAST> k, UniquePtr<BaseAST> v);
+    
     bool isKeyword() const { return key != nullptr; }
     AstType getAstType() const {return AstType::Argument;}
     String getAstTypeAsString() const {return astTypeToString(getAstType());}

@@ -149,6 +149,7 @@ public:
     void setParent(SharedPtr<Scope> scope);
 
     bool has(const SharedPtr<Scope>& scope);
+    bool hasImmediateChild(const SharedPtr<Scope>& candidate);
 
     void updateChildLevelsRecursively();
     void setScopeLevel(int newLevel);
@@ -170,6 +171,10 @@ public:
 
     SharedPtr<Scope> buildInstanceScope(SharedPtr<ClassBase> classTemplate, String className);
     SharedPtr<Scope> buildClassScope(FreeVars freeVarNames, String className);
+
+    SharedPtr<Scope> buildFunctionDefScope(const FreeVars& freeVars, const String& funcName);
+
+    SharedPtr<Scope> buildClassDefScope(const FreeVars& freeVars, const String& className);
     
 
 

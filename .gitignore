@@ -11,3 +11,4 @@ merk-extension
 reinstall_extension.sh
 include/utilities/debugger.txt
 old_code.txt
+a_info.cpp

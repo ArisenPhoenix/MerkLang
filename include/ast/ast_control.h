@@ -34,7 +34,7 @@ public:
 class CodeBlock : public BaseAST, AstCollector {
 
 protected:
-    SharedPtr<Scope> scope;
+    mutable SharedPtr<Scope> scope;
     Vector<UniquePtr<BaseAST>> children;
     bool containsReturn = false;
 public:
@@ -74,6 +74,7 @@ public:
     UniquePtr<BaseAST> clone() const override;
     
     void setScope(SharedPtr<Scope> newScope) override;
+    void setScope(SharedPtr<Scope> newScope) const;
     virtual FreeVars collectFreeVariables() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 

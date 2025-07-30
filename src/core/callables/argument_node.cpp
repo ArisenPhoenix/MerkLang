@@ -8,8 +8,23 @@ void ArgumentList::addPositionalArg(const Node& arg) {
     positionalArgs.push_back(arg);
 }
 
-void ArgumentList::addNamedArg(const String& name, const Node& arg) {
-    namedArgs[name] = arg;
+void ArgumentList::addNamedArg(const String& key, const Node& arg) {
+    DEBUG_LOG(LogLevel::PERMISSIVE, "ARG key: ", key, " ARG VAL: ", arg);
+    // for (auto& [k, v] : namedArgs) {
+    //     DEBUG_LOG(LogLevel::PERMISSIVE, "K1: ", k, "V1: ", v);
+    // }
+
+    namedArgs[key] = Node(arg);
+
+    // for (auto& [k, v] : namedArgs) {
+    //     DEBUG_LOG(LogLevel::PERMISSIVE, "K2: ", k, "V2: ", v);
+    // }
+
+    // throw MerkError("Got Named Args Above");
+}
+
+std::unordered_map<String, Node> ArgumentList::getNamedArgs() {
+    return namedArgs;
 }
 
 Node ArgumentList::getArg(size_t i) const {
@@ -90,8 +105,8 @@ String ArgumentList::toString() const {
 
 
 
-bool ArgumentList::hasNamedArgs(String name) {
-    return namedArgs.find(name) != namedArgs.end();
+bool ArgumentList::hasNamedArgs() {
+    return namedArgs.size();
 }
 size_t ArgumentList::positionalCount() {
     return positionalArgs.size();

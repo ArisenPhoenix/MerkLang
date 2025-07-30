@@ -15,7 +15,6 @@ NativeMethod::NativeMethod(
         setClassScope(classScope);
         setSubType(CallableType::NATIVE);
         if (subType != CallableType::NATIVE) {throw MerkError("SubType is not native, it is: " + callableTypeAsString(subType));}
-        DEBUG_LOG(LogLevel::PERMISSIVE, this->toString(), "Set With: ", parameters.toString());
         DEBUG_FLOW_EXIT();
     }
 
@@ -58,7 +57,7 @@ SharedPtr<Scope> NativeMethod::getCapturedScope() const {
 
 
 void NativeMethod::setScope(SharedPtr<Scope> newScope) const {
-    (void)newScope;
+    MARK_UNUSED_MULTI(newScope);
 };
 
 

@@ -83,6 +83,7 @@ ParamList Parser::handleParameters(TokenType type){
 UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
     DEBUG_FLOW(FlowLevel::HIGH);
     Token token = currentToken();
+    setAllowScopeCreation(true);
     DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
 
     if (!(token.type == TokenType::FunctionDef || token.type == TokenType::ClassMethodDef)) {
@@ -163,23 +164,24 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
     
     DEBUG_LOG(LogLevel::INFO, "Function definition parsed successfully: ", functionName);
     DEBUG_FLOW_EXIT();
+    setAllowScopeCreation(false);
     return functionNode;
 }
 
 UniquePtr<Arguments> Parser::parseAnyArgument() {
-    Vector<Argument> args;
+    // Vector<Argument> args;
+    UniquePtr<Arguments> args = makeUnique<Arguments>(currentScope);
+    // Arguments args;
     if (consumeIf(TokenType::Punctuation, "(")) {
         while (currentToken().value != ")") {
             auto expr = parseExpression();
 
             if (check(TokenType::Punctuation, ":")) {
-                // Keyword argument
                 consume(TokenType::Punctuation, ":", "Parser::parseAnyArgument");
                 auto val = parseExpression();
-                args.push_back({std::move(expr), std::move(val)});
+                args->addKeyword(std::move(expr), std::move(val));
             } else {
-                // Positional argument
-                args.push_back({nullptr, std::move(expr)});
+                args->addPositional(std::move(expr));
             }
 
             if (!consumeIf(TokenType::Punctuation, ",")) break;
@@ -188,46 +190,9 @@ UniquePtr<Arguments> Parser::parseAnyArgument() {
     } else {
         throw UnexpectedTokenError(currentToken(), "(", "Parser::parseArguments");
     }
-    return makeUnique<Arguments>(std::move(args), currentScope);
-    // return Arguments(std::move(args));
+
+    return args;
 }
-
-
-// Vector<UniquePtr<ASTStatement>> Parser::parseArguments() {
-//     Vector<UniquePtr<ASTStatement>> arguments;
-//     if (consumeIf(TokenType::Punctuation, "(")) {
-//         while (currentToken().value != ")") {
-//             DEBUG_LOG(LogLevel::DEBUG, "parsing function argument: ", currentToken().toColoredString());
-//             if (currentToken().value == ")") {
-//                 throw MerkError("current token is ')' in parseFunctionCall");
-//             }
-//             auto argument = parseExpression();
-//             if (!argument) {
-//                 throw SyntaxError("Invalid function argument.", currentToken());
-//             }
-//             DEBUG_LOG(LogLevel::DEBUG, "Token After Parsing Argument: ", currentToken().toColoredString());
-
-//             arguments.push_back(std::move(argument));        
-
-//             if (currentToken().value == ",") {
-//                 advance();  // Consume ','
-//             } else {
-//                 break;  // No more arguments
-//             }
-//         }
-//     } else {
-//         throw UnexpectedTokenError(currentToken(), "(", "Parser::parseArguments");
-//     }
-
-//     if (currentToken().value != ")") {
-//         throw UnexpectedTokenError(currentToken(), ")", "Parser::parseFunctionCall");
-//     }
-//     advance();  // Consume ')'
-    
-//     DEBUG_LOG(LogLevel::DEBUG, "TOKEN AFTER PARSING ARGUMENTS: ", currentToken().toColoredString());
-
-//     return arguments;
-// }
 
 
 UniquePtr<FunctionCall> Parser::parseFunctionCall() {
@@ -243,9 +208,7 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
     if (!expect(TokenType::Punctuation) || controllingToken.value != "(") {
         throw UnexpectedTokenError(controllingToken, "'(' after function name", "Parser::parseFunctionCall");
     }
-
-    // Parse function arguments
-    // auto arguments = parseArguments();
+\
     auto arguments = parseAnyArgument();
 
     

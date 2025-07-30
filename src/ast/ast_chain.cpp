@@ -156,8 +156,9 @@ SharedPtr<Scope> getAssociatedScope(const Node& node) {
 }
 
 void Chain::setScope(SharedPtr<Scope> newScope) {
-    scope = newScope;
-    for (auto& elem : elements) { if (elem.object) {elem.object->setScope(newScope);} }
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // for (auto& elem : elements) { if (elem.object) {elem.object->setScope(newScope);} }
 }
 void Chain::setLastScope(SharedPtr<Scope> mostRecentScope) const {
     lastScope = mostRecentScope;
@@ -329,11 +330,12 @@ void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, Shar
 
 
 void ChainOperation::setScope(SharedPtr<Scope> newScope) {
-    scope = newScope;
-    lhs->setScope(newScope);
-    if (rhs){
-        rhs->setScope(newScope);
-    }
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // lhs->setScope(newScope);
+    // if (rhs){
+    //     rhs->setScope(newScope);
+    // }
 }
 
 
@@ -352,9 +354,6 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
     auto& baseElem = elements[index];
     if (baseElem.object->getAstType() == AstType::Accessor){
         currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
-        // if (!currentVal.isInstance()) {throw MerkError("Pulled out non instance");}
-        DEBUG_LOG(LogLevel::PERMISSIVE, currentVal);
-        // throw MerkError("At List");
     } else {
         currentVal = baseElem.object->evaluate(currentScope, instanceNode);
     }
@@ -399,7 +398,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     
                     auto varRef = static_cast<VariableReference*>(elem.object.get());
                     currentVal = instance->getField(varRef->getName());
-                    DEBUG_LOG(LogLevel::PERMISSIVE, "GETTING VARIABLE REFERENCE");
+                    // DEBUG_LOG(LogLevel::PERMISSIVE, "GETTING VARIABLE REFERENCE");
                     break;
                 }
             
@@ -407,15 +406,23 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 {
                     if (!instanceNode) {throw MerkError("No InstanceNode in Chain::evaluate -> ClassMethodCall");}
                     
-                    DEBUG_LOG(LogLevel::PERMISSIVE, "evaluating ClassMethodCall with instanceNode");
+                    // DEBUG_LOG(LogLevel::PERMISSIVE, "evaluating ClassMethodCall with instanceNode");
                     // DEBUG_LOG(LogLevel::PERMISSIVE, currentVal);
-                    currentVal = elem.object->evaluate(methodScope, instanceNode);
+                    methodScope->debugPrint();
+                    methodScope->printChildScopes();
+                    auto methodCall = static_cast<MethodCall*>(elem.object.get());
+                    auto methodName = methodCall->getName();
+
+                    auto currentVal = instance->call(methodName, methodCall->arguments->evaluateAll(methodScope->createChildScope(), instanceNode));
+                    DEBUG_LOG(LogLevel::PERMISSIVE, "CURRENT VAL: ", currentVal);
+                    // throw MerkError("METHOD CALL");
+                    // currentVal = elem.object->evaluate(methodScope, instanceNode);
 
                     break;
                 }
                 
             default:
-                DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));
+                // DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));
                 // throw MerkError("Evaluating Some other structure");
                 currentVal = elem.object->evaluate(currentScope, instanceNode);
                 currentScope = elem.object->getScope();

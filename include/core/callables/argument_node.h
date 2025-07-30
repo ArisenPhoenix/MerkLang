@@ -25,6 +25,8 @@ public:
     NodeList getRemainingArgs(size_t start) const;
     NodeList getPositional();
 
+    std::unordered_map<String, Node> getNamedArgs();
+
     size_t positionalCount() const;
     bool hasNamedArg(const String& name) const;
 
@@ -32,7 +34,7 @@ public:
 
     String toString() const;
 
-    bool hasNamedArgs(String name);
+    bool hasNamedArgs();
     size_t positionalCount();
     auto begin() { return positionalArgs.begin(); }
     auto end() { return positionalArgs.end(); }

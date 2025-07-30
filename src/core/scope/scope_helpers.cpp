@@ -262,21 +262,4 @@ void Scope::setParent(SharedPtr<Scope> scope) {
 
 
 
-bool Scope::has(const SharedPtr<Scope>& checkScope) {
-    if (!checkScope) {
-        throw MerkError("ChildScope for checking is null");
-    }
-    if (this == checkScope.get()) {
-        DEBUG_LOG(LogLevel::TRACE, "has(): found self match at ", this);
-        return true;
-    }
-    for (auto& child : getChildren()) {
-        if (child->has(checkScope)) {
-            DEBUG_LOG(LogLevel::TRACE, "has(): found in child ", child.get(), " for check ", checkScope.get());
-
-            return true;
-        }
-    }
-    return false;
-}
 

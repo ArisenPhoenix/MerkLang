@@ -121,12 +121,8 @@ void Callable::placeArgsInCallScope(ArgResultType evaluatedArgs, SharedPtr<Scope
         args.addPositionalArg(evaluated);
     }
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "========================================================== ARGS ADDED TO CALLABLE", args.toString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "========================================================== ARGS ADDED TO CALLABLE", args.toString());
     auto finalArgs = args.bindTo(parameters);
-    if (name == "other") {
-        auto argsString = joinVectorNodeStrings(finalArgs);
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Args provided: ", highlight(argsString, Colors::bg_bright_cyan));
-    }
     
     for (size_t i = 0; i < parameters.size(); ++i) {
         VarNode paramVar(finalArgs[i]);

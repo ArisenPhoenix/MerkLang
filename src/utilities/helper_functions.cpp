@@ -65,9 +65,7 @@ String readFile(String filePath) {
 }
 
 bool validateScope(SharedPtr<Scope> scope, String methodName, String forWhat, bool debug) {
-    if (!scope) {
-        throw RunTimeError(methodName+":" + " Null scope passed" + (!forWhat.empty() ? " For " + forWhat : ""));
-    }
+    if (!scope) { throw RunTimeError(methodName+":" + " Null scope passed" + (!forWhat.empty() ? " For " + forWhat : "")); }
     debugLog(debug);
     debugLog(debug, methodName+":", "Scope validated for", (!forWhat.empty() ? forWhat : ",", "scope level: "), scope->getScopeLevel(), "\n");
     return true;

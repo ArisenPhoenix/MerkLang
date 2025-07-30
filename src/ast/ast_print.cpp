@@ -149,7 +149,7 @@ String CodeBlock::toString() const {
 String WhileLoop::toString() const {
     return "WhileLoop(condition=" + (getCondition() ? getCondition()->toString() : "null") +
             ", body=" + (getBody() ? getBody()->toString() : "null") +
-            ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+            ", scope=" + std::to_string(getBody()->getScope()->getScopeLevel()) + ")";
 
 }
 
@@ -403,6 +403,9 @@ void FunctionCall::printAST(std::ostream& os, int indent) const {
     // for (const auto& arg : arguments){
     //     arg->printAST(os, indent);
     // }
+    if (!arguments) {
+        throw MerkError("Arguments Are Null In FunctionCall::printAST");
+    }
     arguments->printAST(os, indent);
 }
 
