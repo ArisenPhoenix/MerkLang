@@ -45,10 +45,8 @@ int main(int argc, char* argv[]) {
     // Step 3: Initialize Global Scope
     const bool interpretMode = true;
     const bool byBlock = false;
-    const bool isRoot = true;
-
         
-    SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, isRoot);
+    SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, true);
     globalScope->owner = "GLOBAL";
     
     
@@ -62,18 +60,19 @@ int main(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
         auto tokens = tokenizer.tokenize();
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
-        if (Debugger::getInstance().getLogLevel() < LogLevel::PERMISSIVE) {
-            tokenizer.printTokens(true);
-        }
+        if (Debugger::getInstance().getLogLevel() < LogLevel::PERMISSIVE) { tokenizer.printTokens(true); }
         
         auto globalFunctions = getNativeFunctions(globalScope);
         for (auto& [name, globalFunc]: globalFunctions) {
-            globalScope->registerFunction(name, globalFunc);
+            // globalScope->registerFunction(name, globalFunc);
+            globalScope->globalFunctions->registerFunction(name, globalFunc);
+            if (globalScope->globalFunctions->getFunction(name)) {};
         }
 
         auto globalClasses = getNativeClasses(globalScope);
         for (auto& [name, globalCls]: globalClasses) {
-            globalScope->registerClass(name, globalCls);
+            globalScope->globalClasses->registerClass(name, globalCls);
+            // globalScope->registerClass(name, globalCls);
         }
 
         // Step 5: Parse tokens into an AST

@@ -22,9 +22,9 @@ public:
     
     bool hasFunction(const String& name) const;
 
-    std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name);
+    std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name) const;
 
-    std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> getFunction(const String& name, const ArgResultType& args);
+    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name, const ArgResultType& args) const;
 
     void debugPrint() const;
 
@@ -32,6 +32,22 @@ public:
 
     FunctionRegistry clone() const;
     void clear();
+
+    void merge(const FunctionRegistry& other);
+
+    size_t size();
+    size_t size() const;
+
+    bool empty() const;
+
+    auto begin() { return functions.begin(); }
+    auto end() { return functions.end(); }
+    auto begin() const { return functions.begin(); }
+    auto end() const { return functions.end(); }
+
+    // Add cbegin() and cend() for const iteration, c++ can be a pain
+    auto cbegin() const { return functions.cbegin(); }
+    auto cend() const { return functions.cend(); }
 
 
 };

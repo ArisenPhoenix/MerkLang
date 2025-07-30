@@ -18,6 +18,7 @@ FunctionRegistry::~FunctionRegistry() {
 void FunctionRegistry::clear() {
     functions.clear();
 }
+
 void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSignature> signature) {
     DEBUG_FLOW(FlowLevel::LOW);
     
@@ -55,6 +56,19 @@ void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSi
         overloads.push_back(signature);
         DEBUG_LOG(LogLevel::DEBUG, "Overload: ", name, "Added");
     }
+
+    else if (subType == CallableType::NATIVE) {
+        // const auto& newParamTypes = signature->getParameterTypes();
+        // for (const auto& existingSig : overloads) {
+        //     if (existingSig->getSubType() == CallableType::FUNCTION && existingSig->matches(newParamTypes)) {
+        //         DEBUG_FLOW_EXIT();
+                
+        //         throw MerkError("Duplicate overload for function: " + name);
+        //     }
+        // }
+        overloads.push_back(signature);
+        DEBUG_LOG(LogLevel::DEBUG, "Overload: ", name, "Added");
+    }
     else {
         throw MerkError("Unsupported function type for function: " + name + " Type: " + callableTypeAsString(subType));
     }
@@ -70,13 +84,14 @@ bool FunctionRegistry::hasFunction(const String& name) const {
     return func;
 }
 
-std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name, const ArgResultType& args)  {
+std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const String& name, const ArgResultType& args) const  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     auto it = functions.find(name);
     if (it == functions.end() || it->second.empty()){
         DEBUG_LOG(LogLevel::TRACE, "Failed To Get Function:", name, "at first attempt");
         return std::nullopt;
     }
+
         
     Vector<NodeValueType> argTypes;
     for (const auto &arg : args) {
@@ -86,20 +101,25 @@ std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegi
 
     // Search for a matching overload.
     for (auto candidate : it->second) {
+        if (candidate->getSubType() == CallableType::DEF) {            
+            return candidate;
+        }
+        if (candidate->getSubType() == CallableType::NATIVE) {
+            if (candidate->matches(argTypes)) {return candidate;}
+            // return candidate;
+        }
         DEBUG_LOG(LogLevel::TRACE, "Checking Function Candidate", name, candidate->getCallable()->parameters.toString());
 
         // If this is a def function, return it regardless.
         DEBUG_LOG(LogLevel::TRACE, "Function Type: ", callableTypeAsString(candidate->getSubType()));
-        if (candidate->getSubType() == CallableType::DEF) {
-            return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(candidate);
-        }
-        else if (candidate->getSubType() == CallableType::FUNCTION) {
+        
+        if (candidate->getSubType() == CallableType::FUNCTION) {
 
             if (candidate->matches(argTypes)){
                 DEBUG_FLOW_EXIT();
-                return std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>(candidate);
+                return candidate;
             }
-            DEBUG_LOG(LogLevel::DEBUG, highlight("Function:", Colors::bold_blue), name, "args didn't match");
+            DEBUG_LOG(LogLevel::TRACE, "Candidate ", name, " skipped: subtype=", callableTypeAsString(candidate->getSubType()));
         }
     }
 
@@ -110,7 +130,7 @@ std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>> FunctionRegi
 }
 
 
-std::optional<Vector<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name) {
+std::optional<Vector<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name) const {
     DEBUG_FLOW(FlowLevel::MED);
     auto it = functions.find(name);
     if (it != functions.end() && !it->second.empty()) {
@@ -152,3 +172,15 @@ FunctionRegistry FunctionRegistry::clone() const {
     return copy;
 }
 
+void FunctionRegistry::merge(const FunctionRegistry& other) {
+    for (const auto& [name, overloads] : other.getFunctions()) {
+        for (auto& sig : overloads) {
+            registerFunction(name, sig);
+        }
+    }
+}
+
+size_t FunctionRegistry::size() {return functions.size();}
+size_t FunctionRegistry::size() const {return functions.size();};
+
+bool FunctionRegistry::empty() const {return functions.empty();}
