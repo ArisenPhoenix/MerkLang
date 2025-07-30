@@ -177,7 +177,7 @@ Vector<Token> Tokenizer::tokenize() {
             tokens.push_back(identifier);
             
             nextChar = position + 2 < sourceLength ? source[position + 2] : '\0';
-            if (previousToken().type == TokenType::Variable && !isWhitespace(nextChar) && handleOptionalType(tokens)) {
+            if (previousToken().type == TokenType::Variable && !isWhitespace(nextChar) && handleOptionalType()) {
                 skipWhitespace();
 
                 continue;  // already tokenized the type annotation

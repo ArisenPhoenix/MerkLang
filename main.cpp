@@ -95,12 +95,6 @@ int main(int argc, char* argv[]) {
         }
 
         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
-<<<<<<< HEAD
-        ast->printAST(std::cout);
-        globalScope->debugPrint();
-        globalScope->printChildScopes();
-
-=======
         // ast->printAST(std::cout);
         // globalScope->debugPrint();
         // globalScope->printChildScopes();
@@ -108,7 +102,6 @@ int main(int argc, char* argv[]) {
         ast->clear();
         globalScope->clear();
         std::cout << "Execution time: " << elapsed.count() << " ms\n";
->>>>>>> classes
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
 
