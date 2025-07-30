@@ -24,10 +24,10 @@ class LiteralValue : public ASTStatement {
 public:
     explicit LiteralValue(
         LitNode value, 
-        SharedPtr<Scope> scope,
-        bool isString,
-        bool isBool
+        SharedPtr<Scope> scope
     );
+
+    ~LiteralValue();
 
     String toString() const override;
 
@@ -35,12 +35,11 @@ public:
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::Literal;}
     UniquePtr<BaseAST> clone() const override;
+    LitNode getValue();
 
 
 private:
     LitNode value;
-    bool _isString;
-    bool _isBool;
 };
 
 class VariableDeclaration : public ASTStatement {
@@ -49,7 +48,9 @@ private:
     String name;
     VarNode variable;
     std::optional<NodeValueType> typeTag;
+    ResolvedType type;
     UniquePtr<ASTStatement> valueExpression;
+    
 
 public:
     VariableDeclaration(
@@ -59,6 +60,15 @@ public:
         std::optional<NodeValueType> typeTag = std::nullopt,
         UniquePtr<ASTStatement> valueExpression = nullptr
     );
+
+    VariableDeclaration(
+        String name,
+        VarNode variable,
+        SharedPtr<Scope> scope,
+        ResolvedType type,
+        UniquePtr<ASTStatement> valueExpression = nullptr
+    );
+    
     VariableDeclaration(UniquePtr<VariableDeclaration> varDec);
     friend class AttributeDeclaration;
     virtual String toString() const override;
@@ -165,7 +175,7 @@ public:
     String toString() const override;
     const String& getOperator() const { return op; }
     const ASTStatement* getOperand() const { return operand.get(); }
-    AstType getAstType() const override {return AstType::BinaryOperation;}
+    AstType getAstType() const override {return AstType::UnaryOperation;}
 
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     void printAST(std::ostream& os, int indent = 0) const override;
@@ -231,7 +241,6 @@ public:
 
     AstType getAstType() const override { return AstType::Continue; }
     UniquePtr<BaseAST> clone() const override;
-    // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
 };
         

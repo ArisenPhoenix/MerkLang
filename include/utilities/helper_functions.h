@@ -20,5 +20,7 @@ int printIndent(std::ostream& os, int indent);
 bool validateScope(SharedPtr<Scope> scope, String methodName, String forWhat = "", bool debug = false);
 
 String generateScopeOwner(String userName, String itemName);
-String joinUnorderedSetStrings(const std::unordered_set<String>& input, const String& delimiter = ", ");
+String joinUnorderedSetStrings(const std::unordered_set<String>& input, const String& delimiter = ",");
+String joinVectorNodeStrings(const NodeList& nodes, const String& delimiter = ",");
+String joinVectorStrings(const Vector<String>, const String& delimiter = ",");
 #endif // HELPER_FUNCTIONS_H

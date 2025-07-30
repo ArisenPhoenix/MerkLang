@@ -9,9 +9,13 @@
 #include "core/types.h"
 #include <optional>
 
+#include <functional>
+
+
 // Struct for NodeData using a union for efficient storage
 struct NodeData {
     NodeValueType type = NodeValueType::Null; // Type of the value
+    mutable ResolvedType fullType;
     VariantType value = Null; // A std::variant to store any of the allowed types
     NodeData() = default; // Default constructor
     NodeData(const NodeData&) = default; // Copy constructor
@@ -35,22 +39,31 @@ public:
     bool isStatic = false;
     bool isCallable = false;
 
+    void copyFlagsFrom(const Node& other);
+
+    void transferOwnershipFrom(Node&& other);
+
+    void applyTypeInfo(std::optional<NodeValueType> typeTag, const ResolvedType& fullType);
+
+    void updateClassInstance(const Node& me);
+
     void setValue(const Node& other);
     void setValue(const VariantType& newValue);
     NodeValueType determineResultType(const Node& left, const Node& right) const;
     String nodeType = "DataNode";
     String name = "";
+    String key = "";
 
-
-
-    bool isInstanceScope();
-    bool isInstanceScope() const;
+    ResolvedType getFullType() {return data.fullType;}
+    ResolvedType getFullType() const {return data.fullType;}
+    virtual std::size_t hash() const;
     
-    bool isClassInstance();
-    bool isClassInstance() const;
+
     
     // Clone Method for Proper Copying
     virtual Node* clone() const;
+
+    void setFullType(ResolvedType) const;
 
     // Default Constructor
     Node();
@@ -90,11 +103,24 @@ public:
     String getTypeAsString() const;
     virtual String toString() const;
     bool toBool() const;
+    char toChar() const;
+    SharedPtr<ListNode> toList();
+    SharedPtr<ArrayNode> toArray();
+    SharedPtr<SetNode> toSet();
+    SharedPtr<DictNode> toDict();
 
+    SharedPtr<ListNode> toList() const;
+    SharedPtr<ArrayNode> toArray() const;
+    SharedPtr<SetNode> toSet() const;
+    SharedPtr<DictNode> toDict() const;
+    
 
+    SharedPtr<ClassInstance> toInstance() const;
+    SharedPtr<ClassInstance> toInstance();
     
     NodeValueType getNodeValueType(const String& typeStr, const String& valueStr);
     NodeValueType getNodeValueType(const VariantType& value);
+
 
     // Type checks
     bool isType(const NodeValueType type) const;
@@ -108,7 +134,12 @@ public:
     bool isValid() const;
     bool isLong() const;
     bool getIsCallable() const;
-    void setIsCallable(bool isCallable);
+    bool isArray() const;
+    bool isList() const;
+    bool isSet() const;
+    bool isDict() const;
+    bool isInstance();
+    bool isInstance() const;
 
     Node negate() const;
     VariantType getValue() const;
@@ -190,6 +221,9 @@ public:
     // // For Static Typing
     explicit VarNode(const String value, const String& type, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = false);
     explicit VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic = true);
+
+    explicit VarNode(const String value, const String& type, bool isConst, bool isMutable, ResolvedType typeTag, bool isStatic = false);
+    explicit VarNode(VarNode& parent, bool isConst, bool isMutable, ResolvedType typeTag, bool isStatic = true);
     
     // Copy Constructor
     VarNode(const VarNode& other);
@@ -221,6 +255,26 @@ inline bool validateConditionIsBool(Node node, String methodName, bool debug = t
 
 bool validateLeftAndRightNodes(Node leftNode, Node rightNode, String methodName, String op = "", bool debug = true);
 
+
+
+
+
+class ComposableTypeNode : public Node {
+    String baseType;         // e.g., "List" or "Map"
+    Vector<SharedPtr<Node>> innerTypes; // e.g., [Int], or [String, Int]
+};
+
+UniquePtr<VarNode> cloneVarNode(VarNode* original);
+
+
+namespace std {
+    template<>
+    struct hash<Node> {
+        std::size_t operator()(const Node& n) const noexcept {
+            return n.hash();
+        }
+    };
+}
 
 #endif // NODE_H
 

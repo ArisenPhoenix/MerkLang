@@ -33,7 +33,7 @@ ParamList Parser::handleParameters(TokenType type){
                 return params;
             }
             if (currentToken().type != TokenType::Parameter) {
-                throw UnexpectedTokenError(currentToken(), "parameter name");
+                throw UnexpectedTokenError(currentToken(), "parameter name", "Parser::handleParameters");
             }
 
             String paramName = currentToken().value;
@@ -71,7 +71,7 @@ ParamList Parser::handleParameters(TokenType type){
         } while (true);
 
         if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-            throw SyntaxError("Expected ')' after parameters.", currentToken());
+            throw UnexpectedTokenError(currentToken(), ") after parameters", "Parser::handleParameters");
         }
     }
     DEBUG_FLOW_EXIT();
@@ -83,6 +83,7 @@ ParamList Parser::handleParameters(TokenType type){
 UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
     DEBUG_FLOW(FlowLevel::HIGH);
     Token token = currentToken();
+    setAllowScopeCreation(true);
     DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
 
     if (!(token.type == TokenType::FunctionDef || token.type == TokenType::ClassMethodDef)) {
@@ -163,52 +164,54 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
     
     DEBUG_LOG(LogLevel::INFO, "Function definition parsed successfully: ", functionName);
     DEBUG_FLOW_EXIT();
+    setAllowScopeCreation(false);
     return functionNode;
 }
 
+UniquePtr<Arguments> Parser::parseAnyArgument() {
+    // Vector<Argument> args;
+    UniquePtr<Arguments> args = makeUnique<Arguments>(currentScope);
+    // Arguments args;
+    if (consumeIf(TokenType::Punctuation, "(")) {
+        while (currentToken().value != ")") {
+            auto expr = parseExpression();
+
+            if (check(TokenType::Punctuation, ":")) {
+                consume(TokenType::Punctuation, ":", "Parser::parseAnyArgument");
+                auto val = parseExpression();
+                args->addKeyword(std::move(expr), std::move(val));
+            } else {
+                args->addPositional(std::move(expr));
+            }
+
+            if (!consumeIf(TokenType::Punctuation, ",")) break;
+        }
+        consume(TokenType::Punctuation, ")", "Parser::parseAnyArgument");
+    } else {
+        throw UnexpectedTokenError(currentToken(), "(", "Parser::parseArguments");
+    }
+
+    return args;
+}
+
+
 UniquePtr<FunctionCall> Parser::parseFunctionCall() {
-    DEBUG_FLOW(FlowLevel::HIGH);
-
-    if (!expect(TokenType::FunctionCall)) {
-        throw UnexpectedTokenError(currentToken(), "FunctionCall");
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    Token controllingToken = currentToken();
+    if (controllingToken.type != TokenType::FunctionCall && controllingToken.type != TokenType::ClassMethodCall) {
+        throw UnexpectedTokenError(controllingToken, "FunctionCall, ClassMethodCall", "Parser::parseFunctionCall");
     }
 
-    String functionName = currentToken().value;
-    advance();  // Consume function name
+    String functionName = controllingToken.value;
+    controllingToken = advance();  // Consume function name
 
-    if (!expect(TokenType::Punctuation) || currentToken().value != "(") {
-        throw UnexpectedTokenError(currentToken(), "'(' after function name", "parseFunctionCall");
+    if (!expect(TokenType::Punctuation) || controllingToken.value != "(") {
+        throw UnexpectedTokenError(controllingToken, "'(' after function name", "Parser::parseFunctionCall");
     }
+\
+    auto arguments = parseAnyArgument();
 
-    advance();  // Consume '('
-
-    // Parse function arguments
-    Vector<UniquePtr<ASTStatement>> arguments;
-    while (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        DEBUG_LOG(LogLevel::INFO, "parsing function argument");
-        auto argument = parseExpression();
-        if (!argument) {
-            throw SyntaxError("Invalid function argument.", currentToken());
-        }
-
-        DEBUG_LOG(LogLevel::INFO, "[Parser::parseFunctionCall] Parsed argument: ", argument->toString());
-        arguments.push_back(std::move(argument));        
-
-        if (expect(TokenType::Punctuation) && currentToken().value == ",") {
-            advance();  // Consume ','
-        } else {
-            break;  // No more arguments
-        }
-    }
-
-    // Ensure proper function call closure
-    if (!expect(TokenType::Punctuation) || currentToken().value != ")") {
-        throw UnexpectedTokenError(currentToken(), ")", "parseFunctionCall");
-    }
-    advance();  // Consume ')'
-
-    DEBUG_LOG(LogLevel::INFO, "[Parser::parseFunctionCall] Completed parsing function call '", functionName,
-             "' with ", arguments.size(), " arguments.");
+    
     
     DEBUG_FLOW_EXIT();
     return makeUnique<FunctionCall>(functionName, std::move(arguments), currentScope);
@@ -217,17 +220,19 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
 UniquePtr<ASTStatement> Parser::parseReturnStatement() {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parseReturnStatement: Entering with token: ", currentToken().toString());
-
-    if (!expect(TokenType::Keyword) || currentToken().value != "return") {
-        throw SyntaxError("Expected 'return' keyword.", currentToken());
+    Token controllingToken = currentToken();
+    DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parseReturnStatement: Entering with token: ", controllingToken.toColoredString());
+    
+    if (!expect(TokenType::Keyword) || controllingToken.value != "return") {
+        throw SyntaxError("Expected 'return' keyword.", controllingToken);
     }
 
-    advance(); // Consume `return`
+    controllingToken = advance(); // Consume `return`
 
     // Ensure the return statement has a value
-    if (currentToken().type == TokenType::Newline || currentToken().type == TokenType::EOF_Token) {
-        throw SyntaxError("Return statement must return a value.", currentToken());
+
+    if (controllingToken.type == TokenType::Newline || controllingToken.type == TokenType::EOF_Token || controllingToken.type == TokenType::Dedent) {
+        throw SyntaxError("Return statement must return a value.", controllingToken);
     }
 
     // Parse the return expression

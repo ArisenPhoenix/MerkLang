@@ -6,8 +6,11 @@
 #include "ast/ast.h"
 #include "ast/ast_chain.h"
 #include "ast/ast_control.h"
-#include "ast/ast_function.h"
 #include "ast/ast_callable.h"
+#include "ast/ast_function.h"
+#include "ast/ast_method.h"
+
+
 #include "ast/ast_class.h"
 #include "core/scope.h"
 
@@ -16,15 +19,13 @@
 
 // The printAST method is mostly for debugging and verification purposes. It is useful for identification of bugs and visualizing the structure
 String scopeLevelAsString(SharedPtr<Scope> scope, String astCaller) {
-    String scopeString = scope ? std::to_string(scope->getScopeLevel()) : "Error Getting Scope For " + astCaller;
-    return "Scope Level " + scopeString;
+    String scopeString = scope ? " " + std::to_string(scope->getScopeLevel()) : " Error Getting Scope For " + astCaller;
+    return " Scope Level " + scopeString;
 }
 
 // AST Basic
 String LiteralValue::toString() const {
     return getAstTypeAsString() + "(value=" + value.toString() +
-        ", isString=" + (_isString ? "true" : "false") +
-        ", isBool=" + (_isBool ? "true" : "false") +
         scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";;
 }
 
@@ -148,7 +149,7 @@ String CodeBlock::toString() const {
 String WhileLoop::toString() const {
     return "WhileLoop(condition=" + (getCondition() ? getCondition()->toString() : "null") +
             ", body=" + (getBody() ? getBody()->toString() : "null") +
-            ", scope=" + std::to_string(getScope()->getScopeLevel()) + ")";
+            ", scope=" + std::to_string(getBody()->getScope()->getScopeLevel()) + ")";
 
 }
 
@@ -197,8 +198,14 @@ void CodeBlock::printAST(std::ostream& os, int indent) const {
 
 void CallableBody::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()));
-    for (auto& child : children){
+    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()) + "):");
+
+    if (children.empty()) {
+        indent = printIndent(os, indent);
+        debugLog(true, "[No Children]");
+    }
+
+    for (const auto& child : children) {
         child->printAST(os, indent);
     }
 }
@@ -211,9 +218,37 @@ void CallableDef::printAST(std::ostream& os, int indent) const {
 };
 
 
+String Arguments::toString() const {
+    String out = getAstTypeAsString();
+    for (auto& arg : arguments) {
+        if (arg.isKeyword()) {
+            out += arg.key->toString();
+        }
+        arg.value->toString();
+    }
+
+    return out;
+};
+
+void Arguments::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    String out;
+    for (auto& arg : arguments) {
+        out += arg.toString();
+    }
+    debugLog(true, getAstTypeAsString(), "(" + out + ")");
+
+};
+
+
 void CallableCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), "()");
+    debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
+    printIndent(os, indent);
+    arguments->printAST(os, indent);
+    // for (const auto& arg : arguments){
+    //     arg->printAST(os, indent);
+    // }
 }
 
 void ElseStatement::printAST(std::ostream& os, int indent) const  {
@@ -230,7 +265,7 @@ void ElifStatement::printAST(std::ostream& os, int indent) const {
 
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString());
-    condition->printAST(os, indent + 1);
+    condition->printAST(os, indent + 2);
     body->printAST(os, indent + 2);
 
     DEBUG_FLOW_EXIT();
@@ -364,23 +399,26 @@ void FunctionRef::printAST(std::ostream& os, int indent) const {
 void FunctionCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
-    for (const auto& arg : arguments){
-        printIndent(os, indent);
-        debugLog(true, arg->toString());
+    printIndent(os, indent);
+    // for (const auto& arg : arguments){
+    //     arg->printAST(os, indent);
+    // }
+    if (!arguments) {
+        throw MerkError("Arguments Are Null In FunctionCall::printAST");
     }
-    os << std::endl;
+    arguments->printAST(os, indent);
 }
 
-void ParameterAssignment::printAST(std::ostream& os, int indent) const {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
+// void ParameterAssignment::printAST(std::ostream& os, int indent) const {
+//     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
-    indent = printIndent(os, indent);
-    debugLog(true, "ParameterAssignment (variable = ", getName(), scopeLevelAsString(getScope(), getAstTypeAsString()), ")"); 
-    getExpression()->printAST(os, indent);
+//     indent = printIndent(os, indent);
+//     debugLog(true, "ParameterAssignment (variable = ", getName(), scopeLevelAsString(getScope(), getAstTypeAsString()), ")"); 
+//     getExpression()->printAST(os, indent);
 
-    DEBUG_FLOW_EXIT();
+//     DEBUG_FLOW_EXIT();
 
-}
+// }
 
 
 String MethodDef::toString() const {return astTypeToString(getAstType());}
@@ -394,10 +432,11 @@ void ClassDef::printAST(std::ostream& os, int indent) const {
 void ClassCall::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     std::ostringstream argString;
-    for (const auto& arg : arguments){
-        argString << arg->toString();
-    }
-    debugLog(true, getAstTypeAsString(), "(" + argString.str() + ")");
+    // for (const auto& arg : arguments){
+    //     argString << arg->toString();
+    // }
+    arguments->printAST(os, indent);
+    // debugLog(true, getAstTypeAsString(), "(" + argString.str() + ")");
 }
 
 
@@ -418,19 +457,31 @@ String ChainOperation::toString() const {
 }
 
 void ChainOperation::printAST(std::ostream& os, int indent) const {
-    printIndent(os, indent);
+    indent = printIndent(os, indent);
     os << getAstTypeAsString() << ")\n";
-    lhs->printAST(os, indent + 2);
-    if (rhs) rhs->printAST(os, indent + 2);
+    // printIndent(os, indent);
+    lhs->printAST(os, indent);
+
+    if (rhs) {
+        // printIndent(os, indent);
+        rhs->printAST(os, indent);
+    }
 }
 
-
+void ChainElement::printAST(std::ostream& os, int indent) const {
+    
+    indent = printIndent(os, indent);
+    debugLog(true, "Name:", name, "TokenType:", tokenTypeToString(type));
+    // os << "Name: " << name << " TokenType: " << tokenTypeToString(type);
+    object->printAST(os, indent);
+};
 
 void Chain::printAST(std::ostream& os, int indent) const {
     indent = printIndent(os, indent);
     debugLog(true, getAstTypeAsString()+":");
 
     for (const auto& elem : elements) {
+        // printIndent(os, indent);
         elem.printAST(os, indent);
     }
 }

@@ -21,108 +21,95 @@
 
 
 
-// Input	Meaning
-// self.x	Dot syntax (attribute)
-// -3.14	Numeric literal (float)
-// fib(3).x	Dot syntax after a call
-// 0.5	Float literal
-// myFunc().3 Invalid
-// myClass().x Valid
 
 
 
 UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
-
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseVariableDeclaration: Entering with token: ", currentToken().toColoredString());
+    
     // Determine reassignability
-    bool isConst = false;
+    
     Token startToken = currentToken(); // should be var / const
-    if (!(startToken.value == "var" || startToken.value == "const")) {
-        throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
-
+    if (peek().type == TokenType::ChainEntryPoint) {
+        return parseChainOp();  // this should end up as a variable declaration chain
     }
 
-    if (startToken.value == "var" || startToken.value == "const") {
-        if (peek().type == TokenType::ChainEntryPoint) {
-            return parseChainOp();  // this should end up as a variable declaration chain
-        }
-
-        isConst = startToken.value == "const";
-        advance();  // Consume 'var' or 'const'
-    } else {
-        throw MerkError("Expected 'var' or 'const' keyword for variable declaration. Token: " + startToken.toString());
-    }
+    bool isConst = startToken.value == "const";
+    Vector<String> values = {"var", "const"};
+    consume(TokenType::VarDeclaration, values, "Parser::parseVariableDeclaration");
 
     Token variableToken = currentToken();
+    if (variableToken.type == TokenType::ChainEntryPoint) {throw RunTimeError("Invalid: ChainEntryPoint token passed into VarNode logic.");}
 
-    advance(); //consume variable name
-
-    std::optional<NodeValueType> typeTag = parseStaticType();
-
-    Token assignment = currentToken();    
-
-    // Expects an assignment operator
-    if (assignment.type != TokenType::VarAssignment) {
-        throw MerkError("Expected ':=' or '=' for variable declaration. Token: " + assignment.toString());
+    // consume(TokenType::Variable, "Parser::parseVariableDeclaration");
+    if (!consumeIf(TokenType::Variable)) {
+        throw MerkError("Not A Variable -> Parser::parseVariableDeclaration");
     }
+    // advance(); //consume variable name
 
-    bool isMutable = (assignment.value == "=");
-    advance();  // Consume ':=' or '='
+    // std::optional<NodeValueType> typeTag = parseStaticType();
+    ResolvedType type = ResolvedType("Any");
 
+    if (consumeIf(TokenType::Punctuation, ":")) {
+        // throw MerkError("parsing Type");
+        type = parseResolvedType();
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Current Token Is: ", currentToken().toColoredString(), "Current Type Is: ", type.toString());
+    }
+    bool isMutable = currentToken().value == "=";
+    values = {"=", ":="};
+    consume(TokenType::VarAssignment, values, "Parser::parseVariableDeclaration");
 
     auto valueNode = parseExpression();
-    if (!valueNode) {
-        throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);
-    }
+    
+    
+    if (!valueNode) {throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);}
 
-    const bool isStatic = false;  
-    if (variableToken.type == TokenType::ChainEntryPoint) {
-        throw std::logic_error("Invalid: ChainEntryPoint token passed into VarNode logic.");
-    }
-    auto varNode = VarNode(variableToken.value, isConst, isMutable, isStatic);
+    // const bool isStatic = false;  
+    
+    auto varNode = VarNode(variableToken.value, isConst, isMutable, type.getBaseType().size() > 0);
     auto varDec = makeUnique<VariableDeclaration>(
         variableToken.value,
         varNode,
-        currentScope,  // Use the currentScope at the time of declaration
-        typeTag,
+        currentScope,
+        type,
         std::move(valueNode)
     );
     DEBUG_FLOW_EXIT();
+
+    // throw MerkError("Ok");
     return varDec;
 }
 
 UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    Token startToken = currentToken();
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseVariableAssignment: Entering with token: ", currentToken().toColoredString());
 
-    DEBUG_LOG(LogLevel::DEBUG, "DEBUG Parser: Entering parseVariableAssignment with token: ", startToken.toString());
-    if (!(startToken.type == TokenType::Variable || startToken.type == TokenType::ChainEntryPoint)) {
-        throw MerkError("Expected an identifier for variable assignment.");
+    // Token startToken = currentToken();
+    Token variableToken = currentToken();
+
+    if (!consumeIf(TokenType::Variable)) {
+        throw MerkError("Not A Variable -> Parser::parseVariableDeclaration");
     }
-    // if (startToken.type == TokenType::ChainEntryPoint) {
-    //     return parseChain();
+
+    // Token assignment = advance(); // consume variable
+
+    Vector<String> values = {"=", ":="};
+    consume(TokenType::VarAssignment, values, "Parser::parseVariableDeclaration");
+
+    // if (assignment.type != TokenType::VarAssignment || 
+    //     (assignment.value != "=" && assignment.value != ":=")) {
+    //     throw UnexpectedTokenError(assignment, "= or :=");
     // }
 
-    Token variableToken = currentToken();
-    // Token variableToken = handleAttributNotation();
-    advance();
 
-    Token assignment = currentToken();
-
-    if (assignment.type != TokenType::VarAssignment || 
-        (assignment.value != "=" && assignment.value != ":=")) {
-        throw UnexpectedTokenError(assignment, "= or :=");
-    }
-
-
-    advance();  // consume assignment operator
+    // advance();  // consume assignment operator
 
     auto valueNode = parseExpression();
     if (!valueNode) {
         throw MerkError("Failed to parse value for assignment to " + variableToken.value);
     }
 
-    // DEBUG_LOG(LogLevel::DEBUG, "Parser: Created VariableAssignment for ", variableToken.toString(), "\n");
     auto varAssign = makeUnique<VariableAssignment>(
         variableToken.value,
         std::move(valueNode),
@@ -130,18 +117,24 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
     );
     DEBUG_FLOW_EXIT();
     return varAssign;
-    // return variableToken.type == TokenType::Variable ? std::move(varAssign) : makeUnique<AttributeAssignment>(AttributeAssignment(std::move(varAssign)));
  
 }
 
 UniquePtr<ASTStatement> Parser::parseExpression() {
-    DEBUG_LOG(LogLevel::TRACE, "Parser: Entering parseExpression with token: ", currentToken().toString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "Parser: Entering parseExpression with token: ", currentToken().toString());
+    Token token = currentToken();
+    if (check(TokenType::LeftBracket, "[") || check(TokenType::LeftArrow, "<") || check(TokenType::Operator, "{")) { return parseClassLiteralCall(); }
+    // processNewLines();
+    DEBUG_FLOW_EXIT();
     return parseBinaryExpression(0);
 }
 
 // Though a bit of a misnomer, it was named BinaryExpression or BinaryOperation due to how it only handles two values at a time (or one)
 UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::NONE);
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseBinaryExpression: Entering with token: ", currentToken().toColoredString());
+
     auto left = parsePrimaryExpression();
     if (!left) {
         throw SyntaxError("Expected a valid left-hand side expression.", currentToken());
@@ -175,7 +168,9 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
             throw MerkError("Right operand is null in parseBinaryExpression.");
         }
         DEBUG_LOG(LogLevel::INFO, "Right operand detected: ", right->toString());
-
+        if (!currentScope) {
+            throw MerkError("Current Scope In Parser::parseBinaryExpression is null");
+        }
         left = makeUnique<BinaryOperation>(
             op.value, std::move(left), std::move(right), currentScope
         );
@@ -187,21 +182,26 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
 }
 
 UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::NONE);
 
-    DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toString());
+    // processNewLines();
 
-    Token token = currentToken();   
+    Token token = currentToken();
+    // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toColoredString());
 
-    if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool) {
+    if (check(TokenType::LeftBracket, "[") || check(TokenType::Operator, "<") || check(TokenType::Operator, "{")){
+        return parseClassLiteralCall();
+    }
+
+        
+
+    if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool || token.type == TokenType::Char) {
 
         LitNode nodeLiteral = LitNode(token.value, token.typeAsString());
 
         auto literalVal = makeUnique<LiteralValue>(
             nodeLiteral,
-            currentScope,
-            token.type == TokenType::String,
-            token.type == TokenType::Bool
+            currentScope
         );
 
         advance();  // Consume Literal Value
@@ -226,22 +226,18 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 
     if (token.type == TokenType::Operator && (token.value == "-" || token.value == "!" || token.value == "not" || token.value == "and" || token.value == "or")) {
         String op = token.value;
-        advance(); // move past '-'
+        advance(); // move past '-' etc.
         Token current = currentToken();
         
         if (current.type != TokenType::Number && op == "-"){
             throw MerkError("Cannot Make Type " + current.typeAsString() + " a negative");
         }
 
-        if ((op == "and" || op == "or" || op == "not" || op == "!") && 
-        (current.type != TokenType::Number && current.type != TokenType::Bool && current.type != TokenType::String)) {
-            throw MerkError("Cannot Perform a Logical Operation On Type " + current.typeAsString());
-  
-        }
         auto operand = parsePrimaryExpression(); // recursively parse next value
         DEBUG_LOG(LogLevel::ERROR, "Operand: ", operand->toString());
         return makeUnique<UnaryOperation>(op, std::move(operand), currentScope);
     }
+
     // Chain-based variable, method, class references like a.b.c or Foo::bar
     if (token.type == TokenType::ChainEntryPoint) {
         return parseChainOp();  // handles the entire chain from here
@@ -263,6 +259,10 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     }
 
     else if (token.type == TokenType::Argument){
+        if (peek().value == ".") {
+            tokens[position].type = TokenType::ChainEntryPoint;
+            return parseChainOp();
+        }
 
         auto varRefNode = makeUnique<VariableReference>(token.value, currentScope);
         advance(); // consume Argument
@@ -283,14 +283,13 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     }
 
     DEBUG_FLOW_EXIT();
-    throw UnexpectedTokenError(token, "Not: " + currentToken().toString(), "in parsePrimaryExpression");
+    throw UnexpectedTokenError(token, "ClassLiteral, ClassCall, FunctionCall, Argument, FunctionRef, Variable, ChainEntryPoint, Operator, Punctuation, Literal", "in parsePrimaryExpression");
 }
 
 UniquePtr<BaseAST> Parser::parseStatement() {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    DEBUG_FLOW(FlowLevel::NONE);
 
     Token token = currentToken();
-    // Due to IfStatement inheriting from at one time (and maybe again) ElifStatement, this check is necessary.
     if (token.value == "else" || token.value == "elif"){
         throw MerkError("if Statement must come before elif or else");
     }
@@ -420,28 +419,30 @@ UniquePtr<BaseAST> Parser::parseStatement() {
 
         default:
             DEBUG_FLOW_EXIT();
-            throw UnexpectedTokenError(token, "Keyword, Variable, FunctionCall, FunctionDef, ClassDef, VarDeclaration", "ClassCall");
+            displayPreviousTokens(currentToken().value, 5, "Parser::ParseStatement");
+            displayNextTokens(currentToken().value, 5, "Parser::ParseStatement");
+            throw UnexpectedTokenError(token, "Keyword, Variable, FunctionCall, FunctionDef, ClassDef, VarDeclaration", "Parser::parseStatement");
 
     }
 }
 
 UniquePtr<ASTStatement> Parser::parseBreakStatement() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::NONE);
 
-    DEBUG_LOG(LogLevel::TRACE, "Parser: parseBreakStatement with token: ", currentToken().toString());
+    Token controllingToken = currentToken();
+
+    DEBUG_LOG(LogLevel::TRACE, "Parser: parseBreakStatement with token: ", controllingToken.toColoredString());
 
     if (!isInsideLoop()) {
         throw MerkError("Break statement not allowed outside of a loop.");
     }
 
 
-    advance(); // Consume 'break'
+    controllingToken = advance(); // Consume 'break'
 
-    if (position < tokens.size() &&
-        currentToken().type != TokenType::Newline &&
-        currentToken().type != TokenType::EOF_Token) {
+    if (position < tokens.size() && controllingToken.type != TokenType::Newline && controllingToken.type != TokenType::Dedent && controllingToken.type != TokenType::EOF_Token) {
         DEBUG_FLOW_EXIT();
-        throw UnexpectedTokenError(currentToken(), "");
+        throw UnexpectedTokenError(controllingToken, "");
     }
     DEBUG_FLOW_EXIT();
     return makeUnique<Break>(currentScope);
@@ -450,24 +451,22 @@ UniquePtr<ASTStatement> Parser::parseBreakStatement() {
 
 
 UniquePtr<ASTStatement> Parser::parseContinueStatement() {
-    DEBUG_FLOW(FlowLevel::HIGH);
-
-    DEBUG_LOG(LogLevel::TRACE, "Parser: parseContinueStatement with token: ", currentToken().toString());
+    DEBUG_FLOW(FlowLevel::NONE);
+    Token controllingToken = currentToken();
+    DEBUG_LOG(LogLevel::TRACE, "Parser: parseContinueStatement with token: ", controllingToken.toString());
 
     if (!isInsideLoop()) {
         throw MerkError("Continue statement not allowed outside of a loop.");
     }
     
-    DEBUG_LOG(LogLevel::INFO, "Parsing break statement at token: ", currentToken().toString());
+    DEBUG_LOG(LogLevel::INFO, "Parsing break statement at token: ", controllingToken.toString());
 
 
-    advance(); // Consume 'continue'
+    controllingToken = advance(); // Consume 'continue'
 
-    if (position < tokens.size() &&
-        currentToken().type != TokenType::Newline &&
-        currentToken().type != TokenType::EOF_Token) {
+    if (position < tokens.size() && controllingToken.type != TokenType::Newline && controllingToken.type != TokenType::Dedent && controllingToken.type != TokenType::EOF_Token) {
         DEBUG_FLOW_EXIT();
-        throw UnexpectedTokenError(currentToken(), "");
+        throw UnexpectedTokenError(controllingToken, "");
     }
     DEBUG_FLOW_EXIT();
     return makeUnique<Continue>(currentScope);

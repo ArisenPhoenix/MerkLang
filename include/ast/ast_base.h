@@ -98,14 +98,11 @@ public:
         (void)indent;
         os << highlight("ASTStatement", Colors::red) << "\n";
     }
+
+    // ASTStatement();
     virtual AstType getAstType() const override {return AstType::AST;}
     virtual String toString() const override {return getAstTypeAsString();}
-    SharedPtr<Scope> getScope() const override {
-        if (auto s = scope.lock()) {
-            return s;
-        }
-        return nullptr;
-    }
+    SharedPtr<Scope> getScope() const override;
     virtual void setScope(SharedPtr<Scope> newScope) override;
     virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override= 0;
 

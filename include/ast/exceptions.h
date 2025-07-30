@@ -1,3 +1,7 @@
+#ifndef FUNCTIONAL_EXCPETIONS_H
+#define FUNCTIONAL_EXCPETIONS_H
+
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -35,3 +39,6 @@ class ReturnException : public std::exception {
         Node getValue() const { return returnValue; }
 };
 // Should probably include the return exception here too
+
+
+#endif //FUNCTIONAL_EXCPETIONS_H

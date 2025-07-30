@@ -2,9 +2,9 @@
 #define CLASS_REGISTRY_H
 
 #include "core/types.h"
-#include "core/functions/callable.h"
+#include "core/callables/callable.h"
 
-#include "core/classes/class_base.h"
+#include "core/callables/classes/class_base.h"
 
 
 class ClassSignature;

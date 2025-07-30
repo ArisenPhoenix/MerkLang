@@ -37,12 +37,12 @@ void Context::updateVariable(const String& name, const Node& newValue) {
 
     auto it = variables.find(name);
     if (it == variables.end()) {
+        DEBUG_LOG(LogLevel::ERROR, "From Context");
         throw VariableNotFoundError(name);
     }
     VarNode& currentVar = *(it->second);
 
     currentVar.setValue(newValue);
-
     DEBUG_FLOW_EXIT();
 
 }
@@ -107,9 +107,18 @@ void Context::debugPrint() const {
 }
 
 void Context::clear() {
-    for (auto& [varName, var] : variables) {
+    
+    if (variables.size() > 0) {
+        for (auto& [varName, var] : variables) {
         var.reset();
     }
+        variables.clear();
+    }
+    
+}
+
+
+void Context::clearVars() {
     variables.clear();
 }
 

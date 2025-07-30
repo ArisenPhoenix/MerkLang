@@ -1,7 +1,9 @@
 #include "core/node.h"
 #include "core/types.h"
-#include "core/functions/callable.h"
-#include "core/classes/class_base.h"
+#include "core/callables/callable.h"
+#include "core/callables/classes/class_base.h"
+#include "core/callables/classes/node_structures.h"
+// #include "core/callables/argument_node.h"
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "core/errors.h"
@@ -16,11 +18,7 @@
 #include <utility>
 #include <cmath>
 
-
-// const bool debugNodeC = false;
-// getIsCallable
-
-// 1. Infer from String
+// Infer from String
 std::pair<VariantType, NodeValueType> inferFromString(const String& value) {
     if (value == "true" || value == "false") {
         return { value == "true", NodeValueType::Bool };
@@ -45,7 +43,7 @@ std::pair<VariantType, NodeValueType> inferFromString(const String& value) {
     throw MerkError("Could not infer type from string: " + value);
 }
 
-// 2. Coerce string to a given type
+// Coerce string to a given type
 std::pair<VariantType, NodeValueType> coerceStringToType(const String& value, NodeValueType type) {
     try {
         switch (type) {
@@ -71,7 +69,7 @@ std::pair<VariantType, NodeValueType> coerceStringToType(const String& value, No
     }
 }
 
-// 3. Validate and Copy
+// Validate and Copy
 std::pair<VariantType, NodeValueType> validateAndCopy(const VariantType& value, NodeValueType type) {
     auto visitor = [&](auto&& arg) -> std::pair<VariantType, NodeValueType> {
         using T = std::decay_t<decltype(arg)>;
@@ -82,11 +80,6 @@ std::pair<VariantType, NodeValueType> validateAndCopy(const VariantType& value, 
     };
     return std::visit(visitor, value);
 }
-
-
-
-
-
 
 NodeData::~NodeData() {
     value = 0;
@@ -146,9 +139,7 @@ bool areDoublesEqual(double a, double b) {
 }
 
 bool compareNumericNodes(const Node& left, const Node& right, const std::function<bool(double, double)>& comparator) {
-    if (!(left.isNumeric() && right.isNumeric())) {
-        throw MerkError("Attempting to compare non-numeric Nodes.");
-    }
+    if (!(left.isNumeric() && right.isNumeric())) {throw MerkError("Attempting to compare non-numeric Nodes.");}
 
     double leftValue = left.toDouble();
     double rightValue = right.toDouble();
@@ -156,89 +147,48 @@ bool compareNumericNodes(const Node& left, const Node& right, const std::functio
     return comparator(leftValue, rightValue);
 }
 
-// Overload operator<< for Node to display detailed information
-std::ostream& operator<<(std::ostream& os, const Node& node) {
-    os << node.nodeType << "(";
-    os << "Value: ";
 
-    // Display the value
-    try {
-        os << node.toString();
-    } catch (const std::exception& e) {
-        os << "<Error retrieving value>";
-    }
-
-    SharedPtr<Scope> scope = nullptr;
-
-    // Display the type
-    os << ", Type: " << (node.name.empty() ? nodeTypeToString(node.getType()) : nodeTypeToString(node.getType()) + "(" + node.name + ")");
-    if (node.getType() == NodeValueType::ClassInstance){
-        auto instance = std::get<SharedPtr<ClassInstance>>(node.getValue());
-        scope = instance->getInstanceScope();        
-    }
-
-    
-    // Display metadata
-    os << ", isConst: " << (node.isConst ? "true" : "false");
-    os << ", isMutable: " << (node.isMutable ? "true" : "false");
-    os << ", isStatic: " << (node.isStatic ? "true" : "false");
-
-    os << ", isCallable: " << (node.isCallable ? "true" : "false");
-    
-
-    os << ")";
-
-    if (scope){
-        os << "\n INSTANCE: " + node.name + " DATA START In Scope : " + "Scope(" + std::to_string(scope->getScopeLevel()) + ", " + scope->owner + ")\n";
-        // scope->debugPrint();
-        for (auto& [varName, var] : scope->getContext().getVariables()) {
-            os << varName << " = " << var->toString() << "\n";
-        }
-        for (auto& [funcName, funcVec] : scope->localFunctions) {
-            for (auto& func : funcVec) {
-                os << func->getCallable()->toString() << "\n";
-            }
-        }
-
-        for (auto& [className, cls] : scope->localClasses) {
-            os << cls->getCallable()->toString() << "\n";
-        }
-        
-        os << "\n INSTANCE DATA END\n\n";
-    }
-    return os;
-}
 
 
 // Overload to accept value and type as strings
 void Node::setInitialValue(const String& value, const String& typeStr) {
     // DEBUG_LOG(LogLevel::DEBUGC, "Entering Node::setInitialValue 2 ARGS");
     NodeValueType nodeType = getNodeValueType(typeStr, value);
-
+    
+    data.type = nodeType;
     switch (nodeType) {
         case NodeValueType::Int:
-            data.type = NodeValueType::Int;
             data.value = std::stoi(value);
             break;
         case NodeValueType::Float:
-            data.type = NodeValueType::Float;
             data.value = std::stof(value);
             break;
         case NodeValueType::String:
-            data.type = NodeValueType::String;
             data.value = value;
             break;
         case NodeValueType::Bool:
             if (value == "true") {
-                data.type = NodeValueType::Bool;
                 data.value = true;
             } else if (value == "false") {
-                data.type = NodeValueType::Bool;
                 data.value = false;
             } else {
                 throw MerkError("Invalid boolean string: " + value);
             }
             break;
+        case NodeValueType::Long:
+            data.value = std::stol(value);
+            break;
+        case NodeValueType::Char:
+            if (!value.empty()){
+                data.value = char(value[0]);
+            }
+            else {data.value = char(0);}
+            break;
+        case NodeValueType::None:
+        case NodeValueType::Null:
+            data.value = NullType();
+            break;
+
         default:
             throw MerkError("Unsupported NodeValueType in setInitialValue.");
     }
@@ -250,15 +200,14 @@ void Node::setInitialValue(const String& value, const String& typeStr) {
 void Node::setValue(const VariantType& newValue) {
     DEBUG_LOG(LogLevel::DEBUG, "[Debug] Node::setValue() - Setting new value with type:", nodeTypeToString(getNodeValueType(newValue)));
 
-    if (isConst) {
-        throw MerkError("Cannot reassign a constant Node.");
-    }
+    if (isConst) {throw MerkError("Cannot reassign a constant Node.");}
 
-    if (isStatic && data.type != getNodeValueType(newValue)) {
-        throw MerkError("Cannot reassign a statically typed Node with a different type.");
-    }
+    if (isStatic && data.type != getNodeValueType(newValue)) {throw MerkError("Cannot reassign a statically typed Node with a different type.");}
 
     NodeValueType newType = getNodeValueType(newValue);
+
+    if (newType == NodeValueType::List) {throw MerkError("Is A List in setValue");}
+    // else {throw MerkError("Is Not A List, but: " + nodeTypeToString(newType) + " in setValue");}
 
     if (data.type == NodeValueType::Any) {
         // Allow assignment of any type if type is 'Any'
@@ -274,172 +223,52 @@ void Node::setValue(const VariantType& newValue) {
         data.value = newValue;
         data.type = NodeValueType::Null;
     } else {
-        validateTypeAlignment();
+        
         data.value = newValue;
+        data.type = newType;
+        // data.type = ;
+        validateTypeAlignment();
     }
 
     
 }
 
-void Node::setValue(const Node& other) {
-
-    if (isConst) {
-        throw MerkError("Cannot reassign a constant Node.");
-    }
-    if (other.getType() == NodeValueType::Null) {
-        throw MerkError("Cannot assign a Null Node to another Node.");
-    }
-    if (isStatic && getType() != other.getType()) {
-        throw MerkError("Cannot reassign a statically-typed Node with a different type.");
-    }
-
-    // Update both value and metadata (since Node allows this)
-    data.value = other.getValue();
-    data.type = other.getType();
-    isConst = other.isConst;
-    isMutable = other.isMutable;
-    isStatic = other.isStatic;
-
-    DEBUG_LOG(LogLevel::DEBUG, "Node::setValue: Value and metadata updated.");
-}
-
-bool Node::isValid() const {
-    return data.type != NodeValueType::Null && !std::holds_alternative<NullType>(data.value);
-}
-
-bool Node::isType(const NodeValueType type) const {
-    return isValid() && data.type == type;
-}
-
-// Type checks
-bool Node::isInt() const { return isType(NodeValueType::Int);}
-bool Node::isFloat() const { return isType(NodeValueType::Float);}
-bool Node::isDouble() const { return isType(NodeValueType::Double);}
-bool Node::isLong() const { return isType(NodeValueType::Long); }
-
-bool Node::isBool() const { return isType(NodeValueType::Bool);}
-
-bool Node::isChar() const { return isType(NodeValueType::Char);}
-bool Node::isString() const { return isType(NodeValueType::String);}
-
-bool Node::getIsCallable() const { 
-    if (!isCallable){
-        switch (data.type)
-        {
-        case NodeValueType::Function:
-        case NodeValueType::ClassInstance:
-        case NodeValueType::Method:
-        case NodeValueType::Callable:
-        case NodeValueType::Class:
-        return true;
-        default:
-            break;
-        }
-    }
-    return isCallable; 
-}
-
-bool Node::isClassInstance() const {return data.type == NodeValueType::ClassInstance;}
-
-bool Node::isClassInstance() {return data.type == NodeValueType::ClassInstance;}
-
-bool Node::isInstanceScope() {
-    return data.type == NodeValueType::Scope;
-}
-
-bool Node::isInstanceScope() const {
-    return data.type == NodeValueType::Scope;
-}
-
-
-bool Node::isNumeric() const { return isInt() || isFloat() || isDouble() || isLong(); }
-
-template <typename T>
-T Node::convertNumber() const {
-    if (!isNumeric()) {throw MerkError("Cannot convert a non-numeric type to another.");}
-
-    switch (data.type) {
-        case NodeValueType::Int:
-            return static_cast<T>(std::get<int>(data.value));
-        case NodeValueType::Float:
-            return static_cast<T>(std::get<float>(data.value));
-        case NodeValueType::Double:
-            return static_cast<T>(std::get<double>(data.value));
-        case NodeValueType::Long:
-            return static_cast<T>(std::get<long>(data.value));
-        default:
-            throw MerkError("Cannot convert non-numeric Node to the requested type.");
-    }
-}
-
-int Node::toInt() const {
-    return convertNumber<int>();
-}
-
-float Node::toFloat() const {
-    return convertNumber<float>();
-}
-
-double Node::toDouble() const {
-    return convertNumber<double>();
-}
-
-long Node::toLong() const {
-    return convertNumber<long>();
-}
 
 bool Node::toBool() const {
-    if (data.type != NodeValueType::Bool) {
-        throw MerkError("Cannot convert non-boolean Node to bool.");
-    }
-    return std::get<bool>(data.value);
-}
-
-String Node::toString() const {
-    try {
         switch (data.type) {
-            case NodeValueType::Int:
-                return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Number:
-                return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Float:
-                return std::to_string(std::get<float>(data.value));
-            case NodeValueType::Double:
-                return std::to_string(std::get<double>(data.value));
-            case NodeValueType::Long:
-                return std::to_string(std::get<long>(data.value));
-            case NodeValueType::Bool:
-                return std::get<bool>(data.value) ? "true" : "false";
-            case NodeValueType::Char:
-                return std::string(1, std::get<char>(data.value));
-            case NodeValueType::String:
-                return std::get<String>(data.value);
-            case NodeValueType::Null:
-                return "null"; 
-            case NodeValueType::Uninitialized:
-                return "<Uninitialized>";
-            case NodeValueType::Any:
-                return "Any";
-            case NodeValueType::Class:
-                return "Class";
-            
-            case NodeValueType::ClassInstance:
-                return "<ClassInstance>";
-            case NodeValueType::Callable:
-                return "<Callable";
-            case NodeValueType::UNKNOWN:
-                return "UNKNOWN";
-            case NodeValueType::Function:
-                return "Function";
+            case NodeValueType::Bool: return std::get<bool>(data.value);
+            case NodeValueType::Int: return toInt() != 0;
+            case NodeValueType::Long: return toLong() != 0;
+            case NodeValueType::Float: return toFloat() != 0.0f;
+            case NodeValueType::Double: return toDouble() != 0.0;
+            case NodeValueType::String: 
+            case NodeValueType::Char: return toString().empty();
             case NodeValueType::None:
-                return "None";
+            case NodeValueType::Null:
+                return false;
+            
+            case NodeValueType::List:
+                return toList()->getElements().size() > 0;
+            case NodeValueType::Array:
+                return toArray()->getElements().size() > 0;
+            
+
+            case NodeValueType::ClassInstance:
+                {
+                    auto inst = std::get<SharedPtr<ClassInstance>>(data.value);
+                    auto data = inst->getNativeData();
+                    // throw MerkError("Got Data");
+                    if (data) {
+                        // throw MerkError("Got HAS DATA REALLY");
+                        return data->holdsValue();
+                    }
+                    return false;
+                }
+                
             default:
-                throw MerkError("Unsupported type for Node toString.");
+                throw MerkError("No Suitable Conversion From: " + nodeTypeToString(data.type) + " to bool has yet been made");
         }
-    } catch (const std::exception& e) {
-        debugLog(true, highlight("[Error] Exception in Node::toString():", Colors::red), e.what());
-        return "[Error in Node::toString]";
-    }
+    
     
 }
 
@@ -502,54 +331,73 @@ NodeValueType Node::getNodeValueType(const String& typeStr, const String& valueS
         return NodeValueType::Bool;
     } else if (typeStr == "Null") {
         return NodeValueType::Null;
+    } else if (typeStr == "Char") {
+        return NodeValueType::Char;
     }
 
     throw MerkError("Unknown type string: " + typeStr);
 }
 
 NodeValueType Node::getNodeValueType(const VariantType& value) {
-    if (std::holds_alternative<int>(value)) return NodeValueType::Int;
-    if (std::holds_alternative<float>(value)) return NodeValueType::Float;
-    if (std::holds_alternative<double>(value)) return NodeValueType::Double;
-    if (std::holds_alternative<long>(value)) return NodeValueType::Long;
-    if (std::holds_alternative<String>(value)) return NodeValueType::String;
-    if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
-    if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
-    return NodeValueType::Any;  // Allow `Any` when the type is unknown
-}
+    try {
+        if (std::holds_alternative<int>(value)) return NodeValueType::Int;
+        if (std::holds_alternative<float>(value)) return NodeValueType::Float;
+        if (std::holds_alternative<double>(value)) return NodeValueType::Double;
+        if (std::holds_alternative<long>(value)) return NodeValueType::Long;
+        if (std::holds_alternative<String>(value)) return NodeValueType::String;
+        if (std::holds_alternative<bool>(value)) return NodeValueType::Bool;
+        if (std::holds_alternative<char>(value)) return NodeValueType::Char;
+        if (std::holds_alternative<NullType>(value)) return NodeValueType::Null;
+        if (std::holds_alternative<SharedPtr<ArrayNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::Array;}
+        if (std::holds_alternative<SharedPtr<ListNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::List;}
+        if (std::holds_alternative<SharedPtr<SetNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::Set;}
+        if (std::holds_alternative<SharedPtr<DictNode>>(value)) {throw MerkError("Is A List From The Start"); return NodeValueType::Dict;}
+        if (std::holds_alternative<SharedPtr<ClassInstance>>(value)) return NodeValueType::ClassInstance;
+        // if (std::holds_alternative<SharedPtr<FunctionNode>>(value)) return NodeValueType::Function;
+        return NodeValueType::Any;  // Allow `Any` when the type is unknown
+    } catch (std::exception& e) {
+        String out = e.what();
+        throw MerkError("Node::getNodeValueType failed: " + out);
+    }
+    
+} 
 
 void Node::validateTypeAlignment() const {
-    if (data.type == NodeValueType::Null) {
-        throw MerkError("Invalid Node type: Null");
-    }
-    if (data.type == NodeValueType::Any) {
-        return;  // Allow Any type without restriction
-    }
+    if (data.type == NodeValueType::Any) { return;  /*Allow Any type without restriction*/}
 }
 
 void Node::setInitialValue(const VariantType& value) {
-    std::visit(
-        [this](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            data.type = getNodeTypeFromType<T>();
-            data.value = arg; // Store the value
-        },
-        value
-    );
-}
+    // if (getValue() == value) {return;}
+    try {
+        std::visit(
+            [this](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                data.type = getNodeTypeFromType<T>();
+                data.value = arg; // Store the value
+            },
+            value
+        );
+    }  catch (std::exception& e) {
+        String out = e.what();
+        throw MerkError("Node::getNodeValueType failed: " + out);
+    }
 
+    // if (data.type != NodeValueType::List && data.type != NodeValueType::Uninitialized && data.type != NodeValueType::String) {throw MerkError("Not Correct type of: " + nodeTypeToString(data.type) + " " + toString());}
+
+    if (data.type == NodeValueType::List && isInstance()) {
+        throw MerkError("When Initially Setting List value, it is an Instance");
+    }
+}
 
 // Getter for the value
 VariantType Node::getValue() const {
-    if (data.type == NodeValueType::Null) {
-        throw MerkError("Attempting to get value from a Node of type Null.");
-    }
     return data.value; // Return the value stored in the NodeData
 }
 
 
 // Getter for the type
 NodeValueType Node::getType() const {
+    // return getNodeTypeFromType();
     return data.type;
 }
 
@@ -595,9 +443,6 @@ NodeValueType determineNumericResultType(const Node& left, const Node& right) {
         throw MerkError("Cannot perform arithmetic on non-numeric types.");
     }
 
-    DEBUG_LOG(LogLevel::ERROR, "Left Side: ", nodeTypeToString(left.getType()));
-    DEBUG_LOG(LogLevel::ERROR, "Right Side: ", nodeTypeToString(right.getType()));
-
 
     // Follow type promotion rules for dynamic variables
     if (!left.isStatic && !right.isStatic) {
@@ -617,7 +462,6 @@ NodeValueType determineNumericResultType(const Node& left, const Node& right) {
         return left.getType();
     }
 
-    // If one is static, enforce the static type
     return left.isStatic ? left.getType() : right.getType();
 }
 
@@ -639,7 +483,10 @@ void validateModifiability(const Node& node) {
 Node performArithmeticOperation(const Node& left, const Node& right, 
                                 const std::function<double(double, double)>& operation) {
     NodeValueType resultType = determineNumericResultType(left, right);
-    DEBUG_LOG(LogLevel::ERROR, "ResultType: ", nodeTypeToString(resultType));
+    if (left.isStatic && left.getType() != resultType) {
+        throw MerkError("Types Don't Match For Node " + nodeTypeToString(left.getType()) + " -> " + nodeTypeToString(resultType));
+    }
+    DEBUG_LOG(LogLevel::TRACE, "ResultType: ", nodeTypeToString(resultType));
 
     double leftValue = left.toDouble();
     double rightValue = right.toDouble();
@@ -647,20 +494,20 @@ Node performArithmeticOperation(const Node& left, const Node& right,
 
     // Return result with appropriate type
     if (resultType == NodeValueType::Int) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning INT");
+        DEBUG_LOG(LogLevel::TRACE, "Returning INT");
         return Node(static_cast<int>(result));
     }
     if (resultType == NodeValueType::Float) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning FLOAT");
+        DEBUG_LOG(LogLevel::TRACE, "Returning FLOAT");
 
         return Node(static_cast<float>(result));
     }
     if (resultType == NodeValueType::Double) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning DOUBLE");
+        DEBUG_LOG(LogLevel::TRACE, "Returning DOUBLE");
         return Node(result);
     }
     if (resultType == NodeValueType::Long) {
-        DEBUG_LOG(LogLevel::ERROR, "Returning LONG");
+        DEBUG_LOG(LogLevel::TRACE, "Returning LONG");
 
         return Node(static_cast<long>(result));
     }
@@ -672,6 +519,9 @@ Node performArithmeticOperation(const Node& left, const Node& right,
 Node Node::operator+(const Node& other) const {
     if (isString() && other.isString()) {
         return Node(toString() + other.toString());
+    }
+    if (std::holds_alternative<char>(data.value) && std::holds_alternative<char>(other.data.value)) { 
+        return Node(std::string() + std::get<char>(data.value) + std::get<char>(other.data.value));  // construct string from both chars
     }
     else if ((isString() && !other.isString()) || (!isString() && other.isString())){
         throw MerkError("Cannot concatenate string with another type");
@@ -691,9 +541,7 @@ Node Node::operator*(const Node& other) const {
 
 // Division Operator (With Static Type Safety)
 Node Node::operator/(const Node& other) const {
-    if (other.toDouble() == 0.0) {
-        throw MerkError("Division by zero.");
-    }
+    if (other.toDouble() == 0.0) {throw MerkError("Division by zero.");}
     
     NodeValueType resultType = determineNumericResultType(*this, other);
     if (isStatic && other.isStatic && resultType == NodeValueType::Int) {
@@ -716,7 +564,6 @@ Node& Node::operator+=(const Node& other) {
     validateModifiability(*this);
     auto val = performArithmeticOperation(*this, other, [](double a, double b) { return a + b; });
     setValue(val.getValue());
-    // *this = *this + other;
     return *this;
 }
 
@@ -742,7 +589,6 @@ Node& Node::operator/=(const Node& other) {
 
 
 Node Node::plusEquals(const Node& other) {
-
     return *this += other;
 };
 Node& Node::minusEquals(const Node& other) {
@@ -757,11 +603,13 @@ Node& Node::divEquals(const Node& other) {
 
 // Comparison Operators
 bool Node::operator==(const Node& other) const {
-if (std::holds_alternative<UninitializedType>(data.value) ||
-    std::holds_alternative<UninitializedType>(other.data.value)) {
-    return std::holds_alternative<UninitializedType>(data.value) &&
-           std::holds_alternative<UninitializedType>(other.data.value);
-}
+    // return getValue() == other.getValue();
+    if (std::holds_alternative<UninitializedType>(data.value) ||
+        std::holds_alternative<UninitializedType>(other.data.value)) {
+        return std::holds_alternative<UninitializedType>(data.value) &&
+            std::holds_alternative<UninitializedType>(other.data.value);
+    }
+
     if (data.type == NodeValueType::Null || other.data.type == NodeValueType::Null) {
         return data.type == NodeValueType::Null && other.data.type == NodeValueType::Null;
     }
@@ -779,26 +627,29 @@ if (std::holds_alternative<UninitializedType>(data.value) ||
     if (isStatic && (data.type != other.data.type)) {
         return false;
     }
-
-    switch (data.type) {
-        case NodeValueType::Int:
-            return toInt() == other.toInt();
-        case NodeValueType::Float:
-            return areFloatsEqual(toFloat(), other.toFloat());
-        case NodeValueType::Double:
-            return areDoublesEqual(toDouble(), other.toDouble());
-        case NodeValueType::String:
-            return toString() == other.toString();
-        case NodeValueType::Bool:
-            return toBool() == other.toBool();
-        case NodeValueType::Long:
-            return toLong() == other.toLong();
-        default:
-            return false;
+    try {
+        switch (data.type) {
+            case NodeValueType::Int:
+                return toInt() == other.toInt();
+            case NodeValueType::Float:
+                return areFloatsEqual(toFloat(), other.toFloat());
+            case NodeValueType::Double:
+                return areDoublesEqual(toDouble(), other.toDouble());
+            case NodeValueType::String:
+            case NodeValueType::Char:
+                return toString() == other.toString();
+            case NodeValueType::Bool:
+                return toBool() == other.toBool();
+            case NodeValueType::Long:
+                return toLong() == other.toLong();
+            
+            default:
+                return false;
+        }
+    } catch (std::exception& e) {
+        String out = e.what();
+        throw MerkError("Node::operator== failed: " + out);
     }
-
-
-    return getValue() == other.getValue();
 }
 
 bool Node::operator!=(const Node& other) const { return !(*this == other); }
@@ -836,315 +687,34 @@ String operator+(const Node& node, const String& rhs) {
 }
 
 
-void VarNode::setValue(const Node& other) {
-    if (isConst) {
-        throw MerkError("Cannot reassign a constant VarNode.");
-    }
-    if (other.getType() == NodeValueType::Null) {
-        throw MerkError("Cannot assign a Null Node to a VarNode.");
-    }
-    if (isStatic && getType() != other.getType()) {
-        throw MerkError("Cannot reassign a statically typed VarNode with a different type.");
-    }
 
-    // Only update the value, but not the metadata (isConst, isMutable, isStatic)
-    data.value = other.getValue();
-    data.type = other.getType();
 
-    DEBUG_LOG(LogLevel::DEBUG, "VarNode::setValue: Value updated, metadata remains unchanged.");
+UniquePtr<VarNode> cloneVarNode(VarNode* original) {
+    return UniquePtr<VarNode>(original);
 }
 
-// Default Constructor
-Node::Node() : data() {
-    DEBUG_LOG(LogLevel::DEBUG, "===== Node was created with default initialization.");
-}
 
-// Copy Constructor (Handles VarNode properly)
-Node::Node(const Node& other) {
-    if (this == &other) {return;}
+std::size_t Node::hash() const {
+    std::size_t h1 = std::hash<int>()(static_cast<int>(data.type));
+    std::size_t h2 = 0;
 
-    this->data = other.data;
-    isConst = other.isConst;
-    isMutable = other.isMutable;
-    isStatic = other.isStatic;
+    std::visit([&](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
 
-    DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-constructed.");
-}
-
-// Move Constructor
-Node::Node(Node&& other) noexcept {
-    this->data = std::move(other.data);
-    other.data.type = NodeValueType::Null; // Reset moved-from object
-    isConst = other.isConst;
-    isMutable = other.isMutable;
-    isStatic = other.isStatic;
-    isCallable = other.isCallable;
-    name = other.name;
-    // DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-constructed.");
-}
-
-// Copy Assignment Operator
-Node& Node::operator=(const Node& other) {
-    if (this != &other) {
-        if (const VarNode* varNode = dynamic_cast<const VarNode*>(&other)) {
-            *this = VarNode(*varNode); // Call VarNode's copy assignment operator
+        if constexpr (std::is_same_v<T, NodeList>) {
+            // Hash the vector contents
+            std::size_t combined = 0;
+            for (const auto& n : arg) {
+                combined ^= n.hash() + 0x9e3779b9 + (combined << 6) + (combined >> 2);
+            }
+            h2 = combined;
         } else {
-            data = other.data;
-            isConst = other.isConst;
-            isMutable = other.isMutable;
-            isStatic = other.isStatic;
-            isCallable = other.isCallable;
-            name = other.name;
-            DEBUG_LOG(LogLevel::DEBUG, "===== Node was copy-assigned.");
+            h2 = std::hash<T>()(arg);
         }
-    }
-    return *this;
-}
+    }, data.value);
 
-// Move Assignment Operator
-Node& Node::operator=(Node&& other) noexcept {
-    if (this != &other) {
-        data = std::move(other.data);
-        isConst = other.isConst;
-        isMutable = other.isMutable;
-        isStatic = other.isStatic;
-        isCallable = other.isCallable;
-        name = other.name;
-        DEBUG_LOG(LogLevel::DEBUG, "===== Node was move-assigned.");
-    }
-    return *this;
-}
+    std::size_t h3 = std::hash<std::string>()(name);
+    std::size_t h4 = (isConst << 1) ^ (isMutable << 2) ^ (isStatic << 3);
 
-// Constructor accepting a VariantType
-Node::Node(const VariantType& value) {
-    setInitialValue(value);
-    validateTypeAlignment();
-}
-
-// Constructor accepting a string value and type
-Node::Node(const String& value, const String& typeStr) {
-    setInitialValue(value, typeStr);
-    validateTypeAlignment();
-}
-
-// Destructor
-Node::~Node() {
-    DEBUG_LOG(LogLevel::DEBUG, "===== Node was destroyed.");
-    // data.value._M_reset();
-}
-
-// Clone Method
-Node* Node::clone() const {
-    return new Node(*this);
-}
-
-// Default constructor
-LitNode::LitNode() : Node() {
-    nodeType = "LitNode";
-    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was created without initialization.");
-}
-
-// Constructor accepting a VariantType
-LitNode::LitNode(const VariantType& value) : Node(value) {
-    nodeType = "LitNode";
-    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized with VariantType.");
-}
-
-// Constructor accepting a string value and type
-LitNode::LitNode(const String& value, const String& typeStr) : Node(value, typeStr) {
-    nodeType = "LitNode";
-    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized with String and typeStr.");
-}
-
-// Constructor accepting another Node
-LitNode::LitNode(const Node& parentNode) : Node(parentNode) {
-    nodeType = "LitNode";
-    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was initialized from another Node.");
-}
-
-// Copy constructor
-LitNode::LitNode(const LitNode& other) : Node(other) {
-    nodeType = "LitNode";
-    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was copy-constructed.");
-}
-
-// Move constructor
-LitNode::LitNode(LitNode&& other) noexcept : Node(std::move(other)) {
-    nodeType = "LitNode";
-    DEBUG_LOG(LogLevel::TRACE, "===== LitNode was move-constructed.");
-}
-
-LitNode& LitNode::operator=(const LitNode& other) {
-    nodeType = "LitNode";
-    if (this != &other) {
-        Node::operator=(other);
-    }
-    return *this;
-}
-
-// Move assignment operator
-LitNode& LitNode::operator=(LitNode&& other) noexcept {
-    nodeType = "LitNode";
-
-    if (this != &other) {
-        Node::operator=(std::move(other));
-    }
-    return *this;
-}
-
-
-
-
-
-
-
-
-
-
-
-// VarNode Default Constructor
-VarNode::VarNode() : Node() {
-    nodeType = "VarNode";
-    DEBUG_LOG(LogLevel::DEBUG, "===== VarNode was created without initialization.");
-}
-
-// VarNode Constructor accepting VariantType
-VarNode::VarNode(const VariantType& value, bool isConst, bool isMutable, bool isStatic)
-    : Node(value) {
-    nodeType = "VarNode";
-    this->isConst = isConst;
-    this->isMutable = isMutable;
-    this->isStatic = isStatic;
-}
-
-// VarNode Constructor accepting String value and type
-VarNode::VarNode(const String& value, const String& typeStr, bool isConst, bool isMutable, bool isStatic)
-    : Node(value, typeStr) {
-    nodeType = "VarNode";
-    this->isConst = isConst;
-    this->isMutable = isMutable;
-    this->isStatic = isStatic;
-}
-
-// VarNode Constructor accepting another Node
-VarNode::VarNode(const Node& parentNode, bool isConst, bool isMutable, bool isStatic)
-    : Node(parentNode) {
-    if (parentNode.getType() == NodeValueType::Null) {
-        throw MerkError("Cannot create a VarNode from an untyped (Null) parent Node.");
-    }
-    nodeType = "VarNode";
-
-    this->isConst = parentNode.isConst || isConst;
-    this->isMutable = parentNode.isMutable || isMutable;
-    this->isStatic = parentNode.isStatic || isStatic;
-    this->isCallable = parentNode.isCallable;
-    this->name = parentNode.name;
-    this->nodeType = parentNode.nodeType;
-}
-
-// VarNode Copy Constructor
-VarNode::VarNode(const VarNode& other) : Node(other) {
-    nodeType = "VarNode";
-
-    this->isConst = other.isConst;
-    this->isMutable = other.isMutable;
-    this->isStatic = other.isStatic;
-    this->isCallable = other.isCallable;
-    this->name = other.name;
-    this->nodeType = other.nodeType;
-}
-
-// VarNode Move Constructor
-VarNode::VarNode(VarNode&& other) noexcept : Node(std::move(other)) {
-    this->isConst = other.isConst;
-    this->isMutable = other.isMutable;
-    this->isStatic = other.isStatic;
-    this->isCallable = other.isCallable;
-    this->name = other.name;
-    this->nodeType = other.nodeType;
-}
-
-// Copy Assignment Operator
-VarNode& VarNode::operator=(const VarNode& other) {
-    if (this != &other) {
-        Node::operator=(other);
-    }
-    return *this;
-}
-
-// Move Assignment Operator
-VarNode& VarNode::operator=(VarNode&& other) noexcept {
-    if (this != &other) {
-        Node::operator=(std::move(other));
-    }
-    return *this;
-}
-
-VarNode* VarNode::clone() const {
-    return new VarNode(*this);
-}
-
-
-String LitNode::toString() const {
-    try {
-        switch (data.type) {
-            case NodeValueType::Int:
-                return std::to_string(std::get<int>(data.value));
-            case NodeValueType::Float:
-                return std::to_string(std::get<float>(data.value));
-            case NodeValueType::Double:
-                return std::to_string(std::get<double>(data.value));
-            case NodeValueType::Long:
-                return std::to_string(std::get<long>(data.value));
-            case NodeValueType::Bool:
-                return std::get<bool>(data.value) ? "true" : "false";
-            case NodeValueType::Char:
-                return std::string(1, std::get<char>(data.value));
-            case NodeValueType::String:
-                return std::get<String>(data.value);
-            case NodeValueType::Null:
-                return "null"; 
-            case NodeValueType::Uninitialized:
-                return "[Uninitialized]";
-            case NodeValueType::Any:
-                return "[Any Type]";
-            default:
-                throw RunTimeError("Unsupported type for Node toString.");
-        }
-    } catch (const std::exception& e) {
-        debugLog(true, highlight("[Error] Exception in LitNode::toString():", Colors::red), e.what());
-        return "[Error in LitNode::toString]";
-    }
-}
-
-
-
-// For Variable Name Part Construction
-VarNode::VarNode(const String value, const String& typeStr, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic)
-    : Node(value, typeStr) {
-    nodeType = "VarNode";
-    this->isConst = isConst;
-    this->isMutable = isMutable;
-    this->isStatic = isStatic && typeTag.has_value();
-    if (typeTag.has_value()){
-        this->data.type = typeTag.value_or(NodeValueType::Any);
-    }
-
-    validateTypeAlignment();
-}
-
-// For Variable Name Part and ResolvedVariable Construction
-VarNode::VarNode(VarNode& parent, bool isConst, bool isMutable, std::optional<NodeValueType> typeTag, bool isStatic)
-    :Node(parent) {
-    nodeType = "VarNode";
-    this->isConst = isConst;
-    this->isMutable = isMutable;
-    this->isStatic = typeTag.has_value() || isStatic; // && parent.data.type != NodeValueType::Uninitialized;
-    if (typeTag.has_value()){
-        this->data.type = typeTag.value_or(NodeValueType::Any);
-    }
-
-    this->data.value = parent.data.value;
-
-    validateTypeAlignment();
+    return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3);
 }

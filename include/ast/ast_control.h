@@ -29,14 +29,12 @@ public:
     ~AstCollector();
 };
 
-// #endif // AST_COLLECTOR_H
-
     
 
 class CodeBlock : public BaseAST, AstCollector {
 
 protected:
-    SharedPtr<Scope> scope;
+    mutable SharedPtr<Scope> scope;
     Vector<UniquePtr<BaseAST>> children;
     bool containsReturn = false;
 public:
@@ -76,6 +74,7 @@ public:
     UniquePtr<BaseAST> clone() const override;
     
     void setScope(SharedPtr<Scope> newScope) override;
+    void setScope(SharedPtr<Scope> newScope) const;
     virtual FreeVars collectFreeVariables() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 
@@ -102,6 +101,7 @@ public:
     static UniquePtr<ConditionalBlock> create(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope) {
         return makeUnique<ConditionalBlock>(std::move(condition), scope);
     }
+    void setScope(SharedPtr<Scope> newScope) override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
 

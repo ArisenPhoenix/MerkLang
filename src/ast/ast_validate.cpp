@@ -1,7 +1,7 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
 #include "core/scope.h" 
-#include "core/classes/method.h"
+#include "core/callables/classes/method.h"
 
 #include "ast/ast_base.h"
 #include "ast/ast_control.h"
@@ -128,24 +128,6 @@ void validator(const NodeVector& nodes, const String& accessor, const String& co
                         throwAccessError("Chain");
                     break;
                 }
-                // case AstType::VariableReference: {
-                //     const auto* attr = static_cast<const VariableReference*>(node);
-                //     if (attr->getAccessor() == accessor)
-                //         throwAccessError("VariableReference");
-                //     break;
-                // }
-                // case AstType::VariableAssignment: {
-                //     const auto* attr = static_cast<const VariableAssignment*>(node);
-                //     if (attr->getAccessor() == accessor)
-                //         throwAccessError("VariableAssignment");
-                //     break;
-                // }
-                // case AstType::VariableDeclaration: {
-                //     const auto* attr = static_cast<const VariableDeclaration*>(node);
-                //     if (attr->getAccessor() == accessor)
-                //         throwAccessError("VariableDeclaration");
-                //     break;
-                // }
                 default: break;
             }
             return false;

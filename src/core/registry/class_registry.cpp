@@ -17,13 +17,8 @@ ClassRegistry::~ClassRegistry() {
 }
 
 void ClassRegistry::registerClass(const String& name, SharedPtr<ClassBase> classDef) {
-    if (classMap.find(name) != classMap.end()) {
-        throw MerkError("Class '" + name + "' already exists.");
-    }
-    // Create a ClassSignature from the given ClassBase and store it.
-    if (!classDef->getClassScope()) {
-        throw MerkError("ClassRegistry::registerClass(): Classdef contains no scope");
-    }
+    if (classMap.find(name) != classMap.end()) { throw MerkError("Class '" + name + "' already exists."); }
+    if (!classDef->getClassScope()) { throw MerkError("ClassRegistry::registerClass(): Classdef contains no scope"); }
     auto classSig = std::static_pointer_cast<ClassSignature>(classDef->toCallableSignature());
     classMap[name] = classSig;
 }
@@ -33,9 +28,7 @@ void ClassRegistry::clear() {
 }
 
 void ClassRegistry::registerClass(const String& name, SharedPtr<ClassSignature> classSignature) {
-    if (classMap.find(name) != classMap.end()) {
-        throw MerkError("Class '" + name + "' already exists.");
-    }
+    if (classMap.find(name) != classMap.end()) { throw MerkError("Class '" + name + "' already exists."); }
     classMap[name] = classSignature;
 }
 

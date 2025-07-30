@@ -1,3 +1,5 @@
+
+
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
@@ -13,15 +15,12 @@
 #include <memory>
 #include <filesystem>
 #include "core/types.h"
+#include "utilities/helper_functions.h"
 
-
-
-// #include "core/node.h"
+ 
 class VarNode;
 class Node;
 class LitNode;
-#include "utilities/helper_functions.h"
-
 
 
 // --- Helper templates - modified names for clarity ---
@@ -84,6 +83,7 @@ public:
         static Debugger instance;
         return instance;
     }
+    bool enabled = true;
 
     // Global log level.
     void setGlobalLogLevel(LogLevel level);
@@ -131,35 +131,15 @@ public:
         if (handleLogProceed(level, normFile)) {
             handleLogDisplay(level, normFile, line, oss.str());
         }
-        // return std::make_tuple(arguments, file, level, int)
-        // String fileName = normalizeFileName(file);
-        // if (handleProceed(level, fileName)){
-        //     std::ostringstream oss;
-        //     oss << handleLevel(level);
-        //     oss << handleTime();
-        //     oss << handleFileDisplay(fileName, line);
-        //     oss << " ";
-        //     ((oss << stringify(std::forward<Args>(args)) << " "), ...);
-            
-        //     printLog(oss.str());
-        // }
     }
 
 
 
     void handleFlowDisplay(FlowLevel level, const String &file, int line, String methodName, bool entering = true);
     void handleLogDisplay(LogLevel level, const String &file, int line, String args);
-
-    // template<typename ... Args>
-    // std::tuple<String, LogLevel, int> getArgs(LogLevel level, const String &file, int line, Args&& ... args) {
-    //     String arguments;
-    //     std::ostringstream oss;
-    //     arguments =  ((oss << stringify(std::forward<Args>(args)) << " "), ...);
-    //     return std::make_tuple(arguments, file, line);
-    // }
-
     std::function<void()> flowEnter(const String &methodName, FlowLevel level, const String &file, int line);
     
+    void setEnabled(bool enable);
     
 
 
@@ -250,21 +230,29 @@ inline auto flowEnterHelper(const char* funcSig, FlowLevel level, const char* fi
 
 
 
+// #define DEBUG_LOG(level, ...) Debugger::getInstance().logEnter(level, __FILE__, __LINE__, __VA_ARGS__)
+// #define DEBUG_FLOW(...)  ->>>>>>>>>>>>>>>>>>>>>>>>>> USE backslash here <<<<<<<<<<<<<<<<<<<<<<<<-
+//     auto __DEBUG_FLOW_EXIT__ = flowEnterHelper(FUNCTION_SIGNATURE, __VA_OPT__(__VA_ARGS__, ) __FILE__, __LINE__)
+// #define DEBUG_FLOW_EXIT() __DEBUG_FLOW_EXIT__()
 
 
 
-#define DEBUG_LOG(level, ...) Debugger::getInstance().logEnter(level, __FILE__, __LINE__, __VA_ARGS__)
-#define DEBUG_FLOW(...) \
-    auto __DEBUG_FLOW_EXIT__ = flowEnterHelper(FUNCTION_SIGNATURE, __VA_OPT__(__VA_ARGS__, ) __FILE__, __LINE__)
-#define DEBUG_FLOW_EXIT() __DEBUG_FLOW_EXIT__()
+
+#if ENABLE_DEBUG
+    #define DEBUG_LOG(level, ...) Debugger::getInstance().logEnter(level, __FILE__, __LINE__, __VA_ARGS__)
+    #define DEBUG_FLOW(...) \
+        auto __DEBUG_FLOW_EXIT__ = flowEnterHelper(FUNCTION_SIGNATURE, __VA_OPT__(__VA_ARGS__, ) __FILE__, __LINE__)
+    #define DEBUG_FLOW_EXIT() __DEBUG_FLOW_EXIT__()
+    
+#else
+    #define DEBUG_LOG(level, ...) do {} while(0)
+    #define DEBUG_FLOW(...) do {} while(0)
+    #define DEBUG_FLOW_EXIT() do {} while(0)
+#endif
+
+
 #define MARK_UNUSED_MULTI(...) \
     do { (void)([](auto&&... args){ ((void)args, ...); }(__VA_ARGS__)); } while (0)
-
-
-
-
-
- 
 
 namespace Debug {
     // for configuring the debugger in whatever combination(s) desired

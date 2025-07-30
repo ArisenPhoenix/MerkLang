@@ -10,15 +10,15 @@
 #include "ast/ast_class.h"
 
 
-#include "core/classes/class_base.h"
-#include "core/classes/method.h"
+#include "core/callables/classes/class_base.h"
+#include "core/callables/classes/method.h"
 
 UniquePtr<BaseAST> ASTStatement::clone() const {
     throw MerkError("Cannot Clone Base Class ASTStatement");
 } 
 
 UniquePtr<BaseAST> LiteralValue::clone() const {
-    return std::make_unique<LiteralValue>(value, getScope(), _isString, _isBool);
+    return std::make_unique<LiteralValue>(value, getScope());
 }
 
 UniquePtr<BaseAST> VariableDeclaration::clone() const {
@@ -32,7 +32,7 @@ UniquePtr<BaseAST> VariableDeclaration::clone() const {
 }
 
 UniquePtr<BaseAST> VariableReference::clone() const {
-
+    // validateScope(getScope(), "VariableReference::clone", name);
     return makeUnique<VariableReference>(name, getScope());
 } 
 
@@ -43,6 +43,8 @@ UniquePtr<BaseAST> VariableAssignment::clone() const {
 } 
 
 UniquePtr<BaseAST> BinaryOperation::clone() const {
+    // validateScope(getScope(), "BinaryOperation::clone->getScope");
+
     UniquePtr<BaseAST> clonedLeftBase = left->clone();
     auto clonedLeft = static_unique_ptr_cast<ASTStatement>(std::move(clonedLeftBase));
 
@@ -76,14 +78,23 @@ UniquePtr<BaseAST> Break::clone() const {
 }
 
 UniquePtr<BaseAST> Return::clone() const {
+    // validateScope(getScope(), "Return::clone->getScope");
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->getScope was validated");
     UniquePtr<BaseAST> clonedReturnBase = returnValue->clone();
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->returnValue was cloned");
     auto clonedReturn = static_unique_ptr_cast<ASTStatement>(std::move(clonedReturnBase));
+    // clonedReturn->setScope(getScope());
+    // validateScope(clonedReturn->getScope(), "Return::clone -> clonedReturn->getScope");
+    
     return makeUnique<Return>(getScope(), std::move(clonedReturn));
 } 
 
 UniquePtr<BaseAST> ConditionalBlock::clone() const {
+    // validateScope(getScope(), "ConditionalBlock::clone", condition->toString());
     UniquePtr<BaseAST> clonedCondBase = condition->clone();
     auto clonedCond = static_unique_ptr_cast<ConditionalBlock>(std::move(clonedCondBase));
+    // clonedCond->setScope(getScope());
+    // validateScope(clonedCond->getScope(), "ConditionalBlock::clone -> clonedCond->getScope");
     return clonedCond;
 }
 
@@ -104,6 +115,7 @@ UniquePtr<BaseAST> ElifStatement::clone() const {
 
 UniquePtr<BaseAST> IfStatement::clone() const {
     // Clone the condition and downcast to the expected type.
+    if (!condition || (condition && !condition->getScope())) {throw MerkError("Condition is null in if statement");}
     UniquePtr<BaseAST> clonedCondBase = condition->clone();
     auto clonedCondition = static_unique_ptr_cast<ConditionalBlock>(std::move(clonedCondBase));
 
@@ -145,9 +157,15 @@ UniquePtr<BaseAST> WhileLoop::clone() const {
 // AST FUNCTIONS
 UniquePtr<BaseAST> FunctionBody::clone() const {
     // Create a new CodeBlock with the same scope (or a copy of it, as appropriate)
+    validateScope(getScope(), "FunctionBody::clone");
     UniquePtr<FunctionBody> newBlock = std::make_unique<FunctionBody>(getScope());
 
     for (const auto &child : children) {
+        // DEBUG_LOG(LogLevel::PERMISSIVE, "Current FunctionBody child being cloned: ", child->toString());
+        // if (!child->getScope()) {
+        //     // child->printAST(std::cout);
+        //     // throw MerkError("Child Has No Valid Scope");
+        // }
         newBlock->addChild(child->clone());
     }
     return newBlock;
@@ -157,22 +175,50 @@ UniquePtr<BaseAST> FunctionRef::clone() const {
     return makeUnique<FunctionRef>(name, getScope());
 }
 
-UniquePtr<BaseAST> FunctionCall::clone() const {
-    Vector<UniquePtr<ASTStatement>> clonedArgs;
-    for (const auto &arg : arguments) {
-        UniquePtr<BaseAST> clonedArgBase = arg->clone();
-        auto clonedArg = static_unique_ptr_cast<ASTStatement>(std::move(clonedArgBase));
-        clonedArgs.push_back(std::move(clonedArg));
+
+UniquePtr<BaseAST> Arguments::clone() const {
+    auto args = makeUnique<Arguments>(getScope());
+    for (auto& arg: arguments) {
+        args->add(arg.clone());
     }
-    return makeUnique<FunctionCall>(name, std::move(clonedArgs), getScope());
+
+    return args;
+};
+
+UniquePtr<ArgumentType> CallableCall::cloneArgs() const {
+    // if (!getScope()) {throw MerkError("Scope has died at " + astTypeToString(getAstType()) + "::clone");}
+    auto clonedArgs = arguments->clone();
+    return static_unique_ptr_cast<ArgumentType>(std::move(clonedArgs));
+    // static_cast<ArgumentType>(clonedArgs);
+    // for (const auto &arg : arguments) {
+    //     UniquePtr<BaseAST> clonedArgBase = arg->clone();
+    //     auto clonedArg = static_unique_ptr_cast<ASTStatement>(std::move(clonedArgBase));
+    //     if (clonedArg->getAstType() == AstType::CallableCall) {
+    //         throw MerkError("FunctionCall tried to clone a base CallableCall");
+    //     }
+    //     clonedArgs.push_back(std::move(clonedArg));
+    // }
+
+    // return clonedArgs;
 }
 
+UniquePtr<BaseAST> FunctionCall::clone() const {
+    return makeUnique<FunctionCall>(name, std::move(cloneArgs()), getScope());
+}
 
+UniquePtr<BaseAST> ClassCall::clone() const {
+    auto cls = makeUnique<ClassCall>(name, std::move(cloneArgs()), getScope());
+    cls->accessor = accessor;
+    return cls;
+}
+
+UniquePtr<BaseAST> MethodCall::clone() const {
+    return makeUnique<MethodCall>(name, std::move(cloneArgs()), getScope());
+}
 
 UniquePtr<BaseAST> ClassBody::clone() const {
-    if (!getScope()){
-        throw MerkError("No Scope Present in ClassBody::clone()");
-    }
+    if (!getScope()){throw MerkError("No Scope Present in ClassBody::clone()");}
+
     UniquePtr<ClassBody> newBlock = makeUnique<ClassBody>(getScope());
     std::unordered_map<String, SharedPtr<Scope>> methodScopes;
 
@@ -194,28 +240,30 @@ UniquePtr<BaseAST> ClassBody::clone() const {
 
 
 UniquePtr<BaseAST> MethodBody::clone() const {
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    validateScope(getScope(), "MethodBody::clone");
     UniquePtr<MethodBody> newBlock = makeUnique<MethodBody>(getScope());
 
-    for (const auto &child : children) {
-        newBlock->addChild(child->clone());
-    }
+    for (const auto &child : children) {newBlock->addChild(child->clone());}
     newBlock->setNonStaticElements(nonStaticElements);
-    newBlock->isStatic = isStatic;
+    DEBUG_FLOW_EXIT();
     return newBlock;
 }
 
 
 
 UniquePtr<BaseAST> MethodDef::clone() const {
-    DEBUG_FLOW(FlowLevel::LOW);
-    if (!body->getScope()){
-        throw MerkError("No scope present in MethodDef::clone");
-    }
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    if (!body->getScope()){throw MerkError("No scope present in MethodDef::clone");}
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
     
     auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
+    if (!getScope()) {throw MerkError("MethodDef::clone -> No scope");}
     auto methodDef = makeUnique<MethodDef>(name, parameters.clone(), std::move(clonedBody), callType, getScope()->clone());
     String access = getMethodAccessor();
+
+    clonedBody->setNonStaticElements(nonStaticElements);
+    methodDef->setNonStaticElements(nonStaticElements);
 
     methodDef->setMethodAccessor(access);
 
@@ -229,4 +277,55 @@ UniquePtr<BaseAST> MethodDef::clone() const {
 UniquePtr<BaseAST> Accessor::clone() const {
     auto cloned = makeUnique<Accessor>(getAccessor(), getScope());
     return cloned;
+}
+
+
+
+
+
+UniquePtr<BaseAST> CallableBody::clone() const {
+    UniquePtr<CallableBody> newBlock = makeUnique<CallableBody>(getScope());
+
+    for (const auto &child : children) {newBlock->addChild(child->clone());}
+
+    if (nonStaticElements.size() > 0) {newBlock->setNonStaticElements(nonStaticElements);}
+
+    else {newBlock->setNonStaticElements({});}
+
+    
+    return newBlock;
+
+}
+
+
+UniquePtr<BaseAST> CallableDef::clone() const {
+    ParamList clonedParams;
+    for (auto& param: parameters) {clonedParams.addParameter(ParamNode(param));}
+
+    UniquePtr<CallableBody> clonedBodyBase = static_unique_ptr_cast<CallableBody>(body->clone());
+    
+
+    UniquePtr<CallableDef> calDef = std::make_unique<CallableDef>(name, clonedParams, std::move(clonedBodyBase), callType, getScope());
+
+    return calDef;
+}
+
+UniquePtr<BaseAST> CallableCall::clone() const { 
+    // Vector<UniquePtr<ASTStatement>> clonedArgs;
+    // for (auto& arg : arguments->getArgs()){
+    //     UniquePtr<ASTStatement> argBase = static_unique_ptr_cast<ASTStatement>(arg.clone());
+    //     clonedArgs.emplace_back(std::move(argBase));
+    // }
+    // UniquePtr<CallableCall> calCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
+    // return calCall;
+
+    auto args = arguments->clone();
+    auto clonedArgs = static_unique_ptr_cast<ArgumentType>(std::move(args));
+    UniquePtr<CallableCall> callCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
+    return callCall;
+}
+
+UniquePtr<BaseAST> CallableRef::clone() const {
+    UniquePtr<CallableRef> calRef = std::make_unique<CallableRef>(name, getScope());
+    return calRef;
 }

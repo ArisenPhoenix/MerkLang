@@ -65,9 +65,7 @@ String readFile(String filePath) {
 }
 
 bool validateScope(SharedPtr<Scope> scope, String methodName, String forWhat, bool debug) {
-    if (!scope) {
-        throw RunTimeError(methodName+":" + " Null scope passed" + (!forWhat.empty() ? "For " + forWhat : ""));
-    }
+    if (!scope) { throw RunTimeError(methodName+":" + " Null scope passed" + (!forWhat.empty() ? " For " + forWhat : "")); }
     debugLog(debug);
     debugLog(debug, methodName+":", "Scope validated for", (!forWhat.empty() ? forWhat : ",", "scope level: "), scope->getScopeLevel(), "\n");
     return true;
@@ -122,3 +120,32 @@ String joinUnorderedSetStrings(const std::unordered_set<String>& input, const St
     }
     return oss.str();
 }
+
+String joinVectorNodeStrings(const NodeList& nodes, const String& delimiter) {
+    std::ostringstream oss;
+    bool first = true;
+
+    for (const auto& val : nodes) { 
+        if (!val.isValid() && !first) {
+            oss << delimiter << " ";
+            oss << val.toString();
+            first = false;
+        }
+    }
+    return oss.str();
+}
+
+String joinVectorStrings(const Vector<String> nodes, const String& delimiter) {
+    std::ostringstream oss;
+    bool first = true;
+
+    for (const auto& val : nodes) { 
+        if (!val.empty() && !first) {
+            oss << delimiter << " ";
+            oss << val;
+            first = false;
+        }
+    }
+    return oss.str();
+}
+    

@@ -2,8 +2,8 @@
 #include "core/errors.h"
 #include "core/node.h"
 #include "utilities/debugger.h"
-#include "core/functions/param_node.h"
-
+#include "core/callables/param_node.h"
+#include "core/callables/argument_node.h"
 
 
 // All Constructor, not actually used but is an idea still
@@ -53,6 +53,7 @@ ParamNode::ParamNode(NodeValueType expectedType, bool isConst, bool isStatic)
 
 
 
+void ParamNode::setIsVarArgsParam(bool isVarArgParam) {isVarArgs = isVarArgParam;};
 
 // Set value (VariantType) with type checking
 void ParamNode::setValue(VariantType newValue) {
@@ -116,9 +117,8 @@ void ParamNode::validateExpectedType(NodeValueType expectedType) {
 
     DEBUG_FLOW_EXIT();
 }
-
+ 
 String ParamNode::toString() const {
-    DEBUG_FLOW();
     return "ParamNode(name: " + paramName + 
            ", Expected Type: " + nodeTypeToString(data.type) + 
            ", Value: " + VarNode::toString() + 
@@ -148,26 +148,87 @@ void ParamList::addParameter(const ParamNode& param) {
 }
 
 
-
-// Verify arguments against parameters
 void ParamList::verifyArguments(Vector<Node> args) {
     DEBUG_FLOW(FlowLevel::MED);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "NUM ARGUMENTS:", args.size());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "NUM PARAMETERS:",  parameters.size());
-    for (size_t i = 0; i < parameters.size(); ++i) {
+
+    bool variadic = !parameters.empty() && parameters.back().isVarArgsParameter();
+    size_t fixedParamCount = variadic ? parameters.size() - 1 : parameters.size();
+
+    // Check fixed arguments
+    for (size_t i = 0; i < fixedParamCount; ++i) {
         if (i >= args.size() && parameters[i].hasDefault()) {
-            continue; // Use default value if argument is missing
+            continue;
         }
 
         if (i >= args.size()) {
             throw MerkError("Missing argument for parameter: " + parameters[i].getName());
         }
-        DEBUG_LOG(LogLevel::DEBUG, "Setting ParamNode value");
 
-        parameters[i].setValue(args[i]); // ✅ Type check is enforced here
+        parameters[i].setValue(args[i]);
     }
+
+    // Handle variadic parameter
+    if (variadic) {
+        if (args.size() < fixedParamCount) {
+            throw MerkError("Too few arguments for variadic function.");
+        }
+
+        // Copy variadic arguments to a new vector to store in the param
+        Vector<Node> variadicArgs(args.begin() + fixedParamCount, args.end());
+
+        // Instead of assigning a Node, you’ll store it directly in the NativeFunction
+        // This just verifies count and leaves interpretation to the function
+        parameters.back().setValue(UninitializedType());  // Optional: clear placeholder
+    }
+
     DEBUG_FLOW_EXIT();
 }
+
+
+
+void ParamList::verifyArguments(ArgumentList& args) {
+    DEBUG_FLOW(FlowLevel::MED);
+
+    bool variadic = !parameters.empty() && parameters.back().isVarArgsParameter();
+    size_t fixedParamCount = variadic ? parameters.size() - 1 : parameters.size();
+
+    // Check fixed arguments
+    for (size_t i = 0; i < fixedParamCount; ++i) {
+        const auto& param = parameters[i];
+
+        Node arg;
+        if (i < args.positionalCount()) {
+            arg = args.getArg(i);
+        } else if (args.hasNamedArg(param.getName())) {
+            arg = args.getNamedArg(param.getName());
+        } else if (param.hasDefault()) {
+            arg = Node(param.getDefaultValue());
+        } else {
+            throw MerkError("Missing argument for parameter: " + param.getName());
+        }
+
+        // paramaters[i].setValue(arg.getValue());
+        parameters[i].setValue(arg);
+        // param.setValueFromVariant(arg.getValue());
+    }
+
+    // Handle variadic parameter
+    if (variadic) {
+        if (args.size() < fixedParamCount) {
+            throw MerkError("Too few arguments for variadic function.");
+        }
+
+        // Copy variadic arguments to a new vector to store in the param
+        Vector<Node> variadicArgs(args.begin() + fixedParamCount, args.end());
+
+        // Instead of assigning a Node, you’ll store it directly in the NativeFunction
+        // This just verifies count and leaves interpretation to the function
+        parameters.back().setValue(UninitializedType());  // Optional: clear placeholder
+    }
+
+    DEBUG_FLOW_EXIT();
+}
+
 
 // Retrieve parameter by index
 const ParamNode& ParamList::operator[](size_t index) const {
@@ -228,6 +289,9 @@ Vector<NodeValueType> ParamList::getParameterTypes() {
     return paramTypes;
 }
 
+ParamNode& ParamList::back() {return parameters.back();}
+ParamNode ParamList::back() const {return parameters.back();}
+
 void ParamList::printAST(std::ostream& os, int indent) const {
     for (const auto& param: parameters){
         printIndent(os, indent);        
@@ -245,6 +309,11 @@ Vector<String> ParamList::getNames() const {
 
 
 ParamList ParamList::clone() {
+    if (parameters.size() == 0) {
+        DEBUG_LOG(LogLevel::DEBUG, "ParamList is empty. Nothing to clone.");
+        return ParamList();
+        // throw MerkError("ParamList::clone() failed: parameters vector is null. (NON CONST)");
+    }
     ParamList params;
     for (auto& param : parameters) {
         params.addParameter(param.copy());
@@ -254,6 +323,9 @@ ParamList ParamList::clone() {
 };
 
 ParamList ParamList::clone() const {
+    if (parameters.data() == nullptr) {
+        throw MerkError("ParamList::clone() failed: parameters vector is null.");
+    }
     ParamList params;
     for (auto& param : parameters) {
         params.addParameter(param.copy());

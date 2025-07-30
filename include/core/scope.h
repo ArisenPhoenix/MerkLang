@@ -14,12 +14,33 @@ class ClassBase;
 class ClassSignature;
 
 
-class Scope : public std::enable_shared_from_this<Scope> {
+
+class ScopeMeta {
+public:
+    String owner = "";
+    bool isDetached = false;
+    bool isCallableScope = false;
+    bool isClonedScope = false;
+    int currentLine;
+    int currentColumn;
+    bool disregardDeclarations = false;
+    bool isRoot = false;
+    int scopeLevel;                      // The level of the scope in the hierarchy
+
+    String metaString() const;
+}; 
+
+using ScopeCache = std::unordered_map<String, Scope>; 
+
+
+
+class Scope : public ScopeMeta, public std::enable_shared_from_this<Scope> {
 private:
     WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
-    int scopeLevel;                      // The level of the scope in the hierarchy
     static inline size_t liveScopeCount = 0;
     static inline size_t totalScopeCreated = 0;
+    ClassMembers classMembers;   //map for future uses
+
 public:
     static void printScopeReport() {
         std::cout << "----------------------------" << std::endl;
@@ -40,7 +61,7 @@ public:
 
     // // DESTRUCTOR
     ~Scope();
-    void clear();
+    void clear(bool internalCall = true);
     // // Attributes
     String formattedScope();
     SharedPtr<FunctionRegistry>  globalFunctions;
@@ -50,17 +71,14 @@ public:
     std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
     std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
 
-    int currentLine;
-    int currentColumn;
+    
 
-    bool isDetached = false;
-    bool isCallableScope = false;
-    bool isClonedScope = false;
-    String owner = "";
+    ClassMembers getClassMembers() const;
+    void setClassMembers(ClassMembers);
+    bool hasMember(String&);
+    void addMember(String&);
+    void addMember(String&, String&);
 
-    // Vector<String> protectedMembers;
-    // void setProtectedMembers(Vector<String> protectedMems);
-    // Vector<String> Scope::getProtectedMembers() const;
     // Scope Manipulation
     void attachToInstanceScope(SharedPtr<Scope> instanceScope);
     bool removeChildScope(const SharedPtr<Scope>& target);
@@ -69,6 +87,9 @@ public:
     SharedPtr<Scope> createChildScope(); // Create a child scope
     void includeMetaData(SharedPtr<Scope> newScope, bool isDetached = false) const;
     SharedPtr<Scope> makeInstanceScope(SharedPtr<Scope> classScope);
+
+
+    SharedPtr<Scope> getRoot();
 
     // Scope Management
     SharedPtr<Scope> getParent() const;  // Get the parent scope
@@ -90,11 +111,11 @@ public:
 
 
     void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
-    SharedPtr<CallableSignature> handleLookupFunction(String& name, const Vector<Node>& args) const;
+    SharedPtr<CallableSignature> handleLookupFunction(String& name, const ArgResultType& args) const;
     
     //// Registry Management
     //// Function Management
-    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const Vector<Node>& args) const;
+    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const ArgResultType& args) const;
     std::optional<Vector<SharedPtr<CallableSignature>>> lookupFunction(const String& name) const;
 
     const SharedPtr<FunctionRegistry> getFunctionRegistry() const;
@@ -106,7 +127,7 @@ public:
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
     void registerFunction(const String& name, SharedPtr<Callable> anyCallable);
-    SharedPtr<CallableSignature> getFunction(const String& name, const Vector<Node>& args);
+    SharedPtr<CallableSignature> getFunction(const String& name, const ArgResultType& args);
     Vector<SharedPtr<CallableSignature>> getFunction(const String& name);
 
 
@@ -118,6 +139,7 @@ public:
     bool hasClass(const String& name) const;
     void registerClass(const String& name, SharedPtr<ClassBase> cls);
     void registerClass(const String& name, SharedPtr<ClassSignature> classSig);
+    void registerClass(String& name, SharedPtr<ClassSignature> classSig) const;
     std::optional<SharedPtr<ClassSignature>> getClass(const String& name);
 
     // Scope Other
@@ -127,6 +149,7 @@ public:
     void setParent(SharedPtr<Scope> scope);
 
     bool has(const SharedPtr<Scope>& scope);
+    bool hasImmediateChild(const SharedPtr<Scope>& candidate);
 
     void updateChildLevelsRecursively();
     void setScopeLevel(int newLevel);
@@ -137,13 +160,21 @@ public:
 
     // // DEBUGGING
     void printChildScopes(int indentLevel = 0) const;
-    void linkMethod(SharedPtr<Method> method, String methodName, SharedPtr<Scope> instanceScope);
-    void linkMethods(SharedPtr<CallableSignature>  methodSig, String methodName, SharedPtr<Scope> instanceScope);
-    void linkMethods(Vector<SharedPtr<MethodSignature>>& methodVec, String& methodName, SharedPtr<Scope> instanceScope);
-
-    void linkInstanceMethods(SharedPtr<Scope> classTemplateScope, SharedPtr<Scope> instanceScope);
     
     SharedPtr<Scope> isolateScope(const std::unordered_set<String>& freeVarNames);
+
+
+    // scope builders
+
+    SharedPtr<Scope> buildFunctionCallScope(SharedPtr<Function> func, String name);
+    SharedPtr<Scope> buildMethodCallScope(SharedPtr<Method> func, String name);
+
+    SharedPtr<Scope> buildInstanceScope(SharedPtr<ClassBase> classTemplate, String className);
+    SharedPtr<Scope> buildClassScope(FreeVars freeVarNames, String className);
+
+    SharedPtr<Scope> buildFunctionDefScope(const FreeVars& freeVars, const String& funcName);
+
+    SharedPtr<Scope> buildClassDefScope(const FreeVars& freeVars, const String& className);
     
 
 
@@ -155,7 +186,7 @@ private:
     // ClassRegistry classRegistry;               // Add class registry
 
     bool interpretMode;
-    bool isRoot;
+    // bool isRoot;
 };
 
 #endif // SCOPE_H

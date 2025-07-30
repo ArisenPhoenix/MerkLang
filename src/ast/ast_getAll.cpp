@@ -199,12 +199,13 @@ Vector<const BaseAST*> CallableCall::getAllAst(bool includeSelf) const {
     }
 
 
-    if (!arguments.empty()) {
-        for (auto& arg : arguments){
-            auto args = arg->getAllAst(includeSelf);
-            mergeVectors(all, args);
-        }
-    }
+    // if (!arguments.empty()) {
+    //     for (auto& arg : arguments){
+    //         auto args = arg->getAllAst(includeSelf);
+    //         mergeVectors(all, args);
+    //     }
+    // }
+    mergeVectors(all, arguments->getAllAst(includeSelf));
 
     return all; 
 }
@@ -280,4 +281,21 @@ Vector<const BaseAST*> ChainOperation::getAllAst(bool includeSelf) const {
     }
 
     return all;
+}
+
+
+Vector<const BaseAST*> Arguments::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all;
+
+    if (includeSelf) {all.push_back(this);}
+
+    for (auto& arg: arguments) {
+        mergeVectors(all, arg.getAllAst(includeSelf));
+    }
+    return all;
+};
+
+Vector<const BaseAST*> Argument::getAllAst(bool includeSelf) const {
+
+    return value->getAllAst(includeSelf);
 }

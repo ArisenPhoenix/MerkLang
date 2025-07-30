@@ -13,6 +13,8 @@
 #include <functional>
 #include <unordered_set>
 
+
+
 // This is essentially a global types repository used throughout the whole codebase
 
 // Forward declarations
@@ -73,6 +75,7 @@ enum class TokenType {
     Identifier,
     Number,
     String,
+    Char,
     Bool,
 
     VarDeclaration,
@@ -116,7 +119,16 @@ enum class TokenType {
 
     ChainEntryPoint,
 
-    Unknown
+    Unknown,
+    LeftBracket,
+    RightBracket,
+    LiteralArrowLeft,
+    LiteralArrowRight,
+    BraceLeft,
+    BraceRight,
+    LeftArrow,
+    RightArrow,
+    BeginTyping
 };
 
 // Enum for the type of the value held by the variant
@@ -143,7 +155,13 @@ enum class NodeValueType {
     Uninitialized,
     Any,
     UNKNOWN,
-    Scope
+    Scope,
+    Dict,
+    List,
+    Array,
+    Set,
+
+    UserDefined
 };
 
 
@@ -159,6 +177,7 @@ enum class AstType {
     ParameterAssignment,
 
     BinaryOperation,
+    UnaryOperation,
     Block,
     Conditional,
     IfStatement,
@@ -210,7 +229,9 @@ enum class AstType {
     KeyValueStructure,
     Enum,
 
-    ImportStatement
+    ImportStatement, 
+    Argument,
+    Arguments
 };
 
 
@@ -228,6 +249,10 @@ struct NullType {
         os << "null";
         return os;
     }
+
+    std::size_t hash() const {
+        return 0xDEADBEEF;
+    }
 };
 
 constexpr NullType Null{};
@@ -237,8 +262,17 @@ constexpr bool operator==(const NullType&, const NullType&) {return true;}
 struct UninitializedType {
     String toString() const { return "Uninitialized"; }
     constexpr bool operator==(const UninitializedType&) const { return true; }
-
+    std::size_t hash() const {
+        return 0xBAADF00D;
+    }
 };
+ 
+using NodeList = Vector<Node>;
+class ListNode;
+class ArrayNode;
+class DictNode;
+class MapNode;
+class SetNode;
 
 using VariantType = std::variant<
     int,
@@ -248,49 +282,59 @@ using VariantType = std::variant<
     char,
     bool,
     String,
-    Vector<Node>,
-    SharedPtr<Vector<Node>>,
     NullType,
     UninitializedType,
+    
     SharedPtr<Function>,
     SharedPtr<ClassBase>,
     SharedPtr<Method>,
-    SharedPtr<Callable>,
     SharedPtr<ClassInstance>,
-    SharedPtr<Scope>
+    SharedPtr<Callable>,
+
+    SharedPtr<ListNode>,
+    SharedPtr<ArrayNode>,
+    SharedPtr<DictNode>,
+    SharedPtr<MapNode>,
+    SharedPtr<SetNode>,
+
+    Vector<Node>
+    // SharedPtr<Scope>,
     // SharedPtr<FunctionNode> // Add this to support FunctionNode
 >;
+
+
+using ClassMembers = std::unordered_map<String, String>;
+
 
 // Function to map types in VariantType to NodeValueType
 template <typename T>
 constexpr NodeValueType getNodeTypeFromType() {
-    if constexpr (std::is_same_v<T, int>)
-        return NodeValueType::Int;
-    else if constexpr (std::is_same_v<T, float>)
-        return NodeValueType::Float;
-    else if constexpr (std::is_same_v<T, double>)
-        return NodeValueType::Double;
-    else if constexpr (std::is_same_v<T, long>)
-        return NodeValueType::Long;
-    else if constexpr (std::is_same_v<T, bool>)
-        return NodeValueType::Bool;
-    else if constexpr (std::is_same_v<T, String>)
-        return NodeValueType::String;
-    // else if constexpr (std::is_same_v<T, Vector<Node>>) // Replace with actual `Node`
-    //     return NodeValueType::Vector;
-    // else if constexpr (std::is_same_v<T, SharedPtr<Vector<Node>>>) // Replace with actual `Node`
-        // return NodeValueType::Shared_Vector;
-    else if constexpr (std::is_same_v<T, std::nullptr_t>)
-        return NodeValueType::Null;
-    else if constexpr (std::is_same_v<T, UninitializedType>)
-        return NodeValueType::Uninitialized;
-    else
-        throw RunTimeError("Unsupported type in VariantType.");
+    if constexpr (std::is_same_v<T, char>) return NodeValueType::Char;
+    if constexpr (std::is_same_v<T, int>) return NodeValueType::Int;
+    else if constexpr (std::is_same_v<T, float>) return NodeValueType::Float;
+    else if constexpr (std::is_same_v<T, double>) return NodeValueType::Double;
+    else if constexpr (std::is_same_v<T, long>) return NodeValueType::Long;
+    else if constexpr (std::is_same_v<T, bool>) return NodeValueType::Bool;
+    else if constexpr (std::is_same_v<T, String>) return NodeValueType::String;
+    else if constexpr (std::is_same_v<T, SharedPtr<ListNode>>)  return NodeValueType::List;
+    else if constexpr (std::is_same_v<T, SharedPtr<ArrayNode>>)  return NodeValueType::Array;
+    else if constexpr (std::is_same_v<T, SharedPtr<DictNode>>)  return NodeValueType::Dict;
+    else if constexpr (std::is_same_v<T, SharedPtr<SetNode>>)  return NodeValueType::Set;
+    else if constexpr (std::is_same_v<T, std::nullptr_t>) return NodeValueType::Null;
+    else if constexpr (std::is_same_v<T, NullType>) return NodeValueType::Null;
+    else if constexpr (std::is_same_v<T, Vector<Node>>) return NodeValueType::Vector;
+    else if constexpr (std::is_same_v<T, UninitializedType>) return NodeValueType::Uninitialized;
+    else {return NodeValueType::Any;}
+
+
+    // else if constexpr (std::is_same_v<T, NodeValueType::Any>)
+    //     return NodeValueType::Any;
+    // else throw RunTimeError("Unsupported type in VariantType." + nodeTypeToString(T));
 }
 
 
-String nodeTypeToString(NodeValueType type); 
-
+String nodeTypeToString(NodeValueType type, bool colored = true); 
+NodeValueType stringToNodeType(String);
 String astTypeToString(AstType type);
 
 String tokenTypeToString(TokenType type, bool colored = false);
@@ -440,6 +484,55 @@ String callableTypeAsString(CallableType callableType);
 
 String identifierTypeToString(IdentifierType identifierType);
 
+
+
+
+
+class ResolvedType {
+    String baseType;  // e.g. "Array", "List", "Schema", or "UserStruct"
+    Vector<ResolvedType> inner;  // Nested for Array[Map[String, Int]]
+public:
+    ResolvedType();
+    // ResolvedType(const ResolvedType& other);
+    ResolvedType(String baseType);
+    ResolvedType(String baseType, Vector<ResolvedType> inner);
+    String toString() const;
+    String toString();
+    void setBaseType(String);
+    void setInner(Vector<ResolvedType>);
+
+    String getBaseType() {return baseType;}
+    Vector<ResolvedType> getInnerType() {return inner;}
+    bool matches(const ResolvedType& other) const;
+
+};
+
+
+namespace std {
+    template<>
+    struct hash<NullType> {
+        std::size_t operator()(const NullType&) const noexcept {
+            // Constant hash for all NullType values
+            return 0x9e3779b9; // some fixed random prime
+        }
+    };
+
+    template<>
+    struct hash<UninitializedType> {
+        std::size_t operator()(const UninitializedType&) const noexcept {
+            // Constant hash for all UninitializedType values
+            return 0x85ebca6b; // another fixed random prime
+        }
+    };
+}
+
+class ArgumentList;
+class Arguments;
+
+// using ArgumentType = Vector<UniquePtr<ASTStatement>>;
+using ArgumentType = Arguments;
+// using ArgResultType = Vector<Node>;
+using ArgResultType = ArgumentList;
 
 #endif // TYPES_H
 

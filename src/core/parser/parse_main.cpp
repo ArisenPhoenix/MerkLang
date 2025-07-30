@@ -33,24 +33,16 @@ Parser::Parser(Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpret
         if (!currentScope){
             throw MerkError("Initial Scope is null");
         }
-        // nativeFunctionNames = rootScope->functionNames;
-        // DEBUG_LOG(LogLevel::INFO, "Parser initialized with root scope at level: ", rootScope->getScopeLevel(),
-        //         " | Memory Loc: ", rootScope.get());
-        // DEBUG_FLOW_EXIT();
 }
 
 UniquePtr<CodeBlock> Parser::parse() {
     // DEBUG_FLOW(FlowLevel::HIGH);
 
-    // DEBUG_LOG(LogLevel::INFO, "\nParser::parse: running in ", interpretMode ? "Interpret Mode\n" : "Deferred Mode\n");
-    if (!currentScope){
-        throw MerkError("Initial Scope is null");
-    }
+    if (!currentScope){ throw MerkError("Initial Scope is null"); }
     try {
+        setAllowScopeCreation(false);
         while (currentToken().type != TokenType::EOF_Token) {
-            // DEBUG_LOG(LogLevel::TRACE, "DEBUG Parser::parse: with token:", currentToken().toString());
-            // DEBUG_LOG(LogLevel::TRACE, "Scope use_count: ", currentScope.use_count(), ", Address: ", currentScope.get());
-    
+
             if (currentToken().type == TokenType::Newline) {
                 advance(); // Skip blank lines
                 continue;
@@ -69,42 +61,18 @@ UniquePtr<CodeBlock> Parser::parse() {
                     rootBlock->printAST(std::cout, 0);
                     throw MerkError(e.what());
                 }
-                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting AST by Block ===========================", Colors::bg_red));
-                
-                // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting AST by Block ===========================", Colors::bg_red));
-                // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
             }
             
             // Add the parsed statement to the block
             rootBlock->addChild(std::move(statement));
         }
     
-    
+        setAllowScopeCreation(true);
         // If interpretMode is enabled and interpretation is not by block, evaluate the entire AST in a batch.
         if (interpretMode && !byBlock){
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting Full AST ===========================", Colors::bg_red));
-    
-    
-            // rootBlock->printAST(std::cout);
-            rootBlock->printAST(std::cout, 0);
+            // rootBlock->printAST(std::cout, 0);
             interpret(rootBlock.get());
-            
-            // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting Full AST ===========================", Colors::bg_red));
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-            
-            // currentScope->printContext();
-            // DEBUG_LOG(LogLevel::INFO, "\n\n\n");
-            // currentScope->debugPrint();
         }
-    
-        // DEBUG_LOG(LogLevel::INFO, "Returning CodeBlock from parse() with scope address: ", currentScope.get(), ", at block address: ", rootBlock.get());
-        
-        // rootBlock->printAST(std::cout);
-        // DEBUG_LOG(LogLevel::INFO, "\n\n\n\n\n");
-        // rootBlock->printAST(std::cout);
-        // DEBUG_FLOW_EXIT();
         return std::move(rootBlock); // Return the parsed block node
     } catch (MerkError& e) {
         rootScope->printChildScopes();
@@ -271,6 +239,14 @@ Token Parser::advance() {
     return currentToken();
 }
 
+
+Token Parser::lookBack(int number) {
+    position -= number;
+    Token last = currentToken();
+    position += number;
+    return last;
+}
+
 Token Parser::peek(int number){
     // ++position;
     position += number;
@@ -280,40 +256,55 @@ Token Parser::peek(int number){
     return nextToken;
 }
 
-bool Parser::consume(TokenType type) {
-    if (match(type)) { // match only checks the type here because no value is provided
-        // return previousToken(); // Return the matched token
+bool Parser::consume(TokenType type, String value, String fromWhere) {
+    if (currentToken().type == type && currentToken().value == value) { // match only checks the type here because no value is provided
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), "Expected Type: " + tokenTypeToString(type));
+
+    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
 }
 
-bool Parser::consume(String value) {
+bool Parser::consume(TokenType type, String fromWhere) {
+    if (currentToken().type == type) { // match only checks the type here because no value is provided
+        advance();
+        return true;
+    }
+    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
+}
+
+bool Parser::consume(String value, String fromWhere) {
     if (currentToken().value == value){
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), value);
+    throw UnexpectedTokenError(currentToken(), value, " Parser::consume -> " + fromWhere);
 }
 
 
-bool Parser::consume(TokenType type, String val1, String val2, String val3) {
+bool Parser::consume(TokenType type, Vector<String> values, String fromWhere) {
     Token token = currentToken();
     String val = token.value;
-    if (token.type == type && (val == val1 || val == val2 || val == val3)){
-        advance();
-        return true;
-    }
+    if (token.type == type){
+        if (values.size() > 0) {
+            for (auto& value : values) {
+                if (val == value) {
+                    advance();
+                    return true;
+                }
+            }
 
-    String msg = val1;
-    if (!val2.empty()){
-        msg += " | " + val2;
-        if (!val3.empty()){
-            msg += " | " + val3;
+        } else {
+            advance();
+            return true;
         }
     }
-    throw UnexpectedTokenError(token, msg);
+
+    String msg = tokenTypeToString(type) + " | " + joinVectorStrings(values);
+
+    displayPreviousTokens(token.value, 5, "Parser::consume");
+    displayNextTokens(token.value, 5, "Parser::consume");
+    throw UnexpectedTokenError(token, msg, "Parser::consume -> " + fromWhere);
 }
 
 
@@ -321,8 +312,8 @@ bool Parser::check(TokenType type, const String& value) const {
     return currentToken().type == type && (value.empty() || currentToken().value == value);
 }
 
-bool Parser::match(TokenType type, const String& value) {
-    if (currentToken().type == type && (value.empty() || currentToken().value == value)) {
+bool Parser::consumeIf(TokenType type, const String& value) {
+    if (check(type, value)) {
         advance(); // Consume the token
         return true;
     }
@@ -367,7 +358,7 @@ Token Parser::find(TokenType type, int limit) {
 
     position = currentPosition;
     String msg = " Expected token type " + tokenTypeToString(type) + ", but found " + lastToken.toString();
-    throw RunTimeError(msg);
+    throw MerkError(msg);
 }
 
 
@@ -430,22 +421,13 @@ std::optional<std::type_index> getType(Token token){
 }
 
 std::optional<NodeValueType> Parser::getTypeFromString(String typeStr) {
-    if (typeStr == "Int") return NodeValueType::Int;
-    if (typeStr == "Float") return NodeValueType::Float;
-    if (typeStr == "Double") return NodeValueType::Double;
-    if (typeStr == "Long") return NodeValueType::Long;
-    if (typeStr == "Bool") return NodeValueType::Bool;
-    if (typeStr == "Char") return NodeValueType::Char;
-    if (typeStr == "String") return NodeValueType::String;
-    if (typeStr == "Vector") return NodeValueType::Vector;
-    if (typeStr == "Function") return NodeValueType::Function;
-    if (typeStr == "Class") return NodeValueType::Class;
-    if (typeStr == "Method") return NodeValueType::Method;
-    if (typeStr == "Null") return NodeValueType::Null;
-    if (typeStr == "Any") return NodeValueType::Any;
-    else {
-        return std::nullopt;
+    auto val = stringToNodeType(typeStr);
+    if (val == NodeValueType::UNKNOWN) {
+        // This will be Where user defined types are pulled from scope
+        // throw MerkError("Unknown Type");
+        return NodeValueType::UNKNOWN;
     }
+    else {return std::nullopt;}
 }
 
 std::optional<NodeValueType> Parser::parseStaticType() {
@@ -500,8 +482,6 @@ bool Parser::processNewLines(){
 
 void Parser::reinjectControlToken(const Token& token) {
     tokens.insert(tokens.begin() + position, token);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Reinjected token at position ", position, ": ", token.toColoredString());
-
 }
 
 void Parser::processBlankSpaces() {
@@ -509,22 +489,97 @@ void Parser::processBlankSpaces() {
 };
 
 
-bool Parser::expect(TokenType tokenType, bool strict) {
+bool Parser::expect(TokenType tokenType, bool strict, String fromWhere) {
     if (currentToken().type == tokenType){
         return true;
     }
 
     if (strict){
-        throw UnexpectedTokenError(currentToken(), tokenTypeToString(tokenType));
+        throw UnexpectedTokenError(currentToken(), tokenTypeToString(tokenType), fromWhere);
     }
     
     return false;
 }
 
 
+void Parser::displayPreviousTokens(String baseTokenName, size_t number, String location) {
+    for (size_t i = number + 1; i > 1; i--) {
+        if (int(position - i) < 0) { continue; }
+        debugLog(true, baseTokenName, " Token For ", location, " Is: ", lookBack(i).toColoredString(), "back: ", i-1);
+    }
+    debugLog(true, "Primary " + baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
+}
+
+
 void Parser::displayNextTokens(String baseTokenName, size_t number, String location) {
-    DEBUG_LOG(LogLevel::PERMISSIVE, baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
+    debugLog(true, "Primary " + baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
     for (size_t i = 1; i < number + 1; i++) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
+        debugLog(true, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
+    }
+}
+
+
+ResolvedType Parser::parseResolvedType() {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
+    if (consumeIf(TokenType::Operator, "<")) {
+        auto inner = parseResolvedType();
+        consume(TokenType::Operator, ">", "Parser::parseResolvedType -> Operator");
+        return ResolvedType("Array", { inner });
+    }
+
+    if (consumeIf(TokenType::LeftBracket, "[")) {
+        auto inner = parseResolvedType();
+        consume(TokenType::RightBracket, "]", "Parser::parseResolvedType -> RightBracket");
+        return ResolvedType("List", { inner });
+    }
+    
+    if (consumeIf(TokenType::Operator, "{")) {
+        auto first = parseResolvedType();
+        if (consumeIf(TokenType::Punctuation, ",")) {
+            auto second = parseResolvedType();
+            consume(TokenType::Operator, "}", "Parser::parseResolvedType -> Operator");
+            return ResolvedType("Dict", { first, second });
+        } else {
+            consume(TokenType::Operator, "}", "Parser::parseResolvedType -> Operator");
+            return ResolvedType("Set", { first });
+        }
+    }
+
+    if (consumeIf(TokenType::Type)) {
+        DEBUG_FLOW_EXIT();
+        return ResolvedType(previousToken().value);
+    }
+    DEBUG_FLOW_EXIT();
+    throw MerkError("Invalid type annotation: " + currentToken().toColoredString());
+}
+
+
+
+bool Parser::validate(Token token, Vector<TokenType> types, Vector<String> values, bool requiresBoth) {
+    for (auto type : types) {
+        if (token.type == type) {
+            if (requiresBoth) {break;}
+            return true;
+        }
+    }
+    for (auto& val : values) {
+        if (token.value == val) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Parser::validate(Vector<TokenType> types, Vector<String> values, bool requiresBoth) {
+    return validate(currentToken(), types, values, requiresBoth);
+}
+
+void Parser::exitLoop() {
+    if (loopContextCounter > 0) {
+        --loopContextCounter;
+    } else {
+        throw MerkError("Unexpected loop context underflow. This indicates a parser logic error.");
     }
 }

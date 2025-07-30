@@ -120,46 +120,6 @@ void Tokenizer::printTokens(bool colored) const {
 }
 
 
-void Tokenizer::handleIndentation(Vector<Token>& tokens) {
-    size_t lineStart = position;
-
-    // Skip leading spaces/tabs to find the first non-whitespace character
-    while (lineStart < sourceLength && (source[lineStart] == ' ' || source[lineStart] == '\t')) {
-        lineStart++;
-    }
-
-    // Skip blank lines (no tokens needed)
-    if (lineStart == sourceLength || source[lineStart] == '\n') {
-        return;
-    }
-
-    // Count leading spaces/tabs
-    int newIndentLevel = countLeadingSpaces(source.substr(position, lineStart - position));
-
-    if (newIndentLevel > currentIndent) {
-        tokens.emplace_back(TokenType::Indent, "", line, column);
-        indentStack.push_back(newIndentLevel);
-    } else if (newIndentLevel < currentIndent) {
-        while (!indentStack.empty() && newIndentLevel < indentStack.back()) {
-            tokens.emplace_back(TokenType::Dedent, "", line, column);
-            indentStack.pop_back();
-        }
-        
-        if (insideClass && newIndentLevel <= classIndentLevel) {
-            insideClass = false;
-        }
-
-        if (indentStack.empty() || newIndentLevel != indentStack.back()) {
-            throw IndentationError(line, column, currentLineText);
-
-
-        }
-    }
-
-    currentIndent = newIndentLevel;
-    position = lineStart;
-}
-
 
 const Token& Tokenizer::lastToken() const {
     return tokens.back();
@@ -178,12 +138,7 @@ bool Tokenizer::lastTokenWas(TokenType type, size_t offset) const {
 }
 
 
-void Tokenizer::finalizeIndentation(Vector<Token>& tokens) {                
-    while (!indentStack.empty() && indentStack.back() > 0) {
-        tokens.emplace_back(TokenType::Dedent, "", line, column);
-        indentStack.pop_back();
-    }
-}
+
 
 
 bool isUpper(char c) {

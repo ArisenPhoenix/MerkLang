@@ -3,40 +3,70 @@
 
 
 
-String nodeTypeToString(NodeValueType type) {
+String nodeTypeToString(NodeValueType type, bool colored) {
     switch (type) {
-        case NodeValueType::String: return highlight("String", Colors::bold_green);
-        case NodeValueType::Char: return highlight("Char", Colors::bold_green);
+        case NodeValueType::String: return colored ? highlight("String", Colors::bold_green) : "String";
+        case NodeValueType::Char: return colored ? highlight("Char", Colors::bold_green) : "Char";
 
-        case NodeValueType::Number: return highlight("Keyword", Colors::bold_blue);
-        case NodeValueType::Int: return highlight("Int", Colors::bold_blue);
-        case NodeValueType::Bool: return highlight("Bool", Colors::cyan);
-        case NodeValueType::Float: return highlight("Float", Colors::bold_blue);
-        case NodeValueType::Double: return highlight("Double", Colors::bold_blue);
-        case NodeValueType::Long: return highlight("Long", Colors::bold_blue);
+        case NodeValueType::Number: return colored ? highlight("Keyword", Colors::bold_blue) : "Keyword";
+        case NodeValueType::Int: return colored ? highlight("Int", Colors::bold_blue) : "Int";
+        case NodeValueType::Bool: return colored ? highlight("Bool", Colors::cyan) : "Bool";
+        case NodeValueType::Float: return colored ? highlight("Float", Colors::bold_blue) : "Float";
+        case NodeValueType::Double: return colored ? highlight("Double", Colors::bold_blue) : "Double";
+        case NodeValueType::Long: return colored ? highlight("Long", Colors::bold_blue) : "Long";
         
-        case NodeValueType::Vector: return highlight("Vector", Colors::yellow);
-        case NodeValueType::Shared_Vector: return highlight("Shared_Vector", Colors::yellow);
+        case NodeValueType::Vector: return colored ? highlight("Vector", Colors::yellow) : "Vector";
+        case NodeValueType::Shared_Vector: return colored ? highlight("Shared_Vector", Colors::yellow) : "Shared_Vector";
 
-        case NodeValueType::Parameter: return highlight("Parameter", Colors::bold_white);
-        case NodeValueType::Class: return highlight("Class", Colors::bold_white);
+        case NodeValueType::Parameter: return colored ? highlight("Parameter", Colors::bold_white) : "Parameter";
+        case NodeValueType::Class: return colored ? highlight("Class", Colors::bold_white) : "Class";
 
-        case NodeValueType::Function: return highlight("Function", Colors::purple);
-        case NodeValueType::Method: return highlight("Method", Colors::purple);
+        case NodeValueType::Function: return colored ? highlight("Function", Colors::purple) : "Function";
+        case NodeValueType::Method: return colored ? highlight("Method", Colors::purple) : "Method";
 
-        case NodeValueType::Null: return highlight("Null", Colors::orange);
-        case NodeValueType::Any: return highlight("Any", Colors::green);
-        case NodeValueType::None: return highlight("None", Colors::orange);
+        case NodeValueType::Null: return colored ? highlight("Null", Colors::orange) : "Null";
+        case NodeValueType::Any: return colored ? highlight("Any", Colors::green) : "Any";
+        case NodeValueType::None: return colored ? highlight("None", Colors::orange) : "None";
         
-        case NodeValueType::Uninitialized: return highlight("Uninitialized", Colors::red);
-        case NodeValueType::UNKNOWN: return highlight("Unknown", Colors::bold_red);
-        case NodeValueType::Callable: return highlight("Callable", Colors::red);
-        case NodeValueType::ClassInstance: return highlight("ClassInstance", Colors::red);
-
+        case NodeValueType::Uninitialized: return colored ? highlight("Uninitialized", Colors::red) : "Uninitialized";
+        case NodeValueType::UNKNOWN: return colored ? highlight("Unknown", Colors::bold_red) : "Unknown";
+        case NodeValueType::Callable: return colored ? highlight("Callable", Colors::red) : "Callable";
+        case NodeValueType::ClassInstance: return colored ? highlight("ClassInstance", Colors::red) : "ClassInstance";
+        case NodeValueType::List: return colored ? highlight("ClassInstance<List>", Colors::bold_white) : "ClassInstance<List>";
+        case NodeValueType::Array: return colored ? highlight("ClassInstance<Array>", Colors::bold_white) : "ClassInstance<Array>";
+        case NodeValueType::Dict: return colored ? highlight("ClassInstance<Dict>", Colors::bold_white) : "ClassInstance<Dict>";
+        case NodeValueType::Set: return colored ? highlight("ClassInstance<Set>", Colors::bold_white) : "ClassInstance<Set>";
         default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
 
     }
-} 
+}
+
+NodeValueType stringToNodeType(String type) {
+        if (type == "String") {return NodeValueType::String;}
+        if (type == "Char") {return NodeValueType::Char;}
+        if (type == "Number") {return NodeValueType::Number;}
+        if (type == "Int") {return NodeValueType::Int;}
+        if (type == "Bool") {return NodeValueType::Bool;}
+        if (type == "Float") {return NodeValueType::Float;}
+        if (type == "Double") {return NodeValueType::Double;}
+        if (type == "Long") {return NodeValueType::Long;}
+        if (type == "Parameter") {return NodeValueType::Parameter;}
+        if (type == "Class") {return NodeValueType::Class;}
+        if (type == "Function") {return NodeValueType::Function;}
+        if (type == "Method") {return NodeValueType::Method;}
+        if (type == "Null") {return NodeValueType::Null;}
+        if (type == "Any") {return NodeValueType::Any;}
+        if (type == "None") {return NodeValueType::None;}
+        if (type == "Uninitialized") {return NodeValueType::Uninitialized;}
+        if (type == "UNKNOWN") {return NodeValueType::UNKNOWN;}
+        if (type == "Callable") {return NodeValueType::Callable;}
+        if (type == "ClassInstance") {return NodeValueType::ClassInstance;}
+        if (type == "List") {return NodeValueType::List;}
+        if (type == "Array") {return NodeValueType::Array;}
+        if (type == "Dict") {return NodeValueType::Dict;}
+        if (type == "Set") {return NodeValueType::Set;}
+        return NodeValueType::UNKNOWN;
+}
 
 String astTypeToString(AstType type) {
     switch (type) {
@@ -48,6 +78,7 @@ String astTypeToString(AstType type) {
         case AstType::ParameterAssignment: return highlight("ParameterAssignment", Colors::teal);
 
         case AstType::BinaryOperation: return highlight("BinaryOperation", Colors::bold_blue);
+        case AstType::UnaryOperation: return highlight("UnaryOperation", Colors::bold_green);
 
         case AstType::Conditional: return highlight("Conditional", Colors::bold_green);
         case AstType::IfStatement: return highlight("IfStatement", Colors::yellow);
@@ -90,13 +121,18 @@ String astTypeToString(AstType type) {
         case AstType::ChainOperation: return highlight("ChainOperation", Colors::bg_green);
         case AstType::Accessor: return highlight("Accessor", Colors::red);
 
-
+        case AstType::CallableBody: return highlight("CallableBody", Colors::bold_red);
+        case AstType::CallableCall: return highlight("CallableCall", Colors::bold_red);
+        case AstType::CallableDefinition: return highlight("CallableDefinition", Colors::bold_red);
+        case AstType::CallableReference: return highlight("CallableReference", Colors::bold_red);
         case AstType::Function: return "Function";
         case AstType::NoOp: return highlight("NoOp", Colors::light_gray);
 
         case AstType::ImportStatement: return highlight("ImportStatement", Colors::light_blue);
 
         case AstType::AST: return highlight("AST", Colors::red);
+        case AstType::Argument: return highlight("Argument", Colors::bg_cyan);
+        case AstType::Arguments: return highlight("Arguments", Colors::bold_yellow);
 
         default: return "Unknown";
     }
@@ -114,6 +150,7 @@ String tokenTypeToString(TokenType type, bool colored) {
         case TokenType::VarDeclaration: return colored ? highlight("VarDeclaration", Colors::bold_cyan) : "VarDeclaration";
         case TokenType::Variable: return colored ? highlight("Variable", Colors::bold_cyan) : "Variable";
 
+        case TokenType::Char: return colored ? highlight("Char", Colors::green) : "Char";
         case TokenType::String: return colored ? highlight("String", Colors::green) : "String";
         case TokenType::Bool: return colored ? highlight("Bool", Colors::bold_blue) : "Bool";
         case TokenType::Number: return colored ? highlight("Number", Colors::yellow) : "Number";
@@ -160,6 +197,10 @@ String tokenTypeToString(TokenType type, bool colored) {
 
         case TokenType::EOF_Token: return colored ? highlight("EOF_Token", Colors::red) : "EOF_Token";
 
+        case TokenType::LeftBracket: return colored ? highlight("LeftBracket", Colors::bold_yellow) : "LeftBracket";
+        case TokenType::RightBracket: return colored ? highlight("RightBracket", Colors::bold_yellow) : "RightBracket";
+        case TokenType::LeftArrow: return colored ? highlight("LeftArrow", Colors::bold_yellow) : "LeftArrow";
+        case TokenType::RightArrow: return colored ? highlight("RightArrow", Colors::bold_yellow) : "RightArrow";
         default: return "Invalid TokenType";
     }
 }
@@ -229,19 +270,76 @@ String getTokenDescription(TokenType type) {
         case TokenType::AccessorVariable: return "An Member Variable of an Object";
 
         case TokenType::ChainEntryPoint: return "The Beginning of a Chain to be resolved within the Parser, Ex: 'self.x', 'singleton::method', 'obj.<method>'";
-
-        default: return "Unknown or invalid token.";
+        case TokenType::LeftBracket: return "LeftBracket For Typing Lists";
+        case TokenType::RightBracket: return "RightBracket For Typing Lists";
+        case TokenType::LeftArrow: return "LeftArrow For Typing Arrays";
+        case TokenType::RightArrow: return "RightArrow For Typing Arrays";
+        default: return "Unknown | Invalid Token.";
     }
 }
 
 String identifierTypeToString(IdentifierType identifierType) {
-    switch (identifierType)
-    {
-    case IdentifierType::Variable: return "Variable";
-    case IdentifierType::Function: return "Function";
-    case IdentifierType::Method: return "Method";
-    case IdentifierType::Class: return "Class";
-    default: return "Unknown";
-
+    switch (identifierType) {
+        case IdentifierType::Variable: return "Variable";
+        case IdentifierType::Function: return "Function";
+        case IdentifierType::Method: return "Method";
+        case IdentifierType::Class: return "Class";
+        default: return "Unknown";
     }
+}
+
+
+ResolvedType::ResolvedType() {}
+
+// ResolvedType::ResolvedType(const ResolvedType& other) {
+//     baseType = other.baseType;
+//     inner = other.inner;
+// }
+
+ResolvedType::ResolvedType(String primaryType) {
+    baseType = primaryType;
+}
+
+ResolvedType::ResolvedType(String primaryType, Vector<ResolvedType> innerType) {
+    baseType = primaryType;
+    inner = innerType;
+}
+
+
+
+void ResolvedType::setBaseType(String otherBaseType) {baseType = otherBaseType;}
+void ResolvedType::setInner(Vector<ResolvedType> otherInnerType) {inner = otherInnerType;};
+
+String ResolvedType::toString() const {
+    if (inner.empty()) return baseType;
+
+    String result = baseType + "[";
+    for (size_t i = 0; i < inner.size(); ++i) {
+        result += inner[i].toString();
+        if (i < inner.size() - 1) result += ", ";
+    }
+    result += "]";
+    return result;
+}
+
+
+String ResolvedType::toString() {
+    if (inner.empty()) return baseType;
+
+    String result = baseType + "[";
+    for (size_t i = 0; i < inner.size(); ++i) {
+        result += inner[i].toString();
+        if (i < inner.size() - 1) result += ", ";
+    }
+    result += "]";
+    return result;
+}
+
+bool ResolvedType::matches(const ResolvedType& other) const {
+    if (baseType != other.baseType) return false;
+    if (inner.size() != other.inner.size()) return false;
+    for (size_t i = 0; i < inner.size(); ++i) {
+        if (!inner[i].matches(other.inner[i])) return false;
+    }
+    return true;
 }

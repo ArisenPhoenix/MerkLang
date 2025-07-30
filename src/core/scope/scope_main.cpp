@@ -2,6 +2,7 @@
 #include <unordered_set>
 
 #include "core/types.h"
+#include "core/errors.h"
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
@@ -10,21 +11,25 @@
 #include "ast/ast_validate.h"
 #include "ast/ast_class.h"
 #include "ast/ast_chain.h"
-#include "core/functions/callable.h"
-#include "core/classes/method.h"
-#include "core/functions/param_node.h"
+#include "core/callables/callable.h"
+#include "core/callables/classes/method.h"
+#include "core/callables/param_node.h"
 
 #include "core/context.h"
 #include "core/registry/class_registry.h"
 #include "core/registry/function_registry.h"
 #include "core/errors.h"
-#include "core/functions/function_node.h"
-#include "core/classes/method.h"
+#include "core/callables/functions/function.h"
+#include "core/callables/classes/method.h"
 #include "core/scope.h"
+#include "core/callables/argument_node.h"
 
 #include <cassert>
 
 #include <execinfo.h>
+
+int totalWith = 0;
+int totalWithout = 0;
 
 
 // Helper to format a pointer or return a "None" string
@@ -39,11 +44,13 @@ String formatPointer(const Scope* ptr) {
 }
 
 // constructor for root.
-Scope::Scope(int scopeLevel, bool interpretMode, bool isRoot) 
-    : scopeLevel(scopeLevel), interpretMode(interpretMode), isRoot(isRoot) {
+Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool) 
+    : interpretMode(interpretMode) {
+        isRoot = isRootBool;
+        scopeLevel = scopeNum;
         DEBUG_FLOW(FlowLevel::LOW);
 
-    std::cout << "[Ctor(root)] this=" << this << " level=" << scopeLevel << "\n";
+    DEBUG_LOG(LogLevel::DEBUG, "[Ctor(root)] this=", this, " level=", scopeLevel, "\n");
 
     if (isRoot) {
         globalFunctions = makeShared<FunctionRegistry>();
@@ -70,8 +77,7 @@ String Scope::formattedScope() {
 Scope::Scope(WeakPtr<Scope> parentScope, bool interpretMode)
     : parentScope(std::move(parentScope)), interpretMode(interpretMode) {
         DEBUG_FLOW(FlowLevel::LOW);
-
-        std::cout << "[Ctor(child)] this=" << this << " parent=" << parentScope.lock().get() << "\n";
+        DEBUG_LOG(LogLevel::DEBUG, "[Ctor(root)] this =", this, " parent =", parentScope.lock().get(), "\n");
         if (auto parent = this->parentScope.lock()) {
             DEBUG_LOG(LogLevel::TRACE, "Parent scope locked at level ", parent->scopeLevel);
 
@@ -100,11 +106,12 @@ Scope::Scope(WeakPtr<Scope> parentScope, bool interpretMode)
 }
 
 Scope::Scope(SharedPtr<Scope> parent, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpretMode)
-: parentScope(parent), scopeLevel( parent ? parent->scopeLevel + 1 : 0 ), 
+: parentScope(parent), 
     globalFunctions(std::move(globalF)),
     globalClasses(std::move(globalC)),
     interpretMode(interpretMode)
 {
+    scopeLevel = parent ? parent->scopeLevel + 1 : 0;
     ++liveScopeCount;
     ++totalScopeCreated;
 
@@ -112,8 +119,6 @@ Scope::Scope(SharedPtr<Scope> parent, SharedPtr<FunctionRegistry> globalF, Share
 
 Scope::~Scope() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    DEBUG_LOG(LogLevel::TRACE, "Entering Scope Destructor for Scope Level: ", scopeLevel, 
-             " | Memory Loc: ", this);
     if (scopeLevel == 0 && isRoot) {
         if (interpretMode) {
             DEBUG_LOG(LogLevel::TRACE, "Destroying Root Scope.");
@@ -141,8 +146,38 @@ Scope::~Scope() {
     DEBUG_FLOW_EXIT();
 }
 
-void Scope::clear() {
+void Scope::clear(bool internalCall) {
+    auto weak = weak_from_this();
+
+    DEBUG_LOG(LogLevel::TRACE,
+        "Destroying Scope addr=", this,
+        " owner=", owner,
+        " parent=", getParent() ? getParent().get() : 0,
+        " (captured?) children=", childScopes.size(),
+        " use_count=", weak.use_count()
+    );
+    
+        
+    if (owner.find("ClassInstance") != std::string::npos) {
+        String funcs;
+        for (auto& [funcName, funcSigs] : localFunctions) {(void)funcSigs; funcs += ", " + funcName;}
+        String classes;
+        DEBUG_LOG(LogLevel::TRACE,
+                  "Destroying Instance Scope functions=", localFunctions.size(), metaString(), "Scope Address: ", formattedScope(), "Funcs: ", funcs);
+    }
     context.clear();
+    if (isRoot && internalCall) {
+        DEBUG_LOG(LogLevel::TRACE, metaString(), "InternalCall: ", (internalCall ? "true": "false"));
+        auto funIt = localFunctions.find("pop");
+        if (funIt != localFunctions.end()) {throw MerkError("Trying To Destroy Scope containing pop Method");}
+
+        // auto it = localClasses.find("List");
+        // if (it != localClasses.end()) {throw MerkError("Trying To Destroy Scope containing List class");}
+    }
+    
+
+    
+    
     localFunctions.clear();
     localClasses.clear();
 
@@ -225,6 +260,7 @@ const FunctionRegistry& Scope::getAllFunctions(FunctionRegistry& callingRegister
 }
 
 void Scope::appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool update) {
+    (void)callerLabel;
     if (!child) {
         DEBUG_LOG(LogLevel::WARNING, "appendChildScope called from [", callerLabel, "] with null scope.");
         return;
@@ -238,22 +274,105 @@ void Scope::appendChildScope(const SharedPtr<Scope>& child, const String& caller
 }
 
 
+bool Scope::hasImmediateChild(const SharedPtr<Scope>& candidate) {
+    for (auto& child : childScopes) {
+        if (child.get() == candidate.get()) return true;
+    }
+    return false;
+}
+
+
+bool Scope::has(const SharedPtr<Scope>& checkScope) {
+    if (!checkScope) {
+        throw MerkError("ChildScope for checking is null");
+    }
+    if (this == checkScope.get()) {
+        DEBUG_LOG(LogLevel::TRACE, "has(): found self match at ", this);
+        return true;
+    }
+    for (auto& child : getChildren()) {
+        if (child->has(checkScope)) {
+            DEBUG_LOG(LogLevel::TRACE, "has(): found in child ", child.get(), " for check ", checkScope.get());
+
+            return true;
+        }
+    }
+    return false;
+}
+
+
 void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
+    MARK_UNUSED_MULTI(update);
     DEBUG_FLOW(FlowLevel::LOW);
-    if (shared_from_this().use_count() == 0)
-    throw std::runtime_error("Oops: calling shared_from_this() on a non‑shared object!");
-    
-    childScope->parentScope = shared_from_this();
-    childScope->scopeLevel = getScopeLevel() + 1;
+    DEBUG_LOG(LogLevel::PERMISSIVE, "CREATING CHILD SCPOE");
+    // debugLog(true, "CREATING CHILD SCOPE");
+    auto hasChild = this->has(childScope);
+    // auto hasChild = this->has(childScope);
+    if (!hasChild) {
+        childScope->parentScope = shared_from_this();
+        childScope->scopeLevel = getScopeLevel() + 1;
+        childScopes.push_back(childScope);
+        totalWithout += 1;
+    } else {
+        totalWith += 1;
+        // throw MerkError(metaString() + " |  Attempted To Add childScope  | " + childScope->metaString());
+    }
+
+    // childScope->parentScope = shared_from_this();
+    // childScope->scopeLevel = getScopeLevel() + 1;
+    // childScopes.push_back(childScope);
+
     childScope->isDetached = false;
     childScope->owner = owner;
     includeMetaData(childScope, false);
-    childScopes.push_back(childScope);
+    
     if (update) {
         childScope->updateChildLevelsRecursively();
     }
+
+    // debugLog(true, "Total With So Far: ", totalWith);
+    // debugLog(true, "Total Without So Far: ", totalWithout);
+
     DEBUG_FLOW_EXIT();
 }
+
+
+// void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
+//     DEBUG_FLOW(FlowLevel::LOW);
+//     if (shared_from_this().use_count() == 0)
+//         throw std::runtime_error("Oops: calling shared_from_this() on a non‑shared object!");
+
+//     // Only check immediate children
+//     for (auto& child : childScopes) {
+//         if (child && child == childScope) {
+//             DEBUG_LOG(LogLevel::PERMISSIVE, "appendChildScope: already immediate child ", child.get());
+//             return;
+//         }
+//     }
+
+//     if (auto oldParent = childScope->getParent()) {
+//         auto& siblings = oldParent->childScopes;
+//         siblings.erase(
+//             std::remove_if(siblings.begin(), siblings.end(),
+//                         [&](auto& c) { return c.get() == childScope.get(); }),
+//             siblings.end()
+//         );
+//     }
+
+//     childScope->parentScope = shared_from_this();
+//     childScope->scopeLevel = getScopeLevel() + 1;
+//     childScopes.push_back(childScope);
+
+//     childScope->isDetached = false;
+//     childScope->owner = owner;
+//     includeMetaData(childScope, false);
+
+//     if (update) {
+//         childScope->updateChildLevelsRecursively();
+//     }
+//     DEBUG_FLOW_EXIT();
+// }
+
 
 SharedPtr<Scope> Scope::createChildScope() {
     auto c = makeShared<Scope>(shared_from_this(),
@@ -265,48 +384,12 @@ SharedPtr<Scope> Scope::createChildScope() {
   }
 
 
-SharedPtr<Scope> Scope::makeCallScope() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    auto c = makeShared<Scope>(shared_from_this(),
-                                globalFunctions,
-                                globalClasses,
-                                interpretMode);
-    c->isCallableScope = true;
-    c->isDetached = true;
-    c->isClonedScope = true;
-    c->isRoot = false;
-    DEBUG_FLOW_EXIT();
-    return c;
-}
-
-UniquePtr<VarNode> cloneVar(VarNode* original) {
-    return UniquePtr<VarNode>(original);
-}
+// UniquePtr<VarNode> cloneVar(VarNode* original) {
+//     return UniquePtr<VarNode>(original);
+// }
 
 
 
-SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
-    auto instanceScope = makeCallScope();
-    includeMetaData(instanceScope, true);
-    instanceScope->owner = generateScopeOwner("ClassInstance", classScope->owner);
-    // if (classScope->hasVariable("x")){
-    //     throw MerkError("Scope::makeInstanceScope -> classScope provided Already Has Variable 'x' at instance construction time 1.");}
-
-    for (const auto& [varName, varPtr] : classScope->getContext().getVariables()) {
-        if (varPtr) {
-            if (!instanceScope->getContext().hasVariable(varName)) {
-                instanceScope->getContext().setVariable(varName, cloneVar(varPtr->clone()));
-            } else {
-                DEBUG_LOG(LogLevel::WARNING, "Variable already exists in instanceScope: ", varName);
-            }
-        }
-    }
-
-    auto& clonedMethods = classScope->localFunctions;
-    instanceScope->localFunctions = clonedMethods;
-
-    return instanceScope;
-}
 
 
 SharedPtr<Scope> Scope::getParent() const {
@@ -330,6 +413,8 @@ SharedPtr<Scope> Scope::getParent() const {
 
 void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration) {
     DEBUG_FLOW(FlowLevel::LOW);
+    
+
     if (isDeclaration) {
         if (context.hasVariable(name)) {
             throw MerkError("DEBUG Scope::setVariable:  Variable '" + name + "' is already declared in this scope.");
@@ -342,6 +427,8 @@ void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDec
         } else if (auto parent = parentScope.lock()) {
             parent->setVariable(name, std::move(value), isDeclaration);  // Delegate to parent scope
         } else {
+            DEBUG_LOG(LogLevel::ERROR, "From Scope::setVariable");
+            
             throw VariableNotFoundError(name);
         }
     }
@@ -351,12 +438,19 @@ void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDec
 void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
     DEBUG_FLOW(FlowLevel::LOW);
     DEBUG_LOG(LogLevel::TRACE, "DEBUG Scope::declareVariable: Declaring variable: ", name, " = ", value, " | In Scope Level: ", this->getScopeLevel());
-
+    // if (owner == "ClassBase(Square)" && name != "x" && name != "y" && scopeLevel == 3) {throw MerkError("ClassBase(Square) attempted to allow in a non instance variable: " + name);}
     // Set the variable in the current context (not parent or child)
     if (context.hasVariable(name)) {
         DEBUG_LOG(LogLevel::DEBUG, "SCOPE: ", owner, "SCOPE LEVEL: ", scopeLevel);
-        throw VariableAlreadyDeclaredError(name);
+        if (disregardDeclarations) {
+            context.setVariable(name, std::move(value));
+            return;
+        }
+        throw VariableAlreadyDeclaredError(name, shared_from_this());
     }
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode is: ", value->toString());
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "VarNode FullType: ", value->getFullType().toString());
+    // throw MerkError("See Above");
     context.setVariable(name, std::move(value));
     DEBUG_FLOW_EXIT();
 }
@@ -373,26 +467,26 @@ void Scope::updateVariable(const String& name, const Node& value) {
         return;
     }
 
-    DEBUG_LOG(LogLevel::DEBUG, highlight("Scope Data Before Error", Colors::pink));
+    DEBUG_LOG(LogLevel::ERROR, "From Scope::updateVariable");
     throw VariableNotFoundError(name);
 }
 
 VarNode& Scope::getVariable(const String& name) {
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "in scope: ", getScopeLevel(), "DEBUG DATA BELOW:");
+    // context.debugPrint();
+
     if (auto variable = context.getVariable(name)) {
-        return variable->get();
+        return variable.value();
     }
 
     // Delegate to parent scope if it exists
     if (auto parent = parentScope.lock()) {
-        if (parent.get() == this) { 
-            throw MerkError("Scope::getVariable: Parent scope is same as current scope (cyclic reference).");
-        }
-        DEBUG_LOG(LogLevel::TRACE, "[Scope::getVariable] Variable '", name, "' not found in scope level ", 
-                 getScopeLevel(), ". Checking parent scope.");
         return parent->getVariable(name);
     }
 
-    
+    DEBUG_LOG(LogLevel::ERROR, "From Scope::getVariable");
+    if (hasVariable(name)) {throw MerkError("The Variable Lives Here, yet it is not getting pulled");}
     throw VariableNotFoundError(name);
 }
 
@@ -425,11 +519,38 @@ const SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() const {return glo
 SharedPtr<FunctionRegistry> Scope::getFunctionRegistry() {return globalFunctions;}
 
 void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMethSig) {
-    if (!funcMethSig){
-        throw MerkError("Not a Method Signature");
-    }
+    auto primaryType = callableTypeAsString(funcMethSig->getCallableType());
+    auto subType = callableTypeAsString(funcMethSig->getSubType());
 
-    DEBUG_LOG(LogLevel::DEBUG, "FUNC TYPE: ", callableTypeAsString(funcMethSig->getCallableType()), " FUNC SUB_TYPE: ", callableTypeAsString(funcMethSig->getSubType()), " FUNC NAME: ", funcMethName);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Current ", primaryType, " Being Registered: ", funcMethName, " Type: ", primaryType, " SubType: ", subType);
+    if (!funcMethSig){throw MerkError("Not a Method Signature");}
+
+    DEBUG_LOG(LogLevel::TRACE, "FUNC TYPE: ", primaryType, " FUNC SUB_TYPE: ", subType, " FUNC NAME: ", funcMethName);
+
+    if (funcMethSig->getSubType() == CallableType::NATIVE) {
+        auto previousOpt = lookupFunction(funcMethName);
+        if (previousOpt){
+            auto& previous = previousOpt.value();
+            bool replaced = false;
+            for (auto& prev: previous) {
+                // DEBUG_LOG(LogLevel::PERMISSIVE, "Checking Parameter Matches");
+                if (prev->matches(funcMethSig->getParameterTypes())){
+                    
+                    prev = funcMethSig;
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced) {
+                previous.push_back(funcMethSig);  // Append if not found
+            } 
+        }
+        else {
+            localFunctions[funcMethName] = {funcMethSig};  // First time
+        }
+        return;
+    }
+    
     if (funcMethSig->getSubType() == CallableType::DEF) {
         auto previousOpt = lookupFunction(funcMethName);
         if (previousOpt) {
@@ -467,6 +588,7 @@ void Scope::handleFunctionRegistration(String funcMethName, SharedPtr<CallableSi
         return;
     }
 
+
     throw MerkError("Not A Function: " + funcMethName);
 }
 
@@ -485,10 +607,13 @@ void Scope::registerFunction(const String& name, SharedPtr<UserFunction> functio
 
 void Scope::registerFunction(const String& name, SharedPtr<Callable> anyCallable) {
     DEBUG_FLOW(FlowLevel::MED);
-    if (anyCallable->getCallableType() == CallableType::CLASS) {
-        throw MerkError("Cannot Register A Class Into Function Registry");
-    }
+    if (anyCallable->getCallableType() == CallableType::CLASS) {throw MerkError("Cannot Register A Class Into Function Registry");}
+    DEBUG_LOG(LogLevel::TRACE, "anyCallType: ", callableTypeAsString(anyCallable->getCallableType()), "anySubType: ", callableTypeAsString(anyCallable->getSubType()));
+    // throw MerkError("Got AnyCallable Meta");
     auto signature = anyCallable->toCallableSignature();
+    auto other = signature->getCallable();
+    DEBUG_LOG(LogLevel::TRACE, "otherCallType: ", callableTypeAsString(other->getCallableType()), "otherSubType: ", callableTypeAsString(other->getSubType()));
+    if (other->getCallableType() != anyCallable->getCallableType() || other->getSubType() != anyCallable->getSubType()) {throw MerkError("starting method and signature held method meta don't match");}
     handleFunctionRegistration(name, signature);
 
     DEBUG_FLOW_EXIT();
@@ -528,19 +653,21 @@ std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const 
   }
 
 
-std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const Vector<Node>& args) const {
+std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const ArgResultType& args) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     auto it = localFunctions.find(name);
     Vector<NodeValueType> argTypes;
 
     if (it != localFunctions.end()) {
         DEBUG_LOG(LogLevel::TRACE, "FOUND FUNCTION In lookupFunction, args not checked yet");
-        for (const auto &arg : args) {
+        for (auto &arg : args) {
             argTypes.push_back(arg.getType());
             DEBUG_LOG(LogLevel::TRACE, "ArgType: ", nodeTypeToString(arg.getType()));
         }
 
         for (auto candidate : it->second) {
+            
+            // return candidate;
             if (candidate->matches(argTypes)){
                 DEBUG_FLOW_EXIT();
                 return candidate;
@@ -559,17 +686,21 @@ std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& 
     return nullptr;
 }
 
-SharedPtr<CallableSignature> Scope::getFunction(const String& name, const Vector<Node>& args) {
+SharedPtr<CallableSignature> Scope::getFunction(const String& name, const ArgResultType& args) {
     DEBUG_FLOW(FlowLevel::MED);
     if (auto func = lookupFunction(name, args)) {
         return func.value();
     }
 
     if (auto parent = parentScope.lock()) {
+        debugLog(true, "GOT METHOD WITH ARGS: " + name, args.toString());
+        throw MerkError("GOT METHOD");
         return parent->getFunction(name, args);
     }
 
     if (auto function = globalFunctions->getFunction(name, args)) { // returns std::optional<std::reference_wrapper<SharedPtr<CallableSignature>>>
+        debugLog(true, "GOT METHOD WITH ARGS: " + name, args.toString());
+        throw MerkError("GOT METHOD");
         return function.value();
     }
 
@@ -599,6 +730,8 @@ Vector<SharedPtr<CallableSignature>> Scope::getFunction(const String& name) {
 
 
 std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) const {
+    if (globalClasses->hasClass(name) ) { return globalClasses->getClass(name);}
+
     auto it = localClasses.find(name);
     if (it != localClasses.end())
       return it->second;
@@ -608,63 +741,63 @@ std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) 
         return found;
     }
   
-      auto cls = globalClasses->getClass(name);
-      if (cls) {
-          return cls.value();
-      }
-      return nullptr;
+    // auto cls = globalClasses->getClass(name);
+    // if (cls) {
+    //     return cls.value();
+    // }
+    return std::nullopt;
   }
 
 
 void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::VERY_HIGH);
+    // throw MerkError("Registering class " + name);
+    if (!classBase) {throw MerkError("registerClass called with null ClassBase for: " + name);}
+    if (auto clsOpt = lookupClass(name); clsOpt && clsOpt.value()) {throw MerkError("Class '" + name + "' is already defined in this scope.");}
+    if (!classBase->getCapturedScope()) {throw MerkError("No Captured Scope was set in class: " + name);}
+    // if (!classBase->getCapturedScope()->has(classBase->getClassScope())) {throw MerkError("Class Scope is Not A CHILD OF CAPTURED SCOPE");}
 
-    if (!classBase) {
-        throw MerkError("registerClass called with null ClassBase for: " + name);
-    }
-
-    if (auto clsOpt = lookupClass(name); clsOpt && clsOpt.value()) {
-        throw MerkError("Class '" + name + "' is already defined in this scope.");
-    }
-
-    if (!classBase->getCapturedScope()->has(classBase->getClassScope())) {
-        throw MerkError("Class Scope is Not A CHILD OF CAPTURED SCOPE");
-    }
     auto sig = std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature());
     
-
-
-    if (!sig) {
-        throw MerkError("ClassSignature is null when registering: " + name);
-    }
+    if (!sig) {throw MerkError("ClassSignature is null when registering: " + name);}
 
     
 
     localClasses[name] = std::move(sig);
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Added class to localClasses");
     DEBUG_FLOW_EXIT();
 }
 
 
-
-
-
-
 std::optional<SharedPtr<ClassSignature>> Scope::getClass(const String& name) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (name.empty()) {throw MerkError("String name for getClass Is Empty");}
 
-    if (auto className = lookupClass(name)){
-        return className;
+    if (globalClasses) {
+        auto globalClass = globalClasses->getClass(name);
+        if (globalClass) {
+            DEBUG_FLOW_EXIT();
+            if (!globalClass.has_value() || !globalClass.value()) {throw MerkError("Global Class is Null");}
+            return globalClass;
+        };
     }
-    if (auto className = globalClasses->getClass(name)){
-        return className;
-    }
-    if (globalClasses->hasClass(name)) {
-        return globalClasses->getClass(name);
-    }
+    
+    auto it = localClasses.find(name);
+    if (it != localClasses.end()) {return it->second;}
+    
+
     auto parent = parentScope.lock();
     if (parent) {
-        return parent->getClass(name);
+        
+        auto cls = parent->getClass(name);
+        if (!cls) {throw MerkError("cls itself is null");}
+        if (!cls.has_value() || !cls.value()) {throw MerkError("cls is null");}
+        DEBUG_FLOW_EXIT();
+        return cls;
     }
-    throw MerkError("Class: " + name + " Does Not Exist.");
+
+    DEBUG_FLOW_EXIT();
+    return std::nullopt;
 }
 
 

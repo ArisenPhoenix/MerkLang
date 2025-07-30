@@ -4,22 +4,27 @@
 #include <unordered_set>
 #include "utilities/debugger.h"
 #include "ast/ast.h"
-#include "core/functions/function_node.h"
+#include "core/callables/functions/function.h"
 
 
 class Scope;
 
-class ParameterAssignment : public VariableAssignment {
+class FunctionBody : public CallableBody {
 public:
-    ParameterAssignment(String name, UniquePtr<ASTStatement> valueNode, SharedPtr<Scope> scope)
-        : VariableAssignment(std::move(name), std::move(valueNode), scope) {}
+    friend class MethodBody;
+    FunctionBody(SharedPtr<Scope> scope);
 
-    String toString() const override;
+    // Steal Constructor
+    FunctionBody(UniquePtr<CodeBlock>&& block);
+
+    ~FunctionBody();
+
+    virtual Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    virtual UniquePtr<BaseAST> clone() const override;
+    virtual AstType getAstType() const override { return AstType::FunctionBlock;}    
     void printAST(std::ostream& os, int indent = 0) const override;
-    AstType getAstType() const override { return AstType::ParameterAssignment; }
+    Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
 };
-
-
 
 class FunctionDef : public CallableDef {
 public:
@@ -36,13 +41,12 @@ public:
     
 class FunctionCall : public CallableCall {
 public:
-    FunctionCall(String functionName, Vector<UniquePtr<ASTStatement>> args, SharedPtr<Scope> scope);
+    FunctionCall(String functionName, UniquePtr<ArgumentType> args, SharedPtr<Scope> scope);
 
     virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual AstType getAstType() const override { return AstType::FunctionCall;}
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual UniquePtr<BaseAST> clone() const override;
-    // String toString() const override;
 
 };
 

@@ -5,6 +5,7 @@
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
+#include "ast/ast_method.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_chain.h"
 
@@ -89,6 +90,26 @@ FreeVars ElifStatement::collectFreeVariables() const {
 
 }
 
+
+
+
+FreeVars Argument::collectFreeVariables() const {
+    if (isKeyword()) {
+        FreeVars vars = key->collectFreeVariables();
+        return vars;
+    }
+
+    return value->collectFreeVariables();
+}
+
+FreeVars Arguments::collectFreeVariables() const {
+    FreeVars freeVars;
+    for (auto& arg : arguments) {
+        freeVars.merge(arg.collectFreeVariables());
+    }
+    return freeVars;
+}
+
 FreeVars IfStatement::collectFreeVariables() const {
     DEBUG_FLOW();
     freeVars.clear();
@@ -135,11 +156,8 @@ FreeVars CallableDef::collectFreeVariables() const {
 FreeVars CallableCall::collectFreeVariables() const {
     DEBUG_FLOW();
     freeVars.clear();
-    for (const auto& arg : arguments) {
-        if (arg) {
-            freeVars.merge(arg->collectFreeVariables());
-        }
-    }
+    freeVars.merge(arguments->collectFreeVariables());
+
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
@@ -222,3 +240,5 @@ FreeVars ChainOperation::collectFreeVariables() const {
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
+
+

@@ -10,11 +10,164 @@
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 
-#include "core/functions/function_node.h"
+#include "core/callables/functions/function.h"
+
 #include "core/evaluator.h"
 #include "ast/ast_function.h"
+#include "ast/ast_method.h"
 #include "ast/ast_class.h"  
 #include "ast/ast_callable.h"
+
+#include "core/callables/argument_node.h"
+
+
+void Argument::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
+    // if (key) { key->setScope(newScope); }
+    
+    // value->setScope(newScope);
+};
+
+
+String Argument::toString() const {
+    String out = getAstTypeAsString() + "(";
+    if (isKeyword() && key) {
+        out += key->toString() + ":";
+    }
+
+    if (value) {
+        out += value->toString() + ")";
+    } else {
+        throw MerkError("value in Arguments is null");
+    }
+
+    
+    return out;
+}
+
+
+Argument::Argument(Argument&& other) noexcept: key(std::move(other.key)), value(std::move(other.value)) {
+    // if (other.key) {key = std::move(other.key);}
+    // else {key = nullptr;}
+}
+Argument::~Argument() {
+    clear();
+}
+void Argument::clear() {
+    value.reset();
+    key.reset();
+}
+
+Argument& Argument::operator=(Argument&& other) noexcept {
+    if (this != &other) {
+        // if (other.key) {key = std::move(other.key);}
+        // value = std::move(other.value);
+        key = std::move(other.key);
+        value = std::move(other.value);
+    }
+    return *this;
+};
+
+Argument::Argument() = default;
+
+
+
+Argument::Argument(UniquePtr<BaseAST> v) : key(nullptr), value(std::move(v)) {}
+Argument::Argument(UniquePtr<BaseAST> k, UniquePtr<BaseAST> v)
+    : key(std::move(k)), value(std::move(v)) {}
+
+
+
+Node Argument::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    if (isKeyword()) {
+        auto k = key->evaluate(scope, instanceNode);
+        auto v = value->evaluate(scope, instanceNode);
+        v.key = k.toString();
+        return v; 
+    } else {
+        return value->evaluate(scope, instanceNode);
+    }
+}
+Argument Argument::clone() const {
+    auto arg = Argument();
+    if (isKeyword()) { arg.key = std::move(key->clone()); }
+
+    arg.value = std::move(value->clone());
+    
+    return arg;
+}
+
+
+Arguments::Arguments(SharedPtr<Scope> scope) : ASTStatement(scope) {}
+Arguments::Arguments(Vector<Argument> arg, SharedPtr<Scope> scope) : ASTStatement(scope), arguments(std::move(arg)) {}
+
+void Arguments::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // for (auto& arg : arguments) {
+    //     arg.setScope(newScope);
+    // }
+}
+
+
+ArgResultType Arguments::evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
+    ArgResultType evaluated;
+    
+    for (auto& arg : arguments) {
+        if (arg.isKeyword()) {
+            auto keyVal = arg.key->evaluate(scope, instanceNode);
+            auto valVal = arg.value->evaluate(scope, instanceNode);
+            evaluated.addNamedArg(keyVal.toString(), valVal);
+
+        } else {
+            evaluated.addPositionalArg(arg.value->evaluate(scope, instanceNode));
+        }
+    }
+
+    return evaluated;
+}
+
+
+Node Arguments::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    MARK_UNUSED_MULTI(scope, instanceNode);
+    throw MerkError("USE EVALUATEALL to evaluate Arguments");
+};
+
+
+void Arguments::add(Argument arg) {
+    // throw MerkError("Not Ready");
+    arguments.emplace_back(std::move(arg));
+}
+
+
+void Arguments::addPositional(UniquePtr<ASTStatement> val) {
+    if (!val) {throw MerkError("val is Null");}
+    // makeUnique<NoOpNode>(nullptr)
+    // auto arg = ;
+    arguments.push_back(Argument(std::move(val)));
+}
+
+void Arguments::addKeyword(UniquePtr<ASTStatement> key, UniquePtr<ASTStatement> val) {
+    arguments.push_back(Argument(std::move(key), std::move(val)));
+}
+
+const Vector<Argument>& Arguments::getArgs() const { return arguments; }
+
+bool Arguments::hasKeywords() const {
+    for (auto &a : arguments) if (a.isKeyword()) return true;
+    return false;
+}
+
+
+// CallableCall::CallableCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
+//     : ASTStatement(scope), name(name), arguments(std::move(arguments)) {
+//         branch = "Callable";
+// }
+
+CallableCall::CallableCall(String name, UniquePtr<ArgumentType> arguments, SharedPtr<Scope> scope)
+    : ASTStatement(scope), name(name), arguments(std::move(arguments)) {
+        branch = "Callable";
+}
 
 
 // For Calling Within A Method's Context
@@ -32,55 +185,17 @@ CallableBody* CallableBody::toCallableBody() {
     return static_cast<CallableBody*>(this);
 }
 
-UniquePtr<BaseAST> CallableBody::clone() const {
-    UniquePtr<CallableBody> newBlock = makeUnique<CallableBody>(getScope());
 
-    for (const auto &child : children) {
-        newBlock->addChild(child->clone());
-    }
-    
-    return newBlock;
-
-}
-
-
-UniquePtr<BaseAST> CallableDef::clone() const {
-    ParamList clonedParams;
-    for (auto& param: parameters){
-        clonedParams.addParameter(ParamNode(param));
-    }
-
-    UniquePtr<CallableBody> clonedBodyBase = static_unique_ptr_cast<CallableBody>(body->clone());
-    
-
-    UniquePtr<CallableDef> calDef = std::make_unique<CallableDef>(name, clonedParams, std::move(clonedBodyBase), callType, getScope());
-    return calDef;
-}
-
-UniquePtr<BaseAST> CallableCall::clone() const {
-    Vector<UniquePtr<ASTStatement>> clonedArgs;
-    for (auto& arg : arguments){
-        UniquePtr<ASTStatement> argBase = static_unique_ptr_cast<ASTStatement>(arg->clone());
-        clonedArgs.emplace_back(std::move(argBase));
-    }
-    UniquePtr<CallableCall> calCall = std::make_unique<CallableCall>(name, std::move(clonedArgs), getScope());
-    return calCall;
-}
-
-UniquePtr<BaseAST> CallableRef::clone() const {
-    UniquePtr<CallableRef> calRef = std::make_unique<CallableRef>(name, getScope());
-    return calRef;
-}
-
-// CallableDef::~CallableDef() {
-//     getBody().release();
-// }
 CallableDef::~CallableDef() = default;
 CallableCall::~CallableCall() = default;
-// CallableCall::~CallableCall() {
-//     getScope().reset();
-//     arguments.clear();
-// }
+
+
+
+CallableBody::CallableBody(UniquePtr<CodeBlock>&& block)
+    : CodeBlock(block->getScope()) {
+    this->children = std::move(block->children);
+    block.reset();
+}
 
 CallableBody::~CallableBody() {
     clear();
@@ -107,48 +222,74 @@ CallableDef::CallableDef(String name, ParamList parameters, UniquePtr<CallableBo
     branch = "Callable";
 }
 
-CallableCall::CallableCall(String name, Vector<UniquePtr<ASTStatement>> arguments, SharedPtr<Scope> scope)
-    : ASTStatement(scope), name(name), arguments(std::move(arguments)) {
-        branch = "Callable";
-}
 
 CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
         branch = "Callable";
 }
 
+CallableSignature::CallableSignature(SharedPtr<Callable> newCallable)
+    : callType(newCallable->callType), subType(newCallable->subType), parameters(newCallable->parameters.clone())  {
+        DEBUG_FLOW(FlowLevel::HIGH);
+        if (!newCallable) {throw MerkError("Callable is NULL in: ");}
+        callable = std::move(newCallable);
+        DEBUG_FLOW_EXIT();
+}
+
 CallableSignature::CallableSignature(SharedPtr<Callable> callable, CallableType callTypeAdded)
     : callable(std::move(callable)), callType(callTypeAdded)
 {
-  DEBUG_FLOW(FlowLevel::VERY_LOW);
-  callType = callTypeAdded;
-  if (callableTypeAsString(callType) == "Unknown"){
-    throw MerkError("Failed to instantiate callType at CallableSignature instantiation");
-}
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    callType = callTypeAdded;
+    DEBUG_LOG(LogLevel::TRACE, "ClassSignature::ClassSignature -> classSig:", "CallableType: ", callableTypeAsString(getCallableType()), "SubType: ", callableTypeAsString(getSubType()));
+
   DEBUG_FLOW_EXIT();
 }
+
+Vector<Chain*> CallableBody::getNonStaticElements() {
+    if (nonStaticElements.size() > 0) {
+        return nonStaticElements;
+    }
+    return {};
+}
+
+bool CallableBody::getIsStatic() {
+    return getNonStaticElements().size() > 0;
+}
+
+void CallableBody::setNonStaticElements(Vector<Chain*> nonStaticEls){
+    // if (!nonStaticEls.size()) {
+    //     throw MerkError("Cannot set nonStaticEls to nullptr");
+    // }
+    nonStaticElements = nonStaticEls;
+}
+
+
 
 void CallableSignature::setCallableType(CallableType functionType) { 
     callType = functionType; 
 }
 
+
+
+void CallableSignature::setParameters(ParamList params) {
+    parameters = params;
+}
+
+
 bool CallableSignature::getIsUserFunction() { return callType != CallableType::NATIVE;}
 
 
 
-Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope) const {
+Node CallableSignature::call(const ArgumentList& args, SharedPtr<Scope> scope) const {
     DEBUG_FLOW(FlowLevel::LOW);
-    // scope->debugPrint();
-    // scope->printChildScopes();
     auto val = callable->execute(args, scope);
     DEBUG_FLOW_EXIT();
     return val;
 }
 
-Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
-    (void)args;
-    (void)scope;
-    (void)classScope;
+Node CallableSignature::call(const ArgumentList& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const {
+    MARK_UNUSED_MULTI(args, scope, classScope);
     throw MerkError("BaseClass CallableSignature has no implementation for CallableSignature::call");
 
 }
@@ -156,107 +297,110 @@ Node CallableSignature::call(const Vector<Node>& args, SharedPtr<Scope> scope, S
   
 SharedPtr<Callable> CallableSignature::getCallable() const { return callable;}
 
+const ParamList CallableSignature::getParameters() {
+    if (parameters.empty()) {
+        parameters = getCallable()->parameters.clone();
+        if (parameters.empty()) {
+            return parameters;
+        }
+    }
+    return parameters;
+}
+
 const Vector<NodeValueType>& CallableSignature::getParameterTypes() const {
-    if (parameterTypes.size() == 0) {
+    if (parameterTypes.empty()) {
+        parameterTypes = callable->parameters.getParameterTypes();
+        return parameterTypes;
+    }
+    if (getParameterTypes().size() == 0) {
         parameterTypes = callable->parameters.getParameterTypes();
     }
     return parameterTypes;
 }
 
+
+
 bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
-    DEBUG_FLOW(FlowLevel::LOW);
-    DEBUG_LOG(LogLevel::ERROR, highlight("Entering: ", Colors::orange), highlight("CallableSignature::matches", Colors::bold_blue));
-    // First, check that the number of arguments matches.
-    if (getParameterTypes().size() != argTypes.size()) {
-        
-        DEBUG_LOG(LogLevel::ERROR, "Parameter count does not match. Expected: ", parameterTypes.size(),
-                    ", got: ", argTypes.size());
-        DEBUG_FLOW_EXIT();
-        return false;
+    size_t paramCount = parameters.size();
+    size_t argCount = argTypes.size();
+
+    if (!parameters.empty() && parameters.back().isVarArgsParameter()) {
+        if (argCount < paramCount - 1) return false;
+    } else {
+        if (argCount != paramCount) return false;
     }
 
-    // Now check each parameter type.
-    for (size_t i = 0; i < parameterTypes.size(); ++i) {
-        NodeValueType expected = parameterTypes[i];
-        NodeValueType provided = argTypes[i];
-        DEBUG_LOG(LogLevel::ERROR, "Expected: ", nodeTypeToString(expected), "Provided: ", nodeTypeToString(provided));
+    for (size_t i = 0; i < parameters.size(); ++i) {
+        if (parameters[i].isVarArgsParameter()) break;
 
-        // Allow a parameter declared as "Any" to match any argument.
-        if (expected == NodeValueType::Any) {
+        NodeValueType expected = parameters[i].getType();
+        NodeValueType provided = i < argTypes.size() ? argTypes[i] : NodeValueType::Uninitialized;
+
+        if (expected == NodeValueType::Any || provided == NodeValueType::Uninitialized)
             continue;
-        }
-        // Optionally: Allow an argument of Uninitialized to match, if that is acceptable.
-        if (provided == NodeValueType::Uninitialized) {
-            continue;
-        }
 
-        // Otherwise, they must match exactly.
-        if (expected != provided) {
-            DEBUG_LOG(LogLevel::ERROR, "Type mismatch on parameter ", i, ": expected ",
-            nodeTypeToString(expected), ", got ", nodeTypeToString(provided));
-            DEBUG_LOG(LogLevel::ERROR, "Parameter Failed Expected Type Criteria, returning false");
-
-            DEBUG_FLOW_EXIT();
-            return false;
-        }
+        if (expected != provided) return false;
     }
 
-    DEBUG_LOG(LogLevel::DEBUG, "Parameter Did Not Fail Any Criteria, returning true");
-
-    DEBUG_FLOW_EXIT();
     return true;
 }
 
-Vector<Node> CallableCall::handleArgs(SharedPtr<Scope> scope) const {
-    Vector<Node> evaluatedArgs;
 
-    for (const auto &arg : arguments) {
-        evaluatedArgs.push_back(arg->evaluate(scope));
-    }
+
+
+ArgResultType CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    ArgResultType evaluatedArgs = arguments->evaluateAll(scope, instanceNode);
+
+    // ArgResultType evaluatedArgs;
+    // for (const auto &arg : arguments->getArgs()) {
+    //     auto& value = arg.value;
+    //     if (name == "other" && value->getAstType() == AstType::BinaryOperation && !scope->hasVariable("otherValue")) {
+    //         DEBUG_LOG(LogLevel::PERMISSIVE, "Scope Being Used For Evaluating Args");
+    //         scope->debugPrint();
+    //         throw MerkError("Binary Operation will not compute without 'otherValue'");
+    //     }
+    //     auto val = arg.evaluate(scope, instanceNode);
+    //     evaluatedArgs.addPositionalArg(val);
+    // }
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "evaluatedArgs: ", evaluatedArgs.toString());
     return evaluatedArgs;
 }
 
+
+
+
 Node CallableBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::LOW);
+    MARK_UNUSED_MULTI(scope, instanceNode);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto val = Evaluator::evaluateBlock(children, scope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
 }
 
 Node CallableDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
-    // std::cerr << "ERROR: Called base CallableDef::evaluate on '" << name << "'\n";
-    // std::cerr << "Type: " << getAstTypeAsString() << std::endl;
+    MARK_UNUSED_MULTI(scope, instanceNode);
     throw MerkError("Base CallableDef::evaluate called directly for: " + name);
 }
 
 Node CallableCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
-    return Node(scope->getVariable("var"));
+    MARK_UNUSED_MULTI(scope, instanceNode);
+    throw MerkError("Cannot Evaluate Base CallableCall");
 }
 
 
 Node CallableRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
-    return Node(scope->getVariable("var"));
+    MARK_UNUSED_MULTI(scope, instanceNode);
+    throw MerkError("Cannot Evaluate Base CallableRef");
 }
 
 
 
 
 CallableSignature::~CallableSignature() {
-    parameterTypes.clear();
+    if (parameterTypes.data()) { parameterTypes.clear(); }
+    for (auto& name : parameters.getNames()) {
+        parameters.eraseByName(name);
+    } 
 }
-
-
-
-// template<typename T>
-// SharedPtr<T> CallableSignature::getCallableClonedAs() const {
-//     static_assert(std::is_base_of<Callable, T>::value, "T must derive from Callable");
-//     auto casted = std::dynamic_pointer_cast<T>(callable);
-//     if (!casted) {
-//         throw MerkError("CallableSignature::getCallableAsClone() failed: Type mismatch or null callable.");
-//     }
-//     // Perform a deep copy of the Callable object
-//     return makeShared<T>(*casted);
-// }

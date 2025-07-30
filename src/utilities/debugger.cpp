@@ -171,8 +171,10 @@ FlowLevel Debugger::getFileFlowLevel(const String& file) {
     return flowLevel;
 }
 
+ 
 
 bool Debugger::handleLogProceed(LogLevel level, const String& file){
+    if (!enabled) {return false;}
     if (level == LogLevel::PERMISSIVE){
         return true;
     }
@@ -201,6 +203,7 @@ bool Debugger::handleLogProceed(LogLevel level, const String& file){
 }
 
 bool Debugger::handleFlowProceed(FlowLevel methodFlowLevel, const String& file){
+    if (!enabled) {return false;}
     if (methodFlowLevel == FlowLevel::PERMISSIVE){
         return true;
     }
@@ -228,6 +231,8 @@ bool Debugger::handleFlowProceed(FlowLevel methodFlowLevel, const String& file){
     return false;
     
 }
+
+void Debugger::setEnabled(bool enable) {enabled = enable;}
 
 
 

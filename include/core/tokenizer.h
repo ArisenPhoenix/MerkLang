@@ -26,12 +26,21 @@ private:
 
     bool insideClass = false;
     int classIndentLevel = 0;
+    bool pendingInlineBlock = false;   // after :;
+    bool dedentOnNextNewline = false;
 
     std::unordered_set<String> functions;
     std::unordered_set<String> classes;
 
 
     Vector<int> indentStack; // Stack to manage indentation levels
+    Vector<String> indentStackS;
+
+    void addBasicNewLine();
+    void addMinifiableNewLine();
+    void addOtherNewLine();
+
+    
 
     bool isWhitespace(char c) const;
     bool isLetter(char c) const;
@@ -63,14 +72,14 @@ private:
     Token readOperatorOrPunctuation();
     Token readCompoundOperatorOrPunctuation();
 
-    void handleIndentation(Vector<Token>& tokens);
+    void handleIndentation();
+    bool handleContainers();
     void updateCurrentLineText();
-    bool isUpper(char c);
 
     char peek(size_t offset = 1) const;
 
     bool isCapitalizedType(size_t pos) const;
-    bool handleOptionalType(Vector<Token>& tokens);
+    bool handleOptionalType();
 
 
 public:
@@ -79,7 +88,7 @@ public:
         indentStack.push_back(0); // Initialize with base indent level
     }
 
-    void finalizeIndentation(Vector<Token>& tokens);
+    void finalizeIndentation();
 
     Vector<Token> tokens;
     Vector<Token> tokenize();

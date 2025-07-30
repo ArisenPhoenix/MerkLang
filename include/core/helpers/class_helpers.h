@@ -1,13 +1,12 @@
 #include "core/types.h"
 
 #include "core/scope.h"
-#include "core/classes/class_base.h"
-#include "core/classes/method.h"
 
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/ast_chain.h"
-#include "ast/ast_class.h"
+class Chain;
+class ParamList;
+class Scope;
+class MethodDef;
+
 
 bool handleChain(Chain* chain, ParamList params, String accessor, String name, SharedPtr<Scope> classScope);
 
@@ -15,4 +14,4 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
 
 void fixupClassChains(SharedPtr<Scope> classScope, String accessor);
 
-void stripImplicitAccessor(MethodDef* methodDef, const String& accessor);
+void stripImplicitAccessor(MethodDef* methodDef, const String& accessor); 

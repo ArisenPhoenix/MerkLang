@@ -13,9 +13,10 @@
 #include "ast/ast_chain.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
-// #include "ast/ast_import.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_class.h"
+
+class ArgumentList;
 
 class Parser {
 private:
@@ -39,15 +40,21 @@ private:
     Token currentToken() const;
     Token advance();
 
-    bool consume(TokenType type);
-    bool consume(String value);
-    bool consume(TokenType type, String val1, String val2 = "", String val3 = "");
+    Token advanceIf(TokenType, String val = "", String fromWhere = "Parser::advanceIf");
+    Token advanceIf(String, String fromWhere = "Parser::advanceIf");
+    Token advanceIf(Vector<TokenType> types = {}, Vector<String> values = {}, String fromWhere = "Parser::advanceIf");
+
+    bool consume(TokenType type, String value, String fromWhere = "Parser::consume");
+    bool consume(TokenType type, String fromWhere = "Parser::consume");
+    bool consume(String value, String fromWhere = "Parser::consume");
+    bool consume(TokenType type, Vector<String> values = {}, String fromWhere = "Parser::consume");
     Token peek(int number = 1);
+    Token lookBack(int number = 1);
     Token find(TokenType type, int limit);
     bool existing(TokenType type, int limit);
     Token previousToken() const;
     bool check(TokenType type, const String& value = "") const;
-    bool match(TokenType type, const String& value = "");
+    bool consumeIf(TokenType type, const String& value = "");
     
     int getOperatorPrecedence(const String& op) const;
     std::tuple<bool, bool, String> handleIsVarDec();
@@ -71,7 +78,6 @@ private:
     UniquePtr<BaseAST> parseStatement();
     
     std::optional<NodeValueType> getTypeFromString(String typeStr);
-    std::optional<std::type_index> getStaticType();
     void interpret(CodeBlock* CodeBlockForEvaluation) const;
     void interpret(ASTStatement* CodeBlockForEvaluation) const;
     void interpret(BaseAST* ASTStatementForEvaluation) const;
@@ -82,6 +88,7 @@ private:
     UniquePtr<FunctionCall> parseFunctionCall();
 
     UniquePtr<ASTStatement> parseClassCall();
+    UniquePtr<ASTStatement> parseClassLiteralCall();
     UniquePtr<ASTStatement> parseClassDefinition();
     UniquePtr<MethodDef> parseClassInitializer();
     UniquePtr<MethodDef> parseClassMethod();
@@ -103,15 +110,17 @@ private:
     bool processNewLines();
     void processBlankSpaces();
 
-    bool expect(TokenType tokenType, bool strict = false);
+    bool expect(TokenType tokenType, bool strict = false, String fromWhere = "Parser::expect");
 
-    Token handleAttributNotation();
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
+    Vector<UniquePtr<ASTStatement>> parseArguments();
+    UniquePtr<Arguments> parseAnyArgument();
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
+    void displayPreviousTokens(String baseTokenName, size_t number = 4, String location = "Parser");
     void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
-    // For Future Implementation
-    // UniquePtr<ImportStatement> parseImport();
-    // Vector<UniquePtr<ImportStatement>> parseImports();
+    ResolvedType parseResolvedType();
+    bool validate(Token, Vector<TokenType> types = {}, Vector<String> values = {}, bool requiresBoth = false);
+    bool validate(Vector<TokenType>, Vector<String>, bool requiresBoth = false);
     
 
 public:
@@ -122,26 +131,14 @@ public:
     bool byBlock;
     
     // Check if the parser is currently inside a loop
-    bool isInsideLoop() const {
-        return loopContextCounter > 0;
-    }
+    bool isInsideLoop() const { return loopContextCounter > 0; }
     // Increment the loop context counter (called when entering a loop)
-    void enterLoop() {
-        ++loopContextCounter;
-    }
+    void enterLoop() { ++loopContextCounter; }
 
     // Decrement the loop context counter (called when exiting a loop)
-    void exitLoop() {
-        if (loopContextCounter > 0) {
-            --loopContextCounter;
-        } else {
-            throw MerkError("Unexpected loop context underflow. This indicates a parser logic error.");
-        }
-    }
+    void exitLoop();
 
-    void setAllowScopeCreation(bool allow) {
-        allowScopecreation = allow;
-    }
+    void setAllowScopeCreation(bool allow) {  allowScopecreation = allow; }
     bool getAllowScopeCreation() const;
     
 };

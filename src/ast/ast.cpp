@@ -28,21 +28,34 @@ FreeVars FreeVarCollection::collectFreeVariables() const {
 }
 
 BaseAST::~BaseAST() = default;
+LiteralValue::~LiteralValue()  {
+    value = LitNode(0);
+    if (value.isInstance()) {
+        auto inst = value.toInstance();
+        inst->setNativeData(nullptr);
+    }
+}
 
 void ASTStatement::setScope(SharedPtr<Scope> newScope) {
-    scope = newScope;
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
 }
+
+SharedPtr<Scope> ASTStatement::getScope() const {
+    
+    if (auto s = scope.lock()) {
+        return s;
+    }
+    return nullptr;
+}
+
 
 ASTStatement::ASTStatement(SharedPtr<Scope> scope) : scope(scope) {branch = "AST";}
 
 bool validateLeftAndRightAST(const UniquePtr<ASTStatement>& left, const UniquePtr<ASTStatement>& right, const String& methodName, String op = "") {
-    (void)op;
-    if (!left) {
-        throw MerkError(methodName + ": Left ASTStatement operand is null.");
-    }
-    if (!right) {
-        throw MerkError(methodName + ": Right ASTStatement operand is null.");
-    }
+    MARK_UNUSED_MULTI(op);
+    if (!left) {throw MerkError(methodName + ": Left ASTStatement operand is null.");}
+    if (!right) {throw MerkError(methodName + ": Right ASTStatement operand is null.");}
     DEBUG_LOG(LogLevel::DEBUG, "| Left -> ", left->toString(), op, "Right ->", right->toString());
     return true;
 }
@@ -51,16 +64,21 @@ BaseAST::BaseAST(SharedPtr<Scope> scope) {(void)scope;}
 
 
 // Basic Constructors
-LiteralValue::LiteralValue(LitNode value, SharedPtr<Scope> scope, bool isString, bool isBool)
-    : ASTStatement(scope), value(value), _isString(isString), _isBool(isBool) {
-        validateScope(scope, "LiteralValue::LiteralValue", value.toString());
-    }
+LiteralValue::LiteralValue(LitNode value, SharedPtr<Scope> scope)
+    : ASTStatement(scope), value(value) {}
 
 // Variable Constructors
-VariableDeclaration::VariableDeclaration(String name, VarNode value, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
-    : ASTStatement(scope), name(std::move(name)), variable(std::move(value)),
+VariableDeclaration::VariableDeclaration(String varName, VarNode value, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
+    : ASTStatement(scope), name(std::move(varName)), variable(std::move(value)),
         typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
-        validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
+        // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
+        DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
+}
+
+VariableDeclaration::VariableDeclaration(String varName, VarNode value, SharedPtr<Scope> scope, ResolvedType resolvedType, UniquePtr<ASTStatement> valueNode)
+    : ASTStatement(scope), name(std::move(varName)), variable(std::move(value)),
+        type(resolvedType), valueExpression(std::move(valueNode)) {
+        // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
         DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
 }
 
@@ -68,8 +86,12 @@ VariableDeclaration::VariableDeclaration(UniquePtr<VariableDeclaration> varDec) 
     name = varDec->name;
     variable = varDec->variable;
     typeTag = varDec->typeTag;
+    type = varDec->type;
     valueExpression = std::move(varDec->valueExpression);       
 }
+
+
+
 
 VariableReference::VariableReference(UniquePtr<VariableReference> varRef) : ASTStatement(varRef->getScope()) {
     name = varRef->name;
@@ -78,7 +100,7 @@ VariableReference::VariableReference(UniquePtr<VariableReference> varRef) : ASTS
 
 VariableAssignment::VariableAssignment(String name, UniquePtr<ASTStatement> valueExpression, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name), valueExpression(std::move(valueExpression)) {
-        validateScope(scope, "VariableAssignment::VariableAssignment", name);
+        // validateScope(scope, "VariableAssignment::VariableAssignment", name);
     }
 
 VariableAssignment::VariableAssignment(UniquePtr<VariableAssignment> varAssign) : ASTStatement(varAssign->getScope()) {
@@ -97,7 +119,7 @@ VariableReference::VariableReference(const String& name, SharedPtr<Scope> scope)
 
 UnaryOperation::UnaryOperation(const String& op, UniquePtr<ASTStatement> operand, SharedPtr<Scope> scope)
     : ASTStatement(scope), op(op), operand(std::move(operand)) {
-    validateScope(scope, "UnaryOperation::UnaryOperation", op );
+    // validateScope(scope, "UnaryOperation::UnaryOperation", op );
 }
 
 
@@ -105,17 +127,20 @@ UnaryOperation::UnaryOperation(const String& op, UniquePtr<ASTStatement> operand
 // Calculation Constructors
 BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left, UniquePtr<ASTStatement> right, SharedPtr<Scope> scope)
     : ASTStatement(scope), op(op), left(std::move(left)), right(std::move(right)) {
-    validateScope(scope, "BinaryOperation::BinaryOperation", op);
+    DEBUG_FLOW(FlowLevel::NONE);
+    // if (!scope) {throw MerkError("The Scope Passed to BinaryOperation::BinaryOperation is null");}
+    // validateScope(scope, "BinaryOperation::BinaryOperation", op);
+    DEBUG_FLOW_EXIT();
 }
 
 
 
 
 Node LiteralValue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::LOW);
-
-    validateScope(scope, "LiteralValue", toString());
-    Node val =  Evaluator::evaluateLiteral(value, _isString, _isBool);
+    DEBUG_FLOW(FlowLevel::NONE);
+    MARK_UNUSED_MULTI(scope);
+    // validateScope(scope, "LiteralValue", toString());
+    Node val =  Evaluator::evaluateLiteral(value);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -125,8 +150,13 @@ Node LiteralValue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    validateScope(scope, "VariableDeclaration");
+    // validateScope(scope, "VariableDeclaration");
     DEBUG_LOG(LogLevel::TRACE, highlight("[VariableDeclaration::evaluate]", Colors::orange), valueExpression->toString());
+    // variable.data.fullType = type;
+    // const_cast<VarNode>(variable);
+    variable.setFullType(type);
+    // variable.setFullType(type);
+
     Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, typeTag, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
@@ -136,7 +166,7 @@ Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shar
 Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    validateScope(scope, "VariableAssignment::evaluate", name);
+    // validateScope(scope, "VariableAssignment::evaluate", name);
 
     Node val = Evaluator::evaluateVariableAssignment(name, valueExpression.get(), scope, instanceNode);
 
@@ -147,27 +177,43 @@ Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Share
 Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 
-    validateScope(scope, "VariableReference::evluate", "Name = " + name);
+    // validateScope(scope, "VariableReference::evluate", "Name = " + name);
+    // if (name == "var") { throw MerkError("Tried to Reference Variable named 'var'"); }
 
     VarNode& varRef = Evaluator::evaluateVariableReference(name, scope, instanceNode); 
     DEBUG_FLOW_EXIT();
     return varRef;
 };
 
-
+LitNode LiteralValue::getValue() {return value;}
 // Computation Evaluations
 Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::NONE);
 
-    validateScope(scope, "BinaryOperation::evaluate", left->toString() + " " + op + " " + right->toString());
-    validateLeftAndRightAST(left, right, "BinaryOperation", op);
+    // validateScope(scope, "BinaryOperation::evaluate", left->toString() + " " + op + " " + right->toString());
+    // validateLeftAndRightAST(left, right, "BinaryOperation", op);
+    // if (left->getAstType() == AstType::Literal && right->getAstType() == AstType::Literal) {
+    //     auto leftValue = static_cast<LiteralValue*>(left.get());
+    //     auto rightValue = static_cast<LiteralValue*>(right.get());
+    //     if (op == "+") {
+    //         return leftValue->getValue() + rightValue->getValue();
+    //     }
+    //     if (op == "*") {
+    //         return leftValue->getValue() * rightValue->getValue();
+    //     }
+        
+    // }
     auto leftValue = left->evaluate(scope, instanceNode);
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "GOT PASSED LEFT SIDE");
     auto rightValue = right->evaluate(scope, instanceNode);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "GOT PASSED RIGHT SIDE");
+    if (leftValue.nodeType == "LitNode" && rightValue.nodeType == "LitNode") {
+        if (op == "+") {return leftValue + rightValue;}
+        if (op == "*") {return leftValue * rightValue;}
+    }
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "RightValue Type: ", right->getAstTypeAsString(), "RightValue Type: ", rightValue);
+    // throw MerkError("See above");
 
-    validateLeftAndRightNodes(leftValue, rightValue, "BinaryOperation", op);
+    // validateLeftAndRightNodes(leftValue, rightValue, "BinaryOperation", op);
 
 
     Node val = Evaluator::evaluateBinaryOperation(op, leftValue, rightValue, scope, instanceNode);
@@ -178,9 +224,9 @@ Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPt
 
 Node UnaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
-    validateScope(scope, "UnaryOperation::evaluate", op);
-
-    Node operandValue = operand->evaluate(scope);
+    
+    // validateScope(scope, "UnaryOperation::evaluate", op);
+    Node operandValue = operand->evaluate(scope, instanceNode);
     Node val = Evaluator::evaluateUnaryOperation(op, operandValue, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
@@ -189,51 +235,77 @@ Node UnaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
 
 // Set Scope overrides for particular functionality and debugging
 void VariableDeclaration::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
-    scope = newScope;
+    // scope = newScope;
+    // valueExpression->setScope(newScope);
 }
 
 void VariableReference::setScope(SharedPtr<Scope> newScope) {
-    (void)newScope;
+    MARK_UNUSED_MULTI(newScope);
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
     // scope = newScope;
 }
 
 void VariableAssignment::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting" + getAstTypeAsString() + " Scope", Colors::blue));
-    scope = newScope;
-    valueExpression->setScope(newScope);
+    
+    // valueExpression->setScope(newScope);
 }
 
 void BinaryOperation::setScope(SharedPtr<Scope> newScope) {
-    scope = newScope;
-    left->setScope(newScope);
-    right->setScope(newScope);
+    MARK_UNUSED_MULTI(newScope);
+    DEBUG_FLOW(FlowLevel::NONE);
+
+    // if (!newScope) {throw MerkError("BinaryOperation::setScope -> scope is null");}
+    // scope = newScope;
+    
+    // left->setScope(newScope);
+    // right->setScope(newScope);
+    DEBUG_FLOW_EXIT();
 }
 
 
 void UnaryOperation::setScope(SharedPtr<Scope> newScope) {
-    scope = newScope;
-    operand->setScope(newScope);
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // operand->setScope(newScope);
 }
 
 
 void Return::setScope(SharedPtr<Scope> newScope) {
-    scope = newScope;
-    if (returnValue){
-        returnValue->setScope(newScope);
-    }
-    
+    MARK_UNUSED_MULTI(newScope);
+    DEBUG_FLOW(FlowLevel::NONE);
+    // scope = newScope;
+    // if (!getScope()) {throw MerkError("Return::setScope -> getScope() returned null");}
+    // if (returnValue) {returnValue->setScope(newScope);}
+    DEBUG_FLOW_EXIT();
+}
+
+void CallableCall::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // for (auto& arg : arguments) {
+    //     arg->setScope(newScope);
+    // }
+    // arguments->setScope(newScope);
+}
+
+void CallableDef::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // body->setScope(newScope);
 }
 
 Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const  {
-    DEBUG_FLOW(FlowLevel::HIGH);
-    if (!returnValue) {
-        throw RunTimeError("Return statement must have a value.");
-    }
+    DEBUG_FLOW(FlowLevel::NONE);
+    
+    if (!returnValue) {throw MerkError("Return statement must have a value.");}
+
     auto value = returnValue->evaluate(scope, instanceNode);
 
-    DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
+    // DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
 
     DEBUG_FLOW_EXIT();
     throw ReturnException(value);  // Immediately exit function with value
@@ -243,15 +315,17 @@ Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassIn
 
 
 Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
-    : ASTStatement(scope), returnValue(std::move(value)) {}
+    : ASTStatement(scope), returnValue(std::move(value)) {
+        // validateScope(scope, "Return::Return", returnValue->toString());
+    }
 
 
 
 Continue::Continue(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 
 Node Continue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
-    DEBUG_FLOW();
+    MARK_UNUSED_MULTI(scope, instanceNode);
+    DEBUG_FLOW(FlowLevel::NONE);
     throw ContinueException();
 }
 
