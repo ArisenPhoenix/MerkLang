@@ -37,7 +37,7 @@ Token Tokenizer::readCompoundOperatorOrPunctuation() {
     if (twoCharOp == "==" || twoCharOp == "!=" ||
         twoCharOp == "<=" || twoCharOp == ">=" || twoCharOp == "&&" ||
         twoCharOp == "||" || twoCharOp == "+=" || twoCharOp == "-=" ||
-        twoCharOp == "*=" || twoCharOp == "/=" || twoCharOp == "%=" || twoCharOp == "->" ) { // last one signifies return value
+        twoCharOp == "*=" || twoCharOp == "/=" || twoCharOp == "%=" || twoCharOp == "++" || twoCharOp == "->" ) { // last one signifies return value
         tokens.push_back(Token(TokenType::Operator, twoCharOp, line, startColumn));
         return lastToken();
     }

@@ -1,5 +1,5 @@
 #include "core/types.h"
-
+#include "core/node/node.h"
 
 
 
@@ -8,7 +8,7 @@ String nodeTypeToString(NodeValueType type, bool colored) {
         case NodeValueType::String: return colored ? highlight("String", Colors::bold_green) : "String";
         case NodeValueType::Char: return colored ? highlight("Char", Colors::bold_green) : "Char";
 
-        case NodeValueType::Number: return colored ? highlight("Keyword", Colors::bold_blue) : "Keyword";
+        case NodeValueType::Number: return colored ? highlight("Number", Colors::bold_blue) : "Number";
         case NodeValueType::Int: return colored ? highlight("Int", Colors::bold_blue) : "Int";
         case NodeValueType::Bool: return colored ? highlight("Bool", Colors::cyan) : "Bool";
         case NodeValueType::Float: return colored ? highlight("Float", Colors::bold_blue) : "Float";
@@ -29,15 +29,26 @@ String nodeTypeToString(NodeValueType type, bool colored) {
         case NodeValueType::None: return colored ? highlight("None", Colors::orange) : "None";
         
         case NodeValueType::Uninitialized: return colored ? highlight("Uninitialized", Colors::red) : "Uninitialized";
-        case NodeValueType::UNKNOWN: return colored ? highlight("Unknown", Colors::bold_red) : "Unknown";
+        case NodeValueType::UNKNOWN: return colored ? highlight("UNKNOWN", Colors::bold_red) : "UNKNOWN";
         case NodeValueType::Callable: return colored ? highlight("Callable", Colors::red) : "Callable";
         case NodeValueType::ClassInstance: return colored ? highlight("ClassInstance", Colors::red) : "ClassInstance";
         case NodeValueType::List: return colored ? highlight("ClassInstance<List>", Colors::bold_white) : "ClassInstance<List>";
         case NodeValueType::Array: return colored ? highlight("ClassInstance<Array>", Colors::bold_white) : "ClassInstance<Array>";
         case NodeValueType::Dict: return colored ? highlight("ClassInstance<Dict>", Colors::bold_white) : "ClassInstance<Dict>";
         case NodeValueType::Set: return colored ? highlight("ClassInstance<Set>", Colors::bold_white) : "ClassInstance<Set>";
-        default: throw std::runtime_error("Unknown NodeValueType encountered in nodeTypeToString.");
-
+        case NodeValueType::CallableSignature: return colored ? highlight("CallableSignature", Colors::bg_magenta) : "CallableSignature";
+        case NodeValueType::DataStructure: return colored ? highlight("DataStructure", Colors::red) : "DataStructure";
+        case NodeValueType::NativeOMap: return colored ? highlight("NativeOMap", Colors::bold_red) : "NativeOMap";
+        case NodeValueType::NativeUMap: return colored ? highlight("NativeUMap", Colors::bold_red) : "NativeUMap";
+        case NodeValueType::NativeOSet: return colored ? highlight("NativeOSet", Colors::bold_red) : "NativeOSet";
+        case NodeValueType::NativeUSet: return colored ? highlight("NativeUSet", Colors::bold_red) : "NativeUSet";
+        case NodeValueType::UserDefined: return colored ? highlight("UserDefined", Colors::bold_green) : "UserDefined";
+        case NodeValueType::Scope: return colored ? highlight("Scope", Colors::bold_green) : "Scope";
+        case NodeValueType::Text: return colored ? highlight("Text", Colors::green) : "Text";
+        case NodeValueType::File: return colored ? highlight("File", Colors::bg_cyan) : "File";
+        case NodeValueType::Http: return colored ? highlight("Http", Colors::cyan) : "Http";
+        // case NodeValueType::ClassInstance: 
+        default: throw RunTimeError("Unknown NodeValueType encountered in nodeTypeToString. ");
     }
 }
 
@@ -58,13 +69,20 @@ NodeValueType stringToNodeType(String type) {
         if (type == "Any") {return NodeValueType::Any;}
         if (type == "None") {return NodeValueType::None;}
         if (type == "Uninitialized") {return NodeValueType::Uninitialized;}
-        if (type == "UNKNOWN") {return NodeValueType::UNKNOWN;}
         if (type == "Callable") {return NodeValueType::Callable;}
         if (type == "ClassInstance") {return NodeValueType::ClassInstance;}
         if (type == "List") {return NodeValueType::List;}
         if (type == "Array") {return NodeValueType::Array;}
         if (type == "Dict") {return NodeValueType::Dict;}
         if (type == "Set") {return NodeValueType::Set;}
+        if (type == "DataStructure") {return NodeValueType::DataStructure;}
+        if (type == "CallableSignature") {return NodeValueType::CallableSignature;}
+        if (type == "UNKNOWN") {throw RunTimeError("Cannot Be Passed An Explicit UNKNOWN TYPE");}
+        if (type == "NativeOMap") {return NodeValueType::NativeOMap; }
+        if (type == "NativeUMap") {return NodeValueType::NativeUMap; }
+        if (type == "NativeOSet") {return NodeValueType::NativeOSet; }
+        if (type == "NativeUSet") {return NodeValueType::NativeUSet; }
+        
         return NodeValueType::UNKNOWN;
 }
 
@@ -278,15 +296,15 @@ String getTokenDescription(TokenType type) {
     }
 }
 
-String identifierTypeToString(IdentifierType identifierType) {
-    switch (identifierType) {
-        case IdentifierType::Variable: return "Variable";
-        case IdentifierType::Function: return "Function";
-        case IdentifierType::Method: return "Method";
-        case IdentifierType::Class: return "Class";
-        default: return "Unknown";
-    }
-}
+// String identifierTypeToString(IdentifierType identifierType) {
+//     switch (identifierType) {
+//         case IdentifierType::Variable: return "Variable";
+//         case IdentifierType::Function: return "Function";
+//         case IdentifierType::Method: return "Method";
+//         case IdentifierType::Class: return "Class";
+//         default: return "Unknown";
+//     }
+// }
 
 
 ResolvedType::ResolvedType() {}
@@ -342,4 +360,19 @@ bool ResolvedType::matches(const ResolvedType& other) const {
         if (!inner[i].matches(other.inner[i])) return false;
     }
     return true;
+}
+
+
+size_t ResolvedType::hash() const {
+    size_t h = std::hash<String>()(baseType);
+
+    auto combine = [](size_t& seed, size_t value) {
+        seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    };
+
+    for (const auto& innerType : inner) {
+        combine(h, innerType.hash());
+    }
+
+    return h;
 }

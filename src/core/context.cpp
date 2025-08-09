@@ -9,7 +9,7 @@
 
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/node.h"
+#include "core/node/node.h"
 #include "core/context.h"
 
 #include "utilities/debugging_functions.h"
@@ -18,11 +18,11 @@
 
 
 void Context::setVariable(const String& name, UniquePtr<VarNode> value) {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
              
     auto it = variables.find(name);
     if (it != variables.end()) {
-        if (!it->second->isMutable) {
+        if (!it->second->getIsMutable()) {
             throw ImmutableVariableError(name);
         }
     }
@@ -33,22 +33,25 @@ void Context::setVariable(const String& name, UniquePtr<VarNode> value) {
 }
 
 void Context::updateVariable(const String& name, const Node& newValue) {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     auto it = variables.find(name);
     if (it == variables.end()) {
         DEBUG_LOG(LogLevel::ERROR, "From Context");
         throw VariableNotFoundError(name);
     }
+    // throw MerkError("Variable " + name  + " found ");
     VarNode& currentVar = *(it->second);
-
+    // throw MerkError("Variable " + name  + " found ");
+    if (!currentVar.isValid()) {throw MerkError("Variable Is Not Valid");}
+    // throw MerkError("Variable Is Validated");
     currentVar.setValue(newValue);
     DEBUG_FLOW_EXIT();
 
 }
 
 std::optional<std::reference_wrapper<VarNode>> Context::getVariable(const String& name) {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto it = variables.find(name);
 
     if (it != variables.end()) {
@@ -62,7 +65,14 @@ std::optional<std::reference_wrapper<VarNode>> Context::getVariable(const String
     return std::nullopt; 
 }
 
-UniquePtr<Context> Context::clone() const {
+Context Context::clone() const {
+    Context newContext;
+    newContext.variables = deepCopyVariables();
+    newContext.arguments = arguments;
+    return newContext;
+}
+
+UniquePtr<Context> Context::cloneUnique() const {
     auto newContext = std::make_unique<Context>();
     newContext->variables = deepCopyVariables();
     newContext->arguments = arguments; 
@@ -73,7 +83,7 @@ std::unordered_map<String, UniquePtr<VarNode>> Context::deepCopyVariables() cons
     std::unordered_map<String, UniquePtr<VarNode>> copy;
     for (const auto& [key, value] : variables) {
         if (value) {
-            copy[key] = std::make_unique<VarNode>(*value);  // Deep copy each VarNode
+            copy[key] = value->uniqClone();  
         }
     }
     return copy;
@@ -98,7 +108,7 @@ void Context::debugPrint() const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     for (const auto& [name, value] : variables) {
         if (value) {
-            debugLog(true, "      ", name, " = ", *value); // Dereference pointer
+            debugLog(true, "      ", name, " = ", value->toString()); // Dereference pointer
         } else {
             debugLog(true, "      ", name, " = ", "[null]");
         }
@@ -110,8 +120,9 @@ void Context::clear() {
     
     if (variables.size() > 0) {
         for (auto& [varName, var] : variables) {
-        var.reset();
-    }
+            // var->clear();
+            var.reset();
+        }
         variables.clear();
     }
     
@@ -121,6 +132,7 @@ void Context::clear() {
 void Context::clearVars() {
     variables.clear();
 }
+
 
 
 

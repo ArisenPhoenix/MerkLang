@@ -6,7 +6,7 @@
 #include "utilities/streaming.h"
 
 #include "core/types.h"
-#include "core/node.h"
+#include "core/node/node.h"
 #include "core/tokenizer.h"
 #include "core/parser.h"
 #include "core/context.h"
@@ -95,9 +95,9 @@ int main(int argc, char* argv[]) {
 
         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
         // ast->printAST(std::cout);
-        // globalScope->debugPrint();
+        globalScope->debugPrint();
         // globalScope->printChildScopes();
-        // globalScope->printScopeReport();
+        globalScope->printScopeReport();
         ast->clear();
         globalScope->clear();
         std::cout << "Execution time: " << elapsed.count() << " ms\n";

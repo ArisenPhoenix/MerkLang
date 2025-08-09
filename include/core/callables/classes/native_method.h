@@ -4,7 +4,6 @@
 #include "core/types.h"
 #include "core/callables/callable.h" 
 #include "core/callables/classes/method.h"
-#include "core/callables/param_node.h"
 
 
 class NativeMethod : public Method {

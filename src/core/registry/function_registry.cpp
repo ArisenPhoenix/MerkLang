@@ -1,9 +1,10 @@
+#include "core/node/argument_node.h"
+
 #include "core/types.h"
 #include "ast/ast_callable.h"
 #include "core/callables/functions/function.h"
 #include "core/registry/function_registry.h"
 #include "utilities/debugger.h"
-#include "core/callables/argument_node.h"
 
 
 FunctionRegistry::~FunctionRegistry() {
@@ -94,9 +95,7 @@ std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const 
 
         
     Vector<NodeValueType> argTypes;
-    for (const auto &arg : args) {
-        argTypes.push_back(arg.getType());
-    }
+    for (const auto &arg : args) { argTypes.push_back(arg.getType()); }
     DEBUG_LOG(LogLevel::TRACE, highlight("Function:", Colors::bold_blue), name, "was defined using", highlight("function", Colors::red));
 
     // Search for a matching overload.
@@ -165,7 +164,7 @@ FunctionRegistry FunctionRegistry::clone() const {
     for (const auto& [name, sigList] : this->functions) {
         std::vector<SharedPtr<CallableSignature>> copied;
         for (const auto& sig : sigList) {
-            copied.push_back(std::make_shared<CallableSignature>(*sig)); // Clone the signature
+            copied.push_back(makeShared<CallableSignature>(*sig)); // Clone the signature
         }
         copy.functions[name] = std::move(copied);
     }

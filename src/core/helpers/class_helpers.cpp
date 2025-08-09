@@ -1,15 +1,17 @@
 #include "core/types.h"
 #include "core/helpers/class_helpers.h"
 
+#include "core/node/param_node.h"
+
 #include "core/scope.h"
 #include "core/callables/classes/class_base.h"
 #include "core/callables/classes/method.h"
-#include "core/node.h"
+#include "core/node/node.h"
 #include "core/errors.h"
-#include "core/callables/param_node.h"
 
 #include "ast/ast_base.h"
 #include "ast/ast.h"
+#include "ast/exceptions.h"
 #include "ast/ast_chain.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_class.h"

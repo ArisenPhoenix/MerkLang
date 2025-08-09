@@ -1,8 +1,8 @@
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
+// #include "core/node/node.h"
 #include "core/types.h"
-#include "core/node.h"
 #include <string>
 #include <vector>
 #include <optional>
@@ -28,7 +28,7 @@ class Scope;
 namespace Evaluator {
    
     Node evaluateLiteral(Node value);
-    Node evaluateVariableDeclaration(const ASTStatement* valueNode, VarNode containsMetaData, std::optional<NodeValueType> typeTag, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    Node evaluateVariableDeclaration(String& varName, const ASTStatement* valueNode, DataTypeFlags varMeta, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 

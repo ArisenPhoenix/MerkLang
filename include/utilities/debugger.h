@@ -18,9 +18,8 @@
 #include "utilities/helper_functions.h"
 
  
-class VarNode;
-class Node;
-class LitNode;
+// class VarNode;
+// class LitNode;
 
 
 // --- Helper templates - modified names for clarity ---
@@ -102,6 +101,7 @@ public:
 
     FlowLevel getFlowLevel();
     FlowLevel getFileFlowLevel(const String& file);
+    LogLevel getFileLogLevel(const String& file);
 
     // Set a file-specific log level and flow level.
     void setLogLevels(const String& file, LogLevel fileLoglevel, FlowLevel fileFlowLevel = FlowLevel::UNKNOWN);

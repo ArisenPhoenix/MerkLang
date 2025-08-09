@@ -29,13 +29,13 @@ String ParserError::errorString() const {
 
 
     // Handle empty token value
-    String tokenRepresentation = isWhitespaceOnly(token.value) ? "<empty>" : token.value;
+    // String tokenRepresentation = isWhitespaceOnly(token.value) ? "<empty>" : token.value;
 
     // Highlight token within the context if provided
     if (!context.empty()) {
-        oss << "\n" << highlightToken(context, tokenRepresentation, Colors::red);
+        oss << "\n" << highlightToken(context, token.toString(), Colors::red);
     } else {
-        oss << "\n  Token: " << highlight(tokenRepresentation, Colors::red);
+        oss << "\n  Token: " << highlight(token.toString(), Colors::red);
     }
 
     // Add any specific hints

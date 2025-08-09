@@ -1,5 +1,9 @@
+
+#include "core/node/node.h"
+#include "core/node/param_node.h"
+#include "core/node/argument_node.h"
+
 #include "core/types.h"
-#include "core/node.h"
 #include "utilities/debugger.h"
 
 #include "core/scope.h" 
@@ -7,7 +11,6 @@
 #include "ast/exceptions.h"
 #include "ast/ast_control.h"
 
-#include "core/callables/param_node.h"
 #include "ast/ast_function.h"
 
 #include "core/callables/invocalble.h"
@@ -40,20 +43,10 @@ Node UserFunction::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_u
     (void)args;
     DEBUG_FLOW(FlowLevel::NONE);
     if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
-
     placeArgsInCallScope(args, scope);
 
-    Node value;
-    try {
-        value = body->evaluate(scope, instanceNode);
-    } catch (const ReturnException& e) {
-        DEBUG_LOG(LogLevel::DEBUG, highlight("Caught ReturnException In Function Execution. Returning value:", Colors::red), e.getValue());
-        DEBUG_FLOW_EXIT();
-        return e.getValue();  // Extract and return function's result
-    }
-
     DEBUG_FLOW_EXIT();
-    throw MerkError("Function did not return a value.");
+    return body->evaluate(scope, instanceNode);
 }
 
 FunctionBody::~FunctionBody(){if (getScope()) {DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();}} 
@@ -94,14 +87,73 @@ void UserFunction::setCapturedScope(SharedPtr<Scope> newScope) {
 String UserFunction::toString() const {return "<Function: " + getName() + ">";}
 
 
-FunctionNode::FunctionNode(SharedPtr<Function> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
+FunctionNode::FunctionNode(SharedPtr<Function> function) : CallableNode(function, "Function") {getFlags().type = NodeValueType::Function;}
 
-FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
 
-SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr<Function>>(data.value);}
+FunctionNode::FunctionNode(String originalName, Vector<SharedPtr<CallableSignature>> functionSigs) : CallableNode(functionSigs, "CallableSignature") {
+    auto first = functionSigs[0];
+    auto instanceSpecificFlags = std::unordered_map<String, String>{
+        {"isCallable", "true"},
+        {"isInstance", "false"},
+        {"name", originalName},
+        {"fullType", "Function"}
+    };
+    setFlags(getFlags().merge(instanceSpecificFlags));
+    setValue(functionSigs);
+    if (getFlags().name.find("Method") != String::npos) {
+        throw MerkError("HIT CallableNode::CallableNode(SharedPtr<CallableNode> WITH META: " + getFlags().toString());
+    }
+}
+
+String FunctionNode::toString() const {
+    return "<FunctionRef " + std::to_string(std::get<Vector<SharedPtr<CallableSignature>>>(getValue()).size()) + " overload(s)>";
+}
+
+// FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
+
+SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr<Callable>>(getValue());}
 
 
 CallableBody* UserFunction::getInvocableBody() {return body.get();}
 CallableBody* UserFunction::getBody() const {return body.get();}
 FunctionBody* UserFunction::getThisBody() const {return body.get();}
 UniquePtr<CallableBody> UserFunction::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}
+
+
+SharedPtr<CallableSignature> FunctionNode::getFunction(String name, ArgResultType args) {
+    if (!std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue())) {
+        throw MerkError("FunctionNode holds type " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    }
+    auto funcSigs = std::get<Vector<SharedPtr<CallableSignature>>>(getValue());
+    
+    Vector<NodeValueType> argTypes;
+    for (const auto &arg : args) { argTypes.push_back(arg.getType()); }
+
+    if (funcSigs.size() == 0) { throw MerkError("There Were No Function signatures to pull from"); }
+    for (auto funcSig : funcSigs) {
+        if (funcSig->getSubType() == CallableType::DEF) {  
+            return funcSig;
+        }
+        if (funcSig->getSubType() == CallableType::NATIVE) {
+            if (funcSig->matches(argTypes)) {
+                return funcSig;
+            }
+        }
+        DEBUG_LOG(LogLevel::TRACE, "Checking Function Candidate", name, funcSig->getCallable()->parameters.toString());
+
+        // If this is a def function, return it regardless.
+        DEBUG_LOG(LogLevel::TRACE, "Function Type: ", callableTypeAsString(funcSig->getSubType()));
+        
+        if (funcSig->getSubType() == CallableType::FUNCTION) {
+
+            if (funcSig->matches(argTypes)){
+                return funcSig;
+            }
+            DEBUG_LOG(LogLevel::TRACE, "Candidate ", name, " skipped: subtype=", callableTypeAsString(funcSig->getSubType()));
+        }
+    }
+    
+
+    throw MerkError("FunctionRef " + name + " Was Not Found");
+    
+}

@@ -1,13 +1,14 @@
 #include <unordered_set>
 
 #include "core/types.h"
-#include "core/node.h"
-#include "core/callables/argument_node.h"
+#include "core/node/node.h"
+#include "core/node/argument_node.h"
 #include "core/errors.h"
 #include "utilities/helper_functions.h"
 #include "core/scope.h"
 #include "ast/ast_base.h"
 #include "ast/ast.h"
+#include "ast/exceptions.h"
 #include "core/callables/functions/function.h"
 #include "core/callables/functions/native_function.h"
 #include "ast/ast_validate.h"
@@ -15,7 +16,6 @@
 #include "core/evaluator.h"
 #include "ast/ast_callable.h"
 #include "ast/ast_function.h"
-#include "core/callables/argument_node.h"
 
 
 
@@ -86,13 +86,7 @@ FunctionCall::FunctionCall(String functionName, UniquePtr<ArgumentType> argument
 
 UniquePtr<BaseAST> FunctionDef::clone() const {
     DEBUG_FLOW(FlowLevel::HIGH);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::clone -> CLONING FunctionDef");
-    // validateScope(getScope(), "FunctionDef::clone");
-    // validateScope(body->getScope(), "FunctionDef::clone", body->toString());
-    // throw MerkError("FunctionDef is being cloned");
-    UniquePtr<BaseAST> clonedBodyBase = body->clone();
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "FunctionDef::clone -> Clone Successful");
-    
+    UniquePtr<BaseAST> clonedBodyBase = body->clone();    
     auto clonedBody = static_unique_ptr_cast<FunctionBody>(std::move(clonedBodyBase));
 
     auto funcDef = std::make_unique<FunctionDef>(name, parameters, std::move(clonedBody), callType, getScope());
@@ -127,16 +121,10 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     // SharedPtr<Scope> defScope = scope->isolateScope(freeVarNames);
     if (!defScope) {throw MerkError("defScope for FunctionDef::evaluate is null");}
     defScope->owner = generateScopeOwner("FunctionDef", name);
-
-    // if (!body->getScope()){throw MerkError("Scope not present in FunctionDef::evaluate(scope)");}
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Cloning FunctionBody =====================================================================");
-    // body->printAST(std::cout);
-
     
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
     auto clonedBody = static_unique_ptr_cast<FunctionBody>(std::move(clonedBodyBase));
     clonedBody->setScope(getScope());
-    // if (!clonedBody->getScope()){throw MerkError("Scope not present in FunctionDef::evaluate(scope) of clonedBody");}
 
     DEBUG_LOG(LogLevel::DEBUG, "FunctionDef Defining Scope: ", scope->getScopeLevel());
     
@@ -163,18 +151,40 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::HIGH); 
+    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
     if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
     
-    auto evaluatedArgs = handleArgs(scope, instanceNode);    
-    auto optSig = scope->getFunction(name, evaluatedArgs);
-    SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
+    auto evaluatedArgs = handleArgs(scope, instanceNode);
+    SharedPtr<CallableSignature> optSig;
 
+    auto sigOpt = scope->getFunction(name, evaluatedArgs);
+    if (sigOpt.has_value()) {
+        optSig = sigOpt.value();
+    } else {
+        auto& var = scope->getVariable(name);
+        if (var.isFunctionNode()) {
+            auto funcNode = var.toFunctionNode();
+            optSig = funcNode.getFunction(name, evaluatedArgs);
+        }
+        
+        // throw MerkError("Got FuncSigOpts");
+        if (DynamicNode::getTypeFromValue(var.getValueNode().getValue()) == NodeValueType::Function) {
+            throw MerkError("IS A FUNCTION>>>>YAAAAAAY");
+        }
+    }
+
+
+    SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
 
     if (func->getSubType() == CallableType::NATIVE) {
         func->parameters.clone().verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+        if (func->getName() == "DEBUG_LOG") {
+            printAST(std::cout, 0);
+        }
         return func->execute(evaluatedArgs, scope, instanceNode);
     }
+
+    
     SharedPtr<Scope> callScope;
     auto captured = func->getCapturedScope();
     if (!captured) { throw MerkError("Function has No CapturedScope 1"); }
@@ -187,45 +197,39 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     } else {
         callScope = scope->buildFunctionCallScope(func, func->getName());
     }
-
-
-    // if (func->getCallableType() == CallableType::FUNCTION) {
-    //     callScope = captured;
-    //     if (!callScope) { throw MerkError("Function has No CapturedScope 2"); }
-
-    //     scope->appendChildScope(callScope, false);
-    // } else {
-    //     callScope = scope->buildFunctionCallScope(func, func->getName());
-    // }
-
-    // SharedPtr<Scope> 
     
-    // DEBUG_LOG(LogLevel::TRACE, "******************************* UserFunction Scope Set *******************************");
-       
-    // if (!callScope) { throw MerkError("FunctionCall:evaluate callScope being passed to func->execute is null"); }
-    
-    Node value = func->execute(evaluatedArgs, callScope);
-    // captured->debugPrint();
-    // throw MerkError("Context Above");
-    // captured->getContext().clearVars();
-    
-    func->setCapturedScope(callScope);
-    // callScope->getContext().clearVars();
-    // cleanup
-    // scope->removeChildScope(callScope);
 
+    Node value;
+    try {
+        value = func->execute(evaluatedArgs, callScope);
+        if (func->getRequiresReturn()) { throw MerkError("Function did not return a value."); }
+        
+    } catch (const ReturnException& e) {
+        DEBUG_FLOW_EXIT();
+        value = e.getValue();  // Extract and return function's result
+    }
+    
+    scope->removeChildScope(callScope);
+    // func->setCapturedScope(callScope);
     DEBUG_FLOW_EXIT();
-    return value; 
+    return value;
 }
 
 Node FunctionRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {    
-    auto optSig = scope->getFunction(name);
-    if (optSig.size() == 0) { throw RunTimeError("Function '" + name + "' not found.");}
-
-    SharedPtr<Function> funcs = std::static_pointer_cast<Function>(optSig.front()->getCallable());
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    auto sigOpts = scope->getFunction(name);
+    if (!sigOpts.has_value()) { throw FunctionNotFoundError(name); }
+    auto sigs = sigOpts.value();
+    // for (auto& func: optSigs) {}
+    // SharedPtr<Function> funcs = std::static_pointer_cast<Function>(optSig.front()->getCallable());
 
 
     // DEBUG_FLOW_EXIT();
-    return FunctionNode(funcs);
+    auto val = FunctionNode(name, sigs);
+
+    DEBUG_FLOW_EXIT();
+    // throw MerkError("Did Not Create FunctionNode in FunctionRef::evaluate");
+    
+    return val;
 }
 

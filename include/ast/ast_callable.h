@@ -1,9 +1,9 @@
 #ifndef AST_CALLABLE_H
-#define AST_CALLABLE_H
+#define AST_CALLABLE_H 
 
 #include <unordered_set>
 #include "utilities/debugger.h" 
-#include "core/callables/param_node.h"
+#include "core/node/param_node.h"
 #include "ast/ast_base.h"
 #include "ast/ast.h"
 #include "ast/ast_control.h" 
@@ -54,6 +54,7 @@ class Arguments: public ASTStatement {
 
 public:
     AstType getAstType() const override {return AstType::Arguments;}
+    ~Arguments();
     Arguments(SharedPtr<Scope> scope = nullptr);
 
     explicit Arguments(Vector<Argument> a, SharedPtr<Scope> scope = nullptr);
@@ -86,7 +87,7 @@ public:
 
     auto cbegin() const { return arguments.cbegin(); }
     auto cend() const { return arguments.cend(); }
-
+    void clear();
     
 };
 
@@ -101,8 +102,9 @@ private:
     ParamList parameters;
 
 public:
-    explicit CallableSignature(SharedPtr<Callable> callable, CallableType callType);
-    explicit CallableSignature(SharedPtr<Callable> callable);
+    // explicit CallableSignature(SharedPtr<Callable> callable, CallableType callType);
+    explicit CallableSignature(SharedPtr<NodeBase> callable, CallableType callType);
+    explicit CallableSignature(SharedPtr<NodeBase> callable);
     virtual ~CallableSignature();
 
     Node call(const ArgumentList& args, SharedPtr<Scope> scope) const;
@@ -121,6 +123,8 @@ public:
     CallableType getSubType() {return subType;}
     void setSubType(CallableType subClassification) {subType = subClassification;}
     void setParameters(ParamList params);
+
+    virtual std::size_t hash() const;
  
 };
 

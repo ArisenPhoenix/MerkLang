@@ -12,8 +12,7 @@
 #include "core/tokenizer.h" // Include the tokenizer header file
 
 
-class VarNode;
-class Node;
+// class VarNode;
 
 // Check if a type is streamable to std::ostream
 template <typename T>

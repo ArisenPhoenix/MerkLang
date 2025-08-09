@@ -1,13 +1,12 @@
 #ifndef CLASS_BASE_H
 #define CLASS_BASE_H
 
+
 #include "core/types.h"
 #include "ast/ast_callable.h"
 #include "core/callables/callable.h"
-#include "core/callables/classes/node_structures.h"
 #include "core/errors.h"
 
-class Node;
 class Scope;
 class ClassSignature;
 class FunctionSignature;
@@ -71,22 +70,23 @@ public:
 class ClassNode : public CallableNode {
 public:
     ClassNode(SharedPtr<ClassBase> callable) : CallableNode(callable, "Class") {
-        data.type = NodeValueType::Class;
+        getFlags().type = NodeValueType::Class;
+        // data.type = NodeValueType::Class;
     }
 
-    SharedPtr<Callable> getCallable() const override {
-        return std::static_pointer_cast<Callable>(std::get<SharedPtr<ClassBase>>(data.value));
-    }
+    // SharedPtr<Callable> getCallable() const override {
+    //     return std::static_pointer_cast<Callable>(std::get<SharedPtr<ClassBase>>(data.value));
+    // }
 };
 
 
 
-class ClassInstance : public Callable { 
+class ClassInstance:  public Callable { 
 private:
     SharedPtr<Scope> capturedScope;
     mutable SharedPtr<Scope> instanceScope; // reference to definition (optional)
     String accessor;
-    SharedPtr<DataStructure> nativeData;
+    SharedPtr<NativeNode> value;
     
 public:
     bool isConstructed = false;
@@ -94,22 +94,20 @@ public:
 
     ClassInstance(const String& name, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope, ParamList params, const String& accessor);
     ClassInstance(SharedPtr<ClassBase> cls, SharedPtr<Scope> capturedScope, SharedPtr<Scope> instanceScope);
-
+    
     ~ClassInstance() override;
     
     Node execute(const ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
+    void construct(const ArgResultType& args, SharedPtr<ClassInstance> classInstance);
+    Node call(String name, ArgResultType args);
 
     SharedPtr<Scope> getCapturedScope() const override;
+    SharedPtr<Scope> getInstanceScope() const;
     void setCapturedScope(SharedPtr<Scope> scope) override;
-    SharedPtr<Scope> getInstanceScope() const { return instanceScope; }
-
     SharedPtr<CallableSignature> toCallableSignature() override;
 
     String toString() const override;
-    String getAccessor() {return accessor;} 
-
-    void construct(const ArgResultType& args, SharedPtr<ClassInstance> classInstance);
-    Node call(String name, ArgResultType args);
+    String getAccessor();
 
     virtual Node getField(const String& name) const;                     // assumes a variable
     virtual Node getField(const String& name, TokenType type) const;     // specific to what kind of member i.e var/method
@@ -118,7 +116,7 @@ public:
     virtual void declareField(const String& name, const VarNode& val);             // probably only used in dynamic construction of a class
 
     virtual void updateField(const String& name, Node val) const;                 // most commonly used
-    
+    VariantType getValue() const override;
     SharedPtr<Scope> getInstanceScope();
     SharedPtr<ClassInstanceNode> getInstanceNode();
     SharedPtr<ClassInstanceNode> getInstanceNode() const;
@@ -126,11 +124,16 @@ public:
     void setScope(SharedPtr<Scope> newScope) const override;
     ClassMembers getInstanceVarsFromConstructor(SharedPtr<Method>);
 
-    void setNativeData(SharedPtr<DataStructure>);
-    SharedPtr<DataStructure> getNativeData();
+    void setNativeData(SharedPtr<NativeNode>);
+    SharedPtr<NativeNode> getNativeData();
+    SharedPtr<NodeBase> clone() const override;
+    SharedPtr<ClassInstance> cloneInstance() const;
+    void setValue(const VariantType&) override;
+    void setValue(SharedPtr<NativeNode> v);
+    NodeValueType getType() const override;
 };
 
-class ClassInstanceNode : public CallableNode {
+class ClassInstanceNode : public CallableNode, public std::enable_shared_from_this<ClassInstanceNode> {
     
 public:
     
@@ -144,7 +147,23 @@ public:
     SharedPtr<Callable> getCallable() const override;
 
     String toString() const override;
+    
+    // void setValue(const VariantType& data) override {getInstance()->setNativeData(std::get<SharedPtr<DataStructure>>(data));}
+    // NodeValueType getType() const override {return getInstance()->getNativeData()->getType(); }
+    // void clear() override {}
+    // VariantType getValue() const override {return getInstance()->getNativeData();}
+    // SharedPtr<NodeBase> clone() const override {return makeShared<ClassInstanceNode>(getInstance()); }
 
+    void setNative(SharedPtr<NativeNode>& value) {getInstance()->setNativeData(value);}
+    SharedPtr<ClassInstanceNode> cloneInstance() const;
+    SharedPtr<CallableNode> clone() const override;
+    // VariantType getValue() const override;
+
+    void setValue(const VariantType&);
+    void setValue(SharedPtr<NativeNode> v);
+    NodeValueType getType();
+    // SharedPtr<NodeBase> clone() {}
+    void clear();
     
 };
 

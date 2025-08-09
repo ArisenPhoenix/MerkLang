@@ -1,8 +1,11 @@
 #include <iostream>
+
+#include "core/node/node.h"
+
+#include "core/node/argument_node.h"
 #include "core/types.h"
 #include "utilities/debugger.h"
 #include "utilities/helper_functions.h"
-#include "core/node.h"
 #include "core/scope.h"
 
 #include "core/evaluator.h"
@@ -12,7 +15,7 @@
 #include "ast/ast_chain.h"
 #include "core/callables/classes/method.h" 
 #include "core/callables/classes/class_base.h"
-#include "core/callables/argument_node.h"
+
 
 #include "ast/ast_class.h"
 #include "ast/exceptions.h"
@@ -96,17 +99,17 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 
     // if (!cls->getCapturedScope()) {throw MerkError("CapturedScope was not set correctly on the ClassBase.");}
 
-    auto* classBody = static_cast<ClassBody*>(getBody());
+    auto classBody = static_cast<ClassBody*>(getBody());
     classBody->setClassScope(classScope);
     // if (!cls->getClassScope()){throw MerkError("ClassDef::evlaute classScope is null");}
 
-    // classBody->setCapturedScope(cls->getCapturedScope());
+    classBody->setCapturedScope(cls->getCapturedScope());
     String bodyAccess = accessor;
     classBody->setAccessor(bodyAccess);
 
     DEBUG_LOG(LogLevel::TRACE, "ClassScope Below: ");    
 
-    classBody->evaluate(cls->getClassScope());
+    classBody->evaluate(cls->getClassScope(), instanceNode);
 
     if (!cls->getClassScope()->hasFunction("construct")) {
         cls->getClassScope()->debugPrint();
@@ -114,8 +117,8 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
         throw MerkError("Class '" + name + "' must implement a 'construct' method.");
     }
     
-    // classBody->setCapturedScope(nullptr);
-    // classBody->setClassScope(nullptr);
+    classBody->setCapturedScope(nullptr);
+    classBody->setClassScope(nullptr);
     // classBody->getScope()->owner = generateScopeOwner("ClassBody", name);
 
 
@@ -131,7 +134,7 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     
     DEBUG_FLOW_EXIT();
     return classNode;
-}
+} 
 
 Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
@@ -142,7 +145,7 @@ Node ClassBody::evaluate(SharedPtr<Scope> classScope, [[maybe_unused]] SharedPtr
 Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!callScope) {throw MerkError("Initial Scope Failed in ClassCall::evaluate()");}
-    if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
+    // if (!getScope()) {throw MerkError("ClassCall::evaluate(): getScope() is null");}
 
     auto argValues = handleArgs(callScope, instanceNode);
 
@@ -153,12 +156,17 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
 
 Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     (void)scope;
-    DEBUG_FLOW(FlowLevel::NONE);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    if (!instanceNode) {throw MerkError("The passed instanceNode is null");}
+    
+    if (!instanceNode->isInstance()) throw MerkError("No instance provided to Accessor, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(instanceNode->getCallable())));
 
-    if (!instanceNode || !instanceNode->isInstance()) throw MerkError("No instance provided to Accessor");
 
-    ClassInstanceNode instance = instanceNode->getInstanceNode(); 
+    ClassInstanceNode instance = instanceNode->toInstance(); 
 
+    // throw MerkError("Evaluating Some other structure, the current Value of instanceNode is: " + nodeTypeToString(DynamicNode::getTypeFromValue(instanceNode)));
+
+    
     DEBUG_FLOW_EXIT();
     return instance;
 }

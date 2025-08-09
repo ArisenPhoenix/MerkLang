@@ -19,18 +19,34 @@
 
 // Forward declarations
 class Node;
+
+namespace std { template<> struct hash<Node>; }
+class VarNode;
 class Function;
 class FunctionNode;
 class Callable;
-
+class CallableSignature;
 class ClassBase;
 class ClassNode;
 class CallableNode;
 class Method;
+
+
 class MethodNode;
 class InstanceNode;
 class ClassInstance;
 class Scope;
+class NativeNode;
+class ListNode;
+class ArrayNode;
+class DictNode;
+class MapNode;
+class SetNode;
+
+
+class ParamNode;
+class ParamList;
+class ArgumentList;
 
 // Aliases
 using String = std::string;
@@ -134,6 +150,7 @@ enum class TokenType {
 // Enum for the type of the value held by the variant
 enum class NodeValueType {
     Number,
+    Text,
     Int,
     Float,
     Double,
@@ -160,9 +177,19 @@ enum class NodeValueType {
     List,
     Array,
     Set,
+    CallableSignature,
+    DataStructure,
+    NativeOMap,
+    NativeUMap,
+    NativeOSet,
+    NativeUSet,
+    UserDefined,
 
-    UserDefined
+    NativeNode,
+    Http,
+    File,
 };
+
 
 
 
@@ -189,6 +216,7 @@ enum class AstType {
     Break,
     Return,
     Continue,
+    ThrowStatement,
     LoopBlock,
 
     CallableBody,
@@ -235,14 +263,6 @@ enum class AstType {
 };
 
 
-enum class IdentifierType {
-    Variable,
-    Function,
-    Method,
-    Class
-};
-
-
 
 struct NullType {
     friend std::ostream& operator<<(std::ostream& os, const NullType&) {
@@ -268,13 +288,23 @@ struct UninitializedType {
 };
  
 using NodeList = Vector<Node>;
-class ListNode;
-class ArrayNode;
-class DictNode;
-class MapNode;
-class SetNode;
+using NodeMapU = std::unordered_map<Node, Node>;
+using NodeMapO = std::map<Node, Node>;
+using NodeSetU = std::unordered_set<Node>;
+// using NodeSetO = std::set<Node>;
+
+
+
+using TextVariant = std::variant< String, char >;
+
+using NumberVariant = std::variant< int, float, double, long >;
+
+class ClassInstanceNode;
 
 using VariantType = std::variant<
+    // NumberVariant, TextVariant,
+
+    // Basic Types
     int,
     float,
     double,
@@ -284,22 +314,21 @@ using VariantType = std::variant<
     String,
     NullType,
     UninitializedType,
-    
-    SharedPtr<Function>,
-    SharedPtr<ClassBase>,
-    SharedPtr<Method>,
-    SharedPtr<ClassInstance>,
+
+
+    // Held For CallableRefs
+    Vector<SharedPtr<CallableSignature>>,
+
+    // Held Data for Nodes on classes
     SharedPtr<Callable>,
 
-    SharedPtr<ListNode>,
-    SharedPtr<ArrayNode>,
-    SharedPtr<DictNode>,
-    SharedPtr<MapNode>,
-    SharedPtr<SetNode>,
-
-    Vector<Node>
-    // SharedPtr<Scope>,
-    // SharedPtr<FunctionNode> // Add this to support FunctionNode
+    // For general handling
+    // What Data Structure Holds
+    Vector<Node>,
+    std::unordered_map<Node, Node>,
+    std::map<Node, Node>,
+    std::unordered_set<Node>,
+    SharedPtr<NativeNode>
 >;
 
 
@@ -310,21 +339,30 @@ using ClassMembers = std::unordered_map<String, String>;
 template <typename T>
 constexpr NodeValueType getNodeTypeFromType() {
     if constexpr (std::is_same_v<T, char>) return NodeValueType::Char;
-    if constexpr (std::is_same_v<T, int>) return NodeValueType::Int;
+    // else if constexpr (std::is_same_v<T, NumberVariant>) return NodeValueType::Number;
+    // else if constexpr (std::is_same_v<T, TextVariant>) return NodeValueType::Text;
+
+    else if constexpr (std::is_same_v<T, int>) return NodeValueType::Int;
     else if constexpr (std::is_same_v<T, float>) return NodeValueType::Float;
     else if constexpr (std::is_same_v<T, double>) return NodeValueType::Double;
     else if constexpr (std::is_same_v<T, long>) return NodeValueType::Long;
     else if constexpr (std::is_same_v<T, bool>) return NodeValueType::Bool;
     else if constexpr (std::is_same_v<T, String>) return NodeValueType::String;
-    else if constexpr (std::is_same_v<T, SharedPtr<ListNode>>)  return NodeValueType::List;
-    else if constexpr (std::is_same_v<T, SharedPtr<ArrayNode>>)  return NodeValueType::Array;
-    else if constexpr (std::is_same_v<T, SharedPtr<DictNode>>)  return NodeValueType::Dict;
-    else if constexpr (std::is_same_v<T, SharedPtr<SetNode>>)  return NodeValueType::Set;
+    else if constexpr (std::is_same_v<T, UninitializedType>) return NodeValueType::Uninitialized;
     else if constexpr (std::is_same_v<T, std::nullptr_t>) return NodeValueType::Null;
     else if constexpr (std::is_same_v<T, NullType>) return NodeValueType::Null;
+    
+    else if constexpr (std::is_same_v<T, SharedPtr<Callable>> ) return NodeValueType::Callable;
+    // else if constexpr (std::is_same_v<T, SharedPtr<DataStructure>>) return NodeValueType::DataStructure;
+    else if constexpr (std::is_same_v<T, Vector<SharedPtr<CallableSignature>>>) return NodeValueType::CallableSignature;
+
     else if constexpr (std::is_same_v<T, Vector<Node>>) return NodeValueType::Vector;
-    else if constexpr (std::is_same_v<T, UninitializedType>) return NodeValueType::Uninitialized;
-    else {return NodeValueType::Any;}
+    
+    else if constexpr (std::is_same_v<T, NodeMapO>) return NodeValueType::NativeOMap;
+    else if constexpr (std::is_same_v<T, NodeMapU>) return NodeValueType::NativeUMap;
+    else if constexpr (std::is_same_v<T, NodeSetU>) return NodeValueType::NativeUSet;
+    else if constexpr (std::is_same_v<T, NativeNode>) return NodeValueType::NativeNode;
+    else return NodeValueType::Any;
 
 
     // else if constexpr (std::is_same_v<T, NodeValueType::Any>)
@@ -482,10 +520,6 @@ enum class CallableType {
 String callableTypeAsString(CallableType callableType);
 
 
-String identifierTypeToString(IdentifierType identifierType);
-
-
-
 
 
 class ResolvedType {
@@ -504,6 +538,7 @@ public:
     String getBaseType() {return baseType;}
     Vector<ResolvedType> getInnerType() {return inner;}
     bool matches(const ResolvedType& other) const;
+    size_t hash() const;
 
 };
 
@@ -533,6 +568,7 @@ class Arguments;
 using ArgumentType = Arguments;
 // using ArgResultType = Vector<Node>;
 using ArgResultType = ArgumentList;
+
 
 #endif // TYPES_H
 

@@ -3,9 +3,8 @@
 
 #include "core/types.h"
 #include "ast/ast_base.h"
-
-#include "ast/ast_base.h"
 #include "utilities/helper_functions.h"
+
 class Scope;
 
 enum class ChainOpKind {
@@ -50,7 +49,7 @@ private:
     WeakPtr<Scope> classScope; //  set when evaluating in class
     int resolutionStartIndex = 0;  // default is 0, resolve from the beginning
     ResolutionMode mode = ResolutionMode::Normal;
-    mutable WeakPtr<Scope> lastScope;
+    mutable SharedPtr<Scope> lastScope;
 
 
 public:

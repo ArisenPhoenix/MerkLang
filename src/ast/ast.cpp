@@ -7,8 +7,8 @@
 #include <string>
 #include <unordered_set>
 
+#include "core/node/node.h"
 #include "core/types.h"
-#include "core/node.h"
 
 #include "ast/ast.h"
 #include "ast/ast_control.h"
@@ -21,6 +21,7 @@
 #include "core/errors.h"
 #include "core/evaluator.h"
 #include "core/scope.h"
+#include "utilities/debugger.h"
 
 
 FreeVars FreeVarCollection::collectFreeVariables() const {
@@ -29,11 +30,11 @@ FreeVars FreeVarCollection::collectFreeVariables() const {
 
 BaseAST::~BaseAST() = default;
 LiteralValue::~LiteralValue()  {
-    value = LitNode(0);
-    if (value.isInstance()) {
-        auto inst = value.toInstance();
-        inst->setNativeData(nullptr);
-    }
+    // DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    // // value = Node(Null);
+    // DEBUG_FLOW_EXIT();
+    // auto data = value.getValueNode();
+    // data.clear();
 }
 
 void ASTStatement::setScope(SharedPtr<Scope> newScope) {
@@ -65,33 +66,26 @@ BaseAST::BaseAST(SharedPtr<Scope> scope) {(void)scope;}
 
 // Basic Constructors
 LiteralValue::LiteralValue(LitNode value, SharedPtr<Scope> scope)
-    : ASTStatement(scope), value(value) {}
+    : ASTStatement(scope), value(value) {
+        if (!value.isValid()) {
+            throw MerkError("LitNode Became Invalid After LiteralValue construction");
+        }
+    }
 
 // Variable Constructors
-VariableDeclaration::VariableDeclaration(String varName, VarNode value, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
-    : ASTStatement(scope), name(std::move(varName)), variable(std::move(value)),
-        typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
+// VariableDeclaration::VariableDeclaration(String varName, DataTypeFlags valueTypes, SharedPtr<Scope> scope, std::optional<NodeValueType> typeTag, UniquePtr<ASTStatement> valueNode)
+//     : ASTStatement(scope), name(std::move(varName)), variableMeta(valueTypes),
+//         typeTag(std::move(typeTag)), valueExpression(std::move(valueNode)) {
+//         // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
+//         DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
+// }
+
+VariableDeclaration::VariableDeclaration(String varName, DataTypeFlags valueTypes, SharedPtr<Scope> scope, UniquePtr<ASTStatement> valueNode)
+    : ASTStatement(scope), name(std::move(varName)), variableMeta(valueTypes), valueExpression(std::move(valueNode)) {
         // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
         DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
+        if (name.empty()) {throw MerkError("Variable Declaration name is empty");}
 }
-
-VariableDeclaration::VariableDeclaration(String varName, VarNode value, SharedPtr<Scope> scope, ResolvedType resolvedType, UniquePtr<ASTStatement> valueNode)
-    : ASTStatement(scope), name(std::move(varName)), variable(std::move(value)),
-        type(resolvedType), valueExpression(std::move(valueNode)) {
-        // validateScope(scope, "VariableDeclaration::VariableDeclaration", value.toString());
-        DEBUG_LOG(LogLevel::TRACE, highlight("[VarNode Constructor] Value:", Colors::purple), this->toString());
-}
-
-VariableDeclaration::VariableDeclaration(UniquePtr<VariableDeclaration> varDec) : ASTStatement(varDec->getScope()) {
-    name = varDec->name;
-    variable = varDec->variable;
-    typeTag = varDec->typeTag;
-    type = varDec->type;
-    valueExpression = std::move(varDec->valueExpression);       
-}
-
-
-
 
 VariableReference::VariableReference(UniquePtr<VariableReference> varRef) : ASTStatement(varRef->getScope()) {
     name = varRef->name;
@@ -139,11 +133,13 @@ BinaryOperation::BinaryOperation(const String& op, UniquePtr<ASTStatement> left,
 Node LiteralValue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::NONE);
     MARK_UNUSED_MULTI(scope);
+
+    if (val) {throw MerkError("returning cached literal"); return Node(val->getInner()); }  // something of a cached value
     // validateScope(scope, "LiteralValue", toString());
-    Node val =  Evaluator::evaluateLiteral(value);
+    Node evaluated =  Evaluator::evaluateLiteral(value.getValueNode());
 
     DEBUG_FLOW_EXIT();
-    return val;
+    return evaluated;
 };
 
 // Variable Evaluations
@@ -154,10 +150,11 @@ Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shar
     DEBUG_LOG(LogLevel::TRACE, highlight("[VariableDeclaration::evaluate]", Colors::orange), valueExpression->toString());
     // variable.data.fullType = type;
     // const_cast<VarNode>(variable);
-    variable.setFullType(type);
     // variable.setFullType(type);
+    // variable.setFullType(type);
+    String varName = name;
 
-    Node val = Evaluator::evaluateVariableDeclaration(valueExpression.get(), variable, typeTag, scope, instanceNode);
+    Node val = Evaluator::evaluateVariableDeclaration(varName, valueExpression.get(), variableMeta, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return val;
@@ -175,14 +172,15 @@ Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Share
 }
 
 Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     // validateScope(scope, "VariableReference::evluate", "Name = " + name);
     // if (name == "var") { throw MerkError("Tried to Reference Variable named 'var'"); }
 
     VarNode& varRef = Evaluator::evaluateVariableReference(name, scope, instanceNode); 
+    varRef.getValueNode().getValue().valueless_by_exception();
     DEBUG_FLOW_EXIT();
-    return varRef;
+    return varRef.getValueNode();
 };
 
 LitNode LiteralValue::getValue() {return value;}
@@ -206,16 +204,23 @@ Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPt
     auto leftValue = left->evaluate(scope, instanceNode);
 
     auto rightValue = right->evaluate(scope, instanceNode);
-    if (leftValue.nodeType == "LitNode" && rightValue.nodeType == "LitNode") {
-        if (op == "+") {return leftValue + rightValue;}
-        if (op == "*") {return leftValue * rightValue;}
+
+    if ((leftValue.isNull() || rightValue.isNull()) && op == "==") {
+        throw MerkError("About To Attempt Operation with lhs: " + leftValue.toString() + " And rhs: " + rightValue.toString() + " AST IS: " + toString());
     }
+    // if (leftValue.nodeType == "LitNode" && rightValue.nodeType == "LitNode") {
+    //     if (op == "+") {return leftValue + rightValue;}
+    //     if (op == "*") {return leftValue * rightValue;}
+    // }
     // DEBUG_LOG(LogLevel::PERMISSIVE, "RightValue Type: ", right->getAstTypeAsString(), "RightValue Type: ", rightValue);
     // throw MerkError("See above");
 
     // validateLeftAndRightNodes(leftValue, rightValue, "BinaryOperation", op);
 
-
+    // if (op == "==") {
+    //     DEBUG_LOG(LogLevel::PERMISSIVE, "LEFT VALUE BEING EVALUATED: ", leftValue.toString(), "RIGHT VALUE BEING EVALUATED: ", rightValue.toString());
+    //     throw MerkError("==");
+    // }
     Node val = Evaluator::evaluateBinaryOperation(op, leftValue, rightValue, scope, instanceNode);
     DEBUG_LOG(LogLevel::DEBUG, "Output Value: ", val);
     DEBUG_FLOW_EXIT();
@@ -283,45 +288,11 @@ void Return::setScope(SharedPtr<Scope> newScope) {
     DEBUG_FLOW_EXIT();
 }
 
-void CallableCall::setScope(SharedPtr<Scope> newScope) {
-    MARK_UNUSED_MULTI(newScope);
-    // scope = newScope;
-    // for (auto& arg : arguments) {
-    //     arg->setScope(newScope);
-    // }
-    // arguments->setScope(newScope);
-}
-
-void CallableDef::setScope(SharedPtr<Scope> newScope) {
-    MARK_UNUSED_MULTI(newScope);
-    // scope = newScope;
-    // body->setScope(newScope);
-}
-
-Node Return::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const  {
-    DEBUG_FLOW(FlowLevel::NONE);
-    
-    if (!returnValue) {throw MerkError("Return statement must have a value.");}
-
-    auto value = returnValue->evaluate(scope, instanceNode);
-
-    // DEBUG_LOG(LogLevel::DEBUG, "Value after return evaluation: ", value, "Type: ", value.getTypeAsString());
-
-    DEBUG_FLOW_EXIT();
-    throw ReturnException(value);  // Immediately exit function with value
-
-}
 
 
 
-Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
-    : ASTStatement(scope), returnValue(std::move(value)) {
-        // validateScope(scope, "Return::Return", returnValue->toString());
-    }
 
 
-
-Continue::Continue(SharedPtr<Scope> scope) : ASTStatement(scope) {}
 
 Node Continue::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     MARK_UNUSED_MULTI(scope, instanceNode);
@@ -336,4 +307,22 @@ void Continue::printAST(std::ostream& os, int indent) const {
 
 UniquePtr<BaseAST> Continue::clone() const {
     return makeUnique<Continue>(getScope());
+}
+
+
+
+
+void CallableCall::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // for (auto& arg : arguments) {
+    //     arg->setScope(newScope);
+    // }
+    // arguments->setScope(newScope);
+}
+
+void CallableDef::setScope(SharedPtr<Scope> newScope) {
+    MARK_UNUSED_MULTI(newScope);
+    // scope = newScope;
+    // body->setScope(newScope);
 }

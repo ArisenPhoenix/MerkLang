@@ -2,8 +2,9 @@
 #define HELPER_FUNCTIONS_H
 
 #include <string>
+#include "core/node/node.h"
+
 #include "core/types.h"
-#include "core/node.h"
 
 
 class Scope;
@@ -11,7 +12,6 @@ class Scope;
 String joinPaths(const String& dir, const String& file);
 String getFilePath(int argc, char* argv[], const String& defaultDir, const String& defaultFile);
 String readFileContent(const String& filePath);
-String getTypeName(const Node& value);  // Not Implemented Anymore -- perhaps a use for it later?
 String readFile(String filepath);
 void outputFileContents(String fileContent, int chars = 0);
 String normalizeFileName(const String& filePath);

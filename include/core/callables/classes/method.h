@@ -1,12 +1,12 @@
 #ifndef METHOD_H
 #define METHOD_H
 
+#include "core/types.h"
 #include "core/scope.h"
-#include "ast/ast_function.h"
+#include "ast/ast_function.h" 
 #include "ast/ast_callable.h"
 #include "core/callables/invocalble.h"
 #include "ast/ast_method.h"
-#include "core/callables/invocalble.h"
 
 class Chain;
 class NativeMethod;
@@ -74,6 +74,7 @@ public:
 
 class MethodNode : public CallableNode {
 public:
+    ~MethodNode();
     MethodNode(SharedPtr<Method> method);
 
     MethodNode(SharedPtr<Callable> method);

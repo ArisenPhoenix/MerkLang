@@ -3,16 +3,14 @@
 
 #include "core/types.h"
 #include "ast/ast_callable.h"
-#include "core/callables/param_node.h"
 #include "core/errors.h" 
 
 class Scope;
-class Node;
 class ParamList;
 class Method;
 
 // Callable is the abstract base for all callables (functions and methods).
-class Callable : public std::enable_shared_from_this<Callable> {
+class Callable: public NodeBase {
 public:
     String name;
     mutable ParamList parameters;
@@ -53,6 +51,15 @@ public:
     
     // Produce a FunctionSignature for registration.
     virtual SharedPtr<class CallableSignature> toCallableSignature() = 0;
+
+    virtual void setValue(const VariantType&) override;
+    virtual VariantType getValue() const override;
+    virtual SharedPtr<NodeBase> clone();
+    virtual void clear();
+    NodeValueType getType() const override;
+
+    // virtual NodeValueType getType() override;
+    virtual SharedPtr<NodeBase> clone() const;
     
 
 protected:
@@ -69,7 +76,7 @@ protected:
 public:
     explicit CallableNode(SharedPtr<Callable> callable, String callableType = "Callable");
     explicit CallableNode(SharedPtr<CallableNode> callableNode); // for returning non shared callable node
-
+    explicit CallableNode(Vector<SharedPtr<CallableSignature>> callSignatures, String callableType = "Callable");
 
     virtual SharedPtr<Callable> getCallable() const;
 
@@ -77,9 +84,19 @@ public:
     SharedPtr<Scope> getInternalScope() const;
 
     virtual String toString() const;
+    std::size_t hash() const override;
+
+    virtual bool isInstance() const override;
+    virtual bool isInstance() override;
+
+    SharedPtr<ClassInstance> toInstance() override;
+    SharedPtr<ClassInstance> toInstance() const override;
+    virtual SharedPtr<CallableNode> clone() const;
+    virtual VariantType getValue() const;
+    
 };
 
 
+SharedPtr<Callable> asCallable(SharedPtr<NodeBase> callable);
 
-
-#endif // CALLABLE_H 
+#endif // CALLABLE_H  

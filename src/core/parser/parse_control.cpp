@@ -3,15 +3,14 @@
 #include <iostream>
 #include <variant>
 #include <string>
+#include "core/node/node.h"
 
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/node.h"
 
 #include "ast/ast_base.h"
 #include "ast/ast.h"
 #include "ast/ast_control.h"
-#include "ast/ast_function.h"
 #include "core/scope.h"
 
 #include "utilities/streaming.h"
@@ -21,7 +20,7 @@
 
 
 UniquePtr<IfStatement> Parser::parseIfStatement() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     consume(TokenType::Keyword, "if", "Parser::parseIfStatement");
     auto condition = parseExpression();
     if (!condition) {throw MerkError("Parser::parseIfStatement: Failed to parse 'if' condition.");}
@@ -84,7 +83,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
 }
 
 UniquePtr<WhileLoop> Parser::parseWhileLoop() {
-    // DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     Token controllingToken = currentToken();
     if (controllingToken.value != "while") {
@@ -110,11 +109,12 @@ UniquePtr<WhileLoop> Parser::parseWhileLoop() {
     auto conditionalBlock = makeUnique<ConditionalBlock>(std::move(condition), currentScope);
     
     // DEBUG_FLOW_EXIT();
+    DEBUG_FLOW_EXIT();
     return makeUnique<WhileLoop>(std::move(conditionalBlock), std::move(body), currentScope);
 }
 
 UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
-    // DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::HIGH);
     
     auto blockScope = currentScope;
     if (controlScope){
@@ -148,6 +148,6 @@ UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
 
     processNewLines();
     
-    // DEBUG_FLOW_EXIT();
+    DEBUG_FLOW_EXIT();
     return codeBlock;
 }
