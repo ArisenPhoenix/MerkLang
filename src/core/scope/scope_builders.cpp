@@ -28,7 +28,7 @@ SharedPtr<Scope> Scope::makeCallScope() {
 SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::MED);
 
-    auto detached = std::make_shared<Scope>(shared_from_this(), globalFunctions, globalClasses, interpretMode);
+    auto detached = makeShared<Scope>(shared_from_this(), globalFunctions, globalClasses, interpretMode);
     detached->isDetached = true;
     detached->owner = owner+"(detached)";
     includeMetaData(detached, true);
@@ -36,14 +36,7 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
     for (const auto& name : freeVarNames) {
         if (this->hasVariable(name)) {
             VarNode original = getVariable(name);
-            detached->declareVariable(name, cloneVarNode(original.clone()));
-        }
-        else if (auto parent = this->getParent()) {
-            // If not in the current scope, attempt to find it in the parents.
-            if (parent->hasVariable(name)) {
-                VarNode originalVar = parent->getVariable(name);
-                detached->declareVariable(name, cloneVarNode(originalVar.clone()));
-            }
+            detached->declareVariable(name, original.uniqClone());
         }
     }
 
@@ -54,15 +47,15 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
 // creates a standalone scope with only freevariables and local functions/classes
 SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::NONE);
-    auto isolated = std::make_shared<Scope>(0, interpretMode, false);
+    auto isolated = makeShared<Scope>(0, interpretMode, false);
     includeMetaData(isolated, true);
 
     for (const auto& name : freeVarNames) {
         if (this->hasVariable(name)) {
-            isolated->declareVariable(name, cloneVarNode(getVariable(name).clone()));
+            isolated->declareVariable(name, getVariable(name).uniqClone());
         } else if (auto parent = getParent()) {
             if (parent->hasVariable(name)) {
-                isolated->declareVariable(name, cloneVarNode(parent->getVariable(name).clone()));
+                isolated->declareVariable(name, getVariable(name).uniqClone());
             }
         }
     }
@@ -111,7 +104,7 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
     for (const auto& [varName, varPtr] : classScope->getContext().getVariables()) {
         if (varPtr) {
             if (!instanceScope->getContext().hasVariable(varName)) {
-                instanceScope->getContext().setVariable(varName, cloneVarNode(varPtr->clone()));
+                instanceScope->getContext().setVariable(varName, varPtr->uniqClone());
             } else {
                 DEBUG_LOG(LogLevel::WARNING, "Variable already exists in instanceScope: ", varName);
             }

@@ -1,8 +1,8 @@
 #ifndef NATIVE_CLASS_H
 #define NATIVE_CLASS_H
 
+
 #include "core/types.h"
-#include "core/callables/argument_node.h"
 #include "core/callables/callable.h"
 #include "core/callables/classes/class_base.h"
 #include "core/callables/classes/native_method.h"

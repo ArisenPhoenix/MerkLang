@@ -4,12 +4,11 @@
 
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/node.h"
+#include "core/node/node.h"
 
 #include "ast/ast_base.h"
 #include "ast/ast.h"
 #include "ast/ast_control.h"
-#include "ast/ast_function.h"
 #include "core/scope.h"
 
 #include "utilities/utilities.h"
@@ -42,23 +41,25 @@ UniquePtr<CodeBlock> Parser::parse() {
     try {
         setAllowScopeCreation(false);
         while (currentToken().type != TokenType::EOF_Token) {
-
-            if (currentToken().type == TokenType::Newline) {
-                advance(); // Skip blank lines
-                continue;
-            }
+            processNewLines();
+            if (currentToken().type == eofToken.type) { break; }
+            // if (currentToken().type == TokenType::Newline) {
+            //     advance(); // Skip blank lines
+            //     continue;
+            // }
+            
     
             auto statement = parseStatement();
-            if (!statement) {
-                throw MerkError("Parser::parse: Null statement returned during parsing. Token: " + currentToken().toString());
-            }
+            if (!statement) { throw MerkError("Parser::parse: Null statement returned during parsing. Token: " + currentToken().toString()); }
     
             // If interpretMode is enabled and interpretation is by block, evaluate each statement one-by-one, whether it is a control or variable
             if (interpretMode && byBlock){
+                setAllowScopeCreation(true);
                 try {
+                    DEBUG_LOG(LogLevel::PERMISSIVE, highlight("EVALUATING AST TYPE: " + statement->getAstTypeAsString(), Colors::orange));
                     interpret(statement.get());
                 } catch(MerkError& e) {
-                    rootBlock->printAST(std::cout, 0);
+                    // rootBlock->printAST(std::cout, 0);
                     throw MerkError(e.what());
                 }
             }
@@ -73,9 +74,11 @@ UniquePtr<CodeBlock> Parser::parse() {
             // rootBlock->printAST(std::cout, 0);
             interpret(rootBlock.get());
         }
+
         return std::move(rootBlock); // Return the parsed block node
     } catch (MerkError& e) {
-        rootScope->printChildScopes();
+        // rootScope->printChildScopes();
+        // rootBlock->printAST(std::cout, 0);
         throw MerkError(e.what());
     }
     
@@ -161,6 +164,7 @@ void Parser::interpret(CodeBlock* block) const {
         block->evaluate(); // Evaluate the updated statement
     } catch (const std::exception& e) {
         DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
+        // block->printAST(std::cout, 0);
         throw MerkError(e.what());
     }
     // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting CodeBlock ===========================", Colors::yellow));
@@ -183,6 +187,7 @@ void Parser::interpret(ASTStatement* ASTStatement) const {
 
     } catch (const std::exception& e) {
         // DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
+        // ASTStatement->printAST(std::cout, 0);
         throw MerkError(e.what());
     }
     // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting ASTStatement ===========================", Colors::yellow));
@@ -194,21 +199,11 @@ void Parser::interpret(BaseAST* block_or_ast) const {
 
     // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting BaseAST ===========================", Colors::yellow));
     try {
-        if (block_or_ast->getBranch() == "Block"){
-            block_or_ast->evaluate(); // Evaluate the updated statement
-        } else if (block_or_ast->getBranch() == "AST"){
-            block_or_ast->evaluate(currentScope);
-        } else {
-            block_or_ast->evaluate();
-        }
-
-        // if (debugParser){
-        //     currentScope->printContext();
-        //     currentScope->debugPrint();
-        // }
+       block_or_ast->evaluate(currentScope); // Evaluate the updated statement
 
     } catch (const std::exception& e) {
         DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
+        // block_or_ast->printAST(std::cout, 0);
         throw MerkError(e.what());
     }
     // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting BaseAST ===========================", Colors::yellow));
@@ -391,8 +386,15 @@ UniquePtr<T> createNode(SharedPtr<Scope> scope, Args&&... args) {
 int Parser::getOperatorPrecedence(const String& op) const {
     static const std::unordered_map<String, int> precedenceMap = {
         {"*", 3}, {"/", 3}, {"%", 3},
-        {"+", 2}, {"-", 2},
-        {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, {"<=", 1}, {">=", 1}
+        {"+", 2}, {"-", 2}, {"+=", 2}, {"++", 2},
+        {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, 
+        {"<=", 1}, {">=", 1}, {"+=", 1}, {"-=", 1},
+        {"*=", 1}, {"/=", 1}
+
+        // {"+=", 0}, {"-=", 0}, {"*=", 0}, {"/=", 0},
+        // {"*", 3}, {"/", 3}, {"%", 3},
+        // {"+", 2}, {"-", 2},
+        // {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, {"<=", 1}, {">=", 1}
     };
 
     auto it = precedenceMap.find(op);

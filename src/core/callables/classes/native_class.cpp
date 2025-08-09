@@ -1,7 +1,8 @@
+#include "core/node/argument_node.h"
+
 #include "core/types.h"
 #include "core/callables/classes/native_method.h"
 #include "core/callables/classes/native_class.h"
-#include "core/callables/argument_node.h"
  
 NativeClass::NativeClass(String name, String access, SharedPtr<Scope> classScope)
 : ClassBase(std::move(name), std::move(access), classScope) {
@@ -40,8 +41,8 @@ String NativeClass::toString() const  {
 }
 
 SharedPtr<CallableSignature> NativeClass::toCallableSignature() {
-    auto sig = makeShared<CallableSignature>(shared_from_this());
-
+    auto sig = makeShared<CallableSignature>(asCallable(shared_from_this()));
+    if (!sig) {throw MerkError("Sig Is null");}
     return sig;
 }
 

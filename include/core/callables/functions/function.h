@@ -6,9 +6,7 @@
 #include <memory> 
 
 #include "core/types.h"
-#include "core/node.h"
 
-#include "core/callables/param_node.h"    // For ParamList
 #include "core/callables/callable.h"      // New base callable class
 #include "core/callables/invocalble.h"
 
@@ -72,7 +70,13 @@ public:
 
     FunctionNode(SharedPtr<Callable> function);
 
+    FunctionNode(String originalName, Vector<SharedPtr<CallableSignature>>);
+
+    SharedPtr<CallableSignature> getFunction(String name, ArgResultType args);
+
     SharedPtr<Callable> getCallable() const override;
+
+    String toString() const override;
 };
 
 #endif // FUNCTION_NODE_H

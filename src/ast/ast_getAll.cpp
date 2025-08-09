@@ -1,10 +1,13 @@
 #include "ast/ast_base.h"
 #include "ast/ast.h"
+#include "ast/exceptions.h"
+
 #include "ast/ast_chain.h"
 #include "ast/ast_control.h"
 #include "ast/ast_callable.h"
-#include "ast/ast_function.h"
-#include "ast/ast_class.h"
+#include "core/node/argument_node.h"
+#include "core/callables/callable.h"
+
 
 
 template <typename T>
@@ -176,40 +179,6 @@ Vector<const BaseAST*> UnaryOperation::getAllAst(bool includeSelf) const {
     return all; 
 }
 
-Vector<const BaseAST*> CallableDef::getAllAst(bool includeSelf) const {
-    Vector<const BaseAST*> all = {};
-
-    if (includeSelf){
-        all.push_back(this);
-    }
-
-    if (body) {
-        auto elems = body->getAllAst(includeSelf);
-        mergeVectors(all, elems);
-    }
-
-    return all; 
-}
-
-Vector<const BaseAST*> CallableCall::getAllAst(bool includeSelf) const {
-    Vector<const BaseAST*> all = {};
-
-    if (includeSelf){
-        all.push_back(this);
-    }
-
-
-    // if (!arguments.empty()) {
-    //     for (auto& arg : arguments){
-    //         auto args = arg->getAllAst(includeSelf);
-    //         mergeVectors(all, args);
-    //     }
-    // }
-    mergeVectors(all, arguments->getAllAst(includeSelf));
-
-    return all; 
-}
-
 
 Vector<const BaseAST*> BinaryOperation::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all = {};
@@ -242,6 +211,58 @@ Vector<const BaseAST*> Return::getAllAst(bool includeSelf) const {
         mergeVectors(all, returns);
 
     }
+
+    return all; 
+}
+
+
+Vector<const BaseAST*> Throw::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+    if (includeSelf){
+        all.push_back(this);
+    }
+    if (expr){
+        auto returns = expr->getAllAst(includeSelf);
+        mergeVectors(all, returns);
+
+    }
+
+    return all; 
+}
+
+
+
+
+Vector<const BaseAST*> CallableDef::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+
+    if (includeSelf){
+        all.push_back(this);
+    }
+
+    if (body) {
+        auto elems = body->getAllAst(includeSelf);
+        mergeVectors(all, elems);
+    }
+
+    return all; 
+}
+
+Vector<const BaseAST*> CallableCall::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+
+    if (includeSelf){
+        all.push_back(this);
+    }
+
+
+    // if (!arguments.empty()) {
+    //     for (auto& arg : arguments){
+    //         auto args = arg->getAllAst(includeSelf);
+    //         mergeVectors(all, args);
+    //     }
+    // }
+    mergeVectors(all, arguments->getAllAst(includeSelf));
 
     return all; 
 }

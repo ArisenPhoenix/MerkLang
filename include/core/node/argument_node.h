@@ -1,10 +1,7 @@
 #ifndef ARGUMENT_LIST_H
 #define ARGUMENT_LIST_H
 
-#include "core/types.h"
-#include "core/node.h"
-#include "core/callables/param_node.h"
-
+#include "core/node/node.h"
 
 
 class ParamList;
@@ -52,6 +49,8 @@ public:
     const Node& operator[](size_t index) const;
     bool empty();
     size_t size();
+
+    std::size_t hash() const override;
 };
 
 

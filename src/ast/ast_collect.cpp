@@ -1,13 +1,16 @@
 #include "utilities/debugger.h"
+
+#include "core/node/argument_node.h"
+
 #include "core/types.h"
 #include "utilities/debugging_functions.h"
 #include "ast/ast_base.h"
 #include "ast/ast.h"
+#include "ast/exceptions.h"
 #include "ast/ast_control.h"
-#include "ast/ast_function.h"
-#include "ast/ast_method.h"
-#include "ast/ast_callable.h"
+#include "core/callables/callable.h"
 #include "ast/ast_chain.h"
+
 
 FreeVars CodeBlock::collectFreeVariables() const {
     DEBUG_FLOW();
@@ -90,26 +93,6 @@ FreeVars ElifStatement::collectFreeVariables() const {
 
 }
 
-
-
-
-FreeVars Argument::collectFreeVariables() const {
-    if (isKeyword()) {
-        FreeVars vars = key->collectFreeVariables();
-        return vars;
-    }
-
-    return value->collectFreeVariables();
-}
-
-FreeVars Arguments::collectFreeVariables() const {
-    FreeVars freeVars;
-    for (auto& arg : arguments) {
-        freeVars.merge(arg.collectFreeVariables());
-    }
-    return freeVars;
-}
-
 FreeVars IfStatement::collectFreeVariables() const {
     DEBUG_FLOW();
     freeVars.clear();
@@ -133,36 +116,20 @@ FreeVars IfStatement::collectFreeVariables() const {
     return freeVars;
 }
 
-FreeVars CallableDef::collectFreeVariables() const {
+
+
+
+FreeVars Throw::collectFreeVariables() const {
     DEBUG_FLOW();
     freeVars.clear();
 
-    std::unordered_set<String> paramNames;
-    for (const auto& param : parameters) {
-        paramNames.insert(param.getName());
-    }
-
-    FreeVars nestedFree = body->collectFreeVariables();
-    for (const auto& var : nestedFree) {
-        if (paramNames.find(var) == paramNames.end()) {
-            freeVars.insert(var);
-        }
+    if (getValue()){
+        freeVars.merge(getValue()->collectFreeVariables());
     }
 
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
-
-FreeVars CallableCall::collectFreeVariables() const {
-    DEBUG_FLOW();
-    freeVars.clear();
-    freeVars.merge(arguments->collectFreeVariables());
-
-    DEBUG_FLOW_EXIT();
-    return freeVars;
-}
-
-
 
 
 
@@ -213,6 +180,53 @@ FreeVars BinaryOperation::collectFreeVariables() const {
 }
 
 
+
+FreeVars Argument::collectFreeVariables() const {
+    if (isKeyword()) {
+        FreeVars vars = key->collectFreeVariables();
+        return vars;
+    }
+
+    return value->collectFreeVariables();
+}
+
+FreeVars Arguments::collectFreeVariables() const {
+    FreeVars freeVars;
+    for (auto& arg : arguments) {
+        freeVars.merge(arg.collectFreeVariables());
+    }
+    return freeVars;
+}
+
+FreeVars CallableDef::collectFreeVariables() const {
+    DEBUG_FLOW();
+    freeVars.clear();
+
+    std::unordered_set<String> paramNames;
+    for (const auto& param : parameters) {
+        paramNames.insert(param.getName());
+    }
+
+    FreeVars nestedFree = body->collectFreeVariables();
+    for (const auto& var : nestedFree) {
+        if (paramNames.find(var) == paramNames.end()) {
+            freeVars.insert(var);
+        }
+    }
+
+    DEBUG_FLOW_EXIT();
+    return freeVars;
+}
+
+FreeVars CallableCall::collectFreeVariables() const {
+    DEBUG_FLOW();
+    freeVars.clear();
+    freeVars.merge(arguments->collectFreeVariables());
+
+    DEBUG_FLOW_EXIT();
+    return freeVars;
+}
+
 FreeVars Chain::collectFreeVariables() const {
     DEBUG_FLOW();
     freeVars.clear();
@@ -232,7 +246,7 @@ FreeVars ChainOperation::collectFreeVariables() const {
     if (getLeftSide()) {
         freeVars.merge(getLeftSide()->collectFreeVariables());
     }
-
+ 
     if (getRightSide()) {
         freeVars.merge(getRightSide()->collectFreeVariables());
     }

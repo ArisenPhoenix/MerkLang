@@ -1,15 +1,16 @@
 #ifndef AST_CLASS_H
 #define AST_CLASS_H
 
-#include "core/types.h"               // For String, Vector, UniquePtr, SharedPtr, NodeValueType, etc.
+// #include "core/node/node.h"
+// #include "core/node/param_node.h"
 #include "utilities/debugger.h"       // For DEBUG_LOG
 
-#include "core/node.h"
+// #include "core/types.h"               // For String, Vector, UniquePtr, SharedPtr, NodeValueType, etc.
+
 #include "ast/ast_base.h"             // For ASTStatement, printIndent, etc.
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
-#include "core/callables/param_node.h"
 
 #include "core/errors.h"              // For error types
 
@@ -17,6 +18,7 @@ class Scope;
 class Method;
 class Function;
 class Chain;
+class ParamNode;
 
 class ClassBody : public CallableBody {
 protected:
@@ -60,7 +62,6 @@ public:
 
     // Print the AST for debugging.
     void printAST(std::ostream& os, int indent = 0) const override;
-    Vector<String> removeMethodAccessors(UniquePtr<ClassBody>& clsBody) const;
     AstType getAstType() const override {return AstType::ClassDefinition;}
     void setClassAccessor(String accessorName);
     String getClassAccessor();

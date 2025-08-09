@@ -1,29 +1,60 @@
+#include "core/node/node.h"
+#include "core/node/param_node.h"
+#include "core/node/argument_node.h"
+#include "core/node/node_structures.h"
+
 #include "core/types.h"
 #include "core/callables/callable.h"
 #include "core/callables/functions/native_function.h"
 #include "core/callables/functions/function.h"
-#include "core/callables/param_node.h"
 #include "core/callables/functions/builtins.h"
-#include "core/callables/classes/node_structures.h"
 #include "core/scope.h"
 
 // Define native functions 
 
 Node print(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
-  for (size_t i = 0; i < args.size(); ++i) {
+    // throw MerkError("Showed Print Node to String");
+    for (size_t i = 0; i < args.size(); ++i) {
+        // DEBUG_LOG(LogLevel::PERMISSIVE, args[i].toString(), "  META", args[i].getFlags().toString());
+        
         // DEBUG_LOG(LogLevel::PERMISSIVE, args[i].getTypeAsString());
         std::cout << args[i].toString();
         if (i < args.size() - 1) std::cout << " ";
     }
     std::cout << std::endl;
-    return Node(); // none
+    return Node(Null); // null
 }
 
+Node debug_log(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+    DEBUG_LOG(LogLevel::DEBUG, "ALL ARGS: ", args.toString());
+    debugLog(true, highlight("\n====================================== DEBUG_LOG MERK INTERNALS BEGIN ======================================\n", Colors::bg_bright_red));
+    for (size_t i = 0; i < args.size(); ++i) {
+            auto arg = args[i];
+            DEBUG_LOG(LogLevel::DEBUG, highlight("ARG: ", Colors::bg_bright_red), arg.toString(), highlight(" ARG META: ", Colors::bg_blue), arg.getFlags().toString());
+            std::cout << args[i].toString();
+            if (i < args.size() - 1) std::cout << " ";
+        }
+    std::cout << std::endl;
+    auto first = args[0];
+    if (instanceNode) {
+        auto instScope = instanceNode->getInstanceScope();
+        debugLog(true, highlight("The instance scope internals", Colors::bg_green));
+        instScope->debugPrint();
 
-Node floatFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
-    if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
-    return Node(args[0].toFloat());
+        debugLog(true, highlight("The instance scope children", Colors::bg_green));
+        instScope->printChildScopes();
+    }
+    if (first.isBool() && first.toBool()) {
+        throw MerkError(highlight("DEBUG_LOG threw because first arg was a boolean of " + first.toString(), Colors::bg_magenta));
+    }
+    debugLog(true, highlight("\n====================================== DEBUG_LOG MERK INTERNALS END ======================================\n", Colors::bg_bright_red));
+    return Node(Null); // none
 }
+
+// Node floatFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+//     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
+//     return Node(args[0].toFloat());
+// }
 
 Node intFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
@@ -42,7 +73,7 @@ Node isInstanceFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope,
     auto instance = args[1];
 
     if (var.isInstance()) {
-        auto inst = std::get<SharedPtr<ClassInstance>>(var.getValue());
+        auto inst = std::get<SharedPtr<Callable>>(var.getValue());
         if (inst->getName() == instance.toString()) {
             return Node(true);
         }
@@ -64,13 +95,26 @@ SharedPtr<NativeFunction> createPrintFunction([[maybe_unused]] SharedPtr<Scope> 
     );
 }
 
-SharedPtr<NativeFunction> createFloatFunction([[maybe_unused]] SharedPtr<Scope> scope) {
+SharedPtr<NativeFunction> createDebugLogFunction([[maybe_unused]] SharedPtr<Scope> scope) {
     ParamList params;
     auto param = ParamNode("value", NodeValueType::Any);
+    param.setIsVarArgsParam(true);
     params.addParameter(param);
 
-    return makeShared<NativeFunction>("Float", std::move(params), floatFunc);
+    return makeShared<NativeFunction>(
+        "DEBUG_LOG",
+        std::move(params),
+        debug_log
+    );
 }
+
+// SharedPtr<NativeFunction> createFloatFunction([[maybe_unused]] SharedPtr<Scope> scope) {
+//     ParamList params;
+//     auto param = ParamNode("value", NodeValueType::Any);
+//     params.addParameter(param);
+
+//     return makeShared<NativeFunction>("Float", std::move(params), floatFunc);
+// }
 
 SharedPtr<NativeFunction> createIntFunction([[maybe_unused]] SharedPtr<Scope> scope) {
     ParamList params;
@@ -102,10 +146,11 @@ SharedPtr<NativeFunction> createIsInstanceFunction([[maybe_unused]] SharedPtr<Sc
 
 std::unordered_map<String, NativeFuncFactory> nativeFunctionFactories = {
     {"print", createPrintFunction},
-    {"Float", createFloatFunction},
+    // {"Float", createFloatFunction},
     {"Int", createIntFunction},
     {"String", createStringFunction},
-    {"isInstance", createIsInstanceFunction}
+    {"isInstance", createIsInstanceFunction},
+    {"DEBUG_LOG", createDebugLogFunction}
 };
 
 

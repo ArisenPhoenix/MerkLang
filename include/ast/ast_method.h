@@ -1,15 +1,17 @@
 #ifndef AST_METHOD_H
 #define AST_METHOD_H
 
+
+// #include "core/node/node.h"
+// #include "core/node/param_node.h"
+
 #include "core/types.h"               // For String, Vector, UniquePtr, SharedPtr, NodeValueType, etc.
 #include "utilities/debugger.h"       // For DEBUG_LOG
 
-#include "core/node.h"
 #include "ast/ast_base.h"             // For ASTStatement, printIndent, etc.
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
-#include "core/callables/param_node.h"
 
 #include "core/errors.h"              // For error types
 
@@ -17,9 +19,6 @@ class Chain;
 class FunctionDef;
 
 class MethodBody : public CallableBody {
-private:
-    Vector<Chain*> nonStaticElements;
-
 public:
     MethodBody(SharedPtr<Scope> scope);
     MethodBody(UniquePtr<CodeBlock>&& body);
@@ -33,11 +32,7 @@ public:
     // virtual UniquePtr<BaseAST> clone() const override;
     Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
-    // void setNonStaticElements(Vector<Chain*> nonStaticEls);
     AstType getAstType() const override { return AstType::ClassMethodBlock;}
-    // bool getIsStatic();
-    // Vector<Chain*> getNonStaticElements();
-    // UniquePtr<BaseAST> clone() const override;
 };
 
 

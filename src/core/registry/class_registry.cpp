@@ -2,10 +2,17 @@
 #include "utilities/debugger.h"
 
 void ClassRegistry::debugPrint() const {
-    for (const auto& [name, classSig] : classMap) {
-        MARK_UNUSED_MULTI(name);
-        DEBUG_LOG(LogLevel::DEBUG, "Registered Class: ", name);
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    if (classMap.empty()) {
+        debugLog(true, "No Classes registered.");
+    } else {
+        debugLog(true, "\nRegistered Classes:");
+        for (const auto &pair : classMap) {
+            debugLog(true, "  ", pair.first,  "(", pair.second, ")");
+        }
     }
+    
+    DEBUG_FLOW_EXIT();
 }
 
 

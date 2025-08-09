@@ -2,11 +2,13 @@
 #include <iostream>
 #include <string>
 
+#include "core/node/node.h"
+
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/node.h"
 
 #include "ast/ast_base.h"
+#include "ast/exceptions.h"
 #include "ast/ast.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
@@ -22,7 +24,7 @@
 
 
 ParamList Parser::handleParameters(TokenType type){
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     (void)type;
     ParamList params;
     DEBUG_LOG(LogLevel::DEBUG, highlight("Current Token In handleParameters", Colors::pink), currentToken().toColoredString());
@@ -38,14 +40,16 @@ ParamList Parser::handleParameters(TokenType type){
 
             String paramName = currentToken().value;
             advance(); // Consume parameter name
-            
-            std::optional<NodeValueType> paramType = parseStaticType();
+            auto flags = DataTypeFlags(paramName, false, true, false, ResolvedType("Any"));
+
+            // std::optional<NodeValueType> paramType = parseStaticType();
             if (expect(TokenType::VarAssignment)){
                 advance(); // consume '='
                 auto token = currentToken();
                 DEBUG_LOG(LogLevel::INFO, "Param Token:", token.toString());
                 if (token.type == TokenType::Number || token.type == TokenType::String || token.type == TokenType::Bool){
-                    ParamNode paramNode(paramName, token.value, false, false);
+                    
+                    ParamNode paramNode(flags);
                     params.addParameter(paramNode);
                     DEBUG_LOG(LogLevel::DEBUG, "Parameter: ", paramName, "Added");
 
@@ -56,8 +60,9 @@ ParamList Parser::handleParameters(TokenType type){
                 
             } else {
                 // Create parameter node
-                NodeValueType finalParamType = paramType ? paramType.value() : NodeValueType::Any;
-                ParamNode paramNode = ParamNode(paramName, finalParamType, false, false);
+                auto flags = DataTypeFlags(paramName, false, true, false, ResolvedType("Any"));
+                // NodeValueType finalParamType = paramType ? paramType.value() : NodeValueType::Any;
+                ParamNode paramNode = ParamNode(flags);
                 params.addParameter(paramNode);
                 DEBUG_LOG(LogLevel::DEBUG, "Parameter: ", paramName, "Added");
 
@@ -81,9 +86,9 @@ ParamList Parser::handleParameters(TokenType type){
 
 
 UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     Token token = currentToken();
-    setAllowScopeCreation(true);
+    // setAllowScopeCreation(true);
     DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
 
     if (!(token.type == TokenType::FunctionDef || token.type == TokenType::ClassMethodDef)) {
@@ -164,7 +169,7 @@ UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
     
     DEBUG_LOG(LogLevel::INFO, "Function definition parsed successfully: ", functionName);
     DEBUG_FLOW_EXIT();
-    setAllowScopeCreation(false);
+    // setAllowScopeCreation(false);
     return functionNode;
 }
 
@@ -208,7 +213,7 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
     if (!expect(TokenType::Punctuation) || controllingToken.value != "(") {
         throw UnexpectedTokenError(controllingToken, "'(' after function name", "Parser::parseFunctionCall");
     }
-\
+
     auto arguments = parseAnyArgument();
 
     
@@ -218,7 +223,7 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
 }
 
 UniquePtr<ASTStatement> Parser::parseReturnStatement() {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
     Token controllingToken = currentToken();
     DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parseReturnStatement: Entering with token: ", controllingToken.toColoredString());

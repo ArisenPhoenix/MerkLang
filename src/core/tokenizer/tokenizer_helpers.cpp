@@ -44,12 +44,13 @@ bool Tokenizer::isFunction(size_t startPos) {
 }
 
 bool Tokenizer::isFunction(String value){
-    for (auto& func : functions){
-        if (value == func){
-            return true;
-        }
-    }
-    return false;
+    return functions.count(value);
+    // for (auto& func : functions){
+    //     if (value == func){
+    //         return true;
+    //     }
+    // }
+    // return false;
 }
 
 bool Tokenizer::isClass(String value){
@@ -110,7 +111,12 @@ void Tokenizer::updateCurrentLineText() {
 }
 
 void Tokenizer::printTokens(bool colored) const {
+    Token prev = Token(TokenType::Newline, "newLine", 0, 0);
     for (const auto& token : tokens) {
+        if (prev.type == TokenType::Newline && token.type == TokenType::Newline) {
+            continue;
+        }
+        prev = token;
         String tok = colored ? highlight("Token", Colors::green) : "Token";
         std::cout << tok + "(Type: " << tokenTypeToString(token.type, colored)
                   << ", Value: " << token.value

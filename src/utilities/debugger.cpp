@@ -171,59 +171,69 @@ FlowLevel Debugger::getFileFlowLevel(const String& file) {
     return flowLevel;
 }
 
- 
 
-bool Debugger::handleLogProceed(LogLevel level, const String& file){
-    if (!enabled) {return false;}
-    if (level == LogLevel::PERMISSIVE){
-        return true;
+LogLevel Debugger::getFileLogLevel(const String& file) {
+    if (auto it = fileLevels.find(file); it != fileLevels.end()) {
+        return it->second;
     }
-    if (level == LogLevel::FLOW) {
-        // USED FOR LOGGING EXTRA INFORMATION WITHIN THE NORMAL DEBUG_FLOW...flow
-        if (flowLevel == FlowLevel::NONE){
-            return false;
-        } else {
-            FlowLevel fileFlowLevel = getFileFlowLevel(file);
-            return handleFlowProceed(fileFlowLevel, file);
-        }
-
-    } else {
-        // Determine effective log level (global or file-specific).
-        LogLevel effectiveLevel = currentLevel;
-        String fileName = normalizeFileName(file);
-        {
-            auto it = fileLevels.find(file);
-            if (it != fileLevels.end())
-                effectiveLevel = it->second;
-        }
-        if (static_cast<int>(level) > static_cast<int>(effectiveLevel))
-            return false;
-    }
-    return true;
+    return currentLevel;
 }
+
+bool Debugger::handleLogProceed(LogLevel callLevel, const String& file) {
+    if (!enabled) return false;
+
+    // Special handling for FLOW level
+    if (callLevel == LogLevel::FLOW) {
+        FlowLevel fileFlowLevel = getFileFlowLevel(file);
+        return handleFlowProceed(fileFlowLevel, file);
+    }
+
+    LogLevel fileLogLevel = getFileLogLevel(file);
+
+    // 1. If file is explicitly set to NONE → disable all logs
+    if (fileLogLevel == LogLevel::NONE) { return false; }
+
+    // 2. If either is PERMISSIVE → allow unconditionally
+    if (fileLogLevel == LogLevel::PERMISSIVE || callLevel == LogLevel::PERMISSIVE) { return true; }
+
+    int callInt = static_cast<int>(callLevel);
+    int fileInt = static_cast<int>(fileLogLevel);
+
+    return callInt <= fileInt;
+}
+
+
 
 bool Debugger::handleFlowProceed(FlowLevel methodFlowLevel, const String& file){
     if (!enabled) {return false;}
-    if (methodFlowLevel == FlowLevel::PERMISSIVE){
-        return true;
-    }
-    if (static_cast<int>(flowLevel) >= static_cast<int>(FlowLevel::NONE)){
-        return false;
-    }
+    
+    int globalInt = static_cast<int>(flowLevel);
+    int methodInt = static_cast<int>(methodFlowLevel);
+
+    if ( methodFlowLevel == FlowLevel::NONE ) { return false;}
+    if (flowLevel == FlowLevel::NONE) { return false; }
+    if (globalInt >= static_cast<int>(FlowLevel::NONE)){ return false; }
 
     FlowLevel fileFlowLevel = getFileFlowLevel(file);
 
+    if (fileFlowLevel == FlowLevel::NONE) { return false; }
+
+    if (methodFlowLevel == FlowLevel::PERMISSIVE) { return true; }
+    
+    int fileInt = static_cast<int>(fileFlowLevel);
+
+
     if (flowLevel == FlowLevel::PERMISSIVE){
 
-        if (static_cast<int>(methodFlowLevel) <= static_cast<int>(fileFlowLevel) && fileFlowLevel != FlowLevel::NONE){
+        if (methodInt <= fileInt && fileFlowLevel != FlowLevel::NONE){
             return true;
         }
         return false;
     }
 
     // Check if the file flow level is <= global flow level
-    if (static_cast<int>(fileFlowLevel) <= static_cast<int>(flowLevel)) {
-        if (static_cast<int>(methodFlowLevel) <= static_cast<int>(fileFlowLevel)) {
+    if (fileInt <= static_cast<int>(flowLevel)) {
+        if (methodInt <= fileInt) {
             return true;
         }
     }

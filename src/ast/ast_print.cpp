@@ -6,20 +6,18 @@
 #include "ast/ast.h"
 #include "ast/ast_chain.h"
 #include "ast/ast_control.h"
-#include "ast/ast_callable.h"
-#include "ast/ast_function.h"
-#include "ast/ast_method.h"
-
-
 #include "ast/ast_class.h"
 #include "core/scope.h"
+#include "ast/ast_function.h"
+#include "ast/ast_method.h"
+#include "ast/exceptions.h"
 
 
 
 
 // The printAST method is mostly for debugging and verification purposes. It is useful for identification of bugs and visualizing the structure
 String scopeLevelAsString(SharedPtr<Scope> scope, String astCaller) {
-    String scopeString = scope ? " " + std::to_string(scope->getScopeLevel()) : " Error Getting Scope For " + astCaller;
+    String scopeString = scope ? " " + std::to_string(scope->getScopeLevel()) :  astCaller;
     return " Scope Level " + scopeString;
 }
 
@@ -30,9 +28,9 @@ String LiteralValue::toString() const {
 }
 
 String VariableDeclaration::toString() const {
-        return getAstTypeAsString() + "(name=" + name +
-            ", variable=" + variable.toString() +
-            scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
+    return getAstTypeAsString() + "(name =" + name +
+        ", variableMeta =" + variableMeta.toString() +
+        scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
 }
 
 String VariableReference::toString() const {
@@ -71,7 +69,7 @@ void VariableDeclaration::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     indent = printIndent(os, indent);
-    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", variable, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
+    debugLog(true, highlight(getAstTypeAsString(), Colors::cyan), "(variable =", name, "other: ", variableMeta, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
     valueExpression->printAST(os, indent);
 
     DEBUG_FLOW_EXIT();
@@ -128,6 +126,20 @@ String Return::toString() const {
 }
 
 
+String Throw::toString() const {
+    return getAstTypeAsString()+"(value=" + (expr ? expr->toString() : "None") + ")";
+}
+
+void Throw::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+
+    debugLog(true, highlight(getAstTypeAsString(), Colors::bold_red));
+    if (expr) {
+        expr->printAST(os, indent);
+    }
+}
+
+// void printAST(std::ostream&, int indent = 0)
 void Return::printAST(std::ostream& os, int indent) const  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
@@ -193,62 +205,6 @@ void CodeBlock::printAST(std::ostream& os, int indent) const {
     }
     DEBUG_FLOW_EXIT();
 
-}
-
-
-void CallableBody::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()) + "):");
-
-    if (children.empty()) {
-        indent = printIndent(os, indent);
-        debugLog(true, "[No Children]");
-    }
-
-    for (const auto& child : children) {
-        child->printAST(os, indent);
-    }
-}
-
-void CallableDef::printAST(std::ostream& os, int indent) const {
-    auto paramStr = !parameters.empty() ?  parameters.toShortString() : "";
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), name, "(" + paramStr + ")", scopeLevelAsString(getScope(), getAstTypeAsString()));
-    body->printAST(os, indent);
-};
-
-
-String Arguments::toString() const {
-    String out = getAstTypeAsString();
-    for (auto& arg : arguments) {
-        if (arg.isKeyword()) {
-            out += arg.key->toString();
-        }
-        arg.value->toString();
-    }
-
-    return out;
-};
-
-void Arguments::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    String out;
-    for (auto& arg : arguments) {
-        out += arg.toString();
-    }
-    debugLog(true, getAstTypeAsString(), "(" + out + ")");
-
-};
-
-
-void CallableCall::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
-    printIndent(os, indent);
-    arguments->printAST(os, indent);
-    // for (const auto& arg : arguments){
-    //     arg->printAST(os, indent);
-    // }
 }
 
 void ElseStatement::printAST(std::ostream& os, int indent) const  {
@@ -350,6 +306,75 @@ bool CodeBlock::containsReturnStatement() const {
 
     DEBUG_FLOW_EXIT();
     return false;  // No return statement found
+}
+
+
+
+void CallableBody::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), scopeLevelAsString(getScope(), getAstTypeAsString()) + "):");
+
+    if (children.empty()) {
+        indent = printIndent(os, indent);
+        debugLog(true, "[No Children]");
+    }
+
+    for (const auto& child : children) {
+        child->printAST(os, indent);
+    }
+}
+
+void CallableDef::printAST(std::ostream& os, int indent) const {
+    auto paramStr = !parameters.empty() ?  parameters.toShortString() : "";
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), name, "(" + paramStr + ")", scopeLevelAsString(getScope(), getAstTypeAsString()));
+    body->printAST(os, indent);
+};
+
+
+String Arguments::toString() const {
+    String out = getAstTypeAsString();
+    for (auto& arg : arguments) {
+        if (arg.isKeyword()) {
+            out += arg.key->toString();
+        }
+        arg.value->toString();
+    }
+
+    return out;
+};
+
+void Argument::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    if (isKeyword()) {
+        key->printAST(os, indent);
+        value->printAST(os, indent);
+    } else {
+        value->printAST(os, indent);
+    }
+}
+
+
+void Arguments::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    String out;
+    for (auto& arg : arguments) {
+        printIndent(os, indent);
+        arg.printAST(os, indent);
+    }
+    debugLog(true, getAstTypeAsString(), "(" + out + ")");
+
+};
+
+
+void CallableCall::printAST(std::ostream& os, int indent) const {
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), "(Name =", name, scopeLevelAsString(getScope(), getAstTypeAsString()), "):");
+    printIndent(os, indent);
+    arguments->printAST(os, indent);
+    // for (const auto& arg : arguments){
+    //     arg->printAST(os, indent);
+    // }
 }
 
 

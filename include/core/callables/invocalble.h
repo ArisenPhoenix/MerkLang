@@ -1,10 +1,8 @@
 #ifndef INVOCABLE_H
 #define INVOCABLE_H
 
-// #include "ast/ast_function.h"
-// #include "ast/ast_method.h"
 #include "core/callables/callable.h"
-
+#include "core/types.h"
 
 class Scope;
 class Method;

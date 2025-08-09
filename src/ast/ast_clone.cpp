@@ -1,4 +1,8 @@
+#include "core/node/node.h"
+#include "core/node/argument_node.h"
+#include "core/node/param_node.h"
 #include "core/types.h"
+#include "core/scope.h"
 #include "core/errors.h"
 #include "utilities/debugger.h"
 #include "ast/ast_base.h"
@@ -6,12 +10,11 @@
 
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
+#include "ast/ast_method.h"
+#include "ast/ast_class.h" 
 #include "ast/ast_callable.h"
-#include "ast/ast_class.h"
+#include "ast/exceptions.h"
 
-
-#include "core/callables/classes/class_base.h"
-#include "core/callables/classes/method.h"
 
 UniquePtr<BaseAST> ASTStatement::clone() const {
     throw MerkError("Cannot Clone Base Class ASTStatement");
@@ -23,16 +26,14 @@ UniquePtr<BaseAST> LiteralValue::clone() const {
 
 UniquePtr<BaseAST> VariableDeclaration::clone() const {
     UniquePtr<ASTStatement> valueInfo = nullptr;
-    if (valueExpression){
-        auto valueInfoBase = valueExpression->clone();
-        valueInfo = static_unique_ptr_cast<ASTStatement>(std::move(valueInfoBase));
-    }
+    if (!valueExpression) {throw MerkError("VariableDeclaration Has No Expression");}
+    auto valueInfoBase = valueExpression->clone();
+    valueInfo = static_unique_ptr_cast<ASTStatement>(std::move(valueInfoBase));
     
-    return makeUnique<VariableDeclaration>(name, variable, getScope(), typeTag, std::move(valueInfo));
+    return makeUnique<VariableDeclaration>(name, variableMeta, getScope(), std::move(valueInfo));
 }
 
 UniquePtr<BaseAST> VariableReference::clone() const {
-    // validateScope(getScope(), "VariableReference::clone", name);
     return makeUnique<VariableReference>(name, getScope());
 } 
 
@@ -43,8 +44,6 @@ UniquePtr<BaseAST> VariableAssignment::clone() const {
 } 
 
 UniquePtr<BaseAST> BinaryOperation::clone() const {
-    // validateScope(getScope(), "BinaryOperation::clone->getScope");
-
     UniquePtr<BaseAST> clonedLeftBase = left->clone();
     auto clonedLeft = static_unique_ptr_cast<ASTStatement>(std::move(clonedLeftBase));
 
@@ -78,23 +77,16 @@ UniquePtr<BaseAST> Break::clone() const {
 }
 
 UniquePtr<BaseAST> Return::clone() const {
-    // validateScope(getScope(), "Return::clone->getScope");
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->getScope was validated");
     UniquePtr<BaseAST> clonedReturnBase = returnValue->clone();
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Return->returnValue was cloned");
+
     auto clonedReturn = static_unique_ptr_cast<ASTStatement>(std::move(clonedReturnBase));
-    // clonedReturn->setScope(getScope());
-    // validateScope(clonedReturn->getScope(), "Return::clone -> clonedReturn->getScope");
     
     return makeUnique<Return>(getScope(), std::move(clonedReturn));
 } 
 
 UniquePtr<BaseAST> ConditionalBlock::clone() const {
-    // validateScope(getScope(), "ConditionalBlock::clone", condition->toString());
     UniquePtr<BaseAST> clonedCondBase = condition->clone();
     auto clonedCond = static_unique_ptr_cast<ConditionalBlock>(std::move(clonedCondBase));
-    // clonedCond->setScope(getScope());
-    // validateScope(clonedCond->getScope(), "ConditionalBlock::clone -> clonedCond->getScope");
     return clonedCond;
 }
 
@@ -135,7 +127,7 @@ UniquePtr<BaseAST> IfStatement::clone() const {
 
     // If an else node exists, clone it and set it.
     if (elseNode) {
-        UniquePtr<BaseAST> clonedElseBase = elseNode->clone();
+        UniquePtr<BaseAST> clonedElseBase = elseNode->clone(); 
         auto clonedElse = static_unique_ptr_cast<ElseStatement>(std::move(clonedElseBase));
         clonedIf->setElseNode(std::move(clonedElse));
     }
@@ -161,11 +153,6 @@ UniquePtr<BaseAST> FunctionBody::clone() const {
     UniquePtr<FunctionBody> newBlock = std::make_unique<FunctionBody>(getScope());
 
     for (const auto &child : children) {
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Current FunctionBody child being cloned: ", child->toString());
-        // if (!child->getScope()) {
-        //     // child->printAST(std::cout);
-        //     // throw MerkError("Child Has No Valid Scope");
-        // }
         newBlock->addChild(child->clone());
     }
     return newBlock;

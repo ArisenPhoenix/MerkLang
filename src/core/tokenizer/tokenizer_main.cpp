@@ -17,12 +17,12 @@ bool Tokenizer::isLogicOperator() {
 }
 
 const std::unordered_set<std::string> knownTypes = {
-    "Int", "Float", "Long", "Bool", "String", "Array", "List", "Map", "Schema", "Set", "Dict"
+    "Int", "Float", "Long", "Bool", "String", "Array", "List", "Map", "Schema", "Set", "Dict", "Double", "Http", "File"
 };
 
 
 const std::unordered_set<String> keywords = {
-    "if", "elif", "else", "from", "as", "import", "while", "continue", "break", "return", "for"
+    "if", "elif", "else", "from", "as", "import", "while", "continue", "break", "return", "for", "throw"
 };
 
 const std::unordered_set<char> typeContainers = {
@@ -162,7 +162,7 @@ Vector<Token> Tokenizer::tokenize() {
             }
 
             if (identifier.type == TokenType::Type && nextChar == '(') {
-                if (identifier.value == "List" || identifier.value == "Array" || identifier.value == "Dict" || identifier.value == "Set") {
+                if (identifier.value == "List" || identifier.value == "Array" || identifier.value == "Dict" || identifier.value == "Set" || identifier.value == "Http" || identifier.value == "File") {
                     identifier.type = TokenType::ClassCall;
                 }
                 else {
@@ -178,8 +178,10 @@ Vector<Token> Tokenizer::tokenize() {
             skipWhitespace();
 
             
-            if (previousToken().type == TokenType::Variable && handleOptionalType()) {
-                
+            if (previousToken().type == TokenType::Variable) {
+                if (source[position] == ':' && peek() != '=') {
+                    handleOptionalType();
+                } 
                 continue;  // already tokenized the type annotation
             }
         } else if (isDigit(source[position])) {
@@ -383,9 +385,14 @@ Token Tokenizer::readIdentifier() {
     }
     
     // Function Name (Immediately after `def`)
-    else if (tokens.size() > 0 && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef) && (previousToken().value != "=" && previousToken().value != ":=")){
+    else if (!tokens.empty() && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef)){
         type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
         functions.insert(value);
+        
+    }
+
+    else if (value == "true" || value == "false") {
+        type = TokenType::Bool;
     }
 
     
@@ -404,9 +411,6 @@ Token Tokenizer::readIdentifier() {
     }
     // Function Name (Immediately after `FunctionDef`
     else if (isFunction(position)) {
-        // if (previousToken().value == "if") {
-        //     throw MerkError("Got If");
-        // }
         if (previousToken().value == ".") {
             type = TokenType::ClassMethodCall;
         } else {
@@ -415,12 +419,13 @@ Token Tokenizer::readIdentifier() {
         insideArgs = true;
     }
 
-    else if (isFunction(value) && previousToken().type != TokenType::VarAssignment){
-        type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
-    }
+    // else if (isFunction(value) && previousToken().type != TokenType::VarAssignment){
+    //     type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
+    // }
 
     // Function Argument (Immediately after `call` and inside function call lists)
     else if (insideArgs && prev.type == TokenType::Punctuation){
+        
         type = TokenType::Argument;
     }
 
@@ -429,20 +434,48 @@ Token Tokenizer::readIdentifier() {
         type = TokenType::Parameter;
     }
 
-    // Boolean Literals
-    else if (value == "true" || value == "false") {
-        type = TokenType::Bool;
+    else if (functions.count(value)) {
+        type = TokenType::FunctionRef;
+        
     }
+
+    else if (classes.count(value)) {
+        type = TokenType::ClassRef;
+    }
+
+    if (type == TokenType::FunctionRef || type == TokenType::ClassMethodRef) {
+        
+        if (peek() == '.' || prev.type == TokenType::VarDeclaration || (prev.type == TokenType::VarAssignment && peek() == '.')) {
+            type = TokenType::Variable;
+        }
+    }
+    
+
+    // Boolean Literals
+    
 
     DEBUG_LOG(LogLevel::DEBUG, "Exiting readIdentifier with value: ", value, " (Type: ", tokenTypeToString(type), ")");
     DEBUG_FLOW_EXIT();
-    return Token(type, value, line, startColumn);
+    auto token = Token(type, value, line, startColumn);
+    // if (line == 35 && token.type == TokenType::FunctionRef) {
+    //     String peeked = "I don't know";
+    //     char val = peek();
+    //     if (val == '.') { peeked = "."; }
+    //     else if (val == ' ') { peeked = "SPACE"; }
+    //     else if (val == ':') { peeked = ":"; }
+    //     else {peeked = String(1, val);}
+        
+
+    //     throw MerkError("Didn't Change to Variable " + token.toColoredString() + "   Peek shows " + peeked + " \nprevious token shows " + prev.toColoredString());
+    // }
+    return token;
 }
 
 
 
 bool Tokenizer::isCompoundOperator(char c) const {
     // Look ahead to check for `=`
+    if (c == '+' && peek() == '+') {return true;}
     return (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
             c == '&' || c == '|' || c == '^' || c == '<' || c == '>') && peek() == '=';
 }
@@ -459,7 +492,7 @@ bool Tokenizer::isMathOperator(char c) const {
 
 // Checks if the character is a comparison or logical operator (=, ==, !=, <=, >=, &&, ||, !)
 bool Tokenizer::isComparisonOrLogicalOperator(char c) const {
-    return c == '=' || c == '<' || c == '>' || c == '!' || c == '&' || c == '|';
+    return c == '=' || c == '<' || c == '>' || c == '!' || c == '&' || c == '|' || c == '?';
 }
 
 // Peeks at the next character without advancing position

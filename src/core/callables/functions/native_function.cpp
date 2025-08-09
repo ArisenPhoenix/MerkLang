@@ -1,3 +1,4 @@
+#include "core/node/argument_node.h"
 #include "core/callables/functions/native_function.h"
 #include "core/types.h"
 #include "core/scope.h"
@@ -47,5 +48,5 @@ void NativeFunction::setScope(SharedPtr<Scope> newScope) const {
 }
 
 String NativeFunction::toString() const {
-    return "<NativeFunction: " + getName() + ">";
+    return "<NativeFunction>" + getName() + ">";
 }

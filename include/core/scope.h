@@ -1,8 +1,10 @@
 #ifndef SCOPE_H
 #define SCOPE_H
 
+
+// #include "core/node/node.h"
+
 #include "core/types.h"
-#include "core/node.h"
 #include "core/context.h"
 #include "core/registry/function_registry.h"
 #include "core/registry/class_registry.h"
@@ -67,10 +69,10 @@ public:
     SharedPtr<FunctionRegistry>  globalFunctions;
     SharedPtr<ClassRegistry>     globalClasses;
     
-    // Local Storage
-    // std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
+    // // Local Storage
+    // // std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
     FunctionRegistry localFunctions;
-    // std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
+    // // std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
     ClassRegistry localClasses;
 
     
@@ -129,8 +131,8 @@ public:
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
     void registerFunction(const String& name, SharedPtr<Callable> anyCallable);
-    SharedPtr<CallableSignature> getFunction(const String& name, const ArgResultType& args);
-    Vector<SharedPtr<CallableSignature>> getFunction(const String& name);
+    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name, const ArgResultType& args);
+    std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name);
 
 
     //// Class Management

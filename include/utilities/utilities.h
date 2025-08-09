@@ -92,13 +92,13 @@ inline VariantType resolveVariantTypeValue(const VariantType& value) {
     }, value);
 }
 
-// Was originally used for displaying context before a method was officially established
-inline void keyValueDisplayContext(const Context& context) {
-    for (const auto& [name, node] : context.getVariables()) {
-        debugLog(true, name, " = ", node->getValue(), " type: ", node);
-    }
-    std::cout << "\n";
-}
+// // Was originally used for displaying context before a method was officially established
+// inline void keyValueDisplayContext(const Context& context) {
+//     for (const auto& [name, node] : context.getVariables()) {
+//         debugLog(true, name, " = ", node->getValue(), " type: ", node);
+//     }
+//     std::cout << "\n";
+// }
 
 
 #endif //UTILITIES_H

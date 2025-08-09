@@ -7,7 +7,9 @@
 #include "core/types.h"
 #include "core/scope.h"
 #include "utilities/debugging_functions.h"
+#include <filesystem>
 
+ 
 
 String joinPaths(const String& dir, const String& file) {
     if (dir.empty()) return file;
@@ -75,7 +77,33 @@ String toLower(const String& str) {
     std::string lowerStr = str;
     std::transform(lowerStr.begin(), lowerStr.end(), lowerStr.begin(), ::tolower);
     return lowerStr;
-}
+};
+
+// String normalizeFileName(const String& filePath) {
+//     std::filesystem::path p(filePath);
+//     std::filesystem::path normalized;
+//     bool found = false;
+//     for (const auto& part : p) {
+//         String partLower = toLower(part.string());
+//         if (partLower == "src" || partLower == "include") {
+//             found = true;
+//             continue; // Skip the folder itself if you want.
+//         }
+//         if (found) {
+//             normalized /= part;
+//         }
+//     }
+    
+//     if (normalized.empty())
+//         normalized = p.filename();
+
+//     // auto searchStr = "/mnt/Internal_SSD/Programming/C++/MerkLangTypes/src/core/callables/functions/builtins";
+//     // size_t pos = filePath.find(searchStr);
+//     // if (pos != std::string::npos) {
+//     //     std::cout << "[normalizeFileName] IN: " << filePath << " → OUT: " << normalized.string() << std::endl;
+//     // } 
+//     return normalized.string();
+// }
 
 String normalizeFileName(const String& filePath) {
     std::filesystem::path p(filePath);
@@ -85,19 +113,21 @@ String normalizeFileName(const String& filePath) {
         String partLower = toLower(part.string());
         if (partLower == "src" || partLower == "include") {
             found = true;
-            continue; // Skip the folder itself if you want.
+            continue;
         }
         if (found) {
             normalized /= part;
         }
     }
-    
+
     if (normalized.empty())
         normalized = p.filename();
 
-
-    return normalized.string();
+    auto result = normalized.string();
+    // std::cout << "[normalizeFileName] IN: " << filePath << " → OUT: " << result << std::endl;
+    return result;
 }
+
 
 
 

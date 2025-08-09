@@ -6,11 +6,7 @@
 #include <vector>
 #include <optional>
 #include "core/types.h"
-class VarNode;
-
-
-// Forward declare FunctionDeclarationNode
-class FunctionDeclarationNode; 
+// class VarNode;
 
 class Context {
 public:
@@ -36,12 +32,13 @@ public:
     bool hasVariable(const String& name) const;
     void debugPrint() const;
 
-    UniquePtr<Context> clone() const;
+    UniquePtr<Context> cloneUnique() const;
+    Context clone() const;
 
     void clearVars();
 
     void clear();
-
+    
     // Get a const reference to all variables in the current context
     const std::unordered_map<String, UniquePtr<VarNode>>& getVariables() const;
 
@@ -55,7 +52,7 @@ private:
 
 
 
-#endif // CONTEXT_H
+#endif // CONTEXT_H 
 
 
 

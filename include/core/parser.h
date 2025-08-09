@@ -5,15 +5,18 @@
 #include <memory>
 #include <string>
 
+
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/node.h"
 #include "core/tokenizer.h"
 #include "ast/ast.h"
+#include "core/node/node.h"
+
+#include "ast/ast_callable.h"
 #include "ast/ast_chain.h"
 #include "ast/ast_control.h"
 #include "ast/ast_function.h"
-#include "ast/ast_callable.h"
+#include "ast/ast_method.h"
 #include "ast/ast_class.h"
 
 class ArgumentList;
@@ -84,19 +87,24 @@ private:
 
     std::optional<NodeValueType> parseStaticType();
 
-    UniquePtr<FunctionDef> parseFunctionDefinition();
-    UniquePtr<FunctionCall> parseFunctionCall();
+    
 
     UniquePtr<ASTStatement> parseClassCall();
     UniquePtr<ASTStatement> parseClassLiteralCall();
     UniquePtr<ASTStatement> parseClassDefinition();
-    UniquePtr<MethodDef> parseClassInitializer();
-    UniquePtr<MethodDef> parseClassMethod();
 
     UniquePtr<ASTStatement> parseProtectedClassAttributes();
     UniquePtr<ASTStatement> parseClassAttributes();
-    UniquePtr<Chain> parseChain(bool isDeclaration = false, bool isConst = false);
-    UniquePtr<ChainOperation> parseChainOp();
+
+    UniquePtr<FunctionDef> parseFunctionDefinition();
+    UniquePtr<FunctionCall> parseFunctionCall();
+
+    UniquePtr<MethodDef> parseClassInitializer();
+    UniquePtr<MethodDef> parseClassMethod();
+
+    // UniquePtr<Chain> parseChain(bool isDeclaration = false, bool isConst = false);
+
+    UniquePtr<ChainOperation> parseChainOp(UniquePtr<ASTStatement> stmnt = nullptr);
     String getCurrentClassAccessor();
 
     void addAccessor(String accessorName);
@@ -121,6 +129,9 @@ private:
     ResolvedType parseResolvedType();
     bool validate(Token, Vector<TokenType> types = {}, Vector<String> values = {}, bool requiresBoth = false);
     bool validate(Vector<TokenType>, Vector<String>, bool requiresBoth = false);
+
+    UniquePtr<ASTStatement> parseThrowStatement();
+    UniquePtr<ASTStatement> parseKeyWord();
     
 
 public:

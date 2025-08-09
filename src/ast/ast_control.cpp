@@ -9,7 +9,7 @@
 
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/node.h"
+#include "core/node/node.h"
 
 #include "ast/exceptions.h"
 
@@ -225,12 +225,6 @@ WhileLoop::~WhileLoop(){
 
 }
 
-Break::Break(SharedPtr<Scope> scope) : ASTStatement(scope) {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-    // validateScope(scope, "Break::Break", "");
-
-    DEBUG_FLOW_EXIT();
-}
 
 Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     
@@ -268,7 +262,6 @@ void CodeBlock::setScope(SharedPtr<Scope> newScope) const {
 Node CodeBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
     setScope(scope);
-    // validateScope(scope, "CodeBlock::evaluate(scope)");
     Node val =  Evaluator::evaluateBlock(children, scope, instanceNode);
 
     DEBUG_FLOW_EXIT();

@@ -3,8 +3,11 @@
 #define AST_BASE_H
 
 #include <string> 
+
 #include "core/types.h"
-#include "core/node.h"
+
+#include "core/node/node.h"
+
 #include "core/errors.h"
 #include <ostream>
 #include <variant>
@@ -27,7 +30,7 @@ UniquePtr<T> dynamic_unique_ptr_cast(UniquePtr<U>&& ptr) {
         ptr.release();
         return UniquePtr<T>(raw);
     }
-    throw std::runtime_error("dynamic_unique_ptr_cast failed");
+    throw RunTimeError("dynamic_unique_ptr_cast failed");
 }
 
 
