@@ -1,15 +1,15 @@
 #include "utilities/debugger.h"
 
-#include "core/node/argument_node.h"
+#include "core/node/ArgumentNode.hpp"
 
 #include "core/types.h"
 #include "utilities/debugging_functions.h"
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/exceptions.h"
-#include "ast/ast_control.h"
-#include "core/callables/callable.h"
-#include "ast/ast_chain.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
+#include "ast/Exceptions.hpp"
+#include "ast/AstControl.hpp"
+#include "core/callables/Callable.hpp"
+#include "ast/AstChain.hpp"
 
 
 FreeVars CodeBlock::collectFreeVariables() const {

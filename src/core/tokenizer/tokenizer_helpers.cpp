@@ -1,5 +1,5 @@
 #include "core/types.h"
-#include "core/tokenizer.h"
+#include "core/Tokenizer.hpp"
 
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
@@ -45,12 +45,6 @@ bool Tokenizer::isFunction(size_t startPos) {
 
 bool Tokenizer::isFunction(String value){
     return functions.count(value);
-    // for (auto& func : functions){
-    //     if (value == func){
-    //         return true;
-    //     }
-    // }
-    // return false;
 }
 
 bool Tokenizer::isClass(String value){
@@ -61,7 +55,6 @@ bool Tokenizer::isClass(String value){
     }
     return false;
 }
-
 
 bool Tokenizer::isClass(size_t startPos) {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
@@ -125,10 +118,11 @@ void Tokenizer::printTokens(bool colored) const {
     }
 }
 
-
-
 const Token& Tokenizer::lastToken() const {
     return tokens.back();
+    // if ( !tokens.empty() ) { tokens.back(); }
+    // static Token dummyToken(TokenType::Unknown, "", line, column);
+    // return dummyToken;
 }
 
 const Token& Tokenizer::previousToken(size_t offset) const {
@@ -143,23 +137,18 @@ bool Tokenizer::lastTokenWas(TokenType type, size_t offset) const {
     return tokens.size() >= offset && tokens[tokens.size() - offset].type == type;
 }
 
-
-
-
-
 bool isUpper(char c) {
     return std::isupper(static_cast<unsigned char>(c));
 }
 
-
 bool Tokenizer::isCapitalizedType(size_t pos) const {
-    if (pos >= sourceLength) return false;
+    if (pos >= sourceLength) { return false; }
 
     if (!std::isupper(static_cast<unsigned char>(source[pos]))) return false;
 
-    // Continue checking for alphanumeric identifier
     while (pos < sourceLength) {
         char c = source[pos];
+        
         if (!(std::isalpha(static_cast<unsigned char>(c)) || std::isdigit(static_cast<unsigned char>(c)))) {
             break;
         }

@@ -5,8 +5,8 @@
 #include <string>
 #include <sstream>
 
-#include "core/tokenizer.h"
-#include "core/context.h"
+#include "core/Tokenizer.hpp"
+#include "core/registry/Context.hpp"
 
 template <typename Container>
 void ensureWithinBounds(

@@ -3,20 +3,25 @@
 #include <iostream>
 #include <variant>
 #include <string>
-#include "core/node/node.h"
+#include "core/node/Node.hpp"
 
 #include "core/types.h"
 #include "core/errors.h"
 
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/ast_control.h"
-#include "core/scope.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
+#include "ast/AstControl.hpp"
+#include "core/Scope.hpp"
 
 #include "utilities/streaming.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
-#include "core/parser.h"
+#include "core/Parser.hpp"
+
+#include "ast/AstCallable.hpp"
+#include "ast/AstClass.hpp"
+#include "ast/AstFunction.hpp"
+#include "ast/AstMethod.hpp"
 
 
 UniquePtr<IfStatement> Parser::parseIfStatement() {
@@ -31,20 +36,17 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
     auto thenBlock = parseBlock(blocksScope);
     if (!thenBlock) {throw MerkError("Parser::parseIfStatement: Failed to parse 'if' block.");}
     
-
     auto ifNode = makeUnique<IfStatement>(
         std::move(condition),
         std::move(thenBlock),
         currentScope
     );
    
-
     if (!blocksScope){throw MerkError("BlockScope Does Not Exist");}
     if (!conditionScope){throw MerkError("StatementScope Does Not Exist");}
 
     while (consumeIf(TokenType::Keyword, "elif")) {
         auto elifCondition = parseExpression();
-        // elifCondition->setScope(conditionScope);
 
         DEBUG_LOG(LogLevel::TRACE, highlight("Processed elifCondition", Colors::pink));
 
@@ -63,7 +65,6 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
             conditionScope
         );
 
-        // elifNodes.push_back(std::move(elifNode));
         ifNode->addElifNode(std::move(elifNode));
     }
 
@@ -73,7 +74,6 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
         auto elseBlock = parseBlock(blocksScope);
         if (!elseBlock) { throw MerkError("Parser::parseIfStatement: Failed to parse 'else' block."); }
         
-
         UniquePtr<ElseStatement> elseNode = makeUnique<ElseStatement>(std::move(elseBlock), conditionScope);
         ifNode->setElseNode(std::move(elseNode));
     }
@@ -89,17 +89,20 @@ UniquePtr<WhileLoop> Parser::parseWhileLoop() {
     if (controllingToken.value != "while") {
         throw UnexpectedTokenError(currentToken(), "while", "Parser::parseWhileLoop");
     }
+
     controllingToken = advance(); // Consume 'while'
 
     auto condition = parseExpression(); // Parse the loop condition
     if (!condition) {
         throw MissingTokenError(currentToken());
     }
+
     controllingToken = currentToken();
     if (controllingToken.type != TokenType::Punctuation || controllingToken.value != ":") {
         throw MissingTokenError(controllingToken);
     }
-    advance(); // Consume ':'
+
+    advance();
 
     enterLoop();
     auto body = parseBlock();
@@ -108,7 +111,6 @@ UniquePtr<WhileLoop> Parser::parseWhileLoop() {
     DEBUG_LOG(LogLevel::TRACE, highlight("Creating while loop condition", Colors::orange));
     auto conditionalBlock = makeUnique<ConditionalBlock>(std::move(condition), currentScope);
     
-    // DEBUG_FLOW_EXIT();
     DEBUG_FLOW_EXIT();
     return makeUnique<WhileLoop>(std::move(conditionalBlock), std::move(body), currentScope);
 }
@@ -127,8 +129,6 @@ UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
     
     processIndent(blockScope);
 
-    // DEBUG_LOG(LogLevel::TRACE, "Current Scope Level: ", blockScope->getScopeLevel());
-
     while (currentToken().type != TokenType::Dedent && currentToken().type != TokenType::EOF_Token) {
         if (processNewLines()){
             continue;
@@ -136,14 +136,9 @@ UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
 
         auto statement = parseStatement();
         if (statement) {
-            codeBlock->addChild(std::move(statement));
-            
-        } else {
-            // DEBUG_LOG(LogLevel::INFO, "parseBlock: CodeBlock has children.");
+            codeBlock->addChild(std::move(statement)); 
         }
-
     }
-
     processDedent(blockScope);
 
     processNewLines();

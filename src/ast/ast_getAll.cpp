@@ -1,12 +1,12 @@
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/exceptions.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
+#include "ast/Exceptions.hpp"
 
-#include "ast/ast_chain.h"
-#include "ast/ast_control.h"
-#include "ast/ast_callable.h"
-#include "core/node/argument_node.h"
-#include "core/callables/callable.h"
+#include "ast/AstChain.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/AstCallable.hpp"
+#include "core/node/ArgumentNode.hpp"
+#include "core/callables/Callable.hpp"
 
 
 

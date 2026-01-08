@@ -1,16 +1,16 @@
-#include "core/node/node.h"
-#include "core/node/argument_node.h"
+#include "core/node/Node.hpp"
+#include "core/node/ArgumentNode.hpp"
 
 #include "core/types.h"
 #include "utilities/debugger.h"
 #include "core/errors.h"
 #include "core/evaluator.h"
-#include "ast/exceptions.h" 
-#include "ast/ast_base.h"
-#include "ast/ast_class.h"
-#include "ast/ast_chain.h"
-#include "ast/ast_callable.h"
-#include "core/callables/classes/method.h"
+#include "ast/Exceptions.hpp" 
+#include "ast/AstBase.hpp"
+#include "ast/AstClass.hpp"
+#include "ast/AstChain.hpp"
+#include "ast/AstCallable.hpp"
+#include "core/callables/classes/Method.hpp"
 
 
 Method::Method(String name, ParamList params, CallableType definedType, bool requiresReturn, bool isStatic)

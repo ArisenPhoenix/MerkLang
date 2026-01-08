@@ -1,6 +1,6 @@
 #include "core/types.h"
 
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
 class Chain;
 class ParamList;

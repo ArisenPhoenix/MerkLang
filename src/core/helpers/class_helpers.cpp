@@ -1,20 +1,20 @@
 #include "core/types.h"
 #include "core/helpers/class_helpers.h"
 
-#include "core/node/param_node.h"
+#include "core/node/ParamNode.hpp"
 
-#include "core/scope.h"
-#include "core/callables/classes/class_base.h"
-#include "core/callables/classes/method.h"
-#include "core/node/node.h"
+#include "core/Scope.hpp"
+#include "core/callables/classes/ClassBase.hpp"
+#include "core/callables/classes/Method.hpp"
+#include "core/node/Node.hpp"
 #include "core/errors.h"
 
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/exceptions.h"
-#include "ast/ast_chain.h"
-#include "ast/ast_callable.h"
-#include "ast/ast_class.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
+#include "ast/Exceptions.hpp"
+#include "ast/AstChain.hpp"
+#include "ast/AstCallable.hpp"
+#include "ast/AstClass.hpp"
 #include "ast/ast_validate.h"
 
 bool handleChain(Chain* chain, ParamList params, String accessor, String name, SharedPtr<Scope> classScope) {

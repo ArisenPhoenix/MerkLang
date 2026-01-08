@@ -2,25 +2,28 @@
 #include <iostream>
 #include <string>
 
-#include "core/node/node.h"
+#include "core/node/Node.hpp"
 
 #include "core/types.h"
 #include "core/errors.h"
 
-#include "ast/ast_base.h"
-#include "ast/exceptions.h"
-#include "ast/ast.h"
-#include "ast/ast_control.h"
-#include "ast/ast_function.h"
-#include "ast/ast_callable.h"
-#include "core/scope.h"
+#include "ast/AstBase.hpp"
+#include "ast/Exceptions.hpp"
+#include "ast/Ast.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/AstFunction.hpp"
+#include "ast/AstCallable.hpp"
+#include "core/Scope.hpp"
 
 #include "utilities/utilities.h"
 #include "utilities/streaming.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
 
-#include "core/parser.h"
+#include "core/Parser.hpp"
+
+#include "ast/AstClass.hpp"
+#include "ast/AstMethod.hpp"
 
 
 ParamList Parser::handleParameters(TokenType type){
@@ -42,7 +45,6 @@ ParamList Parser::handleParameters(TokenType type){
             advance(); // Consume parameter name
             auto flags = DataTypeFlags(paramName, false, true, false, ResolvedType("Any"));
 
-            // std::optional<NodeValueType> paramType = parseStaticType();
             if (expect(TokenType::VarAssignment)){
                 advance(); // consume '='
                 auto token = currentToken();
@@ -61,7 +63,6 @@ ParamList Parser::handleParameters(TokenType type){
             } else {
                 // Create parameter node
                 auto flags = DataTypeFlags(paramName, false, true, false, ResolvedType("Any"));
-                // NodeValueType finalParamType = paramType ? paramType.value() : NodeValueType::Any;
                 ParamNode paramNode = ParamNode(flags);
                 params.addParameter(paramNode);
                 DEBUG_LOG(LogLevel::DEBUG, "Parameter: ", paramName, "Added");

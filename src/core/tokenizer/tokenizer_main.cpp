@@ -1,5 +1,5 @@
 #include "core/types.h"
-#include "core/tokenizer.h"
+#include "core/Tokenizer.hpp"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
 #include "core/errors.h"
@@ -20,7 +20,6 @@ const std::unordered_set<std::string> knownTypes = {
     "Int", "Float", "Long", "Bool", "String", "Array", "List", "Map", "Schema", "Set", "Dict", "Double", "Http", "File"
 };
 
-
 const std::unordered_set<String> keywords = {
     "if", "elif", "else", "from", "as", "import", "while", "continue", "break", "return", "for", "throw"
 };
@@ -30,7 +29,6 @@ const std::unordered_set<char> typeContainers = {
 };
 
 bool Tokenizer::handleContainers() {
-
     bool found = false;
     if (source[position] == '[') {
         tokens.emplace_back(TokenType::LeftBracket, "[", line, column);
@@ -82,8 +80,15 @@ bool Tokenizer::handleContainers() {
     return found;
 }
 
+Tokenizer::Tokenizer(const String& sourceCode)
+    : source(sourceCode), position(0), line(1), column(1), currentIndent(0) {
+        indentStack.push_back(0); // Initialize with base indent level
+        tokens.emplace_back(Token(TokenType::SOF_Token, "SOF_TOKEN", 0, 0));
+    }
+
 Vector<Token> Tokenizer::tokenize() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
+    
     sourceLength = source.size();
     while (position < sourceLength) {
         DEBUG_LOG(LogLevel::DEBUG, "Processing char: ", source[position], " at position: ", position);
@@ -124,17 +129,15 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
-        
-
         // Handle compound operators first
         if ((isOperator(source[position]) || isPunctuation(source[position])) &&
             (isOperator(peek()) || isPunctuation(peek()))) {
-            // tokens.push_back();
             readCompoundOperatorOrPunctuation();
             position += 2;
             column += 2;
             continue;
         }
+
         // Handle single character operators
         else if (isOperator(source[position]) || isPunctuation(source[position])) { 
             tokens.push_back(readOperatorOrPunctuation());
@@ -144,7 +147,6 @@ Vector<Token> Tokenizer::tokenize() {
             
         }
 
-        // Handle identifiers, numbers, and strings
         else if (isLetter(source[position])) {
             Token identifier = readIdentifier();  // advances past identifier
             
@@ -153,11 +155,9 @@ Vector<Token> Tokenizer::tokenize() {
             }
 
             char nextChar = position < sourceLength ? source[position] : '\0';
-        
             char nextNextChar = peek();
         
-            if (identifier.type == TokenType::Variable && 
-                (nextChar == '.' || (nextChar == ':' && nextNextChar == ':'))) {
+            if (identifier.type == TokenType::Variable && (nextChar == '.' || (nextChar == ':' && nextNextChar == ':'))) {
                 identifier.type = TokenType::ChainEntryPoint;
             }
 
@@ -168,8 +168,8 @@ Vector<Token> Tokenizer::tokenize() {
                 else {
                     identifier.type = TokenType::FunctionCall;
                 }
-                
             }
+
             if (identifier.value == "null" && identifier.type == TokenType::Variable) {
                 identifier.type = TokenType::String;
             }
@@ -204,7 +204,6 @@ Vector<Token> Tokenizer::tokenize() {
 
 Token Tokenizer::readOperatorOrPunctuation() {
     char c = source[position];
-
     // Handle assignment "=" (but not "==", which is handled in readCompoundOperatorOrPunctuation)
     if (c == '=') {
         return Token(TokenType::VarAssignment, "=", line, column);
@@ -217,8 +216,8 @@ Token Tokenizer::readOperatorOrPunctuation() {
         } 
         return Token(TokenType::Operator, String(1, c), line, column);
     };
-    if (isPunctuation(c)) return Token(TokenType::Punctuation, String(1, c), line, column);
 
+    if (isPunctuation(c)) return Token(TokenType::Punctuation, String(1, c), line, column);
     throw UnknownTokenError(String(1, c), line, column, currentLineText);
 }
 
@@ -249,47 +248,45 @@ Token Tokenizer::readNumber() {
     return Token(TokenType::Number, number, line, startColumn);
 }
 
-
 Token Tokenizer::readString() {
     int startColumn = column;
-String result;
+    String result;
 
-if (source[position] == '\'') {
-    position++; 
-    column++;
-
-    char value;
-    if (source[position] == '\\') {
-        position++;  // move to escaped char
+    if (source[position] == '\'') {
+        position++; 
         column++;
-        switch (source[position]) {
-            case 'n': value = '\n'; break;
-            case 't': value = '\t'; break;
-            case '\\': value = '\\'; break;
-            case '\'': value = '\''; break;
-            case '"': value = '"'; break;
-            default:
-                throw UnknownTokenError(std::to_string(source[position]), line, column, currentLineText);
+
+        char value;
+        if (source[position] == '\\') {
+            position++;  // move to escaped char
+            column++;
+            switch (source[position]) {
+                case 'n': value = '\n'; break;
+                case 't': value = '\t'; break;
+                case '\\': value = '\\'; break;
+                case '\'': value = '\''; break;
+                case '"': value = '"'; break;
+                default:
+                    throw UnknownTokenError(std::to_string(source[position]), line, column, currentLineText);
+            }
+        } else {
+            value = source[position];
         }
-    } else {
-        value = source[position];
+
+        result += value;
+
+        position++;  // move past actual char
+        column++;
+
+        if (position >= sourceLength || source[position] != '\'') {
+            throw UnmatchedQuoteError(line, column, currentLineText);
+        }
+
+        position++;  // move past closing quote
+        column++;
+
+        return Token(TokenType::Char, result, line, startColumn);
     }
-
-    result += value;
-
-    position++;  // move past actual char
-    column++;
-
-    if (position >= sourceLength || source[position] != '\'') {
-        throw UnmatchedQuoteError(line, column, currentLineText);
-    }
-
-    position++;  // move past closing quote
-    column++;
-
-    return Token(TokenType::Char, result, line, startColumn);
-}
-
 
     position++;
     column++;
@@ -299,8 +296,10 @@ if (source[position] == '\'') {
             if (position + 1 >= sourceLength) {
                 throw TokenizationError("Unfinished escape sequence in string literal.", line, column);
             }
+
             char nextChar = source[++position];
             column++;
+
             switch (nextChar) {
                 case 'n': result += '\n'; break;
                 case 't': result += '\t'; break;
@@ -308,12 +307,13 @@ if (source[position] == '\'') {
                 case '\\': result += '\\'; break;
                 case '"': result += '"'; break;
                 default:
-                    // throw RunTimeError("Unknown escape sequence: \\" + String(1, nextChar));
                     throw UnknownTokenError(std::to_string(nextChar), line, column, currentLineText);
             }
+
         } else {
             result += source[position];
         }
+
         position++;
         column++;
     }
@@ -347,9 +347,8 @@ Token Tokenizer::readIdentifier() {
 
     String value = source.substr(start, position - start);
     TokenType type = TokenType::Variable;  // Default to Variable
-
     DEBUG_LOG(LogLevel::DEBUG, "Found identifier: ", value);
-    const Token& prev = lastToken();  // Do once
+    const Token& prev = lastToken();
 
     // Class definition keyword: "Class"
     if (value == "Class") {
@@ -371,37 +370,30 @@ Token Tokenizer::readIdentifier() {
         type = TokenType::Operator;
     }
     
-
-    // Function Definition Keyword?
     else if (value == "function" || value == "def") {
         type = insideClass ? TokenType::ClassMethodDef : TokenType::FunctionDef; 
-        insideParams = true; // Keep this active until after ')'
+        insideParams = true;
     }
-
 
     else if (!tokens.empty() && prev.type == TokenType::ClassDef) {
         type = TokenType::ClassRef;
         classes.insert(value);
     }
     
-    // Function Name (Immediately after `def`)
     else if (!tokens.empty() && (prev.type == TokenType::FunctionDef || prev.type == TokenType::ClassMethodDef)){
         type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
         functions.insert(value);
-        
     }
 
     else if (value == "true" || value == "false") {
         type = TokenType::Bool;
     }
 
-    
     else if (isClass(value)) {
         type = TokenType::ClassCall;
         insideArgs = true;
     }
 
-    // Variable Declaration?
     else if (value == "var" || value == "const") {
         type = TokenType::VarDeclaration;
     }
@@ -409,6 +401,7 @@ Token Tokenizer::readIdentifier() {
     else if (keywords.count(value)) {
         type = TokenType::Keyword;
     }
+
     // Function Name (Immediately after `FunctionDef`
     else if (isFunction(position)) {
         if (previousToken().value == ".") {
@@ -419,13 +412,8 @@ Token Tokenizer::readIdentifier() {
         insideArgs = true;
     }
 
-    // else if (isFunction(value) && previousToken().type != TokenType::VarAssignment){
-    //     type = insideClass ? TokenType::ClassMethodRef : TokenType::FunctionRef;
-    // }
-
     // Function Argument (Immediately after `call` and inside function call lists)
     else if (insideArgs && prev.type == TokenType::Punctuation){
-        
         type = TokenType::Argument;
     }
 
@@ -435,8 +423,7 @@ Token Tokenizer::readIdentifier() {
     }
 
     else if (functions.count(value)) {
-        type = TokenType::FunctionRef;
-        
+        type = TokenType::FunctionRef; 
     }
 
     else if (classes.count(value)) {
@@ -444,34 +431,17 @@ Token Tokenizer::readIdentifier() {
     }
 
     if (type == TokenType::FunctionRef || type == TokenType::ClassMethodRef) {
-        
         if (peek() == '.' || prev.type == TokenType::VarDeclaration || (prev.type == TokenType::VarAssignment && peek() == '.')) {
             type = TokenType::Variable;
         }
     }
     
-
     // Boolean Literals
-    
-
     DEBUG_LOG(LogLevel::DEBUG, "Exiting readIdentifier with value: ", value, " (Type: ", tokenTypeToString(type), ")");
     DEBUG_FLOW_EXIT();
     auto token = Token(type, value, line, startColumn);
-    // if (line == 35 && token.type == TokenType::FunctionRef) {
-    //     String peeked = "I don't know";
-    //     char val = peek();
-    //     if (val == '.') { peeked = "."; }
-    //     else if (val == ' ') { peeked = "SPACE"; }
-    //     else if (val == ':') { peeked = ":"; }
-    //     else {peeked = String(1, val);}
-        
-
-    //     throw MerkError("Didn't Change to Variable " + token.toColoredString() + "   Peek shows " + peeked + " \nprevious token shows " + prev.toColoredString());
-    // }
     return token;
 }
-
-
 
 bool Tokenizer::isCompoundOperator(char c) const {
     // Look ahead to check for `=`
@@ -501,9 +471,6 @@ char Tokenizer::peek(size_t offset) const {
     return result;
 }
 
-
-
-
 bool Tokenizer::isLetter(char c) const {
     return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
 }
@@ -525,7 +492,6 @@ bool Tokenizer::isPunctuation(char c) const {
     return c == ':' || c == ',' || c == '.' || c == '(' || c == ')' || c == ';' || c == '[' || c == ']';
 }
 
-
 bool Tokenizer::handleOptionalType() {
     if (position < sourceLength && source[position] == ':') {
         tokens.emplace_back(Token(TokenType::Punctuation, ":", line, column));
@@ -533,7 +499,7 @@ bool Tokenizer::handleOptionalType() {
             skipWhitespace();  // Allow optional space
             position++;
             column++;
-            // skipWhitespace();
+
             if (typeContainers.count(source[position])) {  //&& source[position] != '(' && source[position] != ')'
                 handleContainers();
             }
@@ -555,11 +521,9 @@ bool Tokenizer::handleOptionalType() {
                 if (typeContainers.count(source[position])) {  //&& source[position] != '(' && source[position] != ')'
                     handleContainers();
                 }
-                
             }
             return true;
         }
-        
     }
     return false;
 }

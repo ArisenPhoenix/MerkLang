@@ -1,12 +1,12 @@
-#include "core/node/argument_node.h"
+#include "core/node/ArgumentNode.hpp"
 
 #include "core/types.h"
-#include "core/scope.h"
+#include "core/Scope.hpp"
 #include "core/callables/classes/bultins.h"
-#include "core/callables/classes/class_base.h"
-#include "core/callables/classes/native_method.h"
-#include "core/callables/classes/native_class.h"
-#include "core/node/node_structures.h"
+#include "core/callables/classes/ClassBase.hpp"
+#include "core/callables/classes/NativeMethod.hpp"
+#include "core/callables/classes/NativeClass.hpp"
+#include "core/node/NodeStructures.hpp"
 #include "core/evaluator.h"
 
 

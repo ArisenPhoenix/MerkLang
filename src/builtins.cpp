@@ -1,7 +1,7 @@
 #include "core/types.h"
 #include "core/builtins.h"
 
-// #include "core/scope.h"
+// #include "core/Scope.hpp"
 
 
 std::unordered_map<String, SharedPtr<ClassBase>> getNativeClasses(SharedPtr<Scope> scope) {

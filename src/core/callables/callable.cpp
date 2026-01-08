@@ -1,6 +1,6 @@
-#include "core/node/argument_node.h"
-#include "core/callables/callable.h"
-#include "core/callables/classes/method.h"
+#include "core/node/ArgumentNode.hpp"
+#include "core/callables/Callable.hpp"
+#include "core/callables/classes/Method.hpp"
 
 
 Callable::Callable(Method& method){

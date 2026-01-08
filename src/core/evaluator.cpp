@@ -5,34 +5,34 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "core/node/node.h"
-#include "core/node/argument_node.h"
-#include "core/node/node_structures.h"
+#include "core/node/Node.hpp"
+#include "core/node/ArgumentNode.hpp"
+#include "core/node/NodeStructures.hpp"
 
 #include "core/types.h"
 #include "core/errors.h"
 
 
-#include "core/scope.h"
+#include "core/Scope.hpp"
 #include "core/evaluator.h"
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
 
-#include "ast/ast_base.h"
-#include "ast/ast.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
 
-#include "ast/exceptions.h"
-#include "ast/ast_control.h"
-#include "ast/ast_chain.h"
+#include "ast/Exceptions.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/AstChain.hpp"
 #include "ast/ast_validate.h"
-#include "ast/ast_method.h"
-#include "ast/ast_class.h"
+#include "ast/AstMethod.hpp"
+#include "ast/AstClass.hpp"
 #include "core/helpers/class_helpers.h"
-#include "core/callables/functions/function.h"
-#include "core/callables/classes/method.h"
+#include "core/callables/functions/Function.hpp"
+#include "core/callables/classes/Method.hpp"
 
 
 enum class Operator {

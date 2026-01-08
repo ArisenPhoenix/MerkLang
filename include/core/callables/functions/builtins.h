@@ -1,7 +1,7 @@
 #ifndef FUNCTION_BUILTIN_H
 #define FUNCTION_BUILTIN_H
 
-#include "core/callables/functions/native_function.h"
+#include "core/callables/functions/NativeFunction.hpp"
 
 class Scope;
 class Callable;

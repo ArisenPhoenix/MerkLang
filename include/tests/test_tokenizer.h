@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include "core/types.h"
-#include "core/tokenizer.h"
+#include "core/Tokenizer.hpp"
 
 // very old test, I'll keep it for nostalgia
 

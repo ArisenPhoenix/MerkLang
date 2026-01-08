@@ -1,4 +1,4 @@
-#include "core/node/param_node.h"
+#include "core/node/ParamNode.hpp"
 
 #include "core/types.h"
 #include "core/errors.h"

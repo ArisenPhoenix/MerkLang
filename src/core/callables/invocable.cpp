@@ -1,6 +1,6 @@
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
-#include "core/callables/invocalble.h"
+#include "core/callables/Invocable.hpp"
 
 Invocable::Invocable(String name, ParamList params, CallableType definedType, bool requiresReturn, bool isStatic)
 : Callable(name, params, definedType, requiresReturn, isStatic) {

@@ -1,9 +1,9 @@
 #include "core/types.h"
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
-#include "core/callables/functions/function.h"
-#include "core/callables/classes/class_base.h"
-#include "core/callables/classes/method.h"
+#include "core/callables/functions/Function.hpp"
+#include "core/callables/classes/ClassBase.hpp"
+#include "core/callables/classes/Method.hpp"
 
 
 // Builds a simple shell scope for callables with only globalFunctions and globalClasses

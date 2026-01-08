@@ -5,6 +5,9 @@ project(Merk LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if (MSVC)
+  add_compile_options(/wd4514)
+endif()
 
 # Dir Setup
 set(MERK_SRC_DIR "${CMAKE_SOURCE_DIR}/src")
@@ -53,6 +56,7 @@ endif()
 # === Debug macro toggle ===
 # set(ENABLE_DEBUG ON BOOL "Enable debug logging")
 set(ENABLE_DEBUG ON) 
+# set(ENABLE_DEBUG OFF)
 if(ENABLE_DEBUG)
     target_compile_definitions(merk PRIVATE ENABLE_DEBUG=1)
 else()

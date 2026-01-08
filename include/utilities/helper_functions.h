@@ -2,7 +2,7 @@
 #define HELPER_FUNCTIONS_H
 
 #include <string>
-#include "core/node/node.h"
+#include "core/node/Node.hpp"
 
 #include "core/types.h"
 

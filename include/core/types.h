@@ -2,267 +2,25 @@
 #define TYPES_H
 
 #include <variant>
-#include <string>
 #include <iostream>
-#include <unordered_map>
 #include <sstream>
-#include <memory>
-#include <vector>
 #include <any>
-#include <map>
 #include <functional>
-#include <unordered_set>
+#include "core/TypesFWD.hpp"
 
 
 
 // This is essentially a global types repository used throughout the whole codebase
 
 // Forward declarations
-class Node;
+
 
 namespace std { template<> struct hash<Node>; }
-class VarNode;
-class Function;
-class FunctionNode;
-class Callable;
-class CallableSignature;
-class ClassBase;
-class ClassNode;
-class CallableNode;
-class Method;
 
 
-class MethodNode;
-class InstanceNode;
-class ClassInstance;
-class Scope;
-class NativeNode;
-class ListNode;
-class ArrayNode;
-class DictNode;
-class MapNode;
-class SetNode;
-
-
-class ParamNode;
-class ParamList;
-class ArgumentList;
-
-// Aliases
-using String = std::string;
-template <typename T>
-using UniquePtr = std::unique_ptr<T>;
-
-template <typename T2>
-using SharedPtr = std::shared_ptr<T2>;
-
-template <typename T3>
-using WeakPtr = std::weak_ptr<T3>;
-
-template <typename V>
-using Vector = std::vector<V>;
-
-using RunTimeError = std::runtime_error;
-
-template <typename M>
-using UnorderedMapNode = std::unordered_map<String, M>;
 
 template <typename F>
 using Funciton = std::function<F>;
-
-template <typename T, typename... Args>
-std::unique_ptr<T> makeUnique(Args&&... args) {
-    return std::make_unique<T>(std::forward<Args>(args)...);
-}
-
-template <typename T, typename... Args>
-std::shared_ptr<T> makeShared(Args&&... args) {
-    return std::make_shared<T>(std::forward<Args>(args)...);
-}
-
-
-
-using DependencyGraph = std::unordered_map<String, std::unordered_set<String>>;
-
-// Enum for Tokens and their types of the value held by the variant
-enum class TokenType {
-    Type,
-    Keyword,
-    Identifier,
-    Number,
-    String,
-    Char,
-    Bool,
-
-    VarDeclaration,
-    VarAssignment,
-    Variable,
-    AccessorVariable,
-
-    Operator,
-    Punctuation,
-
-    Indent,
-    Dedent,
-    Newline,
-    EOF_Token,
-
-    Break,
-    Else,
-    If,
-    Elif,
-    DoWhile,
-    Case,
-    Default,
-    Continue,
-
-    Function,
-    FunctionDef,
-    FunctionCall,
-    FunctionRef,
-
-    Parameter,
-    Argument,
-
-    ClassDef,
-    ClassCall,
-    ClassRef,
-
-    ClassMethodDef,
-    ClassMethodCall,
-    ClassMethodRef,
-    ClassAttribute,
-
-    ChainEntryPoint,
-
-    Unknown,
-    LeftBracket,
-    RightBracket,
-    LiteralArrowLeft,
-    LiteralArrowRight,
-    BraceLeft,
-    BraceRight,
-    LeftArrow,
-    RightArrow,
-    BeginTyping
-};
-
-// Enum for the type of the value held by the variant
-enum class NodeValueType {
-    Number,
-    Text,
-    Int,
-    Float,
-    Double,
-    Long,
-    Char,
-    String,
-    Vector,
-    Bool,
-    Shared_Vector,
-    Function,
-    Parameter,
-
-    Class,
-    Method,
-    Callable,
-    ClassInstance,
-    Null,
-    None,
-    Uninitialized,
-    Any,
-    UNKNOWN,
-    Scope,
-    Dict,
-    List,
-    Array,
-    Set,
-    CallableSignature,
-    DataStructure,
-    NativeOMap,
-    NativeUMap,
-    NativeOSet,
-    NativeUSet,
-    UserDefined,
-
-    NativeNode,
-    Http,
-    File,
-};
-
-
-
-
-// Actually refers to AST Types
-enum class AstType {
-    Base,
-    AST,
-    Literal,
-    VariableDeclaration,
-    VariableAssignment,
-    VariableReference,
-    ParameterAssignment,
-
-    BinaryOperation,
-    UnaryOperation,
-    Block,
-    Conditional,
-    IfStatement,
-    ElseStatement,
-    ElifStatement,
-    WhileLoop,
-    CodeBlock,
-    
-    Break,
-    Return,
-    Continue,
-    ThrowStatement,
-    LoopBlock,
-
-    CallableBody,
-    CallableDefinition,
-    CallableReference,
-    CallableCall,
-
-    Function,
-    FunctionBlock,
-    FunctionCall,
-    NativeFunction,
-    UserFunction,
-    FunctionDefinition,
-    FunctionReference,
-
-    ClassDefinition,
-    ClassCall,
-    ClassReference,
-    ClassBlock,
-
-    ClassMethodBlock,
-    ClassMethodDef,
-    ClassMethodRef,
-    ClassMethodCall,
-
-    AttributeDeclaration,
-    AttributeReference,
-    AttributeAssignment,
-
-    Chain,
-    ChainOperation,
-    Accessor,
-
-    Unknown,
-    NoOp,
-
-    // Structures
-    KeyValueStructure,
-    Enum,
-
-    ImportStatement, 
-    Argument,
-    Arguments
-};
-
-
 
 struct NullType {
     friend std::ostream& operator<<(std::ostream& os, const NullType&) {
@@ -278,7 +36,6 @@ struct NullType {
 constexpr NullType Null{};
 constexpr bool operator==(const NullType&, const NullType&) {return true;}
 
-
 struct UninitializedType {
     String toString() const { return "Uninitialized"; }
     constexpr bool operator==(const UninitializedType&) const { return true; }
@@ -287,24 +44,13 @@ struct UninitializedType {
     }
 };
  
-using NodeList = Vector<Node>;
-using NodeMapU = std::unordered_map<Node, Node>;
-using NodeMapO = std::map<Node, Node>;
-using NodeSetU = std::unordered_set<Node>;
-// using NodeSetO = std::set<Node>;
-
-
 
 using TextVariant = std::variant< String, char >;
-
 using NumberVariant = std::variant< int, float, double, long >;
 
-class ClassInstanceNode;
+
 
 using VariantType = std::variant<
-    // NumberVariant, TextVariant,
-
-    // Basic Types
     int,
     float,
     double,
@@ -330,9 +76,6 @@ using VariantType = std::variant<
     std::unordered_set<Node>,
     SharedPtr<NativeNode>
 >;
-
-
-using ClassMembers = std::unordered_map<String, String>;
 
 
 // Function to map types in VariantType to NodeValueType
@@ -374,9 +117,7 @@ constexpr NodeValueType getNodeTypeFromType() {
 String nodeTypeToString(NodeValueType type, bool colored = true); 
 NodeValueType stringToNodeType(String);
 String astTypeToString(AstType type);
-
 String tokenTypeToString(TokenType type, bool colored = false);
-
 String getTokenDescription(TokenType type);
 
 
@@ -469,8 +210,6 @@ inline String highlightToken(const String& context, const String& token, const c
 }
 
 
-using NodeMap = std::map<String, Node>;                 // For named arguments in function calls
-using NodeTypeMap = std::map<String, NodeValueType>;    // For named parameter types in function signatures
 
 
 struct Token {
@@ -504,43 +243,9 @@ struct Token {
 }; 
 
 
-enum class CallableType {
-    DEF,        // Can capture outside variables but does not modify them
-    FUNCTION,   // Only has access to its parameters, no external variables and supports overloads
-    LAMBDA,     // Future lambda type
-    NATIVE,     // native functions are hardcoded in C++
-
-    METHOD,
-    CLASS,
-    CALLABLE,
-    INSTANCE
-};
-
-
 String callableTypeAsString(CallableType callableType);
 
 
-
-
-class ResolvedType {
-    String baseType;  // e.g. "Array", "List", "Schema", "etc"
-    Vector<ResolvedType> inner;  // Nested for Array[Map[String, Int]]
-public:
-    ResolvedType();
-    // ResolvedType(const ResolvedType& other);
-    ResolvedType(String baseType);
-    ResolvedType(String baseType, Vector<ResolvedType> inner);
-    String toString() const;
-    String toString();
-    void setBaseType(String);
-    void setInner(Vector<ResolvedType>);
-
-    String getBaseType() {return baseType;}
-    Vector<ResolvedType> getInnerType() {return inner;}
-    bool matches(const ResolvedType& other) const;
-    size_t hash() const;
-
-};
 
 
 namespace std {
@@ -548,7 +253,7 @@ namespace std {
     struct hash<NullType> {
         std::size_t operator()(const NullType&) const noexcept {
             // Constant hash for all NullType values
-            return 0x9e3779b9; // some fixed random prime
+            return 0x9e3779b9; // fixed random prime
         }
     };
 
@@ -561,11 +266,7 @@ namespace std {
     };
 }
 
-class ArgumentList;
-class Arguments;
 
-using ArgumentType = Arguments;
-using ArgResultType = ArgumentList;
 
 
 #endif // TYPES_H

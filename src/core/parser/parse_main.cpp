@@ -4,19 +4,19 @@
 
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/node/node.h"
+#include "core/node/Node.hpp"
 
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/ast_control.h"
-#include "core/scope.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
+#include "ast/AstControl.hpp"
+#include "core/Scope.hpp"
 
 #include "utilities/utilities.h"
 #include "utilities/streaming.h"
 
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
-#include "core/parser.h"
+#include "core/Parser.hpp"
 
 
 
@@ -38,21 +38,18 @@ UniquePtr<CodeBlock> Parser::parse() {
     // DEBUG_FLOW(FlowLevel::HIGH);
 
     if (!currentScope){ throw MerkError("Initial Scope is null"); }
+    if (tokens[0].type == TokenType::SOF_Token) {
+        advance();
+    }
+
     try {
         setAllowScopeCreation(false);
         while (currentToken().type != TokenType::EOF_Token) {
             processNewLines();
             if (currentToken().type == eofToken.type) { break; }
-            // if (currentToken().type == TokenType::Newline) {
-            //     advance(); // Skip blank lines
-            //     continue;
-            // }
-            
-    
+
             auto statement = parseStatement();
             if (!statement) { throw MerkError("Parser::parse: Null statement returned during parsing. Token: " + currentToken().toString()); }
-    
-            // If interpretMode is enabled and interpretation is by block, evaluate each statement one-by-one, whether it is a control or variable
             if (interpretMode && byBlock){
                 setAllowScopeCreation(true);
                 try {
@@ -63,25 +60,18 @@ UniquePtr<CodeBlock> Parser::parse() {
                     throw MerkError(e.what());
                 }
             }
-            
-            // Add the parsed statement to the block
             rootBlock->addChild(std::move(statement));
         }
     
         setAllowScopeCreation(true);
-        // If interpretMode is enabled and interpretation is not by block, evaluate the entire AST in a batch.
         if (interpretMode && !byBlock){
-            // rootBlock->printAST(std::cout, 0);
             interpret(rootBlock.get());
         }
 
         return std::move(rootBlock); // Return the parsed block node
     } catch (MerkError& e) {
-        // rootScope->printChildScopes();
-        // rootBlock->printAST(std::cout, 0);
         throw MerkError(e.what());
     }
-    
 }
 
 
@@ -366,6 +356,7 @@ Token Parser::previousToken() const {
 }
 
 String Parser::getCurrentClassAccessor() {
+
     return classAccessors.back();
 }
 

@@ -5,8 +5,8 @@
 #include <string>
 #include <sstream>
 
-// #include "core/node/param_node.h"
-// #include "core/node/argument_node.h"
+// #include "core/node/ParamNode.hpp"
+// #include "core/node/ArgumentNode.hpp"
 #include "core/types.h"
 
 

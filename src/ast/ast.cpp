@@ -7,12 +7,12 @@
 #include <string>
 #include <unordered_set>
 
-#include "core/node/node.h"
+#include "core/node/Node.hpp"
 #include "core/types.h"
 
-#include "ast/ast.h"
-#include "ast/ast_control.h"
-#include "ast/exceptions.h"
+#include "ast/Ast.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/Exceptions.hpp"
 
 #include "utilities/debugging_functions.h"
 #include "utilities/helper_functions.h"
@@ -20,7 +20,7 @@
 
 #include "core/errors.h"
 #include "core/evaluator.h"
-#include "core/scope.h"
+#include "core/Scope.hpp"
 #include "utilities/debugger.h"
 
 

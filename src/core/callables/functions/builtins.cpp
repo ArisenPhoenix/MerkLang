@@ -1,14 +1,14 @@
-#include "core/node/node.h"
-#include "core/node/param_node.h"
-#include "core/node/argument_node.h"
-#include "core/node/node_structures.h"
+#include "core/node/Node.hpp"
+#include "core/node/ParamNode.hpp"
+#include "core/node/ArgumentNode.hpp"
+#include "core/node/NodeStructures.hpp"
 
 #include "core/types.h"
-#include "core/callables/callable.h"
-#include "core/callables/functions/native_function.h"
-#include "core/callables/functions/function.h"
+#include "core/callables/Callable.hpp"
+#include "core/callables/functions/NativeFunction.hpp"
+#include "core/callables/functions/Function.hpp"
 #include "core/callables/functions/builtins.h"
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
 // Define native functions 
 

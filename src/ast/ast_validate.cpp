@@ -1,13 +1,13 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
-#include "core/scope.h" 
-#include "core/callables/classes/method.h"
+#include "core/Scope.hpp" 
+#include "core/callables/classes/Method.hpp"
 
-#include "ast/ast_base.h"
-#include "ast/ast_control.h"
-#include "ast/ast_callable.h"
-#include "ast/ast_chain.h"
-#include "ast/ast_class.h"
+#include "ast/AstBase.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/AstCallable.hpp"
+#include "ast/AstChain.hpp"
+#include "ast/AstClass.hpp"
 #include "ast/ast_validate.h"
 
 static thread_local std::unordered_set<const BaseAST*> globalVisited;

@@ -2,15 +2,15 @@
 #include "core/types.h"
 
 #include "utilities/helper_functions.h"
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/ast_chain.h"
-#include "ast/ast_control.h"
-#include "ast/ast_class.h"
-#include "core/scope.h"
-#include "ast/ast_function.h"
-#include "ast/ast_method.h"
-#include "ast/exceptions.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
+#include "ast/AstChain.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/AstClass.hpp"
+#include "core/Scope.hpp"
+#include "ast/AstFunction.hpp"
+#include "ast/AstMethod.hpp"
+#include "ast/Exceptions.hpp"
 
 
 

@@ -1,6 +1,6 @@
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
 ContextError::ContextError(const String& message)
     : MerkError(message) {}

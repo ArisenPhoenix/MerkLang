@@ -1,6 +1,6 @@
 #include <iostream>
 #include <unordered_set>
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
 #include <cassert>
 
@@ -8,9 +8,9 @@
 #include <execinfo.h>
 #endif
 
-#include "core/node/node.h"
-#include "core/node/param_node.h"
-#include "core/node/argument_node.h"
+#include "core/node/Node.hpp"
+#include "core/node/ParamNode.hpp"
+#include "core/node/ArgumentNode.hpp"
 
 #include "core/types.h"
 #include "core/errors.h"
@@ -19,18 +19,18 @@
 #include "utilities/debugger.h"
 
 #include "ast/ast_validate.h"
-#include "ast/ast_chain.h"
-#include "core/callables/callable.h"
-#include "core/callables/classes/method.h"
+#include "ast/AstChain.hpp"
+#include "core/callables/Callable.hpp"
+#include "core/callables/classes/Method.hpp"
 
 
 
-#include "core/context.h"
-#include "core/registry/class_registry.h"
-#include "core/registry/function_registry.h"
+#include "core/registry/Context.hpp"
+#include "core/registry/ClassRegistry.hpp"
+#include "core/registry/FunctionRegistry.hpp"
 #include "core/errors.h"
-#include "core/callables/functions/function.h"
-// #include "core/callables/classes/method.h"
+#include "core/callables/functions/Function.hpp"
+// #include "core/callables/classes/Method.hpp"
 
 
 int totalWith = 0;
@@ -61,6 +61,7 @@ Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
         globalFunctions = makeShared<FunctionRegistry>();
         globalClasses = makeShared<ClassRegistry>();
     }
+
     DEBUG_LOG(LogLevel::TRACE, 
              "Initialized Root Scope with level: ", scopeLevel, 
              " | Memory Loc: ", this, 
@@ -240,23 +241,21 @@ const FunctionRegistry& Scope::getAllFunctions(FunctionRegistry& callingRegister
 }
 
 void Scope::appendChildScope(const SharedPtr<Scope>& child, const String& callerLabel, bool update) {
-    (void)callerLabel;
+    MARK_UNUSED_MULTI(callerLabel);
     if (!child) {
         DEBUG_LOG(LogLevel::WARNING, "appendChildScope called from [", callerLabel, "] with null scope.");
         return;
     }
 
     DEBUG_LOG(LogLevel::ERROR, "appendChildScope called from [", callerLabel, "] | Parent Addr: ", this, " | Appending Child Addr: ", child.get());
-
     // Delegate to original
     appendChildScope(child, update);
-
 }
 
 
 bool Scope::hasImmediateChild(const SharedPtr<Scope>& candidate) {
     for (auto& child : childScopes) {
-        if (child.get() == candidate.get()) return true;
+        if (child.get() == candidate.get()) { return true; }
     }
     return false;
 }
@@ -456,12 +455,14 @@ void Scope::registerFunction(const String& name, SharedPtr<CallableSignature> si
 }
 
 bool Scope::hasFunction(const String& name) const {
+    
     if (auto func = lookupFunction(name)){
         return true;
     }
     if (auto parent = getParent()){
         return getParent()->hasFunction(name);
     } else {
+    
     }
 
     return globalFunctions->hasFunction(name);
@@ -484,13 +485,11 @@ std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const 
 std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const ArgResultType& args) const {
     if (globalFunctions && globalFunctions->hasFunction(name)) {
         auto sig = globalFunctions->getFunction(name, args);
-        if (sig.has_value()) return sig;
+        if (sig.has_value()) { return sig; }
     }
 
     if (auto sig = localFunctions.getFunction(name, args)) {
-        if (sig.has_value()) {
-            return sig;
-        }
+        if (sig.has_value()) { return sig; }
     }
 
     if (auto parent = parentScope.lock()) {
@@ -501,6 +500,7 @@ std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& 
 }
 
 std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name, const ArgResultType& args) {
+    
     DEBUG_FLOW(FlowLevel::MED);
     if (globalFunctions) {
         auto globalFunc = globalFunctions->getFunction(name, args);
@@ -524,11 +524,11 @@ std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& nam
 
 // For Function Reference
 std::optional<Vector<SharedPtr<CallableSignature>>> Scope::getFunction(const String& name) {
-    if (auto funcs = lookupFunction(name)) return funcs.value();
-    if (auto parent = parentScope.lock()) return parent->getFunction(name);
+    if (auto funcs = lookupFunction(name)) { return funcs.value(); }
+    if (auto parent = parentScope.lock()) { return parent->getFunction(name); }
     if (globalFunctions) {
         auto globals = globalFunctions->getFunction(name);
-        if (globals) return globals.value();
+        if (globals) { return globals.value(); }
     }
 
     return std::nullopt;
@@ -591,10 +591,12 @@ bool Scope::hasClass(const String& name) const {
     if (localClasses.hasClass(name)) {
         return true;
     }
+
     if (auto parent = parentScope.lock()) {
         return parent->hasClass(name);
     }
+
     return globalClasses && globalClasses->hasClass(name);
 }
 
-SharedPtr<ClassRegistry> Scope::getClassRegistry() {return globalClasses;}
+SharedPtr<ClassRegistry> Scope::getClassRegistry() { return globalClasses; }

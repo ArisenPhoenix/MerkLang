@@ -1,21 +1,21 @@
 
-#include "core/node/node.h"
-#include "core/node/param_node.h"
-#include "core/node/argument_node.h"
+#include "core/node/Node.hpp"
+#include "core/node/ParamNode.hpp"
+#include "core/node/ArgumentNode.hpp"
 
 #include "core/types.h"
 #include "utilities/debugger.h"
 
-#include "core/scope.h" 
-#include "ast/ast.h"
-#include "ast/exceptions.h"
-#include "ast/ast_control.h"
+#include "core/Scope.hpp" 
+#include "ast/Ast.hpp"
+#include "ast/Exceptions.hpp"
+#include "ast/AstControl.hpp"
 
-#include "ast/ast_function.h"
+#include "ast/AstFunction.hpp"
 
-#include "core/callables/invocalble.h"
+#include "core/callables/Invocable.hpp"
 
-#include "ast/ast_callable.h"
+#include "ast/AstCallable.hpp"
 
 
 

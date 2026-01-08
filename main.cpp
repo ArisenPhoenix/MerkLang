@@ -3,23 +3,25 @@
 #include <unordered_map>
 #include <cassert>
 
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "utilities/streaming.h"
 
-#include "core/types.h"
-#include "core/node/node.h"
-#include "core/tokenizer.h"
-#include "core/parser.h"
-#include "core/context.h"
 
-#include "ast/ast_base.h"
-#include "ast/ast_control.h"
-#include "ast/ast.h"
+#include "core/node/Node.hpp"
+#include "core/Tokenizer.hpp"
+#include "core/Parser.hpp"
+#include "core/registry/Context.hpp"
+
+#include "ast/AstBase.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/Ast.hpp"
 
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
 
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
 #include "core/builtins.h"
 
@@ -135,7 +137,7 @@ int main(int argc, char* argv[]) {
 // #include <chrono>
 // #include <iostream>
 // #include <fstream>
-// #include "core/tokenizer.h"
+// #include "core/Tokenizer.hpp"
 
 
 // String generatedCode;
@@ -337,7 +339,7 @@ int main(int argc, char* argv[]) {
 
 // #include <chrono>
 // #include <iostream>
-// // #include "core/tokenizer.h"
+// // #include "core/Tokenizer.hpp"
 // // #include "core/parser/parser_main.h"
 // // #include "core/scope/scope_main.h"
 // // #include "core/evaluator.h"

@@ -1,17 +1,17 @@
-// In parse_classes.cpp (or wherever you put your class-parsing methods)
-
-#include "core/node/argument_node.h"
-#include "ast/ast_class.h"       // For ClassDef and ClassBody
+#include "core/node/ArgumentNode.hpp"
+#include "ast/AstClass.hpp"       // For ClassDef and ClassBody
 #include "core/errors.h"
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 
-#include "core/tokenizer.h"      // For token types
-#include "core/scope.h"
-#include "ast/ast_callable.h"
-#include "ast/ast_method.h"
-#include "core/parser.h"
-#include "ast/exceptions.h"
+#include "core/Tokenizer.hpp"      // For token types
+#include "core/Scope.hpp"
+#include "ast/AstCallable.hpp"
+#include "ast/AstMethod.hpp"
+#include "core/Parser.hpp"
+#include "ast/Exceptions.hpp"
+
+#include "ast/AstFunction.hpp"
 
 
 ChainElement createChainElement(const Token& token, const Token& delim, UniquePtr<BaseAST> obj) {
@@ -31,88 +31,6 @@ ChainElement createChainElement(const Token& token, const Token& delim, UniquePt
     }
     return elem;
 }
-
-
-    
-
-    
-// UniquePtr<Chain> Parser::parseChain(bool isDeclaration, bool isConst) {
-//     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-//     DEBUG_LOG(LogLevel::DEBUG, "Chain Is Parsing as a Declaration: ", isDeclaration);
-    
-//     // DEBUG_FLOW_EXIT();
-//     // return chain;
-
-//     auto chain = makeUnique<Chain>(currentScope);
-
-//     // Base token (variable or function call)
-//     Token baseToken = currentToken();
-//     UniquePtr<BaseAST> baseExpr;
-
-//     if (baseToken.type == TokenType::Variable || baseToken.type == TokenType::ChainEntryPoint) {
-//         baseExpr = makeUnique<VariableReference>(baseToken.value, currentScope);
-//         advance();
-//     }
-//     else if (baseToken.type == TokenType::FunctionCall) {
-//         baseExpr = parseFunctionCall();
-//     }
-//     else {
-//         throw UnexpectedTokenError(baseToken, "Variable or FunctionCall");
-//     }
-
-//     auto punct = currentToken();
-//     chain->addElement(createChainElement(baseToken, punct, std::move(baseExpr)));
-
-//     // Chain loop
-//     while (check(TokenType::Punctuation, ".") || check(TokenType::Punctuation, "::")) {
-//         Token delim = advance();
-//         Token next = currentToken();
-//         UniquePtr<BaseAST> rhs;
-
-//         if (next.type == TokenType::FunctionCall) {
-//             rhs = parseFunctionCall();
-//         } else if (next.type == TokenType::ClassMethodCall) {
-//             auto func = parseFunctionCall();
-//             rhs = makeUnique<MethodCall>(func->getName(), std::move(func->arguments), func->getScope());
-//         } else if (next.type == TokenType::Variable) {
-//             rhs = makeUnique<VariableReference>(next.value, currentScope);
-//             advance();
-//         } else {
-//             throw UnexpectedTokenError(next, "Expected variable or call after '.'");
-//         }
-
-//         if (check(TokenType::Punctuation, ".") || check(TokenType::Punctuation, "::")) {
-//             delim = currentToken();  // Was Not The Last item
-//         }
-
-//         chain->addElement(createChainElement(next, delim, std::move(rhs)));
-//     }
-
-//     // Handle declaration or assignment
-//     Token maybeAssign = currentToken();
-//     if (maybeAssign.type == TokenType::VarAssignment) {
-//         bool isMutable = maybeAssign.value == "=";
-//         advance(); // consume '=' or ':='
-
-//         auto rhsExpr = parseExpression();
-
-//         auto &last = chain->getLast();
-//         if (isDeclaration) {
-//             DataTypeFlags flags(last.name, isConst, isMutable, false, ResolvedType("Any"));
-//             last.object = makeUnique<VariableDeclaration>(last.name, flags, currentScope, std::move(rhsExpr));
-//         } else {
-//             last.object = makeUnique<VariableAssignment>(last.name, std::move(rhsExpr), currentScope);
-//         }
-//     }
-
-
-//     if (chain->getElements().size() == 1) {throw MerkError("Chain Was not Built");}
-
-//     return chain;
-// }
-
-
-
 
 UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
@@ -149,9 +67,6 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
 
         chain->addElement(createChainElement(next, delim, std::move(stmnt)));
     }
-
-
-    
 
     // Base token (variable or function call)
     Token baseToken = currentToken();
@@ -190,9 +105,7 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
             rhs = makeUnique<VariableReference>(next.value, currentScope);
             advance();
         } 
-        else {
-            throw UnexpectedTokenError(next, "Expected variable or call after '.'");
-        }
+        else { throw UnexpectedTokenError(next, "Expected variable or call after '.'"); }
 
         if (check(TokenType::Punctuation, ".") || check(TokenType::Punctuation, "::")) {
             delim = currentToken();  // Was Not The Last item
@@ -220,14 +133,6 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
 
 
     if (chain->getElements().size() == 1) {throw MerkError("Chain Was not Built");}
-
-    // return chain;
-
-    // UniquePtr<Chain> lhs = parseChain(isDeclaration, isConst);  // Handles `a.b.c` chains
-
-
-
-    // displayNextTokens(currentToken().value, 20, "Parser::parseChainOp");
 
     DEBUG_LOG(LogLevel::PERMISSIVE, "Got ChainOp");
     DEBUG_FLOW_EXIT();
@@ -313,8 +218,6 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
 
     if (!expect(TokenType::Punctuation) || controllingToken.value != "(") { throw UnexpectedTokenError(controllingToken, "Expected '(' after class name in instantiation", "Parser::parseClassCall"); }
 
-
-    // Vector<UniquePtr<ASTStatement>> arguments = parseArguments();
     auto arguments = parseAnyArgument();
 
     return makeUnique<ClassCall>(className, std::move(arguments), currentScope);
@@ -359,7 +262,6 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
 
     processNewLines();
     DEBUG_LOG(LogLevel::DEBUG, "Processed NewLines After Class header");
-    // Process indent to enter the class body.
     processIndent();
 
     processNewLines();
@@ -371,17 +273,13 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
         throw MerkError("ClassBody Was Not provided a valid Scope around line 371 in Parser::parseClassDefinition");
     }
 
-    // classBody->getScope()->owner = generateScopeOwner("ClassDef", className);
-
     bool foundConstructor = false;
     String accessor;
 
     ParamList classParams;
     while (currentToken().type != TokenType::Dedent && currentToken().type != TokenType::EOF_Token) {
         
-        if (processNewLines()){ // if there were blank lines, then go again
-            continue;
-        }
+        if (processNewLines()) { continue; } // if there were blank lines, then go again
 
         controllingToken = currentToken();
 
@@ -409,8 +307,6 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
                     throw MerkError("Attempting to reassign the constructor using the def keyword");
                 }
                 auto constructor = parseClassInitializer();
-                // constructor->getScope()->owner = generateScopeOwner("constructor", className);
-                // constructor->getBody()->getScope()->owner = generateScopeOwner("constructor", className);
                 classBody->addChild(static_unique_ptr_cast<BaseAST>(std::move(constructor)));
 
             }
@@ -419,8 +315,6 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
                 // Parse subsequent methods normally.
                 auto method = parseClassMethod();
                 if (method) {
-                    // method->getBody()->getScope()->owner = generateScopeOwner("Method", method->getName());
-                    // method->getScope()->owner = generateScopeOwner("Method", method->getName());
                     classBody->addChild(static_unique_ptr_cast<BaseAST>(std::move(method)));
                 }
             }
@@ -440,11 +334,8 @@ UniquePtr<ASTStatement> Parser::parseClassDefinition() {
     // Process dedent to exit the class body.
     processDedent();
 
-    if (!currentScope){
-        throw MerkError("No viable scope present in Parser::parseClassDefinition");
-    }
+    if (!currentScope) { throw MerkError("No viable scope present in Parser::parseClassDefinition"); }
     UniquePtr<ASTStatement> classDefNode = makeUnique<ClassDef>(className, std::move(classParams), std::move(classBody), accessor, currentScope);
-    // classDefNode->getScope()->owner = generateScopeOwner("ClassDef", className);
     DEBUG_FLOW_EXIT();
     insideClass = false;
     return classDefNode;
@@ -457,10 +348,6 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
     DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseClassLiteralCall: Entering with token: ", currentToken().toColoredString());
     UniquePtr<Arguments> elements = makeUnique<Arguments>(currentScope);
     if (consumeIf(TokenType::LeftBracket, "[")) {
-        // Vector<UniquePtr<ASTStatement>> elements;
-        // Vector<Argument> elements;
-        // UniquePtr<ArgumentType> elements;
-
         if (!check(TokenType::RightBracket, "]")) {
             do {
                 elements->addPositional(parsePrimaryExpression());
@@ -523,20 +410,13 @@ UniquePtr<ASTStatement> Parser::parseClassLiteralCall() {
         );
 
         processNewLines();
-        // call->printAST(std::cout);
         DEBUG_FLOW_EXIT();
-        // call.release();
-        // throw MerkError("Testing");
         return call;
     }
 
     DEBUG_FLOW_EXIT();
     throw UnexpectedTokenError(currentToken(), "Expected list or array literal.", "parseClassLiteralCall");
 }
-
-
-
-
 
 UniquePtr<ASTStatement> Parser::parseThrowStatement() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);

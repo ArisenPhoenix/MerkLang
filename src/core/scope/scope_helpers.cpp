@@ -1,20 +1,15 @@
 #include <iostream>
 #include <unordered_set>
 
-#include "core/node/node.h"
-
+#include "core/node/Node.hpp"
 #include "core/types.h"
-
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
-
-// #include "core/node/param_node.h"
-#include "core/context.h"
-// #include "core/callables/functions/function.h"
-#include "core/registry/class_registry.h"
-#include "core/registry/function_registry.h"
+#include "core/registry/Context.hpp"
+#include "core/registry/ClassRegistry.hpp"
+#include "core/registry/FunctionRegistry.hpp"
 #include "core/errors.h"
-#include "core/scope.h"
+#include "core/Scope.hpp"
 
 
 String ScopeMeta::metaString() const {
@@ -45,11 +40,7 @@ SharedPtr<Scope> Scope::getRoot() {
 
 
 // In Scope class
-
 SharedPtr<Scope> Scope::clone(bool strict) const {
-    (void)strict;
-    // DEBUG_FLOW(FlowLevel::MED);
-
     SharedPtr<Scope> newScope;
     if (auto parent = parentScope.lock()) {
         // use the weak/child constructor
@@ -69,29 +60,21 @@ SharedPtr<Scope> Scope::clone(bool strict) const {
     newScope->isClonedScope  = true;
     includeMetaData(newScope, isDetached);
 
-    // DEBUG_FLOW_EXIT();
     return newScope;
-    // return shared_from_this();
 }
 
 
 
-Vector<SharedPtr<Scope>> Scope::getChildren() {
-    return childScopes;
-}
+Vector<SharedPtr<Scope>> Scope::getChildren() { return childScopes; }
 
-bool Scope::hasChildren(){
-    return childScopes.size() > 0;
-}
+bool Scope::hasChildren() { return childScopes.size() > 0; }
 
 bool Scope::parentIsValid() {
     auto parent = parentScope.lock();
     if (parent){
         return true;
     }
-
     return false;
-
 }
 
 // Debugging
@@ -114,23 +97,17 @@ void Scope::debugPrint() const {
         localClasses.debugPrint();
     // }
     
-    
-
     for (const auto& child : childScopes) {
         if (child.get() != this) {
             child->debugPrint();
         }
-        
     }
 
     if (scopeLevel == 0) { debugLog(true, highlight("======================== End Scope::debugPrint ======================== \n", Colors::cyan)); }
-
     DEBUG_FLOW_EXIT();
 }
 
-// Recursively print all child scopes and their critical information
 void Scope::printChildScopes(int indentLevel) const {
-    // Helper to create indentation for nested scopes
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     if (scopeLevel == 0) { debugLog(true, highlight("\n\n======================== Start Scope::printChildScopes ========================", Colors::cyan)); }
     auto parent = parentScope.lock();
@@ -155,22 +132,6 @@ void Scope::printChildScopes(int indentLevel) const {
         "| Owner:", !owner.empty() ? owner : "<None Provided>>"
         );
     
-    // if (numInstances > 0) {
-    //     debugLog(true, indent, "=================== GO INSTANCE LOG ===================");
-    //     for (auto& [varName, var] : context.getVariables()) {
-    //         if (var->isInstance()) {
-    //             auto instance = std::get<SharedPtr<ClassInstance>>(var->getValue());
-    //             instance->getInstanceScope()->printChildScopes(indentLevel+2);
-    //             instance->getCapturedScope()->printChildScopes(indentLevel+2);
-    //         }
-    //     }
-    //     debugLog(true, indent, "=================== END INSTANCE LOG ===================");
-
-    // }
-    // Recursively print each child scope
-    // for (const auto& child : childScopes) {
-    //     child->printChildScopes(indentLevel+2); // Increase indentation for child
-    // }
     if (scopeLevel == 0){
         debugLog(true, highlight("======================== End Scope::printChildScopes ========================\n", Colors::cyan));
     }
@@ -186,16 +147,6 @@ void Scope::printContext(int depth) const {
               << " | Parent Loc: " << (parentScope.lock() ? parentScope.lock().get() : nullptr)
               << " | Number of Variables: " << context.getVariables().size()
               << " | Number of Children: " << childScopes.size() << std::endl;
-
-    // Print variables in the current context
-    // for (const auto& [name, value] : context.getVariables()) {
-    //     if (value) {
-    //         std::cout << indent << "  Variable: " << name
-    //                   << " = " << *value << std::endl;  // Dereference unique_ptr
-    //     } else {
-    //         std::cout << indent << "  Variable: " << name << " = [null]" << std::endl;
-    //     }
-    // }
 
     // Recursively print the parent scope, if any
     if (auto parent = parentScope.lock()) {
@@ -240,9 +191,6 @@ void Scope::updateChildLevelsRecursively() {
         child->updateChildLevelsRecursively();
     }
 }
-
-
-
 
 bool Scope::removeChildScope(const SharedPtr<Scope>& target) {
     DEBUG_FLOW(FlowLevel::LOW);

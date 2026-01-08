@@ -1,5 +1,5 @@
 #include "core/types.h"
-#include "core/tokenizer.h"
+#include "core/Tokenizer.hpp"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
 #include "core/errors.h"

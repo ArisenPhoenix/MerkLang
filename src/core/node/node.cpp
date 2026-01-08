@@ -1,13 +1,11 @@
-#include "core/node/node.h"
-#include "core/node/node_structures.h"
+#include "core/node/Node.hpp"
+#include "core/node/NodeStructures.hpp"
 #include "core/types.h"
-#include "core/scope.h"
-
+#include "core/Scope.hpp"
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
-
-#include "core/callables/classes/class_base.h"
-#include "core/callables/functions/function.h"
+#include "core/callables/classes/ClassBase.hpp"
+#include "core/callables/functions/Function.hpp"
 
 
 // DynamicNode
@@ -52,6 +50,7 @@ NodeValueType DynamicNode::inferTypeFromString (String& valueStr, String& typeSt
 
         // DEBUG_LOG(LogLevel::DEBUGC, "Set initial value with String. Type: ", static_cast<int>(data.type), ", Value: ", data.value);
 }
+
 NodeValueType DynamicNode::getNodeTypeFromString(String& type) {
     DEBUG_FLOW(FlowLevel::MED);
 
@@ -62,6 +61,7 @@ NodeValueType DynamicNode::getNodeTypeFromString(String& type) {
     DEBUG_FLOW_EXIT();
     return nodeType;
 }
+
 std::pair<VariantType, NodeValueType> DynamicNode::getCoercedStringAndType(const String& value, String& typeStr) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (value == "Variable" || value == "Argument" || value == "FunctionCall" || value == "ClassMethodCall" || value == "Parameter") {
@@ -122,6 +122,7 @@ std::pair<VariantType, NodeValueType> DynamicNode::getCoercedStringAndType(const
         throw MerkError("Failed to coerce value '" + value + "' to type " + nodeTypeToString(type));
     }
 }
+
 std::pair<VariantType, NodeValueType> DynamicNode::validateAndCopy(const VariantType& value, NodeValueType type) {
     auto visitor = [&](auto&& arg) -> std::pair<VariantType, NodeValueType> {
         using T = std::decay_t<decltype(arg)>;
@@ -165,7 +166,6 @@ NodeValueType DynamicNode::getTypeFromValue(const VariantType& value) {
     // if (val == NodeValueType::Callable) { throw MerkError("DynamicNode::getTypeFromValue -> Callable"); }
     return val;
 }
-
 
 String DynamicNode::forceToString(VariantType value) {
     if (std::holds_alternative<String>(value)) {return std::get<String>(value);}
@@ -288,6 +288,7 @@ SharedPtr<NodeBase> DynamicNode::dispatch(VariantType val, NodeValueType type, b
     DEBUG_FLOW_EXIT();
     throw MerkError("Not A supported Type " + nodeTypeToString(valType) + ". Tried to dispatch to: " + nodeTypeToString(type));
 }
+
 Node DynamicNode::dispatchNode(VariantType value, String typeStr, bool coerce) {
     DEBUG_FLOW(FlowLevel::MED);
 
@@ -299,8 +300,8 @@ Node DynamicNode::dispatchNode(VariantType value, String typeStr, bool coerce) {
     return node;
 }
 
-
 VariantType DynamicNode::getValue() const { return value; }
+
 void DynamicNode::setValue(const VariantType& v)  {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto type = DynamicNode::getTypeFromValue(v);
@@ -311,6 +312,7 @@ void DynamicNode::setValue(const VariantType& v)  {
 }
 
 NodeValueType DynamicNode::getType() const { return NodeValueType::Any; }
+
 SharedPtr<NodeBase> DynamicNode::clone() const {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) { throw MerkError("Clone called on an DynamicNode holding an instance"); }
     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
@@ -350,23 +352,17 @@ int DynamicNode::toInt() const {
 
     throw MerkError("Cannnot cast " + nodeTypeToString(getType()) + " to " + "Int");
 }
-
-
 bool DynamicNode::isString() const {return std::holds_alternative<String>(value);}
 bool DynamicNode::isBool() const {return std::holds_alternative<bool>(value);}
 bool DynamicNode::isValid() const { return DynamicNode::getTypeFromValue(value) == getNodeType(); }
-
-
 String DynamicNode::toString() const { return DynamicNode::forceToString(value); }
 bool DynamicNode::toBool() const { 
     NodeValueType ofThis = DynamicNode::getTypeFromValue(value);
     auto node = DynamicNode::dispatchNode(value, nodeTypeToString(ofThis, false));
     return node.toBool();
 }
-
 bool DynamicNode::isNumeric() const { return isInt() || isFloat() || isDouble();}
 bool DynamicNode::isInt() const {return std::holds_alternative<int>(value);}
-
 
 // virtual type checkers
 int NodeBase::toInt() const { throw MerkError("Not an Int"); }

@@ -1,7 +1,7 @@
 #include "core/types.h"
-#include "core/node/node.h"
-#include "core/node/node_structures.h"
-#include "core/callables/classes/class_base.h"
+#include "core/node/Node.hpp"
+#include "core/node/NodeStructures.hpp"
+#include "core/callables/classes/ClassBase.hpp"
 
 Node handleVirtualMethod(SharedPtr<ClassInstanceNode> instanceNode, const String& methodName);
 

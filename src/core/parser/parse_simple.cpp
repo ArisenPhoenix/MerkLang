@@ -1,26 +1,24 @@
 #include <stdexcept>
 #include <iostream>
 #include <string>
-#include "core/node/node.h"
+#include "core/node/Node.hpp"
 
 #include "core/types.h"
 #include "core/errors.h"
 
-#include "ast/ast_base.h"
-#include "ast/ast.h"
-#include "ast/exceptions.h"
-#include "ast/ast_control.h"
-#include "core/scope.h"
+#include "ast/AstBase.hpp"
+#include "ast/Ast.hpp"
+#include "ast/Exceptions.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/AstFunction.hpp"
+#include "core/Scope.hpp"
 
 #include "utilities/utilities.h"
 #include "utilities/streaming.h"
 
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
-#include "core/parser.h"
-
-
-
+#include "core/Parser.hpp"
 
 
 
@@ -124,46 +122,6 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
     return varAssign;
 }
 
-
-// UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
-//     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-//     // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parseVariableAssignment: Entering with token: ", currentToken().toColoredString());
-
-//     // Token startToken = currentToken();
-//     Token variableToken = currentToken();
-
-//     if (!consumeIf(TokenType::Variable)) {
-//         throw MerkError("Not A Variable -> Parser::parseVariableDeclaration");
-//     }
-
-//     // Token assignment = advance(); // consume variable
-
-//     Vector<String> values = {"=", ":="};
-//     consume(TokenType::VarAssignment, values, "Parser::parseVariableDeclaration");
-
-//     // if (assignment.type != TokenType::VarAssignment || 
-//     //     (assignment.value != "=" && assignment.value != ":=")) {
-//     //     throw UnexpectedTokenError(assignment, "= or :=");
-//     // }
-
-
-//     // advance();  // consume assignment operator
-
-//     auto valueNode = parseExpression();
-//     if (!valueNode) {
-//         throw MerkError("Failed to parse value for assignment to " + variableToken.value);
-//     }
-
-//     auto varAssign = makeUnique<VariableAssignment>(
-//         variableToken.value,
-//         std::move(valueNode),
-//         currentScope
-//     );
-//     DEBUG_FLOW_EXIT();
-//     return varAssign;
- 
-// }
-
 UniquePtr<ASTStatement> Parser::parseExpression() {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     // DEBUG_LOG(LogLevel::NONE, "Parser: Entering parseExpression with token: ", currentToken().toString());
@@ -199,7 +157,6 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
             break;
         }
         
-
         // These options plan on being added later
         // else if (op.value == "and" || op.value == "or" || op.value == "!" || op.value == "not" || op.value == "&&" || op.value == "||"){
         //     break;
