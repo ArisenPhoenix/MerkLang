@@ -7,7 +7,9 @@
 #include <unordered_map>
 #include <variant>
 #include <typeinfo>
-#include <cxxabi.h>
+#if defined(__GNUC__) && !defined(_WIN32)
+    #include <cxxabi.h>
+#endif
 #include <optional>
 #include <typeindex>
 

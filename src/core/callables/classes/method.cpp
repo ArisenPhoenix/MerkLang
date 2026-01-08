@@ -17,7 +17,6 @@ Method::Method(String name, ParamList params, CallableType definedType, bool req
     : Invocable(name, params, CallableType::METHOD, requiresReturn, isStatic)
 {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    // DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(definedType));
     setSubType(definedType);
     DEBUG_FLOW_EXIT();
 }
@@ -33,33 +32,23 @@ void Method::setClassScope(SharedPtr<Scope> newClassScope) {
     classScope = newClassScope;
 }
 
-
-// bool Method::getIsStatic() {return isStatic;}
-
-
 Method::~Method() {
     if (capturedScope) {
         capturedScope->clear();
     }
-    
 }
-
 
 Vector<Chain*> UserMethod::getNonStaticElements() {
     return getThisBody()->getNonStaticElements();
 }
-
 
 String UserMethod::toString() const {
     std::ostringstream params;
     for (auto& param : parameters) {
         params << param.toShortString();
     }
-
     return "UserMethod<"+name+">(" + params.str() + ")" ;
-
 }
-
 
 UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body, SharedPtr<Scope> scope, CallableType callType)
     : Method(std::move(name), std::move(params), CallableType::METHOD, false, false), body(std::move(body))
@@ -68,8 +57,6 @@ UserMethod::UserMethod(String name, ParamList params, UniquePtr<MethodBody> body
     DEBUG_LOG(LogLevel::TRACE, "Method created: ", getName());
     setCapturedScope(scope);
     setSubType(callType);
-
-
     if (subType == CallableType::METHOD) {throw MerkError("Method Sub Type cannot be Method from Full Constructor");}
 }
 
@@ -94,7 +81,6 @@ UserMethod::UserMethod(UserMethod& method) : Method(method) {
 
     body = static_unique_ptr_cast<MethodBody>(method.body->clone());
     capturedScope = method.capturedScope;
-    // capturedScope->owner = "UserMethod(" + method.getName() + ")";
     setCallableType(CallableType::METHOD);
     setSubType(method.getSubType());
 
@@ -104,36 +90,29 @@ UserMethod::UserMethod(UserMethod& method) : Method(method) {
 SharedPtr<CallableSignature> UserMethod::toCallableSignature(SharedPtr<UserMethod> method) {
     auto sig = makeShared<CallableSignature>(method, CallableType::METHOD);
     sig->setSubType(method->getSubType());
-    // getCapturedScope()->owner = generateScopeOwner("MethodSignature", name);
     sig->setParameters(parameters.clone());
     return sig;
 }
 
 void UserMethod::setScope(SharedPtr<Scope> newScope) const {
-    (void)newScope;
-    // newScope->owner = generateScopeOwner("UserMethod", name);
-    // getBody()->setScope(newScope);
+    MARK_UNUSED_MULTI(newScope);
 }
 
 
 SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
     DEBUG_FLOW(FlowLevel::HIGH);
-
-    
     SharedPtr<CallableSignature> methodSig = makeShared<CallableSignature>(shared_from_this(), getCallableType());
     
     methodSig->setSubType(getSubType());
     
     if (methodSig->getCallableType() == CallableType::DEF) {throw MerkError("Primary Callable Type is: " + callableTypeAsString(methodSig->getCallableType()));}
     methodSig->setParameters(parameters.clone());
-
-    // DEBUG_LOG(LogLevel::ERROR, funcSig->getParameterTypes());
     DEBUG_FLOW_EXIT();
     return methodSig;
 }
 
 Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)args;
+    // MARK_UNUSED_MULTI(args);
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
     DEBUG_LOG(LogLevel::TRACE, "Validated Instance Node");
@@ -151,7 +130,6 @@ Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe
             if (arg.isNull()) {throw MerkError("Arg is null: " + arg.toString());}
 
         }
-        // throw MerkError("Args and callScope are above");
     }
     
     try {
@@ -165,13 +143,8 @@ Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe
         String matches = callScope == capturedScope ? "true" : "false";
 
         Node val = body->evaluate(callScope, instanceNode);
-        // if (val.getType() == instanceNode->getType()) {
-        //     DEBUG_LOG(LogLevel::TRACE, "DETERMINED TYPE FOR Return Val: " + nodeTypeToString(DynamicNode::getTypeFromValue(val.getValue())));
-        //     throw MerkError("Return Val is the same for Method " + name + " Context:" + val.toString() + " META" + val.getFlags().toString() + " |||| instanceNode: " + instanceNode->toString() + " META: " + instanceNode->getFlags().toString());
-        // }
         
         DEBUG_FLOW_EXIT();
-        // throw MerkError("Method Didn't Return");
         return val;
     } catch (const ReturnException& e) {
         auto val = e.getValue();
@@ -186,27 +159,18 @@ CallableBody* UserMethod::getBody() const {return body.get();}
 MethodBody* UserMethod::getThisBody() {return body.get();}
 UniquePtr<CallableBody> UserMethod::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}
 
-
 MethodNode::~MethodNode() {
     clear();
 }
 
 MethodNode::MethodNode(SharedPtr<Method> method) : CallableNode(method, "Method") {
-    // getFlags().type = NodeValueType::Method;
     getFlags().type = NodeValueType::Method;
-    // data.type = NodeValueType::Method;
 }
 
 MethodNode::MethodNode(SharedPtr<Callable> method) : CallableNode(method, "Method") {
-    // getFlags().type = NodeValueType::Method;
     getFlags().type = NodeValueType::Method;
-    // data.type = NodeValueType::Method;
 }
-
-
-
 
 SharedPtr<Callable> MethodNode::getCallable() const {
     return std::get<SharedPtr<Callable>>(getValue());
-    // return std::get<SharedPtr<Method>>(data.value);
 }

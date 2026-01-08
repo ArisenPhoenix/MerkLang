@@ -1,56 +1,59 @@
-.
 ├── CMakeLists.txt
-├── code
-│   ├── bools.merk
-│   ├── class.merk
-│   ├── declarations.merk
-│   ├── dec.merk
-│   ├── def.merk
-│   ├── enum.merk
-│   ├── fail_test.merk
-│   ├── for_loop.merk
-│   ├── funcs.merk
-│   ├── function.merk
-│   ├── functions.merk
-│   ├── nested_test.merk
-│   ├── scope.merk
-│   ├── simple_test.merk
-│   ├── test1.merk
-│   ├── test2.merk
-│   ├── testBinary.merk
-│   ├── test.merk
-│   └── while.merk
-├── debugger_config.cpp
-├── file_structure.txt
+├── LICENSE
+├── README.md
 ├── include
 │   ├── ast
+│   │   ├── README.md
+│   │   ├── ast.h
 │   │   ├── ast_base.h
 │   │   ├── ast_callable.h
 │   │   ├── ast_chain.h
 │   │   ├── ast_class.h
 │   │   ├── ast_control.h
 │   │   ├── ast_function.h
-│   │   ├── ast.h
-│   │   ├── ast_structures.h
+│   │   ├── ast_helpers.h
+│   │   ├── ast_method.h
+│   │   ├── ast_validate.h
 │   │   └── exceptions.h
 │   ├── core
-│   │   ├── classes
+│   │   ├── README.md
+│   │   ├── builtins.h
+│   │   ├── callables
+│   │   │   ├── callable.h
+│   │   │   ├── classes
+│   │   │   │   ├── bultins.h
+│   │   │   │   ├── class_base.h
+│   │   │   │   ├── method.h
+│   │   │   │   ├── native_class.h
+│   │   │   │   └── native_method.h
+│   │   │   ├── functions
+│   │   │   │   ├── builtins.h
+│   │   │   │   ├── function.h
+│   │   │   │   └── native_function.h
+│   │   │   └── invocalble.h
 │   │   ├── context.h
 │   │   ├── errors.h
 │   │   ├── evaluator.h
-│   │   ├── functions
-│   │   ├── node.h
+│   │   ├── helpers
+│   │   │   └── class_helpers.h
+│   │   ├── node
+│   │   │   ├── argument_node.h
+│   │   │   ├── node.h
+│   │   │   ├── node_finals.h
+│   │   │   ├── node_numbers.h
+│   │   │   ├── node_strings.h
+│   │   │   ├── node_structures.h
+│   │   │   ├── param_node.h
+│   │   │   └── scalars.h
 │   │   ├── parser.h
 │   │   ├── registry
+│   │   │   ├── class_registry.h
+│   │   │   └── function_registry.h
 │   │   ├── scope.h
 │   │   ├── tokenizer.h
 │   │   └── types.h
 │   ├── helpers
 │   │   └── iterable.h
-│   ├── node
-│   │   ├── node_finals.h
-│   │   ├── node_numbers.h
-│   │   └── node_strings.h
 │   ├── tests
 │   │   ├── test_ast.h
 │   │   ├── test_node.h
@@ -63,36 +66,80 @@
 │       ├── helper_functions.h
 │       ├── streaming.h
 │       └── utilities.h
-├── LICENSE
 ├── main.cpp
-├── README.md
 └── src
     ├── ast
+    │   ├── ast.cpp
     │   ├── ast_callable.cpp
     │   ├── ast_chain.cpp
     │   ├── ast_class.cpp
     │   ├── ast_clone.cpp
     │   ├── ast_collect.cpp
     │   ├── ast_control.cpp
-    │   ├── ast.cpp
     │   ├── ast_function.cpp
+    │   ├── ast_getAll.cpp
+    │   ├── ast_helpers.cpp
+    │   ├── ast_method.cpp
     │   ├── ast_print.cpp
-    │   └── ast_structures.cpp
+    │   ├── ast_validate.cpp
+    │   └── exceptions.cpp
+    ├── builtins.cpp
     ├── core
-    │   ├── classes
+    │   ├── callables
+    │   │   ├── callable.cpp
+    │   │   ├── classes
+    │   │   │   ├── builtins.cpp
+    │   │   │   ├── class_base.cpp
+    │   │   │   ├── method.cpp
+    │   │   │   ├── native_class.cpp
+    │   │   │   └── native_method.cpp
+    │   │   ├── functions
+    │   │   │   ├── builtins.cpp
+    │   │   │   ├── function.cpp
+    │   │   │   └── native_function.cpp
+    │   │   └── invocable.cpp
     │   ├── context.cpp
+    │   ├── errors
+    │   │   ├── base_error.cpp
+    │   │   ├── callable_errors.cpp
+    │   │   ├── context_errors.cpp
+    │   │   ├── evaluation_errors.cpp
+    │   │   ├── parser_errors.cpp
+    │   │   ├── scope_errors.cpp
+    │   │   └── token_errors.cpp
     │   ├── evaluator.cpp
-    │   ├── functions
-    │   ├── node.cpp
+    │   ├── helpers
+    │   │   └── class_helpers.cpp
+    │   ├── node
+    │   │   ├── argument_node.cpp
+    │   │   ├── node.cpp
+    │   │   ├── node_constructors.cpp
+    │   │   ├── node_conversions.cpp
+    │   │   ├── node_io.cpp
+    │   │   ├── node_operators.cpp
+    │   │   ├── node_structures.cpp
+    │   │   └── param_node.cpp
     │   ├── parser
+    │   │   ├── parse_classes.cpp
+    │   │   ├── parse_control.cpp
+    │   │   ├── parse_functions.cpp
+    │   │   ├── parse_main.cpp
+    │   │   └── parse_simple.cpp
     │   ├── registry
+    │   │   ├── class_registry.cpp
+    │   │   └── function_registry.cpp
     │   ├── scope
+    │   │   ├── scope_builders.cpp
+    │   │   ├── scope_helpers.cpp
+    │   │   └── scope_main.cpp
     │   ├── tokenizer
+    │   │   ├── tokenizer_helpers.cpp
+    │   │   ├── tokenizer_main.cpp
+    │   │   └── tokenizer_white_space.cpp
     │   └── types.cpp
     ├── helpers
     │   └── iterable.cpp
     └── utilities
         ├── debugger.cpp
-        └── helper_functions.cpp
-
-23 directories, 73 files
+        ├── helper_functions.cpp
+        └── lsan_defaults.cpp

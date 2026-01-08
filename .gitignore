@@ -3,12 +3,11 @@ build
 code
 grammar
 Info
-CMakeLists.txt
-debugger_config.cpp
 rebuild.sh
 error
 merk-extension
 reinstall_extension.sh
 include/utilities/debugger.txt
 old_code.txt
-a_info.cpp
+vcpkg_installed
+CMakeFiles

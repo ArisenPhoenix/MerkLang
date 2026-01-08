@@ -508,7 +508,7 @@ enum class CallableType {
     DEF,        // Can capture outside variables but does not modify them
     FUNCTION,   // Only has access to its parameters, no external variables and supports overloads
     LAMBDA,     // Future lambda type
-    NATIVE,     // Placeholder in case there are native functions that are hardcoded in C++
+    NATIVE,     // native functions are hardcoded in C++
 
     METHOD,
     CLASS,
@@ -523,7 +523,7 @@ String callableTypeAsString(CallableType callableType);
 
 
 class ResolvedType {
-    String baseType;  // e.g. "Array", "List", "Schema", or "UserStruct"
+    String baseType;  // e.g. "Array", "List", "Schema", "etc"
     Vector<ResolvedType> inner;  // Nested for Array[Map[String, Int]]
 public:
     ResolvedType();
@@ -564,9 +564,7 @@ namespace std {
 class ArgumentList;
 class Arguments;
 
-// using ArgumentType = Vector<UniquePtr<ASTStatement>>;
 using ArgumentType = Arguments;
-// using ArgResultType = Vector<Node>;
 using ArgResultType = ArgumentList;
 
 

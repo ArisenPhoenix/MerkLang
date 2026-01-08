@@ -25,7 +25,7 @@ The parser constructs an AST from tokens and assigns scopes to different code bl
 Scope acts as an intermediary between:
 
 - Context (for variable storage/retrieval)
-- Registry (for function storage/invocation)
+- Registries (for function/method/Class storage/invocation)
 
 It enforces:
 
@@ -34,12 +34,12 @@ It enforces:
 
 ### Context & Registry
 - **Context**: Manages variables within a scope using an unordered map.
-- **Registry**: Stores functions (both native and user-defined) and executes them when called.
+- **Registries**: Store functions/methods and classes (both native and user-defined) and executes them when called.
 
 ### Variable Management
 - **VarNode**: Stores variables, determines if they can be updated, and ensures type safety.
 - **LitNode**: Stores literal values.
-- **ParamNode**: Inherits from `VarNode` and is used as a placeholder for function parameters, holding type information.
+- **ParamNode**:  Used as a placeholder for function parameters, holding type information.
 
 ### Function Execution
 Merk distinguishes between:
@@ -61,7 +61,11 @@ Merk distinguishes between:
 - **FunctionBlock**: Inherits from `CodeBlock` to encapsulate function logic.
 - **FunctionCall**: Represents function invocation.
 - **FunctionDef**: Represents function definitions.
+- **Methods**: Follow the same convention as that of functions
+- **Classes**: Follow the same convention as that of methods and functions, but are stored in a separate registry, allowing scope based storage of member methods and functions
+
 - **Evaluator**: A namespace dedicated to AST node evaluation.
+
 
 ### Numerical Scoping
 - **Global Scope (Level 0)**
@@ -100,7 +104,7 @@ Global Scope (Level 0)
 - **Potential immutability optimizations**
 
 ## SAL Overview
-SAL (Super Assembly Language) aims to abstract hardware-specific details while retaining high performance. It serves as a unified intermediary language for high-level languages.
+SAL (Super Assembly Language) aims to abstract hardware-specific details while retaining high performance. It would serve as a unified intermediary language for high-level languages.
 
 ### Key Features:
 - Cross-architecture mapping
@@ -116,7 +120,7 @@ SAL (Super Assembly Language) aims to abstract hardware-specific details while r
 <p>Merk allows both static and dynamic typing. If a variable is declared with a type annotation, it is statically typed and cannot change type. If no type is provided, the variable is dynamically typed and can change type based on usage.</p>
 
 <ul>
-  <li><strong>Static Typed Variable:</strong> <code>var x: int = 12</code> (Fixed as an integer)</li>
+  <li><strong>Static Typed Variable:</strong> <code>var x: Int = 12</code> (Fixed as an integer)</li>
   <li><strong>Dynamic Typed Variable:</strong> <code>var x = 12</code> (Type inferred and can change within rules)</li>
 </ul>
 
@@ -125,11 +129,12 @@ SAL (Super Assembly Language) aims to abstract hardware-specific details while r
 <ul>
   <li><strong>Mutability</strong>: Determines whether the value of the variable can change.</li>
   <li><strong>Constness</strong>: Determines whether the variable itself can be reassigned.</li>
-  <li><strong>Locked Variables</strong>: Declared using <code>const</code> and <code>:=</code>, meaning they are immutable in value, cannot be reassigned, and are statically typed.</li>
+  <li><strong>Locked Variables</strong>: Declared using <code>const</code> and <code>:=</code>, meaning they are immutable in value, cannot be reassigned, and are statically typed. If the type is not explicitly stated, then the type is that of the initialized value</li>
 </ul>
 
 <p>Example:</p>
-<pre><code>const x: int := 12  // Fully locked: immutable, non-reassignable, statically typed</code></pre>
+<pre><code>const x: Int := 12  // Fully locked: immutable, non-reassignable, statically typed</code></pre>
+<pre><code>const x := 12  // Fully locked: immutable, non-reassignable, statically typed</code></pre>
 
 <h3>Type Promotion for Dynamic Variables</h3>
 <p>For dynamically typed variables, Merk ensures the type is promoted only when necessary. The system follows these rules:</p>
@@ -149,8 +154,8 @@ SAL (Super Assembly Language) aims to abstract hardware-specific details while r
 <p>For statically typed variables, the type is locked at declaration and cannot be changed. Implicit type conversions do not apply.</p>
 
 <pre><code>
-var a: int = 10
-var b: float = 5.5
+var a: Int = 10
+var b: Float = 5.5
 
 // a = b   // ❌ Error: Cannot assign float to int
 </code></pre>
@@ -163,10 +168,10 @@ var x = 10  // Initially an int
 x = x + 2.5  // Becomes a float due to promotion
 
 var y = 10
-x = float(y) + 2.5  // Explicit cast ensures behavior
+x = Float(y) + 2.5  // Explicit cast ensures behavior
 </code></pre>
 
-<p>These rules ensure Merk remains fast, efficient, and predictable while allowing developers the flexibility they need.</p>
+<p>These rules are meant to ensure that Merk remains predictable and optimizab le while allowing for flexibility.</p>
 
 ### 🔧 Variable Type Combinations in Merk
 
@@ -175,8 +180,6 @@ Merk uses three key boolean flags to determine variable behavior:
 - `isConst`: Whether the variable name can be reassigned.
 - `isMutable`: Whether the internal data can be changed.
 - `isStatic`: Whether the type is fixed after assignment.
-
-These combinations allow developers to precisely control **immutability**, **type stability**, and **optimization potential**.
 
 | `isConst` | `isMutable` | `isStatic` | Description                                                                 | Tags         |
 |-----------|-------------|------------|-----------------------------------------------------------------------------|--------------|
@@ -202,5 +205,5 @@ These combinations allow developers to precisely control **immutability**, **typ
 
 ---
 
-Merk is being developed as a proof of concept for SAL, ensuring that a high-level language can seamlessly map to its functional grammar while maintaining efficiency.
+Merk is being developed as a proof of concept for SAL, ensuring that a high-level language can be mapped to its functional grammar while maintaining efficiency, as such it is not meant to be pre-optimized by itself.
 

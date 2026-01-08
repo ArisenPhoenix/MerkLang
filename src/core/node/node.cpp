@@ -313,7 +313,6 @@ void DynamicNode::setValue(const VariantType& v)  {
 NodeValueType DynamicNode::getType() const { return NodeValueType::Any; }
 SharedPtr<NodeBase> DynamicNode::clone() const {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) { throw MerkError("Clone called on an DynamicNode holding an instance"); }
-
     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
         throw MerkError("Cloning a Callable");
         auto instance = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()));
@@ -369,13 +368,6 @@ bool DynamicNode::isNumeric() const { return isInt() || isFloat() || isDouble();
 bool DynamicNode::isInt() const {return std::holds_alternative<int>(value);}
 
 
-
-
-// DynamicNode
-
-
-
-
 // virtual type checkers
 int NodeBase::toInt() const { throw MerkError("Not an Int"); }
 String NodeBase::toString() const { throw MerkError("Not a String"); } 
@@ -398,10 +390,7 @@ double NodeBase::toDouble() const {throw MerkError("Not a Double"); }
 bool NodeBase::isFloat() const { return false; }
 float NodeBase::toFloat() const { throw MerkError("Not A Float"); }
 
-void NodeBase::setFlags(DataTypeFlags newOnes) {
-    flags = newOnes;
-}
-
+void NodeBase::setFlags(DataTypeFlags newOnes) { flags = newOnes; }
 
 std::size_t NodeBase::hash() const {
     std::size_t h1 = std::hash<int>()(static_cast<int>(getNodeType()));
@@ -456,10 +445,12 @@ NullNode::NullNode() {
     flags.fullType.setBaseType("Null");
     instantiatedWithNull = true;
 }
+
 NullNode::NullNode(NullType v) {
     if (DynamicNode::getTypeFromValue(v) != NodeValueType::Null) {
         throw MerkError("Tried Instantiating a NullNode from Null, but of type " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " Onto NullNode");
     }
+
     flags.type = NodeValueType::Null;
     flags.fullType.setBaseType("Null");
     instantiatedWithNull = true;
@@ -476,6 +467,7 @@ NullNode::NullNode(VariantType v) {
 VariantType NullNode::getValue() const {
     return value;
 }
+
 void NullNode::setValue(const VariantType& v) {
 
     if (std::holds_alternative<NullType>(v)) {
@@ -485,9 +477,7 @@ void NullNode::setValue(const VariantType& v) {
 };
 
 NodeValueType NullNode::getType() const {return DynamicNode::getTypeFromValue(getValue());}
-SharedPtr<NodeBase> NullNode::clone() const {
-    return makeShared<NullNode>(*this);
-}
+SharedPtr<NodeBase> NullNode::clone() const { return makeShared<NullNode>(*this); }
 
 int NullNode::toInt() const { throw MerkError("Cannot Convert Null to Int"); }
 
@@ -501,8 +491,6 @@ bool NullNode::isNull() const { return true; }
 bool NullNode::isNumeric() const { return false; }
 void NullNode::clear() {};
 
-
-
 SharedPtr<ClassInstance> Node::toInstance() {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
         auto callable = std::get<SharedPtr<Callable>>(getValue());
@@ -513,6 +501,7 @@ SharedPtr<ClassInstance> Node::toInstance() {
     }
     throw MerkError("Cannot Cast A simple Node to an Instance");
 }
+
 SharedPtr<ClassInstance> Node::toInstance() const {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
         auto callable = std::get<SharedPtr<Callable>>(getValue());
@@ -521,7 +510,6 @@ SharedPtr<ClassInstance> Node::toInstance() const {
     } 
 
     else if (getInner()->getType() == NodeValueType::Callable || getInner()->getType() == NodeValueType::ClassInstance) {
-        // throw MerkError("The Item Gotten is a " + nodeTypeToString(getInner()->getType()));
         return std::static_pointer_cast<ClassInstance>(getInner());
     }
 
@@ -531,6 +519,7 @@ SharedPtr<ClassInstance> Node::toInstance() const {
 bool Node::isFunctionNode() {
     return std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue());
 }
+
 bool Node::isFunctionNode() const {
     return std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue());
 }
@@ -539,23 +528,22 @@ bool Node::isCallable() {
     return getInner()->getType() == NodeValueType::Callable || (std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance);
     return std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance;
 }
+
 bool Node::isCallable() const {return getInner()->getType() == NodeValueType::Callable || (std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance); return std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance; }
 
 SharedPtr<Callable> Node::toCallable() {
     if (isCallable()) {
         return std::get<SharedPtr<Callable>>(getValue());
     }
-
     throw MerkError("Current Value is not a Callable, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
 }
+
 SharedPtr<Callable> Node::toCallable() const {
     if (isCallable()) {
         return std::get<SharedPtr<Callable>>(getValue());
     }
-
     throw MerkError("Current Value is not a Callable, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
 }
-
 
 FunctionNode Node::toFunctionNode() {
     if (isFunctionNode()) {
@@ -564,6 +552,7 @@ FunctionNode Node::toFunctionNode() {
 
     throw MerkError("Cannot Cast A Simple Node To A FUnctionNode");
 }
+
 FunctionNode Node::toFunctionNode() const {
     if (isFunctionNode()) {
         return FunctionNode(getFlags().name, std::get<Vector<SharedPtr<CallableSignature>>>(getValue()));
@@ -573,27 +562,23 @@ FunctionNode Node::toFunctionNode() const {
 }
 
 void Node::setFlags(DataTypeFlags newOnes) { data->setFlags(newOnes); }
-
 VariantType Node::getValue() const { return data->getValue(); }
 void Node::setValue(const VariantType& v) {
     if (!data) {
         data = makeShared<DynamicNode>(v);
         return;
     }
-
     if (auto nullVar = dynamic_cast<NullNode*>(data.get())) {
         if (nullVar->instantiatedWithNull && !std::holds_alternative<NullType>(v)) {
             data = makeShared<DynamicNode>(v);
             return;
         }
     }
-
     data->setValue(v); 
 }
 
 NodeValueType Node::getType() const { return data->getType(); }
 Node Node::clone() const {
-
     if (isInstance()) {
         return Node(toInstance()->clone());
     }
@@ -614,6 +599,7 @@ Node Node::clone() const {
 
 bool Node::isNumeric() const { return data->isNumeric(); }
 int Node::toInt() const { return data->toInt(); }
+
 String Node::toString() const { 
     if (isFunctionNode()) {
         return "<FunctionRef " + std::to_string(std::get<Vector<SharedPtr<CallableSignature>>>(getValue()).size()) + " overload(s)>"; 
@@ -628,20 +614,14 @@ String Node::toString() const {
     // DEBUG_LOG(LogLevel::PERMISSIVE, "DATA: ", getFlags().toString());
     return data->toString(); 
 }
-bool Node::toBool() const { return data->toBool(); }
 
+bool Node::toBool() const { return data->toBool(); }
 bool Node::isBool() const {return data->isBool();}
 bool Node::isInt() const {return data->isInt();}
 bool Node::isString() const {return data->isString();}
 
-
-bool Node::isInstance() const {
-    return getFlags().isInstance;
-}
-
-bool Node::isInstance() {
-    return getFlags().isInstance;
-}
+bool Node::isInstance() const { return getFlags().isInstance; }
+bool Node::isInstance() { return getFlags().isInstance; }
 
 bool Node::isList() const {return data && data->isList();}
 bool Node::isArray() const {return data && data->isArray();}
@@ -651,7 +631,6 @@ bool Node::isFloat() {return data->isFloat();}
 bool Node::isFloat() const {return data->isFloat();}
 bool Node::isDouble() {return data->isDouble();}
 bool Node::isDouble() const {return data->isDouble();}
-
 float Node::toFloat() const {return data->toFloat(); }
 double Node::toDouble() const { return data->toDouble(); }
 
@@ -662,11 +641,9 @@ SharedPtr<ListNode> Node::toList() const {
         auto list = std::static_pointer_cast<ListNode>(native);
         return list;
     }
-    // else if (std::holds_alternative<SharedPtr<ClassInstance>>(getValue())) {
-    //     throw MerkError("The Data Contained within is a classInstance");
-    // }
     throw MerkError("Node Is Not A NativeNode, so not a list");
 }
+
 SharedPtr<ArrayNode> Node::toArray() const {
     if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
         auto native = std::get<SharedPtr<NativeNode>>(getValue());
@@ -695,6 +672,7 @@ SharedPtr<DictNode> Node::toDict() const {
     }
     throw MerkError("Node Is Not A NativeNode, so not a dict, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
 }
+
 SharedPtr<SetNode> Node::toSet() const {
     if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
         auto native = std::get<SharedPtr<NativeNode>>(getValue());
@@ -707,17 +685,12 @@ SharedPtr<SetNode> Node::toSet() const {
 bool Node::isString() {return data->isString();}
 bool Node::isInt() {return data->isInt();}
 bool Node::isNull() const {return std::holds_alternative<NullType>(data->getValue());}
-
 bool Node::isValid() const { return data != nullptr; }
 bool Node::isTruthy() const { return data && data->isTruthy(); }
 Node Node::negate() const {return Node(!toBool());}
 
-
-
-
 DataTypeFlags& Node::getFlags() { return data->flags; }
 const DataTypeFlags& Node::getFlags() const { return data->flags; }
-
 
 void Node::clear() { if (data) {data->clear();} }
 std::size_t Node::hash() const {
@@ -727,15 +700,12 @@ std::size_t Node::hash() const {
     return Null.hash();
 }
 
-
 // BoolNode
-
 void BoolNode::clear() {}
 bool BoolNode::isInt() const {return false;}
 bool BoolNode::isBool() const { return true; }
 bool BoolNode::isValid() const {return true;}
 bool BoolNode::isNumeric() const {return isInt();}
-
 
 VariantType BoolNode::getValue() const { return value; }
 void BoolNode::setValue(const VariantType& v)  { value = std::get<bool>(v); }
@@ -748,17 +718,14 @@ String BoolNode::toString() const { return value ? "true" : "false"; }
 bool BoolNode::toBool() const { return value; }
 bool BoolNode::isTruthy() const { return toBool(); }
 
-
-
 // BoolNode
-
 bool StringNode::isNumeric() const {return false;}
 bool StringNode::isString() const { return true; }
 bool StringNode::isValid() const {return true;}
 bool StringNode::isBool() const {return value == "true" || value == "false" || value == "0" || value == "1";}
 bool StringNode::isTruthy() const {return !value.empty() || value == "true" || value == "1" || value != "null";}
-// StringNode
 
+// StringNode
 VariantType StringNode::getValue() const { return value; }
 void StringNode::setValue(const VariantType& v)  { value = std::get<String>(v); }
 
@@ -768,16 +735,11 @@ SharedPtr<NodeBase> StringNode::clone() const { return makeShared<StringNode>(*t
 int StringNode::toInt() const {  throw MerkError("Cannot Implicitly cast String to Int"); }
 String StringNode::toString() const { return String(value); }
 bool StringNode::toBool() const { return !value.empty(); }
-
-
 // StringNode
 
 
 
 // IntNode
-
-
-
 VariantType IntNode::getValue() const { return value; }
 void IntNode::setValue(const VariantType& v)  { value = std::get<int>(v); }
 
@@ -797,12 +759,10 @@ bool IntNode::toBool() const { return value != 0; }
 bool IntNode::isValid() const {return true;}
 bool IntNode::isTruthy() const { return toBool(); }
 
-
-
-
 VariantType FloatNode::getValue() const {
     return value;
 }
+
 void FloatNode::setValue(const VariantType& v) {
     if (std::holds_alternative<float>(v)) {
         value = std::get<float>(v);
@@ -828,12 +788,7 @@ bool FloatNode::isNumeric() const { return true; }
 
 void FloatNode::clear() {}
 
-
-
 // DOUBLE 
-
-
-
 VariantType DoubleNode::getValue() const { return value; }
 void DoubleNode::setValue(const VariantType& v) {
     if (std::holds_alternative<double>(v)) {
@@ -857,15 +812,9 @@ bool DoubleNode::isTruthy() const { return toBool(); }
 bool DoubleNode::isValid() const { return toBool(); }
 bool DoubleNode::isNumeric() const { return true; }
 void DoubleNode::clear() {}
-
-
-
 // DOUBLE 
 
-
-
 // Node Wrapper
-
 Node& NodeWrapper::getValueNode() {return valueNode;}
 const Node& NodeWrapper::getValueNode() const {return valueNode;}
 const DataTypeFlags& NodeWrapper::getFlags() const {return valueNode.getFlags();}
@@ -896,11 +845,7 @@ bool NodeWrapper::isTruthy() const {return valueNode.isTruthy(); }
 void NodeWrapper::setFlags(DataTypeFlags newOnes) { valueNode.setFlags(newOnes); }
 // Node Wrapper
 
-
-
-
 String VarNode::varString() const { return NodeWrapper::toString() + (!varFlags.name.empty() ? ", Var: " + varFlags.name : "");}
-
 
 void VarNode::setValue(Node other) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
@@ -932,7 +877,6 @@ void VarNode::setValue(Node other) {
     auto varName = varFlags.name;
     auto varType = varFlags.fullType.getBaseType();
 
-    // Assign the value
     valueNode = other;
     if (!other.isValid()) {throw MerkError("Other Is Invalid");}
 
@@ -946,7 +890,6 @@ void VarNode::setValue(Node other) {
     });
     valueNode.setFlags(mergedFlags);
 
-    // Don't touch varFlags except maybe to update its type if it's 'Any'
     if (varFlags.fullType.getBaseType() == "Any") {
         varFlags.type = valueNode.getType();
     }

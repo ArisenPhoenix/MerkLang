@@ -52,14 +52,11 @@ SharedPtr<FileNode> pullFile(SharedPtr<ClassInstanceNode> self) {
 template <typename T>
 SharedPtr<T> pullNative(SharedPtr<ClassInstanceNode> self,
                         std::string_view forWhat = typeid(T).name()) {
-    static_assert(std::is_base_of_v<NativeNode, T>,
-                  "pullNative<T>: T must derive from NativeNode");
 
     if (!self) {
         throw MerkError(String(forWhat) + "::pullNative received null instance");
     }
 
-    // If you need this to force materialization/flags, keep it:
     self->getValue();
 
     auto data = self->getInstance()->getNativeData();
@@ -68,17 +65,8 @@ SharedPtr<T> pullNative(SharedPtr<ClassInstanceNode> self,
     }
 
     return std::static_pointer_cast<T>(data);
-    // auto casted = std::dynamic_pointer_cast<T>(data);
-    // if (!casted) {
-    //     // If your NativeNode has getTypeAsString(), this is nice:
-    //     String got = data->getTypeAsString(); // or fallback: "unknown"
-    //     throw MerkError(String(forWhat) + "::Expected native "
-    //                     + typeid(T).name() + ", but got " + got);
-    // }
-    // return casted;
 }
 
-// Optional convenience when you want a reference:
 template <typename T>
 T& pullNativeRef(SharedPtr<ClassInstanceNode> self,
                  std::string_view forWhat = typeid(T).name()) {
@@ -134,7 +122,6 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
 
     String varName = ListNode::getOriginalVarName();
     
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Got the Dict List initialized");
 
     auto constructFunction = [className, varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
@@ -142,9 +129,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
         auto list = makeShared<ListNode>(args);
         if (!list) {throw MerkError("List Doesn't Exist");}
         
-        // self->getInstance()->setNativeData(list);
         self->getInstance()->setNativeData(list);
-        // throw MerkError("Created List Class");
         return Node();
     };
 
@@ -154,7 +139,6 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() > 1) {throw MerkError("Only one argument accepted in the list::append method");}
         
-        // auto vector = pullList(self, varName);
         auto vector = pullList(self);
         vector->append(args[0]);
         DEBUG_FLOW_EXIT();

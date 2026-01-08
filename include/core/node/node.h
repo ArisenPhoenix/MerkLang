@@ -638,6 +638,7 @@ class NodeWrapper {
     Node valueNode;
 
 public:
+    virtual ~NodeWrapper() = default;
     NodeWrapper();
     NodeWrapper(Node value);
     Node& getValueNode();

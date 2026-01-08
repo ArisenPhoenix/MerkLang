@@ -12,6 +12,7 @@ private:
     std::unordered_map<String, Node> namedArgs;
 
 public:
+    virtual ~ArgumentList() = default;
     ArgumentList() = default;
 
     void addPositionalArg(const Node& arg);

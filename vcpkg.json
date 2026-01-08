@@ -1,0 +1,9 @@
+{
+  "name": "merklang",
+  "version-date": "2025-12-08",
+  "dependencies": [
+    "curl"
+  ],
+  "builtin-baseline": "b1b19307e2d2ec1eefbdb7ea069de7d4bcd31f01"
+
+}

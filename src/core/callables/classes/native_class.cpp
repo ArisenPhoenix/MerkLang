@@ -7,8 +7,6 @@
 NativeClass::NativeClass(String name, String access, SharedPtr<Scope> classScope)
 : ClassBase(std::move(name), std::move(access), classScope) {
     setSubType(CallableType::NATIVE);
-    // if (callableTypeAsString(getCallableType()) != "CLASS") {throw MerkError("NativeClass is not Typed as Class");}
-    // if (callableTypeAsString(getSubType()) != "NATIVE") {throw MerkError("NativeClass is not subTyped as Native");}
 }
 
 void NativeClass::addMethod(const String& name, SharedPtr<NativeMethod> method) {
@@ -28,17 +26,11 @@ Node NativeClass::execute(ArgResultType args,
                 SharedPtr<Scope> scope,
                 [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const  {
     if (!instanceNode) {throw MerkError("An InstanceNode must be supplied to NativeClass::execute");}
-    // auto instancePtr = makeShared<ClassInstance>(getName(), scope, classScope, parameters, accessor);
-    // auto ensuredInstanceNode = makeShared<ClassInstanceNode>(instancePtr);
-
     if (constructorFn) {constructorFn(args, scope, instanceNode);}
-
     return instanceNode->getInstanceNode();
 }
 
-String NativeClass::toString() const  {
-    return "NativeClass(" + name + ")";
-}
+String NativeClass::toString() const  { return "NativeClass(" + name + ")"; }
 
 SharedPtr<CallableSignature> NativeClass::toCallableSignature() {
     auto sig = makeShared<CallableSignature>(asCallable(shared_from_this()));
@@ -47,9 +39,7 @@ SharedPtr<CallableSignature> NativeClass::toCallableSignature() {
 }
 
 
-void NativeClass::setCapturedScope(SharedPtr<Scope> newScope) {
-    capturedScope = newScope;
-}
+void NativeClass::setCapturedScope(SharedPtr<Scope> newScope) { capturedScope = newScope; }
 
 SharedPtr<Scope> NativeClass::getCapturedScope() const {
     if (auto scope = capturedScope.lock()) {
