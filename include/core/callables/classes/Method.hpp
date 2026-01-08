@@ -1,7 +1,7 @@
-#ifndef METHOD_H
-#define METHOD_H
+#pragma once
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/Scope.hpp"
 #include "ast/AstFunction.hpp" 
 #include "ast/AstCallable.hpp"
@@ -84,5 +84,3 @@ public:
     SharedPtr<Callable> getCallable() const override;
 };
 
-
-#endif // METHOD_H

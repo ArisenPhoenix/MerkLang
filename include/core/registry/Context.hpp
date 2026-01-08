@@ -1,11 +1,11 @@
-#ifndef CONTEXT_H
-#define CONTEXT_H
+#pragma once
 
 #include <unordered_map>
 #include <memory>
 #include <vector>
 #include <optional>
-#include "core/types.h"
+#include "core/TypesFWD.hpp"
+// #include "core/types.h"
 // class VarNode;
 
 class Context {
@@ -48,11 +48,5 @@ private:
     std::unordered_map<String, UniquePtr<VarNode>> variables; // Variables for the current context
     Vector<VarNode> arguments;                                // Function arguments
 };
-
-
-
-
-#endif // CONTEXT_H 
-
 
 

@@ -1,13 +1,11 @@
-#ifndef CLASS_BASE_H
-#define CLASS_BASE_H
+#pragma once
 
-
-#include "core/types.h"
+#include "core/TypesFWD.hpp"
+// #include "core/types.h"
 #include "ast/AstCallable.hpp"
 #include "core/callables/Callable.hpp"
 #include "core/errors.h"
 
-class Scope;
 class ClassSignature;
 class FunctionSignature;
 class MethodSignature;
@@ -183,5 +181,3 @@ public:
 
     Node call(const ArgResultType& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 };
-
-#endif // CLASS_BASE_H

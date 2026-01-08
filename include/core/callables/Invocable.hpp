@@ -1,8 +1,8 @@
-#ifndef INVOCABLE_H
-#define INVOCABLE_H
+#pragma once
 
 #include "core/callables/Callable.hpp"
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 
 class Scope;
 class Method;
@@ -30,10 +30,3 @@ public:
     virtual SharedPtr<Scope> getCapturedScope() const;
 
 };
-
-#endif // INVOCABLE_H
-
-
-
-
-

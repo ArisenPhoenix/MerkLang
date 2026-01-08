@@ -1,16 +1,14 @@
-#ifndef AST_CALLABLE_H
-#define AST_CALLABLE_H 
+#pragma once
 
 #include <unordered_set>
+#include "core/TypesFWD.hpp"
 #include "utilities/debugger.h" 
 #include "core/node/ParamNode.hpp"
 #include "ast/AstBase.hpp"
 #include "ast/Ast.hpp"
 #include "ast/AstControl.hpp" 
 
-class Scope;
 class MethodDef;
-class Callable;
 class MethodBody;
 class FunctionBody;
 class Chain;
@@ -246,12 +244,3 @@ public:
     // Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
 };
     
-
-
-    
-    
-
-
-
-
-#endif // AST_CALLABLE_H 

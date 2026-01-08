@@ -1,15 +1,9 @@
-#ifndef CALLABLE_H
-#define CALLABLE_H
+#pragma once
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "ast/AstCallable.hpp"
 #include "core/errors.h"
-
-
-
-class Scope;
-class ParamList;
-class Method;
 
 // Callable is the abstract base for all callables (functions and methods).
 class Callable: public NodeBase {
@@ -101,4 +95,3 @@ public:
 
 SharedPtr<Callable> asCallable(SharedPtr<NodeBase> callable);
 
-#endif // CALLABLE_H  

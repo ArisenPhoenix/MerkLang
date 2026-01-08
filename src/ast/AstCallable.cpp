@@ -1,6 +1,7 @@
 #include <unordered_set>
 #include <ostream>
 
+#include "core/TypesFWD.hpp"
 #include "core/node/Node.hpp"
 #include "core/node/ArgumentNode.hpp"
 

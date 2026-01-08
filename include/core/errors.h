@@ -1,5 +1,4 @@
-#ifndef ERRORS_H
-#define ERRORS_H
+#pragma once
 
 #include <stdexcept>
 #include <string>
@@ -8,7 +7,6 @@
 // #include "core/node/ParamNode.hpp"
 // #include "core/node/ArgumentNode.hpp"
 #include "core/types.h"
-
 
 
 // Base Error Class: MerkError
@@ -453,9 +451,3 @@ public:
 
     String errorHint() const override;
 };
-
-
-
-
-
-#endif // ERRORS_H

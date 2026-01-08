@@ -1,20 +1,9 @@
-#ifndef SCOPE_H
-#define SCOPE_H
-
-
-// #include "core/node/Node.hpp"
+#pragma once
 
 #include "core/TypesFWD.hpp"
-// #include "core/types.h"
 #include "core/registry/Context.hpp"
 #include "core/registry/FunctionRegistry.hpp"
 #include "core/registry/ClassRegistry.hpp"
-
-// class UserFunction;
-// class CallableSignature;
-
-// class ClassBase;
-// class ClassSignature;
 using ScopeCache = std::unordered_map<String, Scope>; 
 
 
@@ -194,4 +183,3 @@ private:
     // bool isRoot;
 };
 
-#endif // SCOPE_H

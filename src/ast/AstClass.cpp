@@ -3,7 +3,8 @@
 #include "core/node/Node.hpp"
 
 #include "core/node/ArgumentNode.hpp"
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "utilities/debugger.h"
 #include "utilities/helper_functions.h"
 #include "core/Scope.hpp"
@@ -16,11 +17,9 @@
 #include "core/callables/classes/Method.hpp" 
 #include "core/callables/classes/ClassBase.hpp"
 
-
 #include "ast/AstClass.hpp"
 #include "ast/Exceptions.hpp"
 #include "ast/ast_validate.h"
-
 
 ClassBody::ClassBody(UniquePtr<CodeBlock>&& block)
     : CallableBody(block->getScope()) {
@@ -28,9 +27,7 @@ ClassBody::ClassBody(UniquePtr<CodeBlock>&& block)
 
     block.reset();
 }
-ClassBody::ClassBody(SharedPtr<Scope> scope)
-    : CallableBody(scope) {}
-
+ClassBody::ClassBody(SharedPtr<Scope> scope): CallableBody(scope) {}
 
 ClassCall::ClassCall(String name, UniquePtr<ArgumentType> arguments, SharedPtr<Scope> scope)
     : CallableCall(name, std::move(arguments), scope) {
@@ -39,16 +36,12 @@ ClassCall::ClassCall(String name, UniquePtr<ArgumentType> arguments, SharedPtr<S
 
 ClassDef::ClassDef(String name, ParamList parameters, UniquePtr<ClassBody> body, String accessor, SharedPtr<Scope> scope)
     : CallableDef(name, std::move(parameters), std::move(body), CallableType::CLASS, scope), accessor(accessor) {}
+
 void ClassDef::setClassAccessor(String accessorName){accessor = accessorName;}
 
 String ClassDef::getClassAccessor() {return accessor;}
     
 ParamList& ClassDef::getParameters() {return parameters;}
-
-// Vector<Chain*> MethodBody::getNonStaticElements() {
-//     return nonStaticElements;
-// }
-
 
 void ClassBody::setAccessor(String& classAccessor) {accessor = classAccessor;}
 
@@ -154,8 +147,8 @@ Node ClassCall::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<
     return Evaluator::evaluateClassCall(callScope, name, argValues, instanceNode);
 }
 
-Node Accessor::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)scope;
+Node Accessor::evaluate(SharedPtr<Scope> evalScope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    MARK_UNUSED_MULTI(evalScope);
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("The passed instanceNode is null");}
     

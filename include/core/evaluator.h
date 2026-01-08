@@ -1,8 +1,7 @@
-#ifndef EVALUATOR_H
-#define EVALUATOR_H
+#pragma once
 
-// #include "core/node/Node.hpp"
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include <string>
 #include <vector>
 #include <optional>
@@ -22,8 +21,6 @@ class FunctionBlock;
 class ClassInstanceNode;
 class CallableBody;
 class MethodBody;
-
-class Scope;
 
 namespace Evaluator {
    
@@ -56,6 +53,3 @@ namespace Evaluator {
     [[noreturn]] Node evaluateBreak(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 
 } // namespace Evaluator
-
-#endif // EVALUATOR_H
-

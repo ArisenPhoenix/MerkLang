@@ -1,12 +1,12 @@
-#ifndef TYPES_H
-#define TYPES_H
+#pragma once
 
+#include "core/TypesFWD.hpp"
 #include <variant>
 #include <iostream>
 #include <sstream>
 #include <any>
 #include <functional>
-#include "core/TypesFWD.hpp"
+
 
 
 
@@ -265,10 +265,4 @@ namespace std {
         }
     };
 }
-
-
-
-
-#endif // TYPES_H
-
 

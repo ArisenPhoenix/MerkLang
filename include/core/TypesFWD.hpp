@@ -1,3 +1,5 @@
+#pragma once
+
 #include <unordered_map>
 #include <unordered_set>
 #include <memory>
@@ -55,6 +57,7 @@ class UserFunction;
 class FunctionNode;
 class Method;
 class MethodNode;
+
 class ClassBase;
 class ClassInstance;
 class ClassNode;
@@ -69,10 +72,6 @@ class DictNode;
 class MapNode;
 class SetNode;
 
-enum class TokenType;
-enum class NodeValueType;
-enum class AstType;
-
 class Scope;
 struct Token;
 
@@ -82,13 +81,54 @@ using NodeMapO = std::map<Node, Node>;
 using NodeSetU = std::unordered_set<Node>;
 using DependencyGraph = std::unordered_map<String, std::unordered_set<String>>;
 using ClassMembers = std::unordered_map<String, String>;
-using NodeTypeMap = std::map<String, NodeValueType>;    // For named parameter types in function signatures
-
 using ArgumentType = Arguments;
 using ArgResultType = ArgumentList;
 
 
+// Enum for the type of the value held by the variant
+enum class NodeValueType {
+    Number,
+    Text,
+    Int,
+    Float,
+    Double,
+    Long,
+    Char,
+    String,
+    Vector,
+    Bool,
+    Shared_Vector,
+    Function,
+    Parameter,
 
+    Class,
+    Method,
+    Callable,
+    ClassInstance,
+    Null,
+    None,
+    Uninitialized,
+    Any,
+    UNKNOWN,
+    Scope,
+    Dict,
+    List,
+    Array,
+    Set,
+    CallableSignature,
+    DataStructure,
+    NativeOMap,
+    NativeUMap,
+    NativeOSet,
+    NativeUSet,
+    UserDefined,
+
+    NativeNode,
+    Http,
+    File,
+};
+
+using NodeTypeMap = std::map<String, NodeValueType>;    // For named parameter types in function signatures
 
 // Enum for Tokens and their types of the value held by the variant
 enum class TokenType {
@@ -154,48 +194,6 @@ enum class TokenType {
     BeginTyping
 };
 
-// Enum for the type of the value held by the variant
-enum class NodeValueType {
-    Number,
-    Text,
-    Int,
-    Float,
-    Double,
-    Long,
-    Char,
-    String,
-    Vector,
-    Bool,
-    Shared_Vector,
-    Function,
-    Parameter,
-
-    Class,
-    Method,
-    Callable,
-    ClassInstance,
-    Null,
-    None,
-    Uninitialized,
-    Any,
-    UNKNOWN,
-    Scope,
-    Dict,
-    List,
-    Array,
-    Set,
-    CallableSignature,
-    DataStructure,
-    NativeOMap,
-    NativeUMap,
-    NativeOSet,
-    NativeUSet,
-    UserDefined,
-
-    NativeNode,
-    Http,
-    File,
-};
 
 // Actually refers to AST Types
 enum class AstType {
@@ -277,7 +275,6 @@ enum class CallableType {
     CALLABLE,
     INSTANCE
 };
-
 
 
 

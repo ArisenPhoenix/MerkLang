@@ -1,7 +1,7 @@
-#ifndef CLASS_REGISTRY_H
-#define CLASS_REGISTRY_H
+#pragma once
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/callables/Callable.hpp"
 
 #include "core/callables/classes/ClassBase.hpp"
@@ -44,5 +44,3 @@ public:
 
 
 };
-
-#endif // CLASS_REGISTRY_H

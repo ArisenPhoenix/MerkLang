@@ -1,6 +1,5 @@
-
 #include "core/node/ArgumentNode.hpp"
-#include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/Scope.hpp"
 #include "core/evaluator.h"
 #include "core/callables/classes/Method.hpp"
@@ -8,8 +7,6 @@
 #include "ast/AstMethod.hpp"
 #include "ast/ast_helpers.h"
 #include "core/node/NodeStructures.hpp"
-
-
 
 MethodDef::~MethodDef() {
     if (body) {
@@ -42,7 +39,6 @@ MethodBody::MethodBody(UniquePtr<CodeBlock>&& body) : CallableBody(std::move(bod
 MethodBody::MethodBody(SharedPtr<Scope> scope) : CallableBody(scope) {}
 MethodBody::MethodBody(UniquePtr<CallableBody>* body) : CallableBody(std::move(body)) {}
 
-
 MethodDef::MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, CallableType funcType, SharedPtr<Scope> scope)
 : CallableDef(name, std::move(parameters), std::move(body), CallableType::METHOD, scope) {
     if (funcType == CallableType::METHOD){
@@ -71,6 +67,7 @@ MethodCall::MethodCall(String name, UniquePtr<ArgumentType> arguments, SharedPtr
 }
 
 SharedPtr<Scope> MethodDef::getClassScope() const {return classScope;}
+
 Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::NONE);
     if (!callScope){throw MerkError("There Is No callScope provided to MethodBody::evaluate");}
@@ -80,7 +77,6 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
     DEBUG_FLOW_EXIT();
     return val;
 }
-
 
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE); 
@@ -155,7 +151,6 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     return val;
 }
 
-
 void MethodDef::setClassScope(SharedPtr<Scope> scope) {
     if (!scope) {
         DEBUG_LOG(LogLevel::ERROR, highlight("Setting MethodDef Scope Failed", Colors::yellow));
@@ -177,7 +172,6 @@ void MethodDef::setNonStaticElements(Vector<Chain*> nonStaticEls) {
 ParamList& MethodDef::getParameters() {return parameters;}
 
 const ParamList& MethodDef::getParameters() const {return parameters;}
-
 
 bool MethodDef::isConstructor() const {return name == "construct";}
 

@@ -1,5 +1,4 @@
-#ifndef TOKENIZER_H
-#define TOKENIZER_H
+#pragma once
 
 #include <string>
 #include <set>
@@ -7,7 +6,7 @@
 #include <regex>
 #include <iostream>
 #include <ostream> 
-#include "core/types.h"
+#include "core/TypesFWD.hpp"
 
 
 class Tokenizer {
@@ -107,5 +106,3 @@ inline std::ostream& operator<<(std::ostream& os, TokenType type) {
     os << tokenTypeToString(type);
     return os;
 }
-
-#endif // TOKENIZER_H

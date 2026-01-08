@@ -1,5 +1,4 @@
-#ifndef AST_H
-#define AST_H
+#pragma once
 
 #include <memory>
 #include <string> 
@@ -14,15 +13,12 @@
 #include <typeindex>
 
 #include "core/node/Node.hpp"
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 
 #include "ast/AstBase.hpp"
 #include "utilities/debugging_functions.h"
 
-
-
-
-class Scope;
 
 class LiteralValue : public ASTStatement {
 public:
@@ -185,24 +181,4 @@ private:
     String op; // Operator (e.g., "!")
     UniquePtr<ASTStatement> operand;
 };
-
-
-
-
-
-
-
-
- 
-
-        
-
-#endif // AST_H
-
- 
-
-
-
-
-
 

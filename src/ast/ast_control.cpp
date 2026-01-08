@@ -7,10 +7,10 @@
 #include <string>
 #include <unordered_set>
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/errors.h"
 #include "core/node/Node.hpp"
-
 #include "ast/Exceptions.hpp"
 
 #include "ast/AstBase.hpp"

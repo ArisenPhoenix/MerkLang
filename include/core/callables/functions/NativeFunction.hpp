@@ -1,8 +1,8 @@
-#ifndef NATIVE_FUNCTION_H
-#define NATIVE_FUNCTION_H
+#pragma once
 
 #include <functional>
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/callables/functions/Function.hpp"
 
 
@@ -34,5 +34,3 @@ public:
     virtual CallableBody* getBody() const {return nullptr;};
     virtual CallableBody* getInvocableBody() {return nullptr;};
 };
-
-#endif // NATIVE_FUNCTION_H

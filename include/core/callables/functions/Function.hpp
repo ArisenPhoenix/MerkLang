@@ -1,12 +1,10 @@
-// core/functions/function_node.h
-#ifndef FUNCTION_NODE_H
-#define FUNCTION_NODE_H
+#pragma once
 
 #include <functional>
 #include <memory> 
 
-#include "core/types.h"
-
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/callables/Callable.hpp"
 #include "core/callables/Invocable.hpp"
 
@@ -79,4 +77,3 @@ public:
     String toString() const override;
 };
 
-#endif // FUNCTION_NODE_H

@@ -1,11 +1,10 @@
-#ifndef PARSER_H
-#define PARSER_H
+#pragma once
  
 #include <vector>
 #include <memory>
 #include <string>
 
-#include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "ast/Ast.hpp"
 #include "core/node/Node.hpp"
 
@@ -14,9 +13,6 @@
 
 #include "core/Tokenizer.hpp"
 #include "ast/AstClass.hpp"
-
-class ArgumentList;
-class Scope;
 
 class Parser {
 private:
@@ -142,5 +138,3 @@ public:
     bool getAllowScopeCreation() const;
     
 };
-
-#endif // PARSER_H

@@ -1,5 +1,5 @@
+#pragma once
 #include "core/types.h"
-
 #include "core/Scope.hpp"
 
 class Chain;

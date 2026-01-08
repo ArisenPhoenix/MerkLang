@@ -1,8 +1,6 @@
-#ifndef AST_CLASS_H
-#define AST_CLASS_H
+#pragma once
 
-// #include "core/node/Node.hpp"
-// #include "core/node/ParamNode.hpp"
+#include "core/TypesFWD.hpp"
 #include "utilities/debugger.h"       // For DEBUG_LOG
 
 // #include "core/types.h"               // For String, Vector, UniquePtr, SharedPtr, NodeValueType, etc.
@@ -118,12 +116,3 @@ public:
     void setScope(SharedPtr<Scope> scope) override;
 
 };
-
-#endif // AST_CLASS_H
-
-
-
-
-
-
-

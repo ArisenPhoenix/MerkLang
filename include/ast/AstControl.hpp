@@ -1,15 +1,13 @@
-#ifndef AST_CONTROL_H
-#define AST_CONTROL_H
+#pragma once
 #include <unordered_set>
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "ast/AstBase.hpp"
 #include "core/errors.h"
 
 // This alias was used for clarity, when dealing with free variables specifically. 
 // The codebase is getting quite large so being explicit has helped to avoid unnecessary problems
-
-class Scope;
 
 class Control {
 public:
@@ -238,8 +236,3 @@ public:
     void setScope(SharedPtr<Scope> newScope) override;
 
 };
-
- 
-
-
-#endif //AST_CONTROL_H 

@@ -1,7 +1,7 @@
-#ifndef NATIVE_METHOD_H
-#define NATIVE_METHOD_H
+#pragma once
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/callables/Callable.hpp" 
 #include "core/callables/classes/Method.hpp"
 
@@ -35,5 +35,3 @@ public:
     virtual CallableBody* getBody() const override;
     virtual CallableBody* getInvocableBody() override;
 };
-
-#endif // NATIVE_METHOD_H

@@ -1,4 +1,5 @@
-#include "core/types.h"
+#pragma once
+#include "core/TypesFWD.hpp"
 #include "core/node/Node.hpp"
 #include "core/node/NodeStructures.hpp"
 #include "core/callables/classes/ClassBase.hpp"

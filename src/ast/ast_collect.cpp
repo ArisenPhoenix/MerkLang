@@ -1,8 +1,7 @@
 #include "utilities/debugger.h"
-
 #include "core/node/ArgumentNode.hpp"
-
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "utilities/debugging_functions.h"
 #include "ast/AstBase.hpp"
 #include "ast/Ast.hpp"

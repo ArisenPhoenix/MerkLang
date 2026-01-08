@@ -1,13 +1,10 @@
-
-#ifndef AST_BASE_H
-#define AST_BASE_H
+#pragma once
 
 #include <string> 
 
-#include "core/types.h"
-
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/node/Node.hpp"
-
 #include "core/errors.h"
 #include <ostream>
 #include <variant>
@@ -118,5 +115,3 @@ public:
 
 
 };
-
-#endif // AST_BASE_H

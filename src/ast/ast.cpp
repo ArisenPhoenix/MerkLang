@@ -8,7 +8,8 @@
 #include <unordered_set>
 
 #include "core/node/Node.hpp"
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 
 #include "ast/Ast.hpp"
 #include "ast/AstControl.hpp"

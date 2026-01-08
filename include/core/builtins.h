@@ -1,8 +1,8 @@
-#ifndef ALL_BUILTIN_H
-#define ALL_BUILTIN_H
+#pragma once
 
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/callables/classes/bultins.h"
 #include "core/callables/functions/builtins.h"
 
@@ -13,6 +13,3 @@ std::unordered_map<String, SharedPtr<ClassBase>> getNativeClasses(SharedPtr<Scop
 
 
 std::unordered_map<String, SharedPtr<CallableSignature>> getNativeFunctions(SharedPtr<Scope>);
-
-
-#endif //ALL_BUILTIN_H

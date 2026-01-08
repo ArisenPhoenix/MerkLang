@@ -1,8 +1,8 @@
-#ifndef AST_VALIDATE_H
-#define AST_VALIDATE_H
+#pragma once
 
 #include <functional>
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "ast/AstBase.hpp"
 
 
@@ -21,6 +21,4 @@ struct ASTUtils {
 
 void validateNoImplicitAccessor(const Vector<UniquePtr<BaseAST>>& nodes, const String& accessor, const String& contextName);
 void validateNoImplicitAccessor(const Vector<const BaseAST*>& nodes, const String& accessor, const String& contextName);
-
-#endif // AST_VALIDATE_H
  

@@ -1,12 +1,11 @@
-// core/registry/registry.h
-#ifndef FUNCTION_REGISTRY_H
-#define FUNCTION_REGISTRY_H
+#pragma once
 
 #include <unordered_map>
 #include <memory>
 #include <optional>
 #include <vector>
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "utilities/debugger.h"
 
 class CallableSignature;
@@ -51,6 +50,4 @@ public:
 
 
 };
-
-#endif // FUNCTION_REGISTRY_H
 

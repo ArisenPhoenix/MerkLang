@@ -1,8 +1,7 @@
-#ifndef NATIVE_CLASS_H
-#define NATIVE_CLASS_H
+#pragma once
 
-
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/callables/Callable.hpp"
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/classes/NativeMethod.hpp"
@@ -33,5 +32,3 @@ public:
     SharedPtr<Scope> getCapturedScope() const override;
     void setScope(SharedPtr<Scope> newScope) const override;
 };
-
-#endif //NATIVE_CLASS_H

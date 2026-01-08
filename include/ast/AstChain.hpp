@@ -1,11 +1,9 @@
-#ifndef AST_CHAIN_H
-#define AST_CHAIN_H
+#pragma once
 
-#include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "ast/AstBase.hpp"
 #include "utilities/helper_functions.h"
 
-class Scope;
 
 enum class ChainOpKind {
     Reference,   // Just evaluates to a value (like a getter)
@@ -16,6 +14,7 @@ enum class ChainOpKind {
 String opKindAsString(ChainOpKind opKind);
 
 // Obsolete but will keep it for now.
+
 enum class ResolutionMode {
     Normal,
     ClassInstance,
@@ -144,9 +143,3 @@ public:
     FreeVars collectFreeVariables() const override;
 
 };
-
-
-    
-    
-
-#endif // AST_CHAIN_H

@@ -1,7 +1,7 @@
-#ifndef AST_FUNCTION_H
-#define AST_FUNCTION_H
+#pragma once
 
 #include <unordered_set>
+#include "core/TypesFWD.hpp"
 #include "utilities/debugger.h"
 #include "ast/Ast.hpp"
 #include "core/callables/functions/Function.hpp"
@@ -61,6 +61,4 @@ public:
     virtual UniquePtr<BaseAST> clone() const override;
 
 };
-    
 
-#endif //AST_FUNCTION_H

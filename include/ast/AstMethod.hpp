@@ -1,15 +1,13 @@
-#ifndef AST_METHOD_H
-#define AST_METHOD_H
+#pragma once
 
-
-// #include "core/node/Node.hpp"
-// #include "core/node/ParamNode.hpp"
-
-#include "core/types.h"               // For String, Vector, UniquePtr, SharedPtr, NodeValueType, etc.
+// #include "core/types.h"               // For String, Vector, UniquePtr, SharedPtr, NodeValueType, etc.
+#include "core/TypesFWD.hpp"
 #include "utilities/debugger.h"       // For DEBUG_LOG
 
 #include "ast/AstBase.hpp"             // For ASTStatement, printIndent, etc.
 #include "ast/Ast.hpp"
+
+#include "ast/AstClass.hpp"
 #include "ast/AstControl.hpp"
 #include "ast/AstFunction.hpp"
 
@@ -87,13 +85,3 @@ public:
 
     AstType getAstType() const override {return AstType::ClassMethodRef;}
 };
-
-
-
-
-
-
-
-
-
-#endif //AST_METHOD_H

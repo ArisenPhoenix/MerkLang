@@ -1,5 +1,6 @@
 #include "utilities/debugger.h"
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 
 #include "utilities/helper_functions.h"
 #include "ast/AstBase.hpp"
