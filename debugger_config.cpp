@@ -12,8 +12,8 @@ namespace Debug
 
         auto globalLevel = FlowLevel::VERY_LOW;
         
-        debugger.setGlobalLogLevel(LogLevel::NONE);
-        debugger.setGlobalFlowLevel(FlowLevel::VERY_LOW);
+        debugger.setGlobalLogLevel(LogLevel::PERMISSIVE);
+        debugger.setGlobalFlowLevel(FlowLevel::NONE);
 
         debugger.setIncludeTimestamp(false);
         debugger.setIncludeFileInfo(true);

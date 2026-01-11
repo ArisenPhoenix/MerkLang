@@ -426,7 +426,7 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 DEBUG_LOG(LogLevel::PERMISSIVE, currentVal.toString(), currentVal.getFlags().toString());
                 currentScope->debugPrint();
                 currentScope->printChildScopes();
-                throw MerkError("Hit it");
+                throw MerkError("Hit it! : " + elem.object->toString());
                 currentVal = handleVirtualMethod(currentVal, elem.name);                
             } else {
                 throw MerkError("Evaluating Some other structure, the current Value is: " + nodeTypeToString(DynamicNode::getTypeFromValue(currentVal.getValue())) + " META: " + currentVal.getFlags().toString());

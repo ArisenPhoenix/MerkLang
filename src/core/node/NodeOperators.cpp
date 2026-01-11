@@ -591,6 +591,95 @@ SharedPtr<NodeBase> StringNode::operator>=(const NodeBase& other) const {
 
 
 
+// Calculation Operators
+SharedPtr<NodeBase> CharNode::operator+(const NodeBase& other) const {
+    if (!other.isString()) {throw MerkError("Attempted String + " + nodeTypeToString(other.getType()));}
+    return makeShared<CharNode>(value + other.toString());
+}
+SharedPtr<NodeBase> CharNode::operator-(const NodeBase& other) const {
+    if (!other.isString()) {throw MerkError("Attempted String - " + nodeTypeToString(other.getType()));}
+    auto thisStr = toString();
+    auto sub = other.toString();
+    if (sub.size() < thisStr.size()) {
+        size_t pos = thisStr.find(sub);
+        if (pos != std::string::npos) {
+            thisStr.erase(pos, sub.length());  // erase from pos, length of sub
+        }
+    }
+    return makeShared<CharNode>(thisStr);
+}
+SharedPtr<NodeBase> CharNode::operator*(const NodeBase& other) const {
+    if (!other.isInt()) { throw MerkError("Attempted String * " + nodeTypeToString(other.getType())); }
+    auto times = other.toInt();
+    auto thisStr = toString();
+    if (times == 0) { thisStr.clear(); }
+    
+    else {
+        std::string base = thisStr;
+        for (int count = 1; count < times; ++count) {
+            thisStr += base;
+        }
+    }
+    return makeShared<CharNode>(thisStr);
+}
+SharedPtr<NodeBase> CharNode::operator/(const NodeBase& other) const {
+    if (!other.isString()) {throw MerkError("Attempted String / " + nodeTypeToString(other.getType()));}
+    auto thisStr = toString();
+    auto sub = other.toString();
+    if (sub.size() < thisStr.size()) {
+        size_t pos;
+        while ((pos = thisStr.find(sub)) != std::string::npos) {
+            thisStr.erase(pos, sub.length());
+        }
+    }
+    return makeShared<CharNode>(thisStr);
+}
+
+
+SharedPtr<NodeBase> CharNode::operator%(const NodeBase& other) const {
+    throw MerkError("Attempted String % " + nodeTypeToString(other.getType()));
+}
+
+// Mutating Operations
+SharedPtr<NodeBase> CharNode::operator+=(const NodeBase& other) {
+    DynamicNode::applyAddMut(*this, other);
+    return shared_from_this();
+}
+
+SharedPtr<NodeBase> CharNode::operator-=(const NodeBase& other) {
+    DynamicNode::applySubMut(*this, other);
+    return shared_from_this();
+}
+SharedPtr<NodeBase> CharNode::operator*=(const NodeBase& other) {
+    DynamicNode::applyMulMut(*this, other);
+    return shared_from_this();
+}
+SharedPtr<NodeBase> CharNode::operator/=(const NodeBase& other) {
+    DynamicNode::applyDivMut(*this, other);
+    return shared_from_this();
+}
+
+// Logic Operations
+SharedPtr<NodeBase> CharNode::operator==(const NodeBase& other) const {
+    return makeShared<BoolNode>(value == other.toChars());
+}
+SharedPtr<NodeBase> CharNode::operator!=(const NodeBase& other) const {
+    return makeShared<BoolNode>(value != other.toChars());
+}
+SharedPtr<NodeBase> CharNode::operator<(const NodeBase& other) const {
+    return makeShared<BoolNode>(value < other.toChars());
+}
+SharedPtr<NodeBase> CharNode::operator>(const NodeBase& other) const {
+    return makeShared<BoolNode>(value > other.toChars());
+}
+SharedPtr<NodeBase> CharNode::operator<=(const NodeBase& other) const {
+    return makeShared<BoolNode>(value <= other.toChars());
+}
+SharedPtr<NodeBase> CharNode::operator>=(const NodeBase& other) const {
+    return makeShared<BoolNode>(value >= other.toChars());
+}
+
+
 
 // Calculation Operators
 SharedPtr<NodeBase> IntNode::operator+(const NodeBase& other) const {

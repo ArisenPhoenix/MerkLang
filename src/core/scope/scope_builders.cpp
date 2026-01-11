@@ -39,7 +39,7 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
             detached->declareVariable(name, original.uniqClone());
         }
     }
-
+    detached->kind = ScopeKind::Detached;
     DEBUG_FLOW_EXIT();
     return detached;
 }
@@ -62,6 +62,7 @@ SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNa
 
     isolated->localFunctions = this->localFunctions;
     isolated->localClasses = this->localClasses;
+    isolated->kind = ScopeKind::Isolated;
     if (!isolated) { throw MerkError("isolated Scope is Null"); }
     DEBUG_FLOW_EXIT();
 
@@ -74,11 +75,12 @@ SharedPtr<Scope> Scope::buildFunctionCallScope(SharedPtr<Function> func, String 
     if (!capturedScope) {throw MerkError("FunctionCall::evaluate -> Function " + name + " Does Not Have Valid capturedScope | SubType: " + callableTypeAsString(func->getSubType()) + " MainType: " + callableTypeAsString(func->getCallableType()));}
     
     capturedScope->owner = generateScopeOwner("FuncCallCaptured", name);
-
+    capturedScope->kind = ScopeKind::Captured;
     auto callScope = capturedScope->makeCallScope();
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserFunction::execute->function");}
     callScope->owner = generateScopeOwner("FuncCall", name);
     this->appendChildScope(callScope, false);                       // appending for recursion
+    callScope->kind = ScopeKind::FunctionCall;
     return callScope;
 }
 
@@ -87,12 +89,14 @@ SharedPtr<Scope> Scope::buildMethodCallScope(SharedPtr<Method> method, String na
     if (!capturedScope) {throw MerkError("MethodCall::evaluate -> Method " + name + " Does Not Have Valid capturedScope | SubType: " + callableTypeAsString(method->getSubType()) + " MainType: " + callableTypeAsString(method->getCallableType()));}
     
     capturedScope->owner = generateScopeOwner("MethodCallCaptured", name);
+    capturedScope->kind = ScopeKind::Captured;
 
     auto callScope = capturedScope->makeCallScope();
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserMethod::execute->Method");}
 
     callScope->owner = generateScopeOwner("MethodCall", name);
     this->appendChildScope(callScope, false);                       // appending for recursion
+    callScope->kind = ScopeKind::MethodCall;
     return callScope;
 }
 
@@ -120,7 +124,7 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
     }
     
     if (instanceScope->localFunctions.size() == 0) {throw MerkError("No Methods added to instanceScope");}
-
+    instanceScope->kind = ScopeKind::Instance;
     return instanceScope;
 }
 
@@ -140,7 +144,7 @@ SharedPtr<Scope> Scope::buildInstanceScope(SharedPtr<ClassBase> classTemplate, S
     capturedClone->owner = generateScopeOwner("InstanceCaptured", className);
     if (capturedClone->has(instanceScope)) { throw MerkError("Captured Scope Already Contains InstanceScope"); }
     capturedClone->appendChildScope(instanceScope);
-
+    instanceScope->kind = ScopeKind::Instance;
     return instanceScope;
 }
 
@@ -154,6 +158,7 @@ SharedPtr<Scope> Scope::buildClassScope(FreeVars freeVarNames, String className)
     this->appendChildScope(classDefCapturedScope, "ClassDef::evaluate");    
     classDefCapturedScope->owner = generateScopeOwner("ClassDef--InitialCaptured", className);
     classDefCapturedScope->appendChildScope(classScope);  // cls->getClassScope // place classScope inside of classDefCapturedScope
+    classScope->kind = ScopeKind::Instance;
 
     return classScope;
 }
@@ -179,6 +184,7 @@ void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) cons
 SharedPtr<Scope> Scope::buildFunctionDefScope(const FreeVars& freeVars, const String& funcName) {
     auto defScope = this->isolateScope(freeVars);
     defScope->owner = generateScopeOwner("FunctionDef", funcName);
+    
     return defScope;
 }
 

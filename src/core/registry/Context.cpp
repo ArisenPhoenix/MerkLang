@@ -108,7 +108,10 @@ void Context::debugPrint() const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     for (const auto& [name, value] : variables) {
         if (value) {
-            debugLog(true, "      ", name, " = ", value->toString()); // Dereference pointer
+            // debugLog(true, "      ", name, " = ", value->toString()); // Dereference pointer
+             String string = value->toString();
+             string = string.substr(0, string.size() > 100 ? 100 : string.size());
+             debugLog(true, "      ", name, " = ", string);
         } else {
             debugLog(true, "      ", name, " = ", "[null]");
         }

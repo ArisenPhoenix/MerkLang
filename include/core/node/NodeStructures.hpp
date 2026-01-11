@@ -1,7 +1,9 @@
 #ifndef NODE_STRUCTURES_H
 #define NODE_STRUCTURES_H
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
+
 #include "core/node/Node.hpp"
 #include <fstream>
 
@@ -21,6 +23,8 @@ public:
     virtual bool holdsValue() = 0;
     virtual std::size_t hash() const override = 0;
     virtual int length() const;
+    bool isNative() const {return true;}
+    virtual SharedPtr<NativeNode> toNative() const override = 0;
 };
 
 
@@ -38,7 +42,7 @@ public:
     // virtual bool holdsValue() override {return false;}
 
     virtual int length() const = 0;
-
+    virtual SharedPtr<NativeNode> toNative() const override = 0;
 
     virtual std::size_t hash() const override = 0;
     friend ArrayNode;
@@ -73,8 +77,9 @@ public:
     void setValue(const VariantType& v) override;
     virtual SharedPtr<NodeBase> clone() const override;
     void clear() override;
-
     int length() const override;
+
+    virtual SharedPtr<NativeNode> toNative() const override;
 };
 
 class ArrayNode: public ListNode {
@@ -87,9 +92,8 @@ public:
     void insert(const Node& index, const Node& value) override;
     String toString() const override;
     void setValue(const VariantType& v) override;
-    SharedPtr<NodeBase> clone() const override;
-    
-    
+    SharedPtr<NodeBase> clone() const override;  
+    SharedPtr<NativeNode> toNative() const override;
 };
 
 class DictNode: public DataStructure {
@@ -97,8 +101,6 @@ private:
     std::unordered_map<Node, Node> elements;
     NodeValueType type = NodeValueType::Dict;
     NodeValueType contains = NodeValueType::Any;
-    
-
 public:
     static String getOriginalVarName() {return "[__DICT__]";}
     
@@ -126,15 +128,15 @@ public:
     SharedPtr<NodeBase> clone() const override;
     void clear() override;
     int length() const override;
+
+    SharedPtr<NativeNode> toNative() const override;
 };
 
 class SetNode: public DataStructure {    
-
 private:
     std::unordered_set<Node> elements;
     NodeValueType type = NodeValueType::Set;
     NodeValueType contains = NodeValueType::Any;
-    
 
 public:
     static String getOriginalVarName() {return "[__SET__]";}
@@ -146,8 +148,7 @@ public:
     explicit SetNode(std::unordered_set<Node>&& init);
     explicit SetNode(VariantType& val);
     void add(const Node& value);
-    void get(const Node& value); 
-    Node pop(const Node& value);
+    Node get(const Node& value); 
     void remove(const Node& value);
     Node has(const Node& value);
     virtual bool holdsValue() override;
@@ -163,6 +164,8 @@ public:
     void setValue(const VariantType& v) override;
     void clear() override;
     int length() const override;
+
+    SharedPtr<NativeNode> toNative() const override;
 };
 
 
@@ -185,11 +188,11 @@ public:
     SharedPtr<NodeBase> clone() const override = 0;
     void clear() override = 0;
     bool holdsValue() override = 0;
+
+    SharedPtr<NativeNode> toNative() const override;
 };
 
 class HttpNode : public InstanceBoundNative {
-
-
 public:
     static String getOriginalVarName() { return "[__HTTP__]"; }
     HttpNode();
@@ -213,6 +216,7 @@ public:
     void clear() override;
     bool holdsValue() override;
 
+    SharedPtr<NativeNode> toNative() const override;
 
     // HttpNode(const Node& url, const Node& method = Node("GET"));
 
@@ -259,6 +263,8 @@ public:
     static bool exists(const String& path);
     static std::uintmax_t sizeOf(const String& path);
     static void removeFile(const String& path);
+
+    SharedPtr<NativeNode> toNative() const override;
 
 private:
     std::fstream stream;

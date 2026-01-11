@@ -101,6 +101,8 @@ std::pair<VariantType, NodeValueType> DynamicNode::getCoercedStringAndType(const
                 else {throw MerkError("Could Not Convert Number to a Number Type");}
             }
             case NodeValueType::String: return { value, type };
+            // case NodeValueType::Char: return {value, type }; // need to convert to char
+            case NodeValueType::Text: return { value, type };
             case NodeValueType::Int: return { std::stoi(value), type };
             case NodeValueType::Float: return { std::stof(value), type };
             case NodeValueType::Double: return { std::stod(value), type };
@@ -366,7 +368,8 @@ bool DynamicNode::isInt() const {return std::holds_alternative<int>(value);}
 
 // virtual type checkers
 int NodeBase::toInt() const { throw MerkError("Not an Int"); }
-String NodeBase::toString() const { throw MerkError("Not a String"); } 
+String NodeBase::toString() const { throw MerkError("Not a String"); }
+char* NodeBase::toChars() const { throw MerkError("Not a Char"); }
 bool NodeBase::toBool() const { return false; }
 bool NodeBase::isValid() const { return false; }
 bool NodeBase::isNumeric() const { throw MerkError("isNumeric Called On NodeBase"); }
@@ -374,7 +377,12 @@ bool NodeBase::isNumeric() const { throw MerkError("isNumeric Called On NodeBase
 
 SharedPtr<NodeBase> Node::getInner() { return data; }
 SharedPtr<NodeBase> Node::getInner() const { return data; }
+
+
+
 bool NodeBase::isString() const { return false; }
+bool NodeBase::isChars() const {return false;}
+
 bool NodeBase::isInt() const { return false; }
 bool NodeBase::isBool() const { return false; }
 bool NodeBase::isTruthy() const { return false; }
@@ -386,7 +394,31 @@ double NodeBase::toDouble() const {throw MerkError("Not a Double"); }
 bool NodeBase::isFloat() const { return false; }
 float NodeBase::toFloat() const { throw MerkError("Not A Float"); }
 
+bool NodeBase::isNative() const { return false; }
+SharedPtr<NativeNode> NodeBase::toNative() const {throw MerkError("Not A NativeNode");}
 void NodeBase::setFlags(DataTypeFlags newOnes) { flags = newOnes; }
+
+
+bool NodeBase::isList() const {
+        if (flags.fullType.getBaseType() == "List" ) { return true; }
+        if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::List) { return true; }
+        return false;       
+    }
+bool NodeBase::isArray() const {
+    if (flags.fullType.getBaseType() == "Array" ) { return true; }
+    if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::Array) { return true; }
+    return false;    
+}
+bool NodeBase::isDict() const {
+    if (flags.fullType.getBaseType() == "Dict" ) { return true; }
+    if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::Dict) { return true; }
+    return false;    
+}
+bool NodeBase::isSet() const {
+    if (flags.fullType.getBaseType() == "Set" ) { return true; }
+    if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::Set) { return true; }
+    return false;    
+}
 
 std::size_t NodeBase::hash() const {
     std::size_t h1 = std::hash<int>()(static_cast<int>(getNodeType()));
@@ -487,6 +519,13 @@ bool NullNode::isNull() const { return true; }
 bool NullNode::isNumeric() const { return false; }
 void NullNode::clear() {};
 
+SharedPtr<NativeNode> Node::toNative() {
+    return data->toNative();
+}
+SharedPtr<NativeNode> Node::toNative() const {
+    return data->toNative();
+}
+
 SharedPtr<ClassInstance> Node::toInstance() {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
         auto callable = std::get<SharedPtr<Callable>>(getValue());
@@ -522,7 +561,7 @@ bool Node::isFunctionNode() const {
 
 bool Node::isCallable() {
     return getInner()->getType() == NodeValueType::Callable || (std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance);
-    return std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance;
+    // return std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance;
 }
 
 bool Node::isCallable() const {return getInner()->getType() == NodeValueType::Callable || (std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance); return std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance; }
@@ -599,13 +638,21 @@ int Node::toInt() const { return data->toInt(); }
 String Node::toString() const { 
     if (isFunctionNode()) {
         return "<FunctionRef " + std::to_string(std::get<Vector<SharedPtr<CallableSignature>>>(getValue()).size()) + " overload(s)>"; 
-    } else if (isDict()) {
-        throw MerkError("Trying to represent a Dict");
-    } else if (isList()) {
-        throw MerkError("Trying to represent a List");
     } else if (isInstance()) {
         // throw MerkError("Trying to represent an Instance");
         return toInstance()->toString();
+    } 
+
+    // The following are currently only possible if it is typed
+    else if (isDict()) {
+        throw MerkError("Trying to represent a Dict");
+    } else if (isList()) {
+        throw MerkError("Trying to represent a List");
+    } else if (isSet()) {
+        return toSet()->toString();
+        // throw MerkError("Trying to represent a Set");
+    } else if (isArray()) {
+        throw MerkError("Trying to represent a Array");
     }
     // DEBUG_LOG(LogLevel::PERMISSIVE, "DATA: ", getFlags().toString());
     return data->toString(); 
@@ -615,6 +662,15 @@ bool Node::toBool() const { return data->toBool(); }
 bool Node::isBool() const {return data->isBool();}
 bool Node::isInt() const {return data->isInt();}
 bool Node::isString() const {return data->isString();}
+
+bool Node::isChars() const {return data->isChars();}
+char* Node::toChars() const {return data->toChars();}
+
+bool Node::isNative() const {return data->isNative();}
+bool Node::isNative() {return data->isNative();}
+
+NodeValueType Node::getNodeType() const {return getFlags().type;}
+String Node::getTypeAsString() const {return nodeTypeToString(getNodeType());}
 
 bool Node::isInstance() const { return getFlags().isInstance; }
 bool Node::isInstance() { return getFlags().isInstance; }
@@ -652,28 +708,17 @@ SharedPtr<ArrayNode> Node::toArray() const {
 SharedPtr<DictNode> Node::toDict() const {
     if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
         auto native = std::get<SharedPtr<NativeNode>>(getValue());
-        auto list = std::static_pointer_cast<DictNode>(native);
-        return list;
+        auto dict = std::static_pointer_cast<DictNode>(native);
+        return dict;
     }
-    else if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
-        auto inst = toInstance();
-        if (inst) {
-            if (inst->getNativeData()) {
-            return std::static_pointer_cast<DictNode>(inst->getNativeData());
-        }
-            if (inst) {throw MerkError("This is an instance with data of " + inst->toString());}
-            throw MerkError("The Data Contained within is a classInstance, not a Dict");
-        }
-        
-    }
-    throw MerkError("Node Is Not A NativeNode, so not a dict, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    throw MerkError("Node Is Not A NativeNode, so not an array");
 }
 
 SharedPtr<SetNode> Node::toSet() const {
     if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
         auto native = std::get<SharedPtr<NativeNode>>(getValue());
-        auto list = std::static_pointer_cast<SetNode>(native);
-        return list;
+        auto set = std::static_pointer_cast<SetNode>(native);
+        return set;
     }
     throw MerkError("Node Is Not A NativeNode, so not a set");
 }
@@ -733,6 +778,46 @@ String StringNode::toString() const { return String(value); }
 bool StringNode::toBool() const { return !value.empty(); }
 // StringNode
 
+
+// CharNode
+
+CharNode::CharNode(VariantType v) {
+    if (std::holds_alternative<char>(v)) {
+        value = std::get<char*>(v);
+    }
+    throw MerkError("CharNode::CharNode(VariantType v) -> v is not a char");
+}
+
+CharNode::CharNode(char v) {
+    value += v;
+}
+
+VariantType CharNode::getValue() const {
+    return value;
+}
+
+void CharNode::setValue(const VariantType& v)  { value = std::get<char*>(v); }
+
+NodeValueType CharNode::getType() const { return NodeValueType::Char; }
+SharedPtr<NodeBase> CharNode::clone() const {return makeShared<CharNode>(value);}
+
+int CharNode::toInt() const {return (int)value;}
+
+bool CharNode::isString() const { return false; }
+bool CharNode::isChars() const { return true; }
+char* CharNode::toChars() const { return value; }
+String CharNode::toString() const { return String(value); }
+bool CharNode::isBool() const {String tmp = String(value); return tmp == "true" || tmp == "0" || tmp == "1" || tmp == "false";}
+
+bool CharNode::toBool() const { return false; }
+
+bool CharNode::isNumeric() const {return false;}
+bool CharNode::isValid() const { return value; }
+bool CharNode::isTruthy() const { return value; }
+
+void CharNode::clear() {
+    value = 0;
+}
 
 
 // IntNode
@@ -815,7 +900,16 @@ Node& NodeWrapper::getValueNode() {return valueNode;}
 const Node& NodeWrapper::getValueNode() const {return valueNode;}
 const DataTypeFlags& NodeWrapper::getFlags() const {return valueNode.getFlags();}
 String NodeWrapper::toString() const {
-    return valueNode.isInstance() ? valueNode.toInstance()->toString() : valueNode.toString();
+    // return valueNode.isInstance() ? valueNode.toInstance()->toString() : valueNode.toString();
+    String string;
+    if (valueNode.isInstance()) {
+         // A band-aid fix for output of native data structures, since the hierarchy has become unclear
+        string = valueNode.toInstance()->toString();
+        string = string.substr(0, string.size() > 50 ? 50 : string.size());
+    } else {
+         string = valueNode.toString();
+    }
+    return string;
 }
 
 int NodeWrapper::toInt() const {return valueNode.toInt();}
@@ -827,7 +921,9 @@ bool NodeWrapper::getIsStatic() {return valueNode.getFlags().isStatic;}
 bool NodeWrapper::getIsConst() {return valueNode.getFlags().isConst;}
 bool NodeWrapper::isBool() const {return valueNode.isBool();}
 bool NodeWrapper::isInt() const {return valueNode.isInt();}
-bool NodeWrapper::isString() const {if (isValid()) { return valueNode.isString(); } else {throw MerkError("NodeWrapper::toString() -> Cannot Validate String Because Node is Invalid");}}
+bool NodeWrapper::isString() const {if (isValid()) { 
+    return valueNode.isString(); } 
+    else {throw MerkError("NodeWrapper::toString() -> Cannot Validate String Because Node is Invalid");}}
 void NodeWrapper::clear() { valueNode.clear(); }
 
 bool NodeWrapper::isList() const {return valueNode.isList();}

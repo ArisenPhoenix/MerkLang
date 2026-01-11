@@ -32,10 +32,10 @@ String nodeTypeToString(NodeValueType type, bool colored) {
         case NodeValueType::UNKNOWN: return colored ? highlight("UNKNOWN", Colors::bold_red) : "UNKNOWN";
         case NodeValueType::Callable: return colored ? highlight("Callable", Colors::red) : "Callable";
         case NodeValueType::ClassInstance: return colored ? highlight("ClassInstance", Colors::red) : "ClassInstance";
-        case NodeValueType::List: return colored ? highlight("ClassInstance<List>", Colors::bold_white) : "ClassInstance<List>";
-        case NodeValueType::Array: return colored ? highlight("ClassInstance<Array>", Colors::bold_white) : "ClassInstance<Array>";
-        case NodeValueType::Dict: return colored ? highlight("ClassInstance<Dict>", Colors::bold_white) : "ClassInstance<Dict>";
-        case NodeValueType::Set: return colored ? highlight("ClassInstance<Set>", Colors::bold_white) : "ClassInstance<Set>";
+        case NodeValueType::List: return colored ? highlight("List", Colors::bold_white) : "List";
+        case NodeValueType::Array: return colored ? highlight("Array", Colors::bold_white) : "Array";
+        case NodeValueType::Dict: return colored ? highlight("Dict", Colors::bold_white) : "Dict";
+        case NodeValueType::Set: return colored ? highlight("Set", Colors::bold_white) : "Set";
         case NodeValueType::CallableSignature: return colored ? highlight("CallableSignature", Colors::bg_magenta) : "CallableSignature";
         case NodeValueType::DataStructure: return colored ? highlight("DataStructure", Colors::red) : "DataStructure";
         case NodeValueType::NativeOMap: return colored ? highlight("NativeOMap", Colors::bold_red) : "NativeOMap";
@@ -48,7 +48,8 @@ String nodeTypeToString(NodeValueType type, bool colored) {
         case NodeValueType::File: return colored ? highlight("File", Colors::bg_cyan) : "File";
         case NodeValueType::Http: return colored ? highlight("Http", Colors::cyan) : "Http";
         // case NodeValueType::ClassInstance: 
-        default: throw RunTimeError("Unknown NodeValueType encountered in nodeTypeToString. ");
+        default: return "UNKNOWN";
+        // default: throw RunTimeError("Unknown NodeValueType encountered in nodeTypeToString. ");
     }
 }
 
@@ -156,8 +157,6 @@ String astTypeToString(AstType type) {
     }
 }
 
-
-
 String tokenTypeToString(TokenType type, bool colored) {
     switch (type) {
         case TokenType::Type: return colored ? highlight("Type", Colors::red) : "Type";
@@ -170,6 +169,7 @@ String tokenTypeToString(TokenType type, bool colored) {
 
         case TokenType::Char: return colored ? highlight("Char", Colors::green) : "Char";
         case TokenType::String: return colored ? highlight("String", Colors::green) : "String";
+        case TokenType::Text: return colored ? highlight("Text", Colors::bold_green) : "String";
         case TokenType::Bool: return colored ? highlight("Bool", Colors::bold_blue) : "Bool";
         case TokenType::Number: return colored ? highlight("Number", Colors::yellow) : "Number";
 
@@ -239,7 +239,6 @@ String callableTypeAsString(CallableType callableType){
     }
 }
 
-
 String getTokenDescription(TokenType type) {
     switch (type) {
         case TokenType::Type: return "The Type To Be Held In The Node";
@@ -248,6 +247,7 @@ String getTokenDescription(TokenType type) {
         case TokenType::Number: return "Number of any type.";
         case TokenType::String: return "A string representation";
         case TokenType::Bool: return "A boolean value of true or false";
+        case TokenType::Text: return "Composite String | Char type";
 
         case TokenType::VarAssignment: return "A Variable Is Being Assigned a new value";
         case TokenType::VarDeclaration: return "A Variable Is Being Declared";
@@ -307,23 +307,18 @@ String getTokenDescription(TokenType type) {
 // }
 
 
-ResolvedType::ResolvedType() {}
-
-// ResolvedType::ResolvedType(const ResolvedType& other) {
-//     baseType = other.baseType;
-//     inner = other.inner;
-// }
+ResolvedType::ResolvedType() {
+    
+}
 
 ResolvedType::ResolvedType(String primaryType) {
     baseType = primaryType;
 }
 
 ResolvedType::ResolvedType(String primaryType, Vector<ResolvedType> innerType) {
-    baseType = primaryType;
-    inner = innerType;
+    setBaseType(primaryType);
+    setInner(innerType);
 }
-
-
 
 void ResolvedType::setBaseType(String otherBaseType) {baseType = otherBaseType;}
 void ResolvedType::setInner(Vector<ResolvedType> otherInnerType) {inner = otherInnerType;};

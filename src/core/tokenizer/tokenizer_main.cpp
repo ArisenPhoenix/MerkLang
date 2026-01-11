@@ -186,7 +186,7 @@ Vector<Token> Tokenizer::tokenize() {
             }
         } else if (isDigit(source[position])) {
             tokens.push_back(readNumber());
-        } else if (source[position] == '"' || source[position] == '\'') {
+        } else if (source[position] == '"' || source[position] == '\'' || source[position] == '`') {
             tokens.push_back(readString());
         } else {
             DEBUG_LOG(LogLevel::DEBUG, "Unknown token at line ", line, ", column ", column, " (", source[position], ")");
@@ -248,50 +248,35 @@ Token Tokenizer::readNumber() {
     return Token(TokenType::Number, number, line, startColumn);
 }
 
+bool handleSpecialChar(char nextChar, char startChar, String& resultAccum) {
+    if (nextChar == startChar) {
+        return true;
+    }
+    switch (nextChar) {
+        case 'n': resultAccum += '\n'; break;
+        case 't': resultAccum += '\t'; break;
+        case 'r': resultAccum += '\r'; break;
+        case '\\': resultAccum += '\\'; break;
+        
+        case '\'': resultAccum += '\''; break;
+        case '"': resultAccum += '"'; break;
+        default:
+            return false;
+    }
+    return true;
+}
+
 Token Tokenizer::readString() {
     int startColumn = column;
     String result;
 
-    if (source[position] == '\'') {
-        position++; 
-        column++;
-
-        char value;
-        if (source[position] == '\\') {
-            position++;  // move to escaped char
-            column++;
-            switch (source[position]) {
-                case 'n': value = '\n'; break;
-                case 't': value = '\t'; break;
-                case '\\': value = '\\'; break;
-                case '\'': value = '\''; break;
-                case '"': value = '"'; break;
-                default:
-                    throw UnknownTokenError(std::to_string(source[position]), line, column, currentLineText);
-            }
-        } else {
-            value = source[position];
-        }
-
-        result += value;
-
-        position++;  // move past actual char
-        column++;
-
-        if (position >= sourceLength || source[position] != '\'') {
-            throw UnmatchedQuoteError(line, column, currentLineText);
-        }
-
-        position++;  // move past closing quote
-        column++;
-
-        return Token(TokenType::Char, result, line, startColumn);
-    }
+    char startChar = source[position];
+    TokenType type = startChar == '"' ? TokenType::String : startChar == '\'' ? TokenType::Char : TokenType::Text;
 
     position++;
     column++;
 
-    while (position < sourceLength && source[position] != '"') {
+    while (position < sourceLength && source[position] != startChar) {
         if (source[position] == '\\') { // Handle escape sequences
             if (position + 1 >= sourceLength) {
                 throw TokenizationError("Unfinished escape sequence in string literal.", line, column);
@@ -299,15 +284,8 @@ Token Tokenizer::readString() {
 
             char nextChar = source[++position];
             column++;
-
-            switch (nextChar) {
-                case 'n': result += '\n'; break;
-                case 't': result += '\t'; break;
-                case 'r': result += '\r'; break;
-                case '\\': result += '\\'; break;
-                case '"': result += '"'; break;
-                default:
-                    throw UnknownTokenError(std::to_string(nextChar), line, column, currentLineText);
+            if (!handleSpecialChar(nextChar, startChar, result)) {
+                throw UnknownTokenError(std::to_string(nextChar), line, column, currentLineText);
             }
 
         } else {
@@ -318,14 +296,14 @@ Token Tokenizer::readString() {
         column++;
     }
 
-    if (position >= sourceLength || source[position] != '"') {
+    if (position >= sourceLength || source[position] != startChar) {
         throw UnmatchedQuoteError(line, column, currentLineText);
     }
 
     position++;
     column++;
 
-    return Token(TokenType::String, result, line, startColumn);
+    return Token(type, result, line, startColumn);
 }
 
 Token Tokenizer::readIdentifier() {

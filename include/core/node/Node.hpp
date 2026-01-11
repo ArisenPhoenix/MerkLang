@@ -10,7 +10,9 @@
 #include <functional>
 #include <unordered_map>
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
+
 #include "core/errors.h"
 
 
@@ -61,6 +63,9 @@ public:
     virtual bool isString() const;
     virtual String toString() const;
 
+    virtual bool isChars() const;
+    virtual char* toChars() const;
+
     virtual bool isBool() const;
     virtual bool toBool() const;
 
@@ -76,11 +81,13 @@ public:
     virtual bool isFloat() const;
     virtual float toFloat() const;
 
-    bool isList() const {return flags.fullType.getBaseType() == "List";}
-    bool isArray() const {return flags.fullType.getBaseType() == "Array";}
-    bool isDict() const {return flags.fullType.getBaseType() == "Dict";}
-    bool isSet() const {return flags.fullType.getBaseType() == "Set";}
+    bool isList() const;
+    bool isArray() const;
+    bool isDict() const;
+    bool isSet() const;
+    bool isNative() const;
 
+    virtual SharedPtr<NativeNode> toNative() const;
     
     // Calculation Operators
     virtual SharedPtr<NodeBase> operator+(const NodeBase& other) const;
@@ -170,11 +177,19 @@ public:
     bool isSet() const;
     bool isNull() const;
 
+    virtual bool isChars() const;
+    virtual char* toChars() const;
+
     SharedPtr<ListNode> toList() const;
     SharedPtr<ArrayNode> toArray() const;
     SharedPtr<DictNode> toDict() const;
     SharedPtr<SetNode> toSet() const;
 
+    virtual bool isNative() const;
+    virtual bool isNative();
+
+    virtual SharedPtr<NativeNode> toNative();
+    virtual SharedPtr<NativeNode> toNative() const;
 
     virtual bool isInstance();
     virtual bool isInstance() const;
@@ -235,8 +250,8 @@ public:
 
     void clear();
 
-    NodeValueType getNodeType() const {return getFlags().type;}
-    String getTypeAsString() const {return nodeTypeToString(getNodeType());}
+    NodeValueType getNodeType() const;
+    String getTypeAsString() const;
 
     virtual std::size_t hash() const;
     void setFlags(DataTypeFlags);
@@ -500,6 +515,55 @@ public:
     void clear() override;
 };
 
+class CharNode : public NodeBase {
+    char* value;
+public:
+    explicit CharNode(char v);
+    CharNode(VariantType v);
+    VariantType getValue() const override;
+    void setValue(const VariantType& v) override;
+
+    NodeValueType getType() const;
+    SharedPtr<NodeBase> clone() const;
+
+    int toInt() const override;
+
+    bool isString() const override;
+    String toString() const override;
+    bool isChars() const override;
+    char* toChars() const override;
+
+    bool isBool() const override;
+    bool toBool() const override;
+
+    bool isNumeric() const override;
+    bool isValid() const override;
+    bool isTruthy() const override;
+
+    // Calculation Operators
+    SharedPtr<NodeBase> operator+(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator-(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator*(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator/(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator%(const NodeBase& other) const override;
+
+    // Mutating Operations
+    SharedPtr<NodeBase> operator+=(const NodeBase& other) override;
+    SharedPtr<NodeBase> operator-=(const NodeBase& other) override;
+    SharedPtr<NodeBase> operator*=(const NodeBase& other) override;
+    SharedPtr<NodeBase> operator/=(const NodeBase& other) override;
+
+    // Logic Operations
+    SharedPtr<NodeBase> operator==(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator!=(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator<(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator>(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator<=(const NodeBase& other) const override;
+    SharedPtr<NodeBase> operator>=(const NodeBase& other) const override;
+    void clear() override;
+};
+
+
 class BoolNode : public NodeBase {
     bool value;
 public:
@@ -682,6 +746,7 @@ public:
 
 class VarNode: public NodeWrapper {
     DataTypeFlags varFlags;
+    String staticType = "Any";
 public:
     VarNode();
     VarNode(Node node, bool isC, bool isMut, ResolvedType t, bool isStatic);

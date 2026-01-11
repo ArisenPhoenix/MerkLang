@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
         auto tokens = tokenizer.tokenize();
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
-        if (Debugger::getInstance().getLogLevel() < LogLevel::PERMISSIVE) { tokenizer.printTokens(true); }
+        if (Debugger::getInstance().getLogLevel() <= LogLevel::PERMISSIVE) { tokenizer.printTokens(true); }
         
         auto globalFunctions = getNativeFunctions(globalScope);
         for (auto& [name, globalFunc]: globalFunctions) {

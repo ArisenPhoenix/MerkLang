@@ -139,6 +139,7 @@ enum class TokenType {
     String,
     Char,
     Bool,
+    Text,
 
     VarDeclaration,
     VarAssignment,

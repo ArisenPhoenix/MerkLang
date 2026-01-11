@@ -56,6 +56,7 @@ using VariantType = std::variant<
     double,
     long,
     char,
+    char*,
     bool,
     String,
     NullType,

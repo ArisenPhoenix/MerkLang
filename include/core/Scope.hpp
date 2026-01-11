@@ -7,6 +7,7 @@
 using ScopeCache = std::unordered_map<String, Scope>; 
 
 
+enum class ScopeKind { Root, Block, FunctionDef, FunctionCall, ClassDef, ClassScope, Instance, Captured, Detached, Isolated, MethodCall };
 
 class ScopeMeta {
 public:
@@ -19,7 +20,7 @@ public:
     bool disregardDeclarations = false;
     bool isRoot = false;
     int scopeLevel;                      // The level of the scope in the hierarchy
-
+    ScopeKind kind = ScopeKind::Block;
     String metaString() const;
 }; 
 

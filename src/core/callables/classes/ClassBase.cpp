@@ -2,7 +2,8 @@
 #include "core/node/ArgumentNode.hpp"
 #include "core/node/NodeStructures.hpp"
 
-#include "core/types.h"
+// #include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/errors.h"
 #include "utilities/helper_functions.h"
 #include "utilities/debugger.h"
@@ -177,7 +178,7 @@ String ClassInstance::toString() const {
     if (out.size() > 2) {
         out.replace(out.size() - 1, out.size(), " )");
     }
-    return "<ClassInstance> " + out;
+    return "<ClassInstance> " + out.substr(0, out.size() > 100 ? 100 : out.size());
 }
 
 SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {throw MerkError("Instances are not directly callable unless '__call__' is defined.");}

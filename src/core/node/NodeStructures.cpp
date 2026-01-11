@@ -15,8 +15,6 @@ void NativeNode::setContains(NodeValueType thisContains) {contains = thisContain
 NodeValueType NativeNode::getContains() {return contains;}
 int NativeNode::length() const { return 0; }
 
-
-
 ListNode::~ListNode() {elements.clear();};
 
 ListNode::ListNode() {
@@ -27,11 +25,12 @@ ListNode::ListNode() {
 
 int ListNode::length() const { return elements.size(); }
 
-
 ListNode::ListNode(ArgumentList init) : elements(std::move(init.getPositional())) {setType(NodeValueType::List);}
+
 ListNode::ListNode(NodeList init) : elements(std::move(init)) {setType(NodeValueType::List);}
 
 bool ListNode::holdsValue() { return elements.size() > 0; }
+
 void ListNode::append(const Node& node) {
     // throw MerkError("Appending Node:  Meta: ");
     DEBUG_LOG(LogLevel::PERMISSIVE, "Appending to List: ", this, " New state: ", this->toString());
@@ -69,8 +68,8 @@ Node ListNode::pop(const Node& index) {
     return Node();
 }
 
-
 VariantType ListNode::getValue() const {return elements;}
+
 void ListNode::setValue(const VariantType& v) {
     if (std::holds_alternative<SharedPtr<NativeNode>>(v)) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
@@ -79,6 +78,7 @@ void ListNode::setValue(const VariantType& v) {
         // elements = static_cast<ListNode*>(std::get<SharedPtr<DataStructure>>(v))->getElements();
     }
 }
+
 SharedPtr<NodeBase> ListNode::clone() const {
     NodeList clonedElements;
     for (auto& ele: elements) {
@@ -99,10 +99,21 @@ SharedPtr<NodeBase> ListNode::clone() const {
     // throw MerkError("Cloned ListNode: " + toString() + "  Into Another " + clonedList->toString());
     return clonedList;
 }
+
 void ListNode::clear() {elements.clear();}
 
+std::size_t ListNode::hash() const {
+    size_t finalHash = 0;
+    for (auto& item : elements) {
+        finalHash ^= item.hash() + 0x9e3779b9 + (finalHash << 6) + (finalHash >> 2);
+    }
+    return finalHash;
+}
+
 const Vector<Node>& ListNode::getElements() const { return elements; }
+
 Vector<Node>& ListNode::getMutableElements() { return elements; }
+
 String ListNode::toString() const {
     String repr = "[";
     for (size_t i = 0; i < elements.size(); ++i) {
@@ -113,11 +124,9 @@ String ListNode::toString() const {
     return repr;
 }
 
-
 ArrayNode::ArrayNode(NodeList init, NodeValueType type) : ListNode(init) {
     contains = type;
 }
-
 
 void ArrayNode::append(const Node& node) {
     if (contains == NodeValueType::Any || node.getType() == contains) {
@@ -127,8 +136,6 @@ void ArrayNode::append(const Node& node) {
     }
 }
 
-
-
 ArrayNode::ArrayNode(ArgumentList init, NodeValueType nodeType)
 : ListNode(init) {
     contains = nodeType;
@@ -137,7 +144,6 @@ ArrayNode::ArrayNode(ArgumentList init, NodeValueType nodeType)
     dataType = NodeValueType::Array;
 }
 
-
 void ArrayNode::setValue(const VariantType& v) {
     if (std::holds_alternative<SharedPtr<NativeNode>>(v)) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
@@ -145,7 +151,6 @@ void ArrayNode::setValue(const VariantType& v) {
         elements = arr->getElements();
     }
 }
-
 
 void ArrayNode::insert(const Node& index, const Node& value) {
     if (contains == NodeValueType::Any || value.getType() == contains) {
@@ -200,8 +205,8 @@ DictNode::DictNode(ArgumentList init) {
             // elements[key] = Node(val.getValue());
         }
     }
-    init.getNamedArgs().clear();
-    init.getPositional().clear();
+    // init.getNamedArgs().clear();
+    // init.getPositional().clear();
 }
 
 int DictNode::length() const {
@@ -236,7 +241,6 @@ bool DictNode::holdsValue() {
     return elements.size() > 0;
 }
 
-
 void DictNode::set(const Node& key, const Node& value) {
     if (value.isNull()) {throw MerkError("Setting A null Value");}
     elements[key] = value;
@@ -258,7 +262,6 @@ void DictNode::remove(const Node& key) {
     elements.erase(key);
 }
 
-
 Node DictNode::get(const Node& key, const Node& defaultReturn) {
     auto val = elements.find(Node(key.toString()));
     if (val != elements.end()) {
@@ -268,6 +271,7 @@ Node DictNode::get(const Node& key, const Node& defaultReturn) {
 }
 
 VariantType DictNode::getValue() const {return elements;}
+
 void DictNode::setValue(const VariantType& v) {
     if (std::holds_alternative<SharedPtr<NativeNode>>(v)) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
@@ -276,6 +280,7 @@ void DictNode::setValue(const VariantType& v) {
         // elements = static_cast<ListNode*>(std::get<SharedPtr<DataStructure>>(v))->getElements();
     }
 }
+
 SharedPtr<NodeBase> DictNode::clone() const {
     std::unordered_map<Node, Node> clonedElements;
     for (auto& [key, val] : elements) {
@@ -289,16 +294,26 @@ SharedPtr<NodeBase> DictNode::clone() const {
     }
     return makeShared<DictNode>(clonedElements);
 }
+
 void DictNode::clear() {elements.clear();}
 
+std::size_t DictNode::hash() const {
+    size_t finalHash = 0;
+    for (auto& [key, val] : elements) {
+        std::size_t pairHash = key.hash() ^ (val.hash() << 1);
+        finalHash ^= pairHash + 0x9e3779b9 + (finalHash << 6) + (finalHash >> 2);
+    }
 
+    return finalHash;
+}
 
 SetNode::~SetNode() {clear();};
-void SetNode::clear() {elements.clear();}
 
+void SetNode::clear() {elements.clear();}
 
 String SetNode::toString() const {
     String repr = getTypeAsString() + "{";
+    if (getTypeAsString() == "UNKNOWN") {throw MerkError("getTypeAsString return UNKNOWN");}
     // elements.end();
     // elements.size();
     // auto currentElem = elements.begin();
@@ -319,37 +334,34 @@ SharedPtr<NodeBase> SetNode::clone() const {
     return makeShared<SetNode>(clonedElements);
 }
 
-
 bool SetNode::holdsValue() {
     return elements.size() > 0;
 }
-
 
 int SetNode::length() const {
     return elements.size();
 }
 
-
-std::size_t ListNode::hash() const {
-    size_t finalHash = 0;
-    for (auto& item : elements) {
-        finalHash ^= item.hash() + 0x9e3779b9 + (finalHash << 6) + (finalHash >> 2);
-    }
-    return finalHash;
+void SetNode::add(const Node& value) {
+    elements.emplace(value);
 }
 
-
-
-std::size_t DictNode::hash() const {
-    size_t finalHash = 0;
-    for (auto& [key, val] : elements) {
-        std::size_t pairHash = key.hash() ^ (val.hash() << 1);
-        finalHash ^= pairHash + 0x9e3779b9 + (finalHash << 6) + (finalHash >> 2);
+Node SetNode::get(const Node& value) {
+    for (auto val : elements) {
+        if (val.toString() == value.toString()) {
+            return val;
+        }
     }
-
-    return finalHash;
+    return Node(Null);
 }
 
+void SetNode::remove(const Node& value) {
+    elements.erase(value);
+}
+
+Node SetNode::has(const Node& value) {
+    return Node(elements.count(value) > 0);
+}
 
 std::size_t SetNode::hash() const {
     size_t finalHash = 0;
@@ -361,28 +373,63 @@ std::size_t SetNode::hash() const {
 }
 
 VariantType SetNode::getValue() const {return elements;}
+
 void SetNode::setValue(const VariantType& v) {
     if (std::holds_alternative<SharedPtr<NativeNode>>(v)) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         auto set = static_cast<SetNode*>(ds.get());
         elements = set->getElements();
     }
+    throw MerkError("Trying to Set variant to Set, but is not Native");
 }
 
 SetNode::SetNode(VariantType& val) {
     (void)val;
-    throw MerkError("Setting Set to Variant");
+    setType(NodeValueType::Set);
+    throw MerkError("This shouldn't execute...I think");
 }
 
-
 SetNode::SetNode(ArgResultType val) {
-    (void)val;
-    throw MerkError("Haven't Handled Set from ArgResultType");
+    auto args = val.getPositional();
+    if (args.size() != 0) {
+        if (args.size() == 1) {
+            auto first = args.front();
+            if (first.isSet()) {
+                for (auto v : first.toSet()->getElements()) {
+                    add(v);
+                }
+            }
+            else if (first.isArray() || first.isList()) {
+                for (auto v : first.toList()->getElements()) {
+                    add(v);
+                }
+            }
+            else if (first.isDict()) {
+                for (auto v : first.toDict()->getElements()) {
+                    add(v.first);
+                }
+            }
+        } else {
+            throw MerkError("args passed to SetNode(ArgResultType) is more than 1");
+        }
+    } else if (args.size() == 0) {
+        elements.emplace(Node(0));
+        elements.erase(Node(0));
+    }
+    
+    else {
+        // (void)val;
+
+        throw MerkError("Haven't Handled Set from ArgResultType: val is " + val.toString());
+    }
+    setType(NodeValueType::Set);
+    
 }
 
 SetNode::SetNode(std::unordered_set<Node> init) : elements(init) {
-
+    setType(NodeValueType::Set);
 }
+
 SetNode::SetNode(std::unordered_set<Node>&& init)
         : elements(std::move(init)) {
         setType(NodeValueType::Set);
@@ -391,14 +438,48 @@ SetNode::SetNode(std::unordered_set<Node>&& init)
 const std::unordered_set<Node>& SetNode::getElements() const {return elements; }
 
 InstanceBoundNative::InstanceBoundNative(SharedPtr<ClassInstanceNode> node): instance(node->getInstance()) {}
+
 InstanceBoundNative::InstanceBoundNative() = default;
+
 void InstanceBoundNative::setInstance(SharedPtr<ClassInstance> thisInstance) { instance = thisInstance; };
+
 SharedPtr<ClassInstance> InstanceBoundNative::getInstance() {
     if (auto current = instance.lock()) { return current; }
     return nullptr;
 }
+
 InstanceBoundNative::~InstanceBoundNative() {
     // if (getInstance()) {
     //     getInstance()->clear();
     // }
+}
+
+
+
+SharedPtr<NativeNode> ListNode::toNative() const {
+    return makeShared<ListNode>(getElements());
+}
+
+SharedPtr<NativeNode> ArrayNode::toNative() const {
+    return makeShared<ArrayNode>(getElements(), getNodeType());
+}
+
+SharedPtr<NativeNode> DictNode::toNative() const {
+    return makeShared<DictNode>(getElements());
+}
+
+SharedPtr<NativeNode> SetNode::toNative() const {
+    return makeShared<SetNode>(getElements());
+}
+
+SharedPtr<NativeNode> InstanceBoundNative::toNative() const {
+    throw MerkError("InstanceBoundNative cannot return toNative()");
+}
+
+SharedPtr<NativeNode> HttpNode::toNative() const {
+    throw MerkError("HttpNode cannot return toNative()");
+}
+
+SharedPtr<NativeNode> FileNode::toNative() const {
+    throw MerkError("FileNode cannot return toNative()");
 }

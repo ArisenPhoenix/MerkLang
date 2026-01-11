@@ -104,12 +104,12 @@ void Tokenizer::updateCurrentLineText() {
 }
 
 void Tokenizer::printTokens(bool colored) const {
-    Token prev = Token(TokenType::Newline, "newLine", 0, 0);
+    // Token prev = Token(TokenType::Newline, "newLine", 0, 0);
     for (const auto& token : tokens) {
-        if (prev.type == TokenType::Newline && token.type == TokenType::Newline) {
-            continue;
-        }
-        prev = token;
+        // if (prev.type == TokenType::Newline && token.type == TokenType::Newline) {
+        //     continue;
+        // }
+        // prev = token;
         String tok = colored ? highlight("Token", Colors::green) : "Token";
         std::cout << tok + "(Type: " << tokenTypeToString(token.type, colored)
                   << ", Value: " << token.value

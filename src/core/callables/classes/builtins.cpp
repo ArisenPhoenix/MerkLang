@@ -1,5 +1,5 @@
 #include "core/node/ArgumentNode.hpp"
-
+#include <tuple>
 #include "core/types.h"
 #include "core/Scope.hpp"
 #include "core/callables/classes/bultins.h"
@@ -26,18 +26,20 @@ SharedPtr<ListNode> pullList(SharedPtr<ClassInstanceNode> self) {
     return list;
 }
 
-
 SharedPtr<DictNode> pullDict(SharedPtr<ClassInstanceNode> self) {
     auto dict = std::static_pointer_cast<DictNode>(pullNativeData(self, "DictNode"));
     return dict;
 }
-
 
 SharedPtr<ArrayNode> pullArray(SharedPtr<ClassInstanceNode> self) {
     auto arr = std::static_pointer_cast<ArrayNode>(pullNativeData(self, "ArrayNode"));
     return arr;
 }
 
+SharedPtr<SetNode> pullSet(SharedPtr<ClassInstanceNode> self) {
+    auto arr = std::static_pointer_cast<SetNode>(pullNativeData(self, "SetNode"));
+    return arr;
+}
 
 SharedPtr<HttpNode> pullHttp(SharedPtr<ClassInstanceNode> self) {
     auto http = std::static_pointer_cast<HttpNode>(pullNativeData(self, "ArrayNode"));
@@ -49,6 +51,23 @@ SharedPtr<FileNode> pullFile(SharedPtr<ClassInstanceNode> self) {
     return file;
 }
 
+std::tuple<String, String> getClassAccessorName(String className) {
+    String accessor;
+
+    for (char c : className) {
+        accessor = std::tolower(c);
+    }
+    return std::tuple<String, String>(className, accessor);
+}
+std::tuple<SharedPtr<Scope>, SharedPtr<Scope>> getClassAndDefScope(SharedPtr<Scope> globalScope) {
+    if (!globalScope) {throw MerkError("Class Scope Not Provided to Native Class Set");}
+    
+    SharedPtr<Scope> classDefCapturedScope = globalScope->detachScope({});
+    if (!classDefCapturedScope) { throw MerkError("classDefCapturedScope Was Not Made");}
+    auto classScope = classDefCapturedScope->makeCallScope();
+    if (!classScope) {throw MerkError("Class Scope Was Not Made");}
+    return std::tuple<SharedPtr<Scope>, SharedPtr<Scope>>(classScope, classDefCapturedScope);
+}
 template <typename T>
 SharedPtr<T> pullNative(SharedPtr<ClassInstanceNode> self,
                         std::string_view forWhat = typeid(T).name()) {
@@ -74,8 +93,11 @@ T& pullNativeRef(SharedPtr<ClassInstanceNode> self,
 }
 
 
-
-
+void validateNativeInstance(String funcName, String className, SharedPtr<ClassInstanceNode> self, SharedPtr<Scope> callScope) {
+    MARK_UNUSED_MULTI(callScope);
+    if (!self) {throw MerkError("Cannot run " + funcName + " method without instance");}
+    validateSelf(self, className, funcName);
+};
 
 SharedPtr<Scope> generateScope(SharedPtr<Scope> globalScope) {
     SharedPtr<Scope> classDefCapturedScope = globalScope->detachScope({});
@@ -87,7 +109,6 @@ SharedPtr<Scope> generateScope(SharedPtr<Scope> globalScope) {
     globalScope->appendChildScope(classDefCapturedScope);
     return classScope;   
 }
-
 
 SharedPtr<DictNode> pullHttpDict(String varName, SharedPtr<ClassInstanceNode> self) {
     auto headersNode = self->getInstance()->getField(varName);
@@ -337,11 +358,10 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
 }
 
 SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
-    String className = "Array";
-    String accessor = "array";
+auto [className, accessor] = getClassAccessorName("Array");
     String varName = ArrayNode::getOriginalVarName();
 
-    if (!globalScope) {throw MerkError("Class Scope Not Provided to Native Class List");}
+    if (!globalScope) {throw MerkError("Class Scope Not Provided to Native Class Array");}
     
     SharedPtr<Scope> classDefCapturedScope = globalScope->detachScope({});
     if (!classDefCapturedScope) { throw MerkError("classDefCapturedScope Was Not Made");}
@@ -361,8 +381,11 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
     globalScope->appendChildScope(classDefCapturedScope);
 
     auto constructFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
-        (void)args; (void)callScope; (void)self;
-        validateSelf(self, className, "constructFunction");
+        MARK_UNUSED_MULTI(callScope);
+        String funcName = "arrayConstruct";
+        // validateSelf(self, className, "constructFunction");
+        validateNativeInstance(funcName, className, self, callScope); 
+        // auto arr = makeShared<ArrayNode>(args, NodeValueType::Any);
         auto arr = makeShared<ListNode>(args);
         // auto var = VarNode(arr);
         auto var = Node(arr);
@@ -421,6 +444,7 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
 
     auto popParams = ParamList();
     auto popParam1 = ParamNode("index", NodeValueType::Int);
+
     popParams.addParameter(popParam1);
     auto popFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
@@ -432,9 +456,6 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
         auto vector = pullArray(self);
         return vector->pop(args[0]);
     };
-
-
-
 
     auto constructMethod = makeShared<NativeMethod>("construct", parameters.clone(), classScope, constructFunction);
     arrClass->addMethod("construct", constructMethod);
@@ -451,9 +472,87 @@ SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
     auto popMethod = makeShared<NativeMethod>("pop", popParams, classScope, popFunction);
     arrClass->addMethod("pop", popMethod);
 
-
     return arrClass;
 }
+
+SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
+    String varName = SetNode::getOriginalVarName();
+    auto [className, accessor] = getClassAccessorName("Set");
+    auto [classScope, classDefCapturedScope] = getClassAndDefScope(globalScope);
+    auto setClass = makeShared<NativeClass>(className, accessor, classScope);
+
+    ParamList parameters;
+    auto param = ParamNode("items", NodeValueType::Any);
+    param.setIsVarArgsParam(true);
+    parameters.addParameter(param);
+
+    setClass->setParameters(parameters);
+    setClass->setCapturedScope(classDefCapturedScope);
+    classDefCapturedScope->appendChildScope(classScope);
+    globalScope->appendChildScope(classDefCapturedScope);
+
+    auto constructFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        MARK_UNUSED_MULTI(callScope);
+        DEBUG_LOG(LogLevel::PERMISSIVE, "CREATING SET: ");
+        // throw MerkError("CLASS NAME: " + className);
+        // validateSelf(self, className, "constructFunction");
+        validateNativeInstance("setConstruct", className, self, callScope);
+        auto set = makeShared<SetNode>(args);
+        DEBUG_LOG(LogLevel::PERMISSIVE, "CREATED SET WITH ARGS: ");
+        
+        // auto var = VarNode(arr);
+        auto var = Node(set);
+        var.getFlags().name = className;
+        var.getFlags().fullType.setBaseType(className);
+
+        if (!var.isSet()) {throw MerkError("Var created is not an Set");}
+        DEBUG_LOG(LogLevel::PERMISSIVE, "VAR IS SET");
+      
+        self->getInstance()->setNativeData(set);
+        // throw MerkError("RETURNING construction");
+        return var;
+    };
+
+    ParamList addParams;
+    auto addParam = ParamNode("value", NodeValueType::Any);
+    addParams.addParameter(addParam);
+    auto addFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        String funcName = "add";
+        validateNativeInstance(funcName, className, self, callScope); 
+        if (args.size() != 1) {throw MerkError("Method add can only accept 1 argument");}
+        auto set = pullSet(self);
+        set->add(args[0]);
+        return Node();  // None
+    };
+
+
+    ParamList lengthParams;
+    auto lengthFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+        MARK_UNUSED_MULTI(callScope);
+        String funcName = "length";
+        validateNativeInstance(funcName, className, self, callScope);        
+        if (args.size() != 1) {throw MerkError("Method add can only accept 1 argument");}
+        auto set = pullSet(self);
+        return Node(set->length());
+    };
+
+
+    auto constructMethod = makeShared<NativeMethod>("construct", parameters.clone(), classScope, constructFunction);
+    setClass->addMethod("construct", constructMethod);
+
+    auto addMethod = makeShared<NativeMethod>("append", parameters, classScope, addFunction);
+    setClass->addMethod("addd", addMethod);
+
+    auto lengthMethod = makeShared<NativeMethod>("length", lengthParams,  classScope, lengthFunction);
+    setClass->addMethod("length", lengthMethod);
+
+    return setClass;
+}
+
+
+
+
+
 
 
 SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
@@ -477,7 +576,7 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
     String varName = DictNode::getOriginalVarName();
     
     auto constructFunction = [className, varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
-        MARK_UNUSED_MULTI(self, callScope);
+        MARK_UNUSED_MULTI(args, callScope, self);
         validateSelf(self, className, "constructFunction");
         auto instance = self->getInstance();
         
@@ -540,12 +639,6 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
     };
 
     
-
-    
-
-
-
-
     auto constructMethod = makeShared<NativeMethod>("construct", parameters.clone(), classScope, constructFunction);
     httpClass->addMethod("construct", constructMethod);
 
@@ -573,7 +666,7 @@ SharedPtr<NativeClass> createNativeFileClass(SharedPtr<Scope> globalScope) {
 
     // construct(path, mode="r")
     auto constructFn = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)->Node {
-        MARK_UNUSED_MULTI(callScope);
+        MARK_UNUSED_MULTI(args, callScope);
         auto inst = self->getInstance();
         inst->declareField("path",   args.size() >= 1 ? args[0] : Node(""));
         inst->declareField("mode",   args.size() >= 2 ? args[1] : Node("r"));
@@ -674,6 +767,7 @@ std::unordered_map<String, NativeClassFactory> nativeClassFactories = {
     {"List", createNativeListClass},
     {"Array", createNativeArrayClass},
     {"Dict", createNativeDictClass},
+    {"Set", createNativeSetClass},
     {"Http", createNativeHttpClass},
     {"File", createNativeFileClass}
 };

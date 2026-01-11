@@ -83,7 +83,7 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
         varNodeMeta,
         currentScope,
         std::move(valueExpression)
-    );
+    ); 
     DEBUG_FLOW_EXIT();
 
     // throw MerkError("Ok");
@@ -202,7 +202,7 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     // DEBUG_LOG(LogLevel::NONE, "DEBUG Parser::parsePrimaryExpression: Entering with token: ", currentToken().toColoredString());
 
     if (check(TokenType::LeftBracket, "[") || check(TokenType::Operator, "<") || check(TokenType::Operator, "{")){
-        return parseClassLiteralCall();
+        return parseClassLiteralCall(); 
     }
 
         
@@ -443,138 +443,6 @@ UniquePtr<ASTStatement> Parser::parseKeyWord() {
     return statement;
 }
 
-
-
-
-// UniquePtr<BaseAST> Parser::parseStatement() {
-//     DEBUG_FLOW(FlowLevel::NONE);
-
-//     Token token = currentToken();
-//     if (token.value == "else" || token.value == "elif"){
-//         throw MerkError("if Statement must come before elif or else");
-//     }
-   
-
-//     switch (token.type) {
-//         case TokenType::VarDeclaration:
-//             DEBUG_FLOW_EXIT();
-//             // if (peek().type == TokenType::ChainEntryPoint) {
-//             //     return parseChainOp();  //  `var self.x = ...`
-//             // } else {
-//             //     return parseVariableDeclaration();  // `var x = ...`
-//             // }
-
-//             return parseVariableDeclaration(); 
-        
-//         case TokenType::ClassDef:
-//             DEBUG_LOG(LogLevel::INFO, "Detected VarDeclaration, calling parseVariableDeclaration()");
-//             DEBUG_FLOW_EXIT();
-
-//             return parseClassDefinition();
-            
-//         case TokenType::FunctionDef:
-//             if (token.type == TokenType::FunctionDef){
-//                 UniquePtr<ASTStatement> statement;
-                
-//                 statement = parseFunctionDefinition();
-            
-//                 DEBUG_LOG(LogLevel::INFO, "Detected FunctionDef, calling parseFunctionDefinition()");
-//                 DEBUG_FLOW_EXIT();
-//                 return statement;
-//             } else {
-//                 throw MerkError("Token Is Not A Function Definition");
-//             }
-            
-//         case TokenType::FunctionCall:
-//             if (token.type == TokenType::FunctionCall){
-//                 auto statement = parsePrimaryExpression();  //Resolve to A FunctionCall
-
-//                 DEBUG_LOG(LogLevel::INFO, "Detected FunctionCall, calling parseFunctionCall()");
-//                 DEBUG_FLOW_EXIT();
-
-//                 return statement;
-//             } else {
-//                 DEBUG_FLOW_EXIT();
-
-//                 throw MerkError("Token Is Not A Function Call");
-//             }
-        
-//         case TokenType::ClassCall:
-//             if (token.type == TokenType::ClassCall){
-//                 auto statement = parsePrimaryExpression();  //Resolve to A ClassCall
-
-//                 DEBUG_LOG(LogLevel::INFO, "Detected FunctionCall, calling parseFunctionCall()");
-//                 DEBUG_FLOW_EXIT();
-//                 return statement;
-//             } else {
-//                 throw MerkError("Was A CLASS CALL, THEN NOT");
-//             }
-            
-//             case TokenType::ChainEntryPoint:
-//                 return parseChainOp(); 
-
-            
-//         case TokenType::Variable:
-//         {
-
-//             if (peek().type == TokenType::VarAssignment) {
-//                 DEBUG_FLOW_EXIT();
-
-//                 return parseVariableAssignment();
-//             }
-
-//             DEBUG_FLOW_EXIT();
-
-//             return parseExpression();
-//         }
-
-
-//         case TokenType::Keyword:
-//             {
-//             UniquePtr<ASTStatement> statement;
-//             if (token.value == "if") { statement = parseIfStatement(); }
-//             else if (token.value == "while"){ statement = parseWhileLoop(); }
-
-//             if (token.value == "return") { statement = parseReturnStatement(); } 
-
-//             else if (token.value == "throw") { statement = parseThrowStatement(); }
-
-//             else if (token.value == "continue" || token.value == "break") {
-//                 if (!isInsideLoop()) {
-//                     DEBUG_FLOW_EXIT();
-//                     throw SyntaxError("Unexpected " + token.value + " outside loop: ", currentToken());
-//                 }
-//                 else if (token.value == "continue") {
-//                     statement = parseContinueStatement(); 
-//                 }
-//                 else if ( token.value == "break" )  {
-//                     advance(); // consume break
-//                     statement = makeUnique<Break>(currentScope);
-//                     return statement;
-//                 } else {
-//                     throw MerkError("Something Else Happened...");
-//                 }
-//             }
-            
-//             else {
-                
-//                 DEBUG_FLOW_EXIT();
-//                 throw SyntaxError("Unexpected Keyword token in parseStatement: ", currentToken());
-//             }
-//             DEBUG_FLOW_EXIT();
-//             return statement;
-//         }
-            
-
-//         default:
-//             DEBUG_FLOW_EXIT();
-//             displayPreviousTokens(currentToken().value, 5, "Parser::ParseStatement");
-//             displayNextTokens(currentToken().value, 5, "Parser::ParseStatement");
-//             // return parseStatement();
-//             throw UnexpectedTokenError(token, "Keyword, Variable, FunctionCall, FunctionDef, ClassDef, VarDeclaration", "Parser::parseStatement");
-
-//     }
-// }
 
 UniquePtr<ASTStatement> Parser::parseBreakStatement() {
     DEBUG_FLOW(FlowLevel::NONE);
