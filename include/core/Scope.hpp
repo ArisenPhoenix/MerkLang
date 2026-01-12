@@ -4,6 +4,7 @@
 #include "core/registry/Context.hpp"
 #include "core/registry/FunctionRegistry.hpp"
 #include "core/registry/ClassRegistry.hpp"
+#include "core/Type.hpp"
 using ScopeCache = std::unordered_map<String, Scope>; 
 
 
@@ -59,13 +60,12 @@ public:
     String formattedScope();
     SharedPtr<FunctionRegistry>  globalFunctions;
     SharedPtr<ClassRegistry>     globalClasses;
+    SharedPtr<TypeRegistry>      globalTypes;
     
     // // Local Storage
-    // // std::unordered_map<String, Vector<SharedPtr<CallableSignature>>>  localFunctions;
     FunctionRegistry localFunctions;
-    // // std::unordered_map<String,SharedPtr<ClassSignature>>              localClasses;
     ClassRegistry localClasses;
-
+    TypeRegistry  localTypes;
     
 
     ClassMembers getClassMembers() const;
@@ -171,6 +171,8 @@ public:
 
     SharedPtr<Scope> buildClassDefScope(const FreeVars& freeVars, const String& className);
     
+
+    void registerType(TypeId);
 
 
 private:

@@ -1,88 +1,144 @@
+// ==============================
+// TypeSystem.hpp
+// ==============================
 #pragma once
-#include "core/types.h"
-#include "core/errors.h"
+
+#include <cstdint>
+#include <optional>
+#include <string>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-class Type;
-class TypeSet;
-class InvocableType;
+// Your project aliases / forward decls
+#include "core/TypesFWD.hpp"   // String, Vector, SharedPtr, etc.
+// #include "core/types.h"        // NodeValueType
 
-using TypePtr = SharedPtr<Type>;
-using Types   = SharedPtr<TypeSet>;
+// using TypeId = uint32_t;
+// static constexpr TypeId kInvalidTypeId = 0;
 
-Types makeTypes();
-
-class TypeSet {
-public:
-    Vector<TypePtr> items;
-
-    void add(const TypePtr& t);
-    const Vector<TypePtr>& getRef() const;
-    std::size_t size() const;
-    bool empty() const;
-
-    String toString(const String& sep = "|") const;
+// --------------------
+// Canonical kind
+// --------------------
+enum class TypeKind : uint8_t {
+    Any,
+    Primitive,   // Int, String, Bool, None, ...
+    Container,   // List[T], Dict[K,V], Set[T], Array[T], Vector[T] ...
+    Named,       // nominal type by name (symbolic)
+    Instance,    // instance-of named/class type (nominal)
+    Union,       // A|B|C
+    Callable,    // future
+    Invocable
 };
 
-class Type {
-public:
-    NodeValueType primary{};
-
-    Type() = default;
-    explicit Type(NodeValueType p) : primary(p) {}
-    virtual ~Type() = default;
-
-    virtual NodeValueType getPrimary() const;
-    virtual Types getSecondary() const;
-    virtual Types getTertiary() const;
-
-    virtual String toString() const;
+enum class MatchMode : uint8_t {
+    Exact,
+    Assignable,
+    Duck
 };
 
-class InvocableType : public Type {
-public:
-    Types args;
-    Types returns;
+struct MatchOptions {
+    MatchMode mode = MatchMode::Assignable;
 
-    InvocableType();
-    InvocableType(const Types& a, const Types& r);
-
-    Types getSecondary() const override; // args
-    Types getTertiary() const override;  // returns
-    String toString() const override;
+    bool allowAny = true;
+    bool allowNumericWidening = true;
+    bool invariantGenerics = true;     // for containers
+    bool allowNoneToMatchAny = false;  // policy knob
 };
 
-class ClassType : public Type {
+struct MatchResult {
+    int cost = 0; // 0 perfect. Extend as needed.
+};
+
+// --------------------
+// TypeNode: canonical structural data
+// (alias is display-only, not part of identity)
+// --------------------
+struct TypeNode {
+    TypeKind kind = TypeKind::Any;
+    NodeValueType prim = NodeValueType::Any;  // valid for Primitive/Any
+    String name;                               // Container base OR Named/Instance name
+    Vector<TypeId> params;                     // Container args OR Union members OR Callable parts
+    String alias;                              // display-only (NOT part of identity)
+
+    // Pure matching: resolves through global canonical store (TypeRegistry::nodeOf).
+    std::optional<MatchResult> match(TypeId other, const MatchOptions& opt = {}) const;
+
+    // Structural identity (alias ignored)
+    bool operator==(const TypeNode& o) const {
+        return kind == o.kind && prim == o.prim && name == o.name && params == o.params;
+    }
+};
+
+// --------------------
+// TypeRegistry: per-scope membership + global canonical store
+//
+// - Global store ensures structural interning => "no duplicated type nodes"
+// - Each TypeRegistry instance decides which ids are "visible/known" in that scope
+// - No Scope interface required
+// --------------------
+class TypeRegistry {
 public:
-    String name;
+    TypeRegistry() = default;
 
-    // Members: usually unique names => 1 index each
-    Vector<String> memberNames;
-    Types members;
-    std::unordered_map<String, std::size_t> memberIndex;
+    // -------- Global canonicalizer --------
+    static TypeId idOf(const TypeNode& n);
+    static const TypeNode& nodeOf(TypeId id);
 
-    // Methods: overloads => name -> many indices
-    Vector<String> methodNames; // one entry per overload
-    Types methods;              // one entry per overload (InvocableType stored as TypePtr)
-    std::unordered_map<String, Vector<std::size_t>> methodIndex;
+    // Convenience global constructors (canonical ids)
+    static TypeId any();
+    static TypeId primitive(NodeValueType t, const String& alias = "");
+    static TypeId named(const String& name, const String& alias = "");
+    static TypeId instanceOf(const String& name, const String& alias = "");
+    static TypeId container(const String& base, const Vector<TypeId>& ps, const String& alias = "");
+    static TypeId unite(const Vector<TypeId>& members, const String& alias = "");
 
-    ClassType();
-    explicit ClassType(const String& n);
+    // -------- Per-scope membership --------
+    bool contains(TypeId id) const;
+    void add(TypeId id);
+    void clear();
 
-    void addMember(const String& memberName, const TypePtr& memberType);
+    // Optional helpers: declare common builtins in a scope
+    void addBuiltins(); // Any + primitive core tags (tune to your language)
 
-    // Adds ONE overload
-    void addMethodOverload(const String& methodName, const SharedPtr<InvocableType>& sig);
+    // -------- Matching / printing --------
+    static std::optional<MatchResult> match(TypeId actual, TypeId expected, const MatchOptions& opt = {});
+    static String toString(TypeId id);
 
-    // Returns all overload candidates (as TypePtr, but they should dynamic_cast to InvocableType)
-    Vector<TypePtr> getMethodOverloads(const String& methodName) const;
+    // -------- Helpers --------
+    static bool isNumeric(NodeValueType t);
+    static bool isTextual(NodeValueType t);
+    static bool isNone(NodeValueType t);
+    static int  numericRank(NodeValueType t);
 
-    // Convenience: return indices directly (useful for resolver)
-    const Vector<std::size_t>* getMethodOverloadIndices(const String& methodName) const;
+    void addPrim(NodeValueType t) {
+        add(primitive(t));
+    }
 
-    TypePtr getMemberType(const String& memberName) const;
+    void addNamed(const String& n) {
+        add(named(n));
+    }
 
-    Types getSecondary() const override; // members
-    Types getTertiary() const override;  // methods
-    String toString() const override;
+private:
+    // Membership set (scope visibility)
+    std::unordered_set<TypeId> known_;
+
+    // -------- Global canonical store --------
+    struct TypeNodeHash {
+        size_t operator()(const TypeNode& n) const;
+    };
+    struct TypeNodeEq {
+        bool operator()(const TypeNode& a, const TypeNode& b) const { return a == b; }
+    };
+
+    struct Store {
+        Vector<TypeNode> nodes; // index == TypeId
+        std::unordered_map<TypeNode, TypeId, TypeNodeHash, TypeNodeEq> intern;
+
+        Store();
+        TypeId internNode(TypeNode n);
+        Vector<TypeId> normalizeUnionMembers(const Vector<TypeId>& members) const;
+    };
+
+    static Store& store();
 };

@@ -278,7 +278,8 @@ enum class CallableType {
 };
 
 
-
+using TypeId = uint32_t;
+static constexpr TypeId kInvalidTypeId = 0;
 
 class ResolvedType {
     String baseType;  // e.g. "Array", "List", "Schema", "etc"

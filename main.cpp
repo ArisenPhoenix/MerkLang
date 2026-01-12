@@ -22,7 +22,6 @@
 #include "utilities/debugger.h"
 
 #include "core/Scope.hpp"
-
 #include "core/builtins.h"
 
 
@@ -50,6 +49,7 @@ int main(int argc, char* argv[]) {
         
     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, true);
     globalScope->owner = "GLOBAL";
+    globalScope->kind = ScopeKind::Root;
     
     
     
@@ -76,6 +76,8 @@ int main(int argc, char* argv[]) {
             globalScope->globalClasses->registerClass(name, globalCls);
             // globalScope->registerClass(name, globalCls);
         }
+
+        
 
         // Step 5: Parse tokens into an AST
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");

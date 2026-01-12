@@ -9,11 +9,31 @@
 #include <optional>
 #include <functional>
 #include <unordered_map>
-
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
-
 #include "core/errors.h"
+
+struct TypeNode;
+using TypeRef = SharedPtr<const TypeNode>;
+
+// struct DataTypeFlags {
+//     bool isConst = false;
+//     bool isMutable = true;
+//     bool isStatic = false;
+
+//     // Optional runtime tag/hint (keep for now if you want)
+//     NodeValueType runtimeTag = NodeValueType::Any;
+
+//     // The actual canonical type (this is what you compare)
+//     TypeRef declaredType;  // from annotation (or Any)
+//     TypeRef runtimeType;   // inferred from value node (optional cache)
+
+//     bool isCallable = false;
+//     bool isInstance = false;
+//     String name = "";
+//     String key = "";
+
+//     size_t hash() const; // include declaredType hash (or pointer)
+// };
 
 
 struct DataTypeFlags {

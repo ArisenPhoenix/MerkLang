@@ -499,6 +499,10 @@ std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& 
     return std::nullopt;
 }
 
+void Scope::registerType(TypeId id) {
+    globalTypes->add(id);
+}
+
 std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name, const ArgResultType& args) {
     
     DEBUG_FLOW(FlowLevel::MED);
