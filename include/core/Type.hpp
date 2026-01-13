@@ -50,17 +50,13 @@ struct MatchResult {
     int cost = 0; // 0 perfect. Extend as needed.
 };
 
-// --------------------
-// TypeNode: canonical structural data
-// (alias is display-only, not part of identity)
-// --------------------
 struct TypeNode {
     TypeKind kind = TypeKind::Any;
-    NodeValueType prim = NodeValueType::Any;  // valid for Primitive/Any
+    NodeValueType prim = NodeValueType::Any;   // valid for Primitive/Any
     String name;                               // Container base OR Named/Instance name
     Vector<TypeId> params;                     // Container args OR Union members OR Callable parts
     String alias;                              // display-only (NOT part of identity)
-
+    Vector<TypeId> methods;                    // Methods for a class if any
     // Pure matching: resolves through global canonical store (TypeRegistry::nodeOf).
     std::optional<MatchResult> match(TypeId other, const MatchOptions& opt = {}) const;
 
@@ -73,9 +69,7 @@ struct TypeNode {
 // --------------------
 // TypeRegistry: per-scope membership + global canonical store
 //
-// - Global store ensures structural interning => "no duplicated type nodes"
-// - Each TypeRegistry instance decides which ids are "visible/known" in that scope
-// - No Scope interface required
+
 // --------------------
 class TypeRegistry {
 public:
@@ -141,4 +135,7 @@ private:
     };
 
     static Store& store();
+
+public:
+    void debugPrint() const;
 };

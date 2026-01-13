@@ -53,6 +53,8 @@ public:
     void setParameters(ParamList params);
     ParamList getParameters() {return parameters;}
 
+    Vector<SharedPtr<CallableSignature>> getAllMethodSignatures();
+
 
     // Produce a ClassSignature for this class definition.
     virtual SharedPtr<CallableSignature> toCallableSignature() override; 

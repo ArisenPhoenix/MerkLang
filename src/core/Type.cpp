@@ -5,6 +5,7 @@
 #include "core/types.h"
 #include <algorithm>
 #include <sstream>
+#include "utilities/debugging_functions.h"
 
 // If you have this function in your codebase, keep it.
 // Otherwise replace toString(Primitive) with your own conversion.
@@ -99,6 +100,7 @@ const TypeNode& TypeRegistry::nodeOf(TypeId id) {
 TypeId TypeRegistry::any() {
     return store().internNode(TypeNode{TypeKind::Any, NodeValueType::Any, "Any", {}, ""});
 }
+
 
 TypeId TypeRegistry::primitive(NodeValueType t, const String& alias) {
     if (t == NodeValueType::Any) return any();
@@ -396,4 +398,18 @@ std::optional<MatchResult> TypeNode::match(TypeId otherId, const MatchOptions& o
     }
 
     return std::nullopt;
+}
+
+
+void printTypeNode(TypeNode typeNode, String moreOutput="") {
+    debugLog(true, typeNode.name +":", "NodeType:", nodeTypeToString(typeNode.prim));
+}
+
+void TypeRegistry::debugPrint() const {
+    for (const auto& node : store().nodes) {
+        printTypeNode(node);
+    }
+    for (const auto& interned : store().intern) {
+        printTypeNode(interned.first, std::to_string(interned.second));
+    }
 }

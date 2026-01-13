@@ -34,6 +34,8 @@
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/Method.hpp"
 
+#include "core/Type.hpp"
+
 
 enum class Operator {
     Equals,
@@ -246,35 +248,6 @@ namespace Evaluator {
         return lastValue; // Return the last evaluated value
     }
 
-    // Node evaluateBlock(const Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-    //     MARK_UNUSED_MULTI(instanceNode);
-
-    //     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    //     Node lastValue;
-    //     // SharedPtr<Scope> evaluationScope = scope->createChildScope();
-    //     for (const auto& child : children) {
-    //         // DEBUG_LOG(LogLevel::INFO, "Evaluating child node in CodeBlock: ", child->getAstTypeAsString());
-    //         if (child.get()) {
-
-    //             DEBUG_LOG(LogLevel::TRACE, "Found Child: ", child->getAstTypeAsString());
-    //             lastValue = child.get()->evaluate(scope, instanceNode);
-    //             DEBUG_LOG(LogLevel::DEBUG, "Child Evaluated To: ", lastValue.toString());
-    //             if (!lastValue.isValid()){
-                    
-    //                 DEBUG_LOG(LogLevel::TRACE, "Invalid value returned from child node evaluation: ", lastValue.toString());
-    //                 DEBUG_LOG(LogLevel::TRACE, "Container for invalid child: ", child->getAstTypeAsString());
-    //                 continue;
-    //             }
-
-    //         } else {
-    //             DEBUG_LOG(LogLevel::TRACE, highlight("Null child node encountered in CodeBlock.", Colors::red));
-    //             DEBUG_LOG(LogLevel::TRACE, "Null child: ", child->getAstTypeAsString());
-    //         }
-    //     }
-
-    //     DEBUG_FLOW_EXIT();
-    //     return lastValue; // Return the last evaluated value
-    // }
 
     Node evaluateBlock(const Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         (void)instanceNode;  // shouldn't be needed because other kinds of 'blocks' are used for more specific circumstances
@@ -374,13 +347,6 @@ namespace Evaluator {
             throw MerkError("ElIfStatement missing condition in Evaluator::evaluateElif");
         }
 
-        
-        // Evaluate the condition
-        // if (elifStatement.getCondition()->evaluate(scope, instanceNode).isValid()) {
-        //     DEBUG_FLOW_EXIT();
-        //     return elifStatement.getBody()->evaluate(scope->createChildScope(), instanceNode); // Execute body if condition is true
-        // } 
-
         return Node(elifStatement.getCondition()->evaluate(scope, instanceNode).isTruthy());
 
         DEBUG_FLOW_EXIT();
@@ -402,75 +368,22 @@ namespace Evaluator {
         DEBUG_FLOW_EXIT();
     }
 
-    // Node evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-    //     MARK_UNUSED_MULTI(instanceNode);
-    //     DEBUG_FLOW(FlowLevel::LOW);
-
-    //     // auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-
-    //     // DEBUG_LOG(LogLevel::NONE, "WHILE LOOP SCOPE");
-    //     // instanceScope->debugPrint();
-    //     // instanceScope->printChildScopes();
-
-    //     if (!body) {
-    //         DEBUG_LOG(LogLevel::INFO, "Error: WhileLoop body is nullptr!");
-    //         DEBUG_FLOW_EXIT();
-    //         throw MerkError("WhileLoop has no body");
-    //         // return Node(); // Return an empty node to prevent a crash
-    //     }
-    //     while (condition.evaluate(scope, instanceNode).isTruthy()) {
-    //         // Evaluate the condition
-    //         DEBUG_LOG(LogLevel::TRACE, "About To Evaluate While Loop Condition Result");
- 
-    //         // Node conditionResult = condition.evaluate(scope, instanceNode);
-    //         // Node conditionResult = condition.evaluate();
-    //         // DEBUG_LOG(LogLevel::INFO, "While Loop Condition Result: ", conditionResult);
-    //         // if (!conditionResult.toBool()) {
-    //         //     DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to false. Exiting loop.");
-    //         //     break;  // Exit the loop if condition is false
-    //         // }
-
-    //         DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to true. Executing body.");
-
-    //         try {
-    //             // Evaluate the body
-    //             body->evaluate(scope, instanceNode);
-    //         } catch (const ContinueException&){
-    //             DEBUG_LOG(LogLevel::TRACE, "Continue statement encountered. Skipping to next iteration.");
-    //             continue;
-    //         } catch (const BreakException&) {
-    //             DEBUG_LOG(LogLevel::TRACE, "Break statement encountered. Exiting loop.");
-    //             break;  // Exit the loop if a break statement is encountered
-    //         }
-    //     }
-    //     DEBUG_FLOW_EXIT();
-    //     return Node();  // Return a default Node, as WhileLoop doesn't produce a value
-    // }
-
     Node evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        // (void)scope;
-        // (void)instanceNode;
         DEBUG_FLOW(FlowLevel::LOW);
 
         // auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
         auto instanceScope = scope;
 
-        // DEBUG_LOG(LogLevel::NONE, "WHILE LOOP SCOPE");
-        // instanceScope->debugPrint();
-        // instanceScope->printChildScopes();
-
         if (!body) {
             DEBUG_LOG(LogLevel::INFO, "Error: WhileLoop body is nullptr!");
             DEBUG_FLOW_EXIT();
             throw MerkError("WhileLoop has no body");
-            // return Node(); // Return an empty node to prevent a crash
         }
+
         while (true) {
-            // Evaluate the condition
             DEBUG_LOG(LogLevel::TRACE, "About To Evaluate While Loop Condition Result");
  
             Node conditionResult = condition.evaluate(instanceScope, instanceNode);
-            // Node conditionResult = condition.evaluate();
             DEBUG_LOG(LogLevel::INFO, "While Loop Condition Result: ", conditionResult);
             if (!conditionResult.toBool()) {
                 DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to false. Exiting loop.");
@@ -500,11 +413,6 @@ namespace Evaluator {
         evaluatingFor(leftValue, "evaluateBinaryOperation", scope->getScopeLevel());
         evaluatingFor(rightValue, "evaluateBinaryOperation", scope->getScopeLevel());
 
-        // if (!leftValue.isValid() || !rightValue.isValid()) {
-        //     DEBUG_FLOW_EXIT();
-        //     throw MerkError("Invalid operands for BinaryOperationNode.");
-        // }
-
         DEBUG_LOG(LogLevel::TRACE, "Evaluating BinaryOperation: ", leftValue, " ", op, " ", rightValue);
         Node val;
         // DEBUG_FLOW_EXIT();
@@ -514,11 +422,6 @@ namespace Evaluator {
         if (op == "*") val = leftValue * rightValue;
         if (op == "/") val = leftValue / rightValue;
         if (op == "%") val = leftValue % rightValue;
-
-        // if (val == Node(-1)) {
-        //     DEBUG_LOG(LogLevel::TRACE, "leftValue: ", leftValue, "rightValue: ", rightValue);
-        //     throw MerkError("Got A negative Value");
-        // }
         
         if (op == "and" || op == "&&") val = Node(leftValue.isTruthy() && rightValue.isTruthy());
         if (op == "or" || op == "||") val == Node(leftValue.isTruthy() || rightValue.isTruthy());
@@ -530,16 +433,6 @@ namespace Evaluator {
         if (op == "++") val = leftValue += Node(1);
 
         // Relational operations
-        // if (leftValue.isNull() || rightValue.isNull()) {
-            
-        //     throw MerkError("Types Before ==: " + leftValue.toString() + " Other: " + rightValue.toString());
-        // }
-
-        // if (auto something = leftValue == rightValue) {
-        //     DEBUG_LOG(LogLevel::TRACE, "GOT ", something, "Out of Something");
-        //     throw MerkError("Something Something");
-        // }
-        
         if (op == "==") {val = Node(leftValue == rightValue);}
         if (op == "!=") val = Node(leftValue != rightValue);
         if (op == "<") val = Node(leftValue < rightValue);
@@ -629,17 +522,9 @@ namespace Evaluator {
             }
 
             lastValue = child->evaluate(methodScope, instanceNode);
-            // if (!lastValue.isValid() || lastValue == Node()){
-            //     throw MerkError("Last Child In method body invalid: " + child->getAstTypeAsString() + " VALUE: " + lastValue.toString());
-            //     continue;
-            // }
             
         }
-        // if (!lastValue.isValid() || lastValue == Node()){
-        //     throw MerkError("Didn't throw Above VALUE: " + lastValue.toString());
-        // }
 
-        // if (DynamicNode::getTypeFromValue(lastValue.getValue()) == NodeValueType::Callable) {throw MerkError("Last Value Being Returned From Method Body is Callable");}
         DEBUG_FLOW_EXIT();
         return lastValue; // Return the last evaluated value
     }
@@ -673,8 +558,6 @@ namespace Evaluator {
                         if (!methodScope){throw MerkError("generated methodscope is null for method in ClassDef::evaluate");} 
 
                         methodDef->setClassScope(classScope);
-                        // methodDef->getBody()->getScope()->owner = generateScopeOwner("MethodDefBody", methodDef->getName());
-                        // methodDef->setScope(methodScope);
                         if (methodDef->getClassScope().get() != classScope.get()) {throw MerkError("method class Scope is not the same as cls->classScope");}
 
                         Vector<Chain*> nonStaticElements = applyAccessorScopeFix(methodDef, classScope, accessor);
@@ -683,7 +566,6 @@ namespace Evaluator {
                         methods.emplace_back(methodDef->getName());
                         // methodDef->setNonStaticElements(nonStaticElements);
                         methodDef->evaluate(classScope, instanceNode);
-                                            
                     } 
                     break;
 
@@ -708,10 +590,6 @@ namespace Evaluator {
     Node evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgResultType argValues, SharedPtr<ClassInstanceNode> instanceNode) {
         MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
-        
-        // if (instanceNode) {
-        //     throw MerkError("Found Instance Node on class call to " + className);
-        // }
         auto classOpt = callScope->getClass(className);
         if (!classOpt.has_value()) {throw MerkError("Class not found: " + className);}
 
@@ -719,23 +597,6 @@ namespace Evaluator {
         if (!classSig) {throw MerkError("Class signature is null for class: " + className);}
         
         auto classTemplate = classSig->getClassDef();
-
-
-        // if (classSig->getCallableType() == CallableType::NATIVE) {
-        //     auto params = classTemplate->getParameters().clone();
-        //     SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classTemplate, callScope->getParent(), callScope->buildInstanceScope(classTemplate, classTemplate->getName()));
-        //     instance->construct(argValues, instance);
-        //     auto node = ClassInstanceNode(instance);
-        //     DEBUG_FLOW_EXIT();
-        //     return node;
-        // }
-
-        // SharedPtr<Scope> instanceScope;
-        // if (!instanceNode) {
-        //     instanceScope = callScope->buildInstanceScope(classTemplate, classTemplate->getName());
-        // } else {
-        //     instanceScope = instanceNode->getInstanceScope()->getParent()->buildInstanceScope(classTemplate, classTemplate->getName());
-        // }
         
         SharedPtr<Scope> instanceScope = callScope->buildInstanceScope(classTemplate, classTemplate->getName());
 
@@ -831,18 +692,8 @@ namespace Evaluator {
         
         if (!method){throw MerkError("Method created in MethodDef::evaluate is null");}
         
-        // method->setScope(defScope);
-        // auto capturedScope = passedScope->detachScope(freeVarNames);
         method->setCapturedScope(defScope);
         if (!method->getCapturedScope()) {throw MerkError("No Captured Scope for method: " + methodName);}
-        // if (methodName == "other") {
-        //     defScope->debugPrint();
-        //     defScope->printChildScopes();
-        //     auto captured = method->getCapturedScope();
-        //     captured->debugPrint();
-        //     captured->printChildScopes();
-        //     throw MerkError("printed Captured Scope");
-        // }
         
 
         auto methodSig = method->toCallableSignature();
@@ -869,7 +720,7 @@ namespace Evaluator {
 
         // Wrap it in a FunctionNode (for returning it as a value)
         MethodNode methodNode(method);
-
+        
         DEBUG_FLOW_EXIT();
         return methodNode;
     }

@@ -503,6 +503,18 @@ void Scope::registerType(TypeId id) {
     globalTypes->add(id);
 }
 
+void Scope::registerPrimitiveType(NodeValueType t) {
+    globalTypes->addPrim(t);
+}
+
+void Scope::registerNamedType(String& name) {
+    globalTypes->addNamed(name);
+}
+
+TypeId Scope::getTypeOf(TypeNode val) {
+    return TypeRegistry::idOf(val);
+}
+
 std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name, const ArgResultType& args) {
     
     DEBUG_FLOW(FlowLevel::MED);

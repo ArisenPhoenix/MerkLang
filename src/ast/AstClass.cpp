@@ -66,23 +66,12 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     FreeVars freeVarNames = body->collectFreeVariables();
     if (freeVarNames.size() == 0) {DEBUG_LOG(LogLevel::TRACE, "There Are No Free Variables in classdef: ", name);}
 
-
     SharedPtr<Scope> classDefCapturedScope = defScope->buildClassDefScope(freeVarNames, name);
     SharedPtr<Scope> classScope = classDefCapturedScope->createChildScope();
     if (!classDefCapturedScope){throw MerkError("classScope was not created correctly on the ClassBase.");}
 
-    // SharedPtr<Scope> classDefCapturedScope = defScope->detachScope(freeVarNames);
-    // if (!classDefCapturedScope) {throw MerkError("Failed to create detachedScope in ClassDef::evaluate");}
-
     if (!parameters.eraseByName(accessor)) {throw MerkError("No Accessor Was Provided In Class Constructor");}
 
-    // SharedPtr<Scope> classScope = classDefCapturedScope->makeCallScope();
-    // classScope->isDetached = true; // detached until ClassBase owns it
-    // classScope->owner = generateScopeOwner("ClassMainScopeClass", name);
-    // auto classScope = classDefCapturedScope;
-
-
-    
     DEBUG_LOG(LogLevel::TRACE, highlight("Attempting captured setting on cls", Colors::yellow));
 
     SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
@@ -90,11 +79,8 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     cls->setCapturedScope(classDefCapturedScope);
     cls->setParameters(parameters.clone());
 
-    // if (!cls->getCapturedScope()) {throw MerkError("CapturedScope was not set correctly on the ClassBase.");}
-
     auto classBody = static_cast<ClassBody*>(getBody());
     classBody->setClassScope(classScope);
-    // if (!cls->getClassScope()){throw MerkError("ClassDef::evlaute classScope is null");}
 
     classBody->setCapturedScope(cls->getCapturedScope());
     String bodyAccess = accessor;
@@ -102,7 +88,7 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
 
     DEBUG_LOG(LogLevel::TRACE, "ClassScope Below: ");    
 
-    classBody->evaluate(cls->getClassScope(), instanceNode);
+    auto out = classBody->evaluate(cls->getClassScope(), instanceNode);
 
     if (!cls->getClassScope()->hasFunction("construct")) {
         cls->getClassScope()->debugPrint();
@@ -114,13 +100,46 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     classBody->setClassScope(nullptr);
     // classBody->getScope()->owner = generateScopeOwner("ClassBody", name);
 
-
-    // defScope->appendChildScope(classDefCapturedScope, "ClassDef::evaluate");
-    // classDefCapturedScope->isCallableScope = true;
-    // classDefCapturedScope->owner = generateScopeOwner("ClassDef--InitialCaptured", name);
-    // classDefCapturedScope->appendChildScope(cls->getClassScope());
-
     defScope->registerClass(name, cls);
+    
+    if (!defScope->getClass(name)) {
+        throw MerkError("Class " + name + " Was not registered");
+    }
+
+    Vector<TypeId> methodIds;
+    auto methods = cls->getAllMethodSignatures();
+    for (auto method : methods) {
+        Vector<TypeId> types;
+        for (auto paramType : method->getParameterTypes() ) {
+            types.emplace_back(TypeRegistry::primitive(paramType));
+        }
+
+        TypeNode typeNode {
+            TypeKind::Invocable,
+            NodeValueType::Method,
+            method->getCallable()->getName(),
+            types,
+        };
+
+        auto mid = classScope->localTypes.idOf(typeNode);
+        methodIds.emplace_back(mid);
+    } 
+    
+    Vector<TypeId> clsParams;
+    for (auto paramType : parameters.clone().getParameterTypes()) {
+        clsParams.emplace_back(TypeRegistry::primitive(paramType));
+    }
+
+    TypeNode classType {
+        TypeKind::Named,
+        NodeValueType::Class,
+        name,
+        clsParams,
+        "",
+        methodIds
+    };
+
+    defScope->localTypes.idOf(classType);
     
     DEBUG_LOG(LogLevel::TRACE, "ClassDef::classScope created: ");
     auto classNode = ClassNode(cls);

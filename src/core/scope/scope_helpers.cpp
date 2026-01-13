@@ -43,7 +43,6 @@ SharedPtr<Scope> Scope::getRoot() {
 SharedPtr<Scope> Scope::clone(bool strict) const {
     SharedPtr<Scope> newScope;
     if (auto parent = parentScope.lock()) {
-        // use the weak/child constructor
         newScope = makeShared<Scope>(parent, globalFunctions, globalClasses, interpretMode);
     } else {
         if (strict) { throw ParentScopeNotFoundError(); }
@@ -62,8 +61,6 @@ SharedPtr<Scope> Scope::clone(bool strict) const {
 
     return newScope;
 }
-
-
 
 Vector<SharedPtr<Scope>> Scope::getChildren() { return childScopes; }
 
@@ -92,10 +89,11 @@ void Scope::debugPrint() const {
         globalClasses->debugPrint();
     }
 
-    // if (!isCallableScope) {
-        localFunctions.debugPrint();
-        localClasses.debugPrint();
-    // }
+    localFunctions.debugPrint();
+    localClasses.debugPrint();
+    if (kind == ScopeKind::Root) {
+        localTypes.debugPrint();
+    }
     
     for (const auto& child : childScopes) {
         if (child.get() != this) {
@@ -113,11 +111,6 @@ void Scope::printChildScopes(int indentLevel) const {
     auto parent = parentScope.lock();
     auto indent = String(indentLevel+2, ' ');
     int numInstances = 0;
-    // for (auto& [varName, var] : context.getVariables()) {
-    //     if (var->isInstance()) {
-    //         numInstances += 1;
-    //     }
-    // }
 
     // Print information about the current scope
     debugLog(true, indent,

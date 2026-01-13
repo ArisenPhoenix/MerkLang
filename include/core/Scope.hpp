@@ -173,6 +173,9 @@ public:
     
 
     void registerType(TypeId);
+    void registerPrimitiveType(NodeValueType);
+    void registerNamedType(String&);
+    TypeId getTypeOf(TypeNode val);
 
 
 private:

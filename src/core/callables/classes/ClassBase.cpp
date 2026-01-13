@@ -49,6 +49,17 @@ SharedPtr<Callable> ClassBase::getMethod(const String& name) {
     throw FunctionNotFoundError(name);
 }
 
+Vector<SharedPtr<CallableSignature>> ClassBase::getAllMethodSignatures() {
+    Vector<SharedPtr<CallableSignature>> methodSigs;
+    for (auto& [methodName, methodSig] : classScope->localFunctions.getFunctions()) {
+        for (const auto& method : methodSig) {
+            methodSigs.emplace_back(method);
+        }
+    }
+    return methodSigs;
+}
+
+
 // Update (or set) a member variable's value in the class scope.
 void ClassBase::addMember(const String& name, UniquePtr<VarNode> value) {
     classScope->declareVariable(name, std::move(value));
