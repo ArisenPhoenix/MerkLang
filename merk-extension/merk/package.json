@@ -1,0 +1,64 @@
+{
+  "name": "merk",
+  "displayName": "MerkLang-support",
+  "description": "Syntax highlighting and linting support for the Merk language.",
+  "version": "0.0.1",
+  "publisher": "brandon", 
+
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onLanguage:merk"],
+  "main": "./out/extension.js",
+  
+"contributes": {
+  "languages": [
+    {
+      "id": "merk",
+      "aliases": ["Merk", "merk", "MerkLang"],
+      "extensions": [".merk"],
+      "configuration": "./language-configuration.json"
+    }
+  ],
+
+  "iconThemes": [
+    {
+      "id": "merk-icons",
+      "label": "Merk Icons",
+      "path": "./file-icons.json"
+    }
+  ],
+  "grammars": [
+    {
+      "language": "merk",
+      "scopeName": "source.merk",
+      "path": "./syntaxes/merk.tmLanguage.json"
+    }
+  ]
+},
+  "scripts": {
+    "vscode:prepublish": "yarn run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "yarn run compile && yarn run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.99.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.23.0",
+    "typescript": "^5.8.2",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+
+
+}

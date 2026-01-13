@@ -1,0 +1,24 @@
+{
+  "iconDefinitions": {
+    "merk-icon": {
+      "iconPath": "icons/Merk_Dark.png"
+    }
+  },
+  "fileExtensions": {
+    "merk": "merk-icon"
+  },
+  "languageIds": {
+    "merk": "merk-icon"
+  },
+  "file": "merk-icon",
+  "light": {
+    "fileExtensions": {
+      "merk": "merk-icon"
+    }
+  },
+  "dark": {
+    "fileExtensions": {
+      "merk": "merk-icon"
+    }
+  }
+}

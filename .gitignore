@@ -5,8 +5,6 @@ grammar
 Info
 rebuild.sh
 error
-merk-extension
-reinstall_extension.sh
 include/utilities/debugger.txt
 old_code.txt
 vcpkg_installed

@@ -1,0 +1,35 @@
+{
+    "scopeName": "source.merk",
+    "patterns": [
+      {
+        "name": "comment.line.number-sign.merk",
+        "match": "#.*$"
+      },
+      {
+        "name": "keyword.control.merk",
+        "match": "\\b(if|else|while|for|return|function|def|Class|var|const)\\b"
+      },
+      {
+        "name": "string.quoted.double.merk",
+        "begin": "\"",
+        "end": "\"",
+        "patterns": [
+          {
+            "name": "constant.character.escape.merk",
+            "match": "\\\\."
+          }
+        ]
+      },
+      {
+        "name": "constant.numeric.merk",
+        "match": "\\b\\d+(\\.\\d+)?\\b"
+      }
+    ],
+    "repository": {},
+    "names": [],
+    "fileTypes": ["merk"],
+    "firstLineMatch": "",
+    "foldingStartMarker": "\\b(if|function|def|Class)\\b",
+    "foldingStopMarker": "\\b(end)\\b"
+  }
+  

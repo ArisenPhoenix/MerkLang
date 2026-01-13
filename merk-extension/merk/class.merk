@@ -1,0 +1,30 @@
+#def multiply(x, y):
+#    return x * y
+
+Class Square:
+    var protectedVar = 0
+    
+    def construct(self):
+        var self.x = 0
+        var self.y = 0
+
+    def set_x(self, x):
+        self.x = x
+
+    def set_y(self, y):
+        self.y = y 
+
+    def getArea():
+        return self.x * self.y
+
+    def getPerimeter():
+        return self.x * 2 + self.y * 2
+
+
+#var square = Square()
+#square.set_x = 4
+#square.set_y = 2
+#var y = square.y
+
+#var protected = square.protectedVar
+#var area = square.getArea()
