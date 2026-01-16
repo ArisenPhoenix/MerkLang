@@ -7,7 +7,6 @@
 #include <string>
 #include <unordered_set>
 
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
 #include "core/errors.h"
 #include "core/node/Node.hpp"
@@ -21,14 +20,14 @@
 #include "utilities/debugging_functions.h"
 #include "utilities/helper_functions.h"
 
-#include "core/evaluator.h"
+#include "core/FlowEvaluator.hpp"
 #include "core/Scope.hpp"
 
 
 FreeVarCollection::~FreeVarCollection() {
     freeVars.clear();
     localAssign.clear();
-}
+} 
 
 AstCollector::~AstCollector() { collectedNodes.clear(); }
 
@@ -75,7 +74,7 @@ CodeBlock::CodeBlock(Vector<UniquePtr<BaseAST>> otherChildren, SharedPtr<Scope> 
 void CodeBlock::clear() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
-    DEBUG_LOG(LogLevel::INFO, 
+    DEBUG_LOG(LogLevel::TRACE, 
         getScope() && getScope()->getScopeLevel() == 0 
             ? "Destroying Root CodeBlock." 
             : "Destroying CodeBlock", 
@@ -85,12 +84,17 @@ void CodeBlock::clear() {
              getScope() ? getScope()->getScopeLevel() : -1);
 
     for (auto it = children.rbegin(); it != children.rend(); ++it) {
-        it->get()->getScope().reset();
-        it->reset();
+        if (*it) {
+            // IMPORTANT: clear the child's internal scope, not a copy
+            (*it)->setScope(nullptr);
+            it->reset();
+        }
     }
     children.clear();
     if (getScope().use_count() <= 1) {
         getScope().reset();
+        scope.reset();
+        setScope(nullptr);
     }
     DEBUG_FLOW_EXIT();
 }
@@ -208,7 +212,7 @@ WhileLoop::WhileLoop(UniquePtr<ConditionalBlock> condition, UniquePtr<CodeBlock>
 WhileLoop::~WhileLoop(){
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
-    DEBUG_LOG(LogLevel::FLOW, "Destroyed WhileLoop with scope level: ");
+    DEBUG_LOG(LogLevel::TRACE, "Destroyed WhileLoop with scope level: ");
 
     DEBUG_FLOW_EXIT();
 
@@ -219,7 +223,9 @@ Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedP
     return condition.get()->evaluate(scope, instanceNode);
 }
 Node ConditionalBlock::evaluate() const {return condition.get()->evaluate(getScope());}
-
+EvalResult ConditionalBlock::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const {
+    return condition.get()->evaluateFlow(scope, instance);
+}
 // Loop Evaluations
 Node LoopBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     MARK_UNUSED_MULTI(scope);
@@ -238,6 +244,19 @@ Node WhileLoop::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
     return val;
 }
 
+
+
+EvalResult WhileLoop::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+
+    DEBUG_LOG(LogLevel::INFO, "Evaluating WhileLoop with scope level: ", scope->getScopeLevel());
+    auto val = FlowEvaluator::evaluateWhileLoop(*condition, body.get(), scope, instanceNode);
+
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
+
 void CodeBlock::setScope(SharedPtr<Scope> newScope) const {
     MARK_UNUSED_MULTI(newScope);
     // this->scope = newScope;
@@ -253,6 +272,11 @@ Node CodeBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
     return val;
 }
 
+EvalResult CodeBlock::evaluateFlow(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    setScope(scope);
+    return FlowEvaluator::evaluateBlock(children, scope, instanceNode);
+}
+
 Node ElseStatement::evaluate(SharedPtr<Scope> evalScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
 
@@ -263,6 +287,19 @@ Node ElseStatement::evaluate(SharedPtr<Scope> evalScope, [[maybe_unused]] Shared
     DEBUG_FLOW_EXIT();
     return val;
 };
+
+EvalResult ElseStatement::evaluateFlow(SharedPtr<Scope> evalScope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+
+    // validateScope(evalScope, "ElseStatement::evaluate");
+
+    auto val = FlowEvaluator::evaluateElse(*body, evalScope, instanceNode);
+
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
+
 
 void IfStatement::addElifNode(UniquePtr<ElifStatement> elifNode) {
     if (!elifNode) {
@@ -281,16 +318,34 @@ Node ElifStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<
     return val;
 }
 
+EvalResult ElifStatement::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+    if (!condition) { throw MerkError("ElIfStatement missing condition in ElifStatement::evaluate."); }
+    // validateScope(scope, "ElIfStatement::evaluate", condition->toString());
+
+    auto val = FlowEvaluator::evaluateElif(*this, scope, instanceNode);
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
 Node IfStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::LOW);
     DEBUG_LOG(LogLevel::TRACE, highlight("Validating IfStatement", Colors::red));
     if (!condition){throw MerkError("IfStatement missing condition.");}
-    // validateScope(scope, "IfStatement::evaluate", condition->toString());
-
     Node val = Evaluator::evaluateIf(*this, scope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
 }
+
+EvalResult IfStatement::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_LOG(LogLevel::TRACE, highlight("Validating IfStatement", Colors::red));
+    if (!condition){throw MerkError("IfStatement missing condition.");}
+    auto val = FlowEvaluator::evaluateIf(*this, scope, instanceNode);
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
 
 void CodeBlock::setScope(SharedPtr<Scope> newScope) {
     MARK_UNUSED_MULTI(newScope);
@@ -322,10 +377,10 @@ void IfStatement::setScope(SharedPtr<Scope> newScope) {
     DEBUG_LOG(LogLevel::TRACE, highlight("Setting IfStatement Scope", Colors::pink));
     DEBUG_LOG(LogLevel::TRACE, highlight("Passed Iniital Check of body Scope", Colors::pink));
 
-    if (!newScope){
-        DEBUG_LOG(LogLevel::ERROR, "NewScope Didn't Exist");
-        throw MerkError("New Scope in IfStatement Did not exist");
-    }
+    // if (!newScope){
+    //     DEBUG_LOG(LogLevel::ERROR, "NewScope Didn't Exist");
+    //     throw MerkError("New Scope in IfStatement Did not exist");
+    // }
 }
 
 void WhileLoop::setScope(SharedPtr<Scope> newScope) {

@@ -21,6 +21,7 @@ public:
     const char* what() const noexcept override {
         return "Break statement executed.";
     }
+    
 };
 
 class ContinueException : public std::exception {
@@ -67,6 +68,7 @@ public:
 
     AstType getAstType() const override { return AstType::Continue; }
     UniquePtr<BaseAST> clone() const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
 };
 
@@ -84,6 +86,8 @@ public:
     void printAST(std::ostream& os, int indent = 0) const override;
 
     UniquePtr<BaseAST> clone() const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+
 };
 
 
@@ -104,6 +108,7 @@ public:
     ASTStatement* getValue() const {return returnValue.get();}
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
 };
 
@@ -125,6 +130,7 @@ public:
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
     void printAST(std::ostream& os, int indent = 0) const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
 };
 

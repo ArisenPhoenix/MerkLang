@@ -41,6 +41,7 @@ public:
     
     // Get a const reference to all variables in the current context
     const std::unordered_map<String, UniquePtr<VarNode>>& getVariables() const;
+    String keysToString();
 
 
 private:

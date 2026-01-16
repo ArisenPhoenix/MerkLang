@@ -25,6 +25,8 @@ public:
     virtual int length() const;
     bool isNative() const {return true;}
     virtual SharedPtr<NativeNode> toNative() const override = 0;
+    virtual SharedPtr<NodeBase> clone() const override;
+    // SharedPtr<NodeBase> operator==(const NodeBase& other) const override = 0;
 };
 
 
@@ -49,6 +51,9 @@ public:
     friend ListNode;
     friend DictNode;
     friend SetNode;
+    virtual SharedPtr<NodeBase> clone() const override = 0;
+    // SharedPtr<NodeBase> operator==(const NodeBase& other) const override;
+
 };
 
 class ListNode: public DataStructure {    
@@ -80,6 +85,7 @@ public:
     int length() const override;
 
     virtual SharedPtr<NativeNode> toNative() const override;
+    // SharedPtr<NodeBase> operator==(const NodeBase& other) const override;
 };
 
 class ArrayNode: public ListNode {
@@ -94,6 +100,7 @@ public:
     void setValue(const VariantType& v) override;
     SharedPtr<NodeBase> clone() const override;  
     SharedPtr<NativeNode> toNative() const override;
+    // SharedPtr<NodeBase> operator==(const NodeBase& other) const override;
 };
 
 class DictNode: public DataStructure {
@@ -130,6 +137,7 @@ public:
     int length() const override;
 
     SharedPtr<NativeNode> toNative() const override;
+    // SharedPtr<NodeBase> operator==(const NodeBase& other) const override;
 };
 
 class SetNode: public DataStructure {    
@@ -166,6 +174,7 @@ public:
     int length() const override;
 
     SharedPtr<NativeNode> toNative() const override;
+    // SharedPtr<NodeBase> operator==(const NodeBase& other) const override;
 };
 
 

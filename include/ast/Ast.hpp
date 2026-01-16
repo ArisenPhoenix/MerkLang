@@ -13,7 +13,6 @@
 #include <typeindex>
 
 #include "core/node/Node.hpp"
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
 
 #include "ast/AstBase.hpp"

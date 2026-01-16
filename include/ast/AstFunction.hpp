@@ -24,6 +24,8 @@ public:
     virtual AstType getAstType() const override { return AstType::FunctionBlock;}    
     void printAST(std::ostream& os, int indent = 0) const override;
     Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
+    virtual EvalResult evaluateFlow(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+
 };
 
 class FunctionDef : public CallableDef {

@@ -32,6 +32,15 @@ void Context::setVariable(const String& name, UniquePtr<VarNode> value) {
 
 }
 
+
+String Context::keysToString() {
+    String out;
+    for (const auto& [name, var] : variables) {
+        out += name + ", ";
+    }
+    return out;
+}
+
 void Context::updateVariable(const String& name, const Node& newValue) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 

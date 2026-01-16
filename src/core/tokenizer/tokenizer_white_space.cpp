@@ -5,41 +5,20 @@
 #include "core/errors.h"
 
 
-
-
-
 Token Tokenizer::readCompoundOperatorOrPunctuation() {
     int startColumn = column;
     String first = String(1, source[position]);
     String twoCharOp = first + peek(); // Look ahead
     if (twoCharOp == ":=") {
-        tokens.push_back(Token(TokenType::VarAssignment, ":=", line, column));
-        return lastToken();
-    }
-    
-    else if (twoCharOp == ":;") {
-        // Push colon
-        tokens.push_back(Token(TokenType::Punctuation, ":", line, column));
-
-        // Simulate Newline + Indent
-        tokens.push_back(Token(TokenType::Newline, ";", line, column + 1));
-        tokens.push_back(Token(TokenType::Indent, "", line + 1, 1));
-
-        position += 2;
-        column = 1;
-
-        // Optionally skip whitespace after ; before statement
-        skipWhitespace();
         
-        return lastToken();
+        return Token(TokenType::VarAssignment, ":=", line, column);
     }
     
     if (twoCharOp == "==" || twoCharOp == "!=" ||
         twoCharOp == "<=" || twoCharOp == ">=" || twoCharOp == "&&" ||
         twoCharOp == "||" || twoCharOp == "+=" || twoCharOp == "-=" ||
         twoCharOp == "*=" || twoCharOp == "/=" || twoCharOp == "%=" || twoCharOp == "++" || twoCharOp == "->" ) { // last one signifies return value
-        tokens.push_back(Token(TokenType::Operator, twoCharOp, line, startColumn));
-        return lastToken();
+        return Token(TokenType::Operator, twoCharOp, line, startColumn);
     }
 
     throw UnknownTokenError("Unexpected compound operator: " + twoCharOp, line, column, currentLineText);
@@ -89,17 +68,10 @@ int Tokenizer::countLeadingSpaces(const String& line) {
 void Tokenizer::handleIndentation() {
     size_t lineStart = position;
 
-    // Skip leading spaces/tabs to find the first non-whitespace character
-    while (lineStart < sourceLength && (source[lineStart] == ' ' || source[lineStart] == '\t')) {
-        lineStart++;
-    }
+    while (lineStart < sourceLength && (source[lineStart] == ' ' || source[lineStart] == '\t')) { lineStart++; }
 
-    // Skip blank lines (no tokens needed)
-    if (lineStart == sourceLength || source[lineStart] == '\n') {
-        return;
-    }
+    if (lineStart == sourceLength || source[lineStart] == '\n') { return; }
 
-    // Count leading spaces/tabs
     int newIndentLevel = countLeadingSpaces(source.substr(position, lineStart - position));
 
     if (newIndentLevel > currentIndent) {
@@ -125,3 +97,5 @@ void Tokenizer::handleIndentation() {
     currentIndent = newIndentLevel;
     position = lineStart;
 }
+
+

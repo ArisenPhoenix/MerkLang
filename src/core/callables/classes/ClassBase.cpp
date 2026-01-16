@@ -1,8 +1,6 @@
 #include "core/node/Node.hpp"
 #include "core/node/ArgumentNode.hpp"
 #include "core/node/NodeStructures.hpp"
-
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
 #include "core/errors.h"
 #include "utilities/helper_functions.h"
@@ -276,13 +274,9 @@ Node ClassInstance::execute(const ArgResultType args, SharedPtr<Scope> scope, [[
 ClassSignature::ClassSignature(SharedPtr<ClassBase> classBaseData)
 : CallableSignature(asCallable(classBaseData), CallableType::CLASS), accessor(classBaseData->getAccessor())
  {
-    // if (callableTypeAsString(classBaseData->getSubType()) == "Unknown") { throw MerkError("SubType is Unknown for ClassBase to ClassSignature");}
     setSubType(classBaseData->getSubType());
-    // DEBUG_LOG(LogLevel::TRACE, "ClassSignature::ClassSignature -> classBase:", "CallableType: ", callableTypeAsString(classBaseData->getCallableType()), "SubType: ", callableTypeAsString(classBaseData->getSubType()));
     if (getCallableType() != CallableType::CLASS) {throw MerkError("ClassSignature callableType is not CLASS");}
     if (callableTypeAsString(getSubType()) == "Unknown") {throw MerkError("ClassSignature subType is unknown at construction");}
-    // throw MerkError("See Above");
-    // if (getSubType() != CallableType::NATIVE) {throw MerkError("SubType is not Native");}
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
     DEBUG_FLOW_EXIT();
 }
@@ -298,12 +292,6 @@ String ClassInstance::getAccessor() {return accessor;}
 SharedPtr<Scope> ClassInstance::getInstanceScope() {return instanceScope;}
 SharedPtr<Scope> ClassInstance::getInstanceScope() const { return instanceScope; }
 void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = scope;};
-
-
-
-
-
-
 
 // Optional: override call() to auto-instantiate when the class is "called"
 Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
@@ -321,11 +309,6 @@ Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, Sha
     if (!captured){
         throw MerkError("Captured Scope Does Not Exist When Instantiating class: " + classBase->getName());
     }
-    if (!captured->has(instanceScope)){
-        captured->printChildScopes();
-        instanceScope->printChildScopes();
-        throw MerkError("Instance Scope does not live in captured Scope");
-    } 
     else {DEBUG_LOG(LogLevel::DEBUG, "Instance Scope Lives in Captured Scope");}
     auto params = classBase->getParameters().clone();
 
@@ -333,7 +316,6 @@ Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, Sha
     instanceScope->owner = generateScopeOwner("ClassInstance", classBase->getName());
     SharedPtr<ClassInstance> instance = makeShared<ClassInstance>(classBase->getQualifiedName(), captured, instanceScope, params, classBase->getQualifiedAccessor());
 
-    // instance->construct(args, ins);
     DEBUG_FLOW_EXIT();
     return Node(ClassInstanceNode(instance));
 }
@@ -379,13 +361,11 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
     }
 
 
-    // return Node();
     DEBUG_FLOW_EXIT();
     throw MerkError("Field or method '" + fieldName + "' not found in class instance. If a call was made that should take place in the ChainOperation");
 }
 
 Node ClassInstance::getField(const String& fieldName) const {                    // assumes a variable
-    // if (fieldName == "x") { throw MerkError("Attempted to get var x");}
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
 
@@ -425,34 +405,15 @@ void ClassInstance::updateField(const String& fieldName, Node val) const {      
 
     if (!instanceScope) { throw MerkError("Cannot declare field: instanceScope is missing"); }
     instanceScope->updateVariable(fieldName, val);
-    // if (fieldName == "list") {
-    //     auto& var = instanceScope->getVariable(fieldName);
-    //     auto val = var.getValueNode();
-    //     throw MerkError("LIST DATA ORIGINAL: " + val.toString() + "     LIST DATA CLONED " + val.toString());
-    // }
-    
-
     DEBUG_FLOW_EXIT();
 }                 
 
 void ClassInstance::setNativeData(SharedPtr<NativeNode> incoming) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     value = incoming;
-    // if (!nativeData) {throw MerkError("Native Data Wasn't Set");}
     DEBUG_FLOW_EXIT();
 
 }
-
-
-// ClassInstance::ClassInstance(SharedPtr<ClassBase> cls, SharedPtr<Scope> captScope, SharedPtr<Scope> instScope)
-//     : Callable(cls->name, cls->parameters.clone(), CallableType::INSTANCE), capturedScope(captScope), instanceScope(instScope), accessor(cls->getAccessor()) {
-//     subType = cls->getSubType();
-//     instanceScope->owner = generateScopeOwner("ClassInstance", name);
-//     auto startingScopeCheck = getCapturedScope()->getParent();
-//     if (!startingScopeCheck) {throw MerkError("Could Not Get Defining Scope For Class Instance");}
-//     // if (name == "Dict") { throw MerkError("Dict Instance Made by ClassBase " + toString()); }
-// }
-
 
 SharedPtr<ClassInstance> ClassInstance::cloneInstance() const {
     auto clonedInstanceScope = getInstanceScope()->clone();
@@ -473,39 +434,21 @@ SharedPtr<ClassInstance> ClassInstance::cloneInstance() const {
     if (value) {
         clonedInstance->setNativeData(std::static_pointer_cast<DataStructure>(value->clone()));
         DEBUG_LOG(LogLevel::TRACE, highlight("++++++++++++++++++++++++++++++++++++++++++++++", Colors::bg_bright_green), "has value of " + value->toString());
-        // throw MerkError("Cloned NativeData from " + value->toString()  + " to " + clonedInstance->getNativeData()->toString());
     }
     if (clonedInstance.get() == this || clonedInstanceScope == getInstanceScope()) {throw MerkError("Instances are still the same");}
 
     DEBUG_LOG(LogLevel::TRACE, highlight("ORIGINAL INSTACE DATA START: ==========================================================================", Colors::orange));
-    // if (value) {debugLog(true, value->toString());}
-
 
     DEBUG_LOG(LogLevel::TRACE, highlight("ORIGINAL INSTACE DATA END: ==========================================================================", Colors::orange));
 
 
 
     DEBUG_LOG(LogLevel::TRACE, highlight("CLONED INSTACE DATA START: ==========================================================================", Colors::purple));
-    clonedInstanceScope->debugPrint();
-    // if (clonedInstance->value) {debugLog(true, clonedInstance->value->toString());}
 
     DEBUG_LOG(LogLevel::TRACE, highlight("CLONED INSTACE DATA END: ==========================================================================", Colors::purple));
-    // throw MerkError("See Above");
-    // else {throw MerkError("Was Unable to get Class Signature");}
-
-    // throw MerkError("End Instance clone");
     
     if (vars.size() > 0 && value) { throw MerkError("cloned an instance holding both variables and native data");}
 
-
-    // else throw MerkError("Cloned Instance from " + toString() + "    To " + clonedInstance->toString());
-    // if (clonedInstanceScope->getContext().getVariables().size()) {
-    //     clonedInstanceScope->getContext().debugPrint();
-    //     throw MerkError("Instance Context Above");
-    // } else {
-    //     String val = (value ? " Holds NativeData" : " No NativeData");
-    //     throw MerkError("No Vars in Context && " + val);
-    // }
     return clonedInstance;
 }
 

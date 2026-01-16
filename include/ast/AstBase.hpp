@@ -8,6 +8,7 @@
 #include "core/errors.h"
 #include <ostream>
 #include <variant>
+#include "core/EvalResult.hpp"
 
 class Scope;
 class ClassInstanceNode;
@@ -79,6 +80,9 @@ public:
     virtual UniquePtr<BaseAST> clone() const = 0;
     String getBranch() const {return branch;}
     virtual FreeVars collectFreeVariables() const override {return {};}
+
+    virtual EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
+    virtual EvalResult evaluateFlow() const;
 };
 
 
@@ -112,6 +116,7 @@ public:
 
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     virtual FreeVars collectFreeVariables() const override {return {};}
+    virtual EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
 
 };

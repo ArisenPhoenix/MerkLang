@@ -7,7 +7,7 @@
 #include "core/callables/classes/NativeMethod.hpp"
 #include "core/callables/classes/NativeClass.hpp"
 #include "core/node/NodeStructures.hpp"
-#include "core/evaluator.h"
+#include "core/Evaluator.hpp"
 
 
 void validateSelf(SharedPtr<ClassInstanceNode> self, String className, String methodName) {
@@ -540,8 +540,8 @@ SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
     auto constructMethod = makeShared<NativeMethod>("construct", parameters.clone(), classScope, constructFunction);
     setClass->addMethod("construct", constructMethod);
 
-    auto addMethod = makeShared<NativeMethod>("append", parameters, classScope, addFunction);
-    setClass->addMethod("addd", addMethod);
+    auto addMethod = makeShared<NativeMethod>("add", parameters, classScope, addFunction);
+    setClass->addMethod("add", addMethod);
 
     auto lengthMethod = makeShared<NativeMethod>("length", lengthParams,  classScope, lengthFunction);
     setClass->addMethod("length", lengthMethod);

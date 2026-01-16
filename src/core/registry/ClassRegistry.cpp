@@ -17,7 +17,7 @@ void ClassRegistry::debugPrint() const {
 
 
 ClassRegistry::~ClassRegistry() {
-    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     clear();  // Clear the map itself
     DEBUG_FLOW_EXIT();
@@ -31,7 +31,10 @@ void ClassRegistry::registerClass(const String& name, SharedPtr<ClassBase> class
 }
 
 void ClassRegistry::clear() {
-    classMap.clear(); // Then clear the container
+    for (auto& [name, obj] : classMap) {
+        obj.reset();
+    }
+    classMap.clear();
 }
 
 void ClassRegistry::registerClass(const String& name, SharedPtr<ClassSignature> classSignature) {

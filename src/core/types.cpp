@@ -152,6 +152,7 @@ String astTypeToString(AstType type) {
         case AstType::AST: return highlight("AST", Colors::red);
         case AstType::Argument: return highlight("Argument", Colors::bg_cyan);
         case AstType::Arguments: return highlight("Arguments", Colors::bold_yellow);
+        case AstType::Namespace: return highlight("Namespace", Colors::bold_blue);
 
         default: return "Unknown";
     }
@@ -219,6 +220,7 @@ String tokenTypeToString(TokenType type, bool colored) {
         case TokenType::RightBracket: return colored ? highlight("RightBracket", Colors::bold_yellow) : "RightBracket";
         case TokenType::LeftArrow: return colored ? highlight("LeftArrow", Colors::bold_yellow) : "LeftArrow";
         case TokenType::RightArrow: return colored ? highlight("RightArrow", Colors::bold_yellow) : "RightArrow";
+        case TokenType::NoOp: return colored ? highlight("NoOp", Colors::bg_black) : "NoOp";
         default: return "Invalid TokenType";
     }
 }
@@ -292,6 +294,7 @@ String getTokenDescription(TokenType type) {
         case TokenType::RightBracket: return "RightBracket For Typing Lists";
         case TokenType::LeftArrow: return "LeftArrow For Typing Arrays";
         case TokenType::RightArrow: return "RightArrow For Typing Arrays";
+        case TokenType::NoOp: return "A Token Indicating There's Nothing To Do";
         default: return "Unknown | Invalid Token.";
     }
 }

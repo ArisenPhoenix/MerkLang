@@ -54,7 +54,8 @@ UniquePtr<CodeBlock> Parser::parse() {
                 setAllowScopeCreation(true);
                 try {
                     DEBUG_LOG(LogLevel::PERMISSIVE, highlight("EVALUATING AST TYPE: " + statement->getAstTypeAsString(), Colors::orange));
-                    interpret(statement.get());
+                    // interpret(statement.get());
+                    interpretFlow(statement.get());
                 } catch(MerkError& e) {
                     // rootBlock->printAST(std::cout, 0);
                     throw MerkError(e.what());
@@ -65,7 +66,8 @@ UniquePtr<CodeBlock> Parser::parse() {
     
         setAllowScopeCreation(true);
         if (interpretMode && !byBlock){
-            interpret(rootBlock.get());
+            // interpret(rootBlock.get());
+            interpretFlow(rootBlock.get());
         }
 
         return std::move(rootBlock); // Return the parsed block node
@@ -145,6 +147,38 @@ void Parser::exitScope(SharedPtr<Scope> manualScope) {
 
 }
 
+void Parser::interpretFlow(CodeBlock* codeBlock) const {
+    try {
+        codeBlock->evaluateFlow(); // Evaluate the updated statement
+
+    } catch (const std::exception& e) {
+        throw MerkError(e.what());
+    }
+  
+}
+
+void Parser::interpretFlow(BaseAST* ASTStatement) const {
+    // DEBUG_FLOW(FlowLevel::HIGH);
+
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting ASTStatement ===========================", Colors::yellow));
+
+    try {
+        ASTStatement->evaluateFlow(currentScope); // Evaluate the updated statement
+
+        // if (debugParser){
+        //     currentScope->printContext();
+        //     currentScope->debugPrint();
+        // }
+
+    } catch (const std::exception& e) {
+        // DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
+        // ASTStatement->printAST(std::cout, 0);
+        throw MerkError(e.what());
+    }
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting ASTStatement ===========================", Colors::yellow));
+    // DEBUG_FLOW_EXIT();
+}
+
 void Parser::interpret(CodeBlock* block) const {
     // DEBUG_FLOW(FlowLevel::HIGH);
 
@@ -159,28 +193,6 @@ void Parser::interpret(CodeBlock* block) const {
     }
     // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting CodeBlock ===========================", Colors::yellow));
 
-    // DEBUG_FLOW_EXIT();
-}
-
-void Parser::interpret(ASTStatement* ASTStatement) const {
-    // DEBUG_FLOW(FlowLevel::HIGH);
-
-    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting ASTStatement ===========================", Colors::yellow));
-
-    try {
-        ASTStatement->evaluate(currentScope); // Evaluate the updated statement
-
-        // if (debugParser){
-        //     currentScope->printContext();
-        //     currentScope->debugPrint();
-        // }
-
-    } catch (const std::exception& e) {
-        // DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
-        // ASTStatement->printAST(std::cout, 0);
-        throw MerkError(e.what());
-    }
-    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting ASTStatement ===========================", Colors::yellow));
     // DEBUG_FLOW_EXIT();
 }
 
@@ -374,25 +386,42 @@ UniquePtr<T> createNode(SharedPtr<Scope> scope, Args&&... args) {
     return makeUnique<T>(std::forward<Args>(args)..., scope);
 }
 
+// int Parser::getOperatorPrecedence(const String& op) const {
+//     static const std::unordered_map<String, int> precedenceMap = {
+//         {"*", 3}, {"/", 3}, {"%", 3},
+//         {"+", 2}, {"-", 2}, {"+=", 2}, {"++", 2},
+//         {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, 
+//         {"<=", 1}, {">=", 1}, {"+=", 1}, {"-=", 1},
+//         {"*=", 1}, {"/=", 1}
+
+//         // {"+=", 0}, {"-=", 0}, {"*=", 0}, {"/=", 0},
+//         // {"*", 3}, {"/", 3}, {"%", 3},
+//         // {"+", 2}, {"-", 2},
+//         // {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, {"<=", 1}, {">=", 1}
+//     };
+
+//     auto it = precedenceMap.find(op);
+//     if (it != precedenceMap.end()) {
+//         return it->second;
+//     }
+//     return 0; // Default precedence for unknown operators
+// }
+
 int Parser::getOperatorPrecedence(const String& op) const {
     static const std::unordered_map<String, int> precedenceMap = {
         {"*", 3}, {"/", 3}, {"%", 3},
-        {"+", 2}, {"-", 2}, {"+=", 2}, {"++", 2},
-        {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, 
-        {"<=", 1}, {">=", 1}, {"+=", 1}, {"-=", 1},
-        {"*=", 1}, {"/=", 1}
+        {"+", 2}, {"-", 2},
+        {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, {"<=", 1}, {">=", 1},
 
-        // {"+=", 0}, {"-=", 0}, {"*=", 0}, {"/=", 0},
-        // {"*", 3}, {"/", 3}, {"%", 3},
-        // {"+", 2}, {"-", 2},
-        // {"==", 1}, {"!=", 1}, {"<", 1}, {">", 1}, {"<=", 1}, {">=", 1}
+        // If you truly want these as binary operators, keep them,
+        // otherwise they should NOT be here:
+        {"+=", 0}, {"-=", 0}, {"*=", 0}, {"/=", 0},
+        {"++", 4}, // (but ++ is usually unary/postfix; see below)
     };
 
     auto it = precedenceMap.find(op);
-    if (it != precedenceMap.end()) {
-        return it->second;
-    }
-    return 0; // Default precedence for unknown operators
+    if (it != precedenceMap.end()) return it->second;
+    return -1; // ✅ unknown: not a binary operator
 }
 
 std::optional<std::type_index> getType(Token token){

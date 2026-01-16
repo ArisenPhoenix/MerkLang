@@ -134,6 +134,8 @@ void DynamicNode::clear() {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue()) && flags.isInstance) {
         auto instance = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()));
         instance->getInstanceScope()->clear();
+        instance->setScope(nullptr);
+        instance.reset();
     } 
 }
 
@@ -253,22 +255,22 @@ UniquePtr<VarNode> VarNode::uniqClone() {
     auto type = DynamicNode::getTypeFromValue(valueNode.getValue());
     auto isTarget = (type == NodeValueType::Dict || type == NodeValueType::Callable || type == NodeValueType::DataStructure || type == NodeValueType::List || type == NodeValueType::ClassInstance);
     
-    if (isTarget && uniqCloned->valueNode == valueNode) {
-        String isDynamic = " isn't dynamic";
-        if (dynamic_cast<DynamicNode*>(oldValue.getInner().get())) {
-            isDynamic = " is certainly dynamic";
-        }
-        throw MerkError("the uniqueCloned value is still the same as the original -> " + isDynamic);
-    } 
+    // if (!oldValue.isNative() && !oldValue.isInstance() && isTarget && uniqCloned->valueNode == valueNode) {
+    //     String isDynamic = " isn't dynamic";
+    //     if (dynamic_cast<DynamicNode*>(oldValue.getInner().get())) {
+    //         isDynamic = " is certainly dynamic";
+    //     }
+    //     throw MerkError("the uniqueCloned value is still the same as the original -> " + isDynamic);
+    // } 
 
-    if (isTarget) {
-        throw MerkError("HAHA " + nodeTypeToString(type));
-    } 
-    else {
-        throw MerkError("HAHA " + nodeTypeToString(type));
-    }
+    // if (isTarget) {
+    //     throw MerkError("HAHA " + nodeTypeToString(type));
+    // } 
+    // else {
+    //     throw MerkError("HAHA " + nodeTypeToString(type));
+    // }
 
-    if ( isTarget ) { throw MerkError("Cloning a Target Type in VarNode " + nodeTypeToString(type)); }
+    // if ( isTarget ) { throw MerkError("Cloning a Target Type in VarNode " + nodeTypeToString(type)); }
     
     // if ((oldValue.getValue() == valueNode.getValue()) && isTarget) {
     //     auto msg = "Value didn't change for type " + nodeTypeToString(DynamicNode::getTypeFromValue(valueNode.getValue()));
@@ -285,7 +287,7 @@ UniquePtr<VarNode> VarNode::uniqClone() {
     //     throw MerkError(msg + msg2);
     // }
 
-    throw MerkError("Cloned Variable");
+    // throw MerkError("Cloned Variable");
     DEBUG_FLOW_EXIT();
     return uniqCloned;
 }
@@ -330,7 +332,7 @@ void validateTypes(NodeValueType defType, Node& startValue) {
 VarNode::VarNode(Node startingValue, DataTypeFlags flags) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto definedType = flags.type;
-    validateTypes(definedType, startingValue);
+    // validateTypes(definedType, startingValue);
     staticType = nodeTypeToString(flags.type);
 
 

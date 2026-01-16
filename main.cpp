@@ -38,9 +38,6 @@ int main(int argc, char* argv[]) {
    
     // Step 2: Read file content
     String content = readFile(filePath);
-    // if (Debugger::getInstance().getLogLevel() > LogLevel::PERMISSIVE) {
-    //     outputFileContents(content, 800);
-    // }
 
     outputFileContents(content, 800);
     // Step 3: Initialize Global Scope
@@ -94,17 +91,17 @@ int main(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
         
         if (!interpretMode) {
-            ast->evaluate(globalScope); // Explicitly evaluate the AST in deferred mode
+            ast->evaluate(globalScope);
         }
 
         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
         // ast->printAST(std::cout);
         globalScope->debugPrint();
-        // globalScope->printChildScopes();
-        globalScope->printScopeReport();
         ast->clear();
-        globalScope->clear();
+        // globalScope->clear();
         std::cout << "Execution time: " << elapsed.count() << " ms\n";
+
+        
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
 
@@ -119,11 +116,11 @@ int main(int argc, char* argv[]) {
     // Print the final state of the Global Scope right before exiting
     DEBUG_LOG(LogLevel::DEBUG, "");
     DEBUG_LOG(LogLevel::DEBUG, "==================== FINAL GLOBAL SCOPE ====================");
-    globalScope->printScopeReport();
-    // globalScope->clear(false);
-    // globalScope.reset();
-    // ast->clear();
     globalScope->clear();
+    globalScope.reset();
+    // Scope::liveScopeCount -= 1;
+    Scope::printScopeReport();
+    
     return 0;
 }
 
@@ -344,7 +341,7 @@ int main(int argc, char* argv[]) {
 // // #include "core/Tokenizer.hpp"
 // // #include "core/parser/parser_main.h"
 // // #include "core/scope/scope_main.h"
-// // #include "core/evaluator.h"
+// // "core/Evaluator.hpp"
 
 // using Clock = std::chrono::high_resolution_clock;
 

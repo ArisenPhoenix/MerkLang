@@ -57,7 +57,7 @@ String& Callable::getQualifiedName() {
 
 Callable::Callable(String name, ParamList params, CallableType callType)
     : name(std::move(name)), parameters(std::move(params)), callType(callType) {
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
     
     if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable instantiation");}
     DEBUG_FLOW_EXIT();
@@ -66,7 +66,7 @@ Callable::Callable(String name, ParamList params, CallableType callType)
 
 Callable::Callable(String name, ParamList params, CallableType callType, bool requiresReturn, bool isStatic)
     : name(std::move(name)), parameters(std::move(params)), callType(callType), requiresReturn(requiresReturn), isStatic(isStatic) {
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
     if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable with requiresReturn instantiation");}
     DEBUG_FLOW_EXIT();
 }

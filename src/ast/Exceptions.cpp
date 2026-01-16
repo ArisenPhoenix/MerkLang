@@ -34,6 +34,12 @@ Node Throw::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> Instan
     throw ThrowException(err);
 }
 
+EvalResult Throw::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const {
+    if (!expr) throw MerkError("Throw statement must have a value.");
+    Node err = expr->evaluate(scope, instance);
+    return EvalResult::Throw(std::move(err));
+}
+
 
 Node Return::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const  {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
@@ -51,21 +57,42 @@ Node Return::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> insta
 
 
 UniquePtr<BaseAST> Throw::clone() const {
-    UniquePtr<BaseAST> clonedReturnBase = expr->clone();
+    UniquePtr<BaseAST> clonedThrowBase = expr->clone();
 
-    auto clonedExpr = static_unique_ptr_cast<ASTStatement>(std::move(clonedReturnBase));
+    auto clonedExpr = static_unique_ptr_cast<ASTStatement>(std::move(clonedThrowBase));
 
     return makeUnique<Throw>(std::move(clonedExpr), getScope());
 }
 
 
+
+
 Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
 : ASTStatement(scope), returnValue(std::move(value)) {}
+EvalResult Return::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const {
+    
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
+    if (!returnValue) throw MerkError("Return statement must have a value.");
+
+    Node value = returnValue->evaluate(scope, instance);
+
+    DEBUG_FLOW_EXIT();
+    return EvalResult::Return(std::move(value));
+}
 
 
 
 
 Break::Break(SharedPtr<Scope> scope) : ASTStatement(scope) {}
-
+EvalResult Break::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const {
+    MARK_UNUSED_MULTI(scope, instance);
+    return EvalResult::Break();
+}
 
 Continue::Continue(SharedPtr<Scope> scope) : ASTStatement(scope) {}
+
+EvalResult Continue::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const {
+    MARK_UNUSED_MULTI(scope, instance);
+    return EvalResult::Continue();
+}

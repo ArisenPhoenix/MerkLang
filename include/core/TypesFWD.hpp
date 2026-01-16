@@ -65,6 +65,8 @@ class InstanceNode;
 class ClassInstanceNode;
 class ClassSignature;
 
+class NameSpace;
+
 class NativeNode;
 class ListNode;
 class ArrayNode;
@@ -192,7 +194,9 @@ enum class TokenType {
     BraceRight,
     LeftArrow,
     RightArrow,
-    BeginTyping
+    BeginTyping,
+
+    NoOp,
 };
 
 
@@ -244,6 +248,8 @@ enum class AstType {
     ClassMethodDef,
     ClassMethodRef,
     ClassMethodCall,
+
+    Namespace,
 
     AttributeDeclaration,
     AttributeReference,

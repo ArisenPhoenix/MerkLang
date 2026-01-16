@@ -77,8 +77,6 @@ SharedPtr<NodeBase> DynamicNode::applyGe(const NodeBase& lhs, const NodeBase& rh
 // Overload operator<< for Node to display detailed information
 std::ostream& operator<<(std::ostream& os, const Node& node) {
     os << "(";
-    // os << "Value: ";
-
     // Display the value
     try {
         os << node.toString();
@@ -87,54 +85,13 @@ std::ostream& operator<<(std::ostream& os, const Node& node) {
     }
 
     SharedPtr<Scope> scope = nullptr;
-    // bool isInstance = node.isInstance();
-    // Display the type
     os << ", Type: " << (nodeTypeToString(node.getType()) + "(" + node.toString() + ")" + " FullType: " + node.getFlags().fullType.toString());
-    // if (node.getType() == NodeValueType::ClassInstance){
-    //     auto instance = std::get<SharedPtr<Callable>>(node.getValue());
-    //     // scope = instance->getInstanceScope();
-
-    //     // if (scope->localFunctions.size() == 0) {scope->debugPrint(); scope->printChildScopes(); throw RunTimeError("There Are No Functions in this instance of " + node.nodeType); }   
-    // }
-
-    // else {
-    //     if (isInstance) {
-    //         throw MerkError("IsInstance is instance, but not value type");
-    //     }
-    // }
-
     
     // Display metadata
     os << ", isConst: " << (node.getFlags().isConst ? "true" : "false");
     os << ", isMutable: " << (node.getFlags().isMutable ? "true" : "false");
     os << ", isStatic: " << (node.getFlags().isStatic ? "true" : "false");
-    // os << ", isCallable: " << (node.getFlags().isCallable ? "true" : "false");
-    // os << ", isInstance: " << (isInstance ? "true" : "false");
-    // os << ", isList: " << (node.isList() ? "true" : "false");
-    
-
     os << ")";
-
-    // if (scope){
-    //     os << "\n INSTANCE: " + node.name + " DATA START In Scope : " + "Scope(" + std::to_string(scope->getScopeLevel()) + ", " + scope->owner + ")\n";
-    //     // scope->debugPrint();
-    //     for (auto& [varName, var] : scope->getContext().getVariables()) {
-    //         os << varName << " = " << var->toString() << "\n";
-    //     }
-    //     for (auto& [funcName, funcVec] : scope->localFunctions) {
-    //         for (auto& func : funcVec) {
-    //             os << func->getCallable()->toString() << "\n";
-    //         }
-    //     }
-
-    //     // if (scope->localFunctions.size() == 0) { throw MerkError("There Are No Functions in this instance of " + node.nodeType); }
-
-    //     for (auto& [className, cls] : scope->localClasses) {
-    //         os << cls->getCallable()->toString() << "\n";
-    //     }
-        
-    //     os << "\n INSTANCE DATA END\n\n";
-    // }
     return os;
 }
 
@@ -386,7 +343,8 @@ SharedPtr<NodeBase> NodeBase::operator==(const NodeBase& other) const {
     // (void)other; 
     // throw MerkError("Invalid op == for Type " + flags.toString() + " DATA: " + toString() + " Determined as type: " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())) + " OTHER IS " + other.flags.toString() + " DATA: " + other.toString() + " Determined type as" + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
     // return makeShared<BoolNode>(true);
-    throw MerkError("NodeBase::operator==, See Above ");
+    // throw MerkError("NodeBase::operator==, See Above ");
+    return makeShared<BoolNode>(other.toString() == toString());
 }
 
 // SharedPtr<NodeBase> NodeBase::operator==(const NodeBase& other) const {(void)other; return makeShared<BoolNode>(false);}

@@ -6,13 +6,6 @@
 
 Node handleVirtualMethod(SharedPtr<ClassInstanceNode> instanceNode, const String& methodName) {
     if (methodName == "clone") {
-    
-        // auto clonedInstance = instanceNode->clone();
-        // if (clonedInstance->getInstance() == instanceNode->getInstance()) {
-        //     throw MerkError("InstanceNode didn't actually clone");
-        // }
-
-        // return Node(clonedInstance->getInstanceNode());
         auto clonedInstance = instanceNode->getInstanceNode().cloneInstance();
         if (clonedInstance->toInstance() == instanceNode->getInstance()) {
             throw MerkError("InstanceNode didn't actually clone");
@@ -34,16 +27,23 @@ Node handleVirtualMethod(SharedPtr<ClassInstanceNode> instanceNode, const String
 }
 
 
-Node handleVirtualMethod(Node currentVal, const String& methodName) {
+Node handleVirtualMethod(Node currentVal, const String& methodName, NodeList args = {}) {
     if (methodName == "clone") {
         auto clonedVal = currentVal.clone();
         return clonedVal;
-
+ 
 
     } else if (methodName == "clear") {
         currentVal.clear();
         return Node(Null);
-    } 
+    }
+
+    else if (methodName == "sub") {
+        if (currentVal.isString()) {
+            return Node(currentVal.toString().find(args[0].toString()) != String::npos);
+        }
+        throw MerkError("Method Sub not implemented for type: " + currentVal.getTypeAsString());
+    }
 
     throw FunctionNotFoundError(methodName);
 }
