@@ -801,7 +801,7 @@ void CharNode::setValue(const VariantType& v)  { value = std::get<char*>(v); }
 NodeValueType CharNode::getType() const { return NodeValueType::Char; }
 SharedPtr<NodeBase> CharNode::clone() const {return makeShared<CharNode>(value);}
 
-int CharNode::toInt() const {return (int)value;}
+int CharNode::toInt() const {return StringNode(value).toInt();}
 
 bool CharNode::isString() const { return false; }
 bool CharNode::isChars() const { return true; }
