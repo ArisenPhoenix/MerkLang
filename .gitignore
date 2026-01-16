@@ -5,7 +5,7 @@ grammar
 Info
 rebuild.sh
 error
-cccccccccccccccccccccccinclude/utilities/debugger.txt
+include/utilities/debugger.txt
 old_code.txt
 vcpkg_installed
 CMakeFiles
