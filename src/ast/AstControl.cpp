@@ -21,7 +21,7 @@
 #include "utilities/debugging_functions.h"
 #include "utilities/helper_functions.h"
 
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 #include "core/Scope.hpp"
 
 
@@ -75,7 +75,7 @@ CodeBlock::CodeBlock(Vector<UniquePtr<BaseAST>> otherChildren, SharedPtr<Scope> 
 void CodeBlock::clear() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
-    DEBUG_LOG(LogLevel::INFO, 
+    DEBUG_LOG(LogLevel::TRACE, 
         getScope() && getScope()->getScopeLevel() == 0 
             ? "Destroying Root CodeBlock." 
             : "Destroying CodeBlock", 
@@ -208,7 +208,7 @@ WhileLoop::WhileLoop(UniquePtr<ConditionalBlock> condition, UniquePtr<CodeBlock>
 WhileLoop::~WhileLoop(){
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
-    DEBUG_LOG(LogLevel::FLOW, "Destroyed WhileLoop with scope level: ");
+    DEBUG_LOG(LogLevel::TRACE, "Destroyed WhileLoop with scope level: ");
 
     DEBUG_FLOW_EXIT();
 
@@ -251,6 +251,11 @@ Node CodeBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
 
     DEBUG_FLOW_EXIT();
     return val;
+}
+
+EvalResult CodeBlock::evaluateFlow(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    setScope(scope);
+    return Evaluator::evaluateBlockFlow(children, scope, instanceNode);
 }
 
 Node ElseStatement::evaluate(SharedPtr<Scope> evalScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {

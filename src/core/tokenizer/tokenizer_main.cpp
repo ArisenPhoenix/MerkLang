@@ -28,6 +28,24 @@ const std::unordered_set<char> typeContainers = {
     '{', '<', '[', ']', '>', '}'
 };
 
+static bool isCompoundPair(char a, char b) {
+    switch (a) {
+        case '<': return b == '=' || b == '<';
+        case '>': return b == '=' || b == '>';
+        case '=': return b == '=';
+        case '!': return b == '=';
+        case '+': return b == '=' || b == '+';
+        case '-': return b == '=' || b == '-' || b == '>';
+        case '*': return b == '=' || b == '*';
+        case '/': return b == '=' || b == '/';
+        case '&': return b == '&' || b == '=';
+        case '|': return b == '|' || b == '=';
+        case ':': return b == ':';   // only if you want ::
+        default: return false;
+    }
+}
+
+
 bool Tokenizer::handleContainers() {
     bool found = false;
     if (source[position] == '[') {
@@ -53,11 +71,13 @@ bool Tokenizer::handleContainers() {
     }
 
     else if (source[position] == '<') {
+        if (peek() == '=' || peek() == '<') {return false;}
         tokens.push_back(Token(TokenType::Operator, "<", line, column));
         found = true;
     }
 
     else if (source[position] == '>') {
+        if (peek() == '=' || peek() == '>') {return false;}
         tokens.push_back(Token(TokenType::Operator, ">", line, column));
         found = true;
     }
@@ -110,6 +130,7 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
+
         // Handle comments - perhaps will use them for something else later
         if (position < sourceLength && source[position] == '#') {
             while (position < sourceLength && source[position] != '\n') {
@@ -118,6 +139,22 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
+        if (source[position] == ':' && peek() == ';') {
+            // ':' ends clause, ';' means "indent next statement"
+            tokens.push_back(Token(TokenType::Punctuation, ":", line, column));
+
+            // End-of-line semantics (but not an actual '\n' in source)
+            tokens.push_back(Token(TokenType::Newline, ";", line, column + 1));
+
+            // Create an indent token so the parser sees a block
+            tokens.push_back(Token(TokenType::Indent, "->", line, 1));
+
+            position += 2;
+            column += 2;
+            continue;
+        }
+
+
         else if (source[position] == ',') {
             tokens.push_back(Token(TokenType::Punctuation, ",", line, column));
             position++;
@@ -125,26 +162,22 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
-        else if (handleContainers()) {
-            continue;
-        }
-
-        // Handle compound operators first
-        if ((isOperator(source[position]) || isPunctuation(source[position])) &&
-            (isOperator(peek()) || isPunctuation(peek()))) {
-            readCompoundOperatorOrPunctuation();
+        if (position + 1 < sourceLength && isCompoundPair(source[position], peek())) {
+            tokens.push_back(readCompoundOperatorOrPunctuation());
             position += 2;
             column += 2;
             continue;
         }
 
-        // Handle single character operators
-        else if (isOperator(source[position]) || isPunctuation(source[position])) { 
+        if (handleContainers()) {
+            continue;
+        }
+
+        if (isOperator(source[position]) || isPunctuation(source[position])) {
             tokens.push_back(readOperatorOrPunctuation());
-            position++;  // Move past the single character
+            position++;
             column++;
             continue;
-            
         }
 
         else if (isLetter(source[position])) {
@@ -204,12 +237,8 @@ Vector<Token> Tokenizer::tokenize() {
 
 Token Tokenizer::readOperatorOrPunctuation() {
     char c = source[position];
-    // Handle assignment "=" (but not "==", which is handled in readCompoundOperatorOrPunctuation)
-    if (c == '=') {
-        return Token(TokenType::VarAssignment, "=", line, column);
-    }
+    if (c == '=') { return Token(TokenType::VarAssignment, "=", line, column); }
 
-    // Handle other mathematical and logical operators
     if (isOperator(c)) {
         if (c == '<' && lastTokenWas(TokenType::VarAssignment)) {
             return Token(TokenType::Operator, String(1, c), line, column);
@@ -231,7 +260,6 @@ Token Tokenizer::readNumber() {
         column++;
     }
 
-    // Check for decimal part
     if (position < sourceLength && source[position] == '.') {
         if (isDigit(peek())) {
             position++;
@@ -249,9 +277,7 @@ Token Tokenizer::readNumber() {
 }
 
 bool handleSpecialChar(char nextChar, char startChar, String& resultAccum) {
-    if (nextChar == startChar) {
-        return true;
-    }
+    if (nextChar == startChar) { return true; }
     switch (nextChar) {
         case 'n': resultAccum += '\n'; break;
         case 't': resultAccum += '\t'; break;
@@ -317,7 +343,6 @@ Token Tokenizer::readIdentifier() {
     size_t start = position;
     int startColumn = column;
 
-    // Read identifier (letters, digits, underscores)
     while (position < sourceLength && (isLetter(source[position]) || isDigit(source[position]) || source[position] == '_')) {
         position++;
         column++;

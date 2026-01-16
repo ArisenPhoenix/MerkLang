@@ -36,6 +36,16 @@
 int totalWith = 0;
 int totalWithout = 0;
 
+String ScopeCounts::toString() {
+    String out;
+    out += "FunctionCalls: " + std::to_string(functionCalls) + "\n";
+    out += "MethodCalls: " + std::to_string(methodCalls) + "\n";
+    out += "InstanceCalls: " + std::to_string(instanceCalls) + "\n";
+    out += "ClassCalls: " + std::to_string(classCalls) + "\n";
+    out += "Blocks: " + std::to_string(blocks) + "\n";
+    return out;
+}
+
 
 // Helper to format a pointer or return a "None" string
 String formatPointer(const Scope* ptr) {
@@ -48,10 +58,34 @@ String formatPointer(const Scope* ptr) {
     return oss.str();
 }
 
+String scopeKindToString(ScopeKind kind) {
+    switch (kind)
+    {
+    case ScopeKind::Root: return "Root";
+    case ScopeKind::Block: return "Block";
+    case ScopeKind::FunctionDef: return "FunctionDef";
+    case ScopeKind::FunctionCall: return "FunctionCall";
+    case ScopeKind::ClassDef: return "ClassDef";
+    case ScopeKind::ClassScope: return "ClassScope";
+    case ScopeKind::Instance: return "Instance";
+    case ScopeKind::Captured: return "Captured";
+    case ScopeKind::Detached: return "Detached";
+    case ScopeKind::Isolated: return "Isolated";
+    case ScopeKind::MethodDef: return "MethodDef";
+    case ScopeKind::MethodCall: return "MethodCall";
+
+    default:
+        return "UNKNOWN";
+    }
+};
+
 // constructor for root.
 Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool) 
     : interpretMode(interpretMode) {
         isRoot = isRootBool;
+        if (isRoot) {
+            Scope::counts.roots += 1;
+        }
         scopeLevel = scopeNum;
         DEBUG_FLOW(FlowLevel::LOW);
 
@@ -77,6 +111,10 @@ String Scope::formattedScope() {
     std::ostringstream oss;
     oss << this;
     return oss.str();
+}
+
+ScopeCounts Scope::getCounts() {
+    return counts;
 }
 
 // Constructor for child
@@ -276,10 +314,98 @@ bool Scope::has(const SharedPtr<Scope>& checkScope) {
     return false;
 }
 
+bool Scope::isAncestorOf(const Scope* maybeDesc) const {
+    for (auto p = maybeDesc; p; ) {
+        if (p == this) {return true;}
+        if (p->getParent()) {
+            p = p->getParent().get();
+        }
+           // or however you store parent
+    }
+    return false;
+}
+
+// void Scope::appendChildScope(SharedPtr<Scope> child, bool update) {
+//     if (!child) return;
+
+//     if (child.get() == this) {
+//         throw MerkError("Cannot append scope as its own child");
+//     }
+
+//     // Prevent cycles: if I'm already inside child's parent chain, adding child under me makes a cycle.
+//     if (child->isAncestorOf(this)) {
+//         throw MerkError("appendChildScope would create a cycle");
+//     }
+
+//     // Optional: prevent double-parenting
+//     if (auto oldParent = child->getParent()) {
+//         if (oldParent.get() != this) {
+//             // Either detach from old parent, or throw.
+//             oldParent->removeChildScope(child);
+//         }
+//     }
+
+//     if (update) { child->updateChildLevelsRecursively(); }
+
+//     child->setParent(shared_from_this());
+//     childScopes.push_back(child);
+// }
+
+
+// void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
+//     MARK_UNUSED_MULTI(update);
+//     DEBUG_FLOW(FlowLevel::LOW);
+//     auto hasChild = this->has(childScope);
+//     if (!hasChild) {
+//         childScope->parentScope = shared_from_this();
+//         childScope->scopeLevel = getScopeLevel() + 1;
+//         childScopes.push_back(childScope);
+//         totalWithout += 1;
+//     } else {
+//         debugLog(true, "CHILD FOUND in Scope holding Meta: " + metaString());
+//         throw MerkError("CHILD FOUND in Scope holding Meta: " + metaString());
+//         totalWith += 1;
+//     }
+
+//     // KEEEEEEEEEEEEP THIS BLOCK IT IS FOR AFTER SCOPING WITHIN CALLABLES IS DETERMINANT
+//     // childScope->parentScope = shared_from_this();
+//     // childScope->scopeLevel = getScopeLevel() + 1;
+//     // childScopes.push_back(childScope);
+
+//     childScope->isDetached = false;
+//     childScope->owner = owner;
+//     includeMetaData(childScope, false);
+    
+//     if (update) { childScope->updateChildLevelsRecursively(); }
+//     DEBUG_FLOW_EXIT();
+// }
+
+void Scope::validateNoCycles(SharedPtr<Scope> childScope){
+    if (!childScope) throw MerkError("appendChildScope: childScope null");
+    if (childScope.get() == this) throw MerkError("appendChildScope: cannot parent self");
+
+    // If it already has a parent, that's a bug unless you have a real detach/reattach protocol.
+    if (auto existingParent = childScope->parentScope.lock()) {
+        if (existingParent.get() == this) {
+            // already attached here: avoid duplicates
+            if (!hasImmediateChild(childScope)) childScopes.push_back(childScope);
+            return;
+        }
+        throw MerkError("appendChildScope: child already has a parent: " +
+                        existingParent->metaString() + " -> " + childScope->metaString());
+    }
+
+    // Prevent parent-cycles: child cannot be one of my ancestors.
+    for (auto p = shared_from_this(); p; p = p->parentScope.lock()) {
+        if (p.get() == childScope.get()) {
+            throw MerkError("appendChildScope: would create cycle (child is ancestor)");
+        }
+    }
+}
 
 void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
-    MARK_UNUSED_MULTI(update);
-    DEBUG_FLOW(FlowLevel::LOW);
+    if (!childScope) throw MerkError("appendChildScope: childScope null");
+    if (childScope.get() == this) throw MerkError("appendChildScope: cannot parent self");
     auto hasChild = this->has(childScope);
     if (!hasChild) {
         childScope->parentScope = shared_from_this();
@@ -287,21 +413,33 @@ void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
         childScopes.push_back(childScope);
         totalWithout += 1;
     } else {
+        String out = "CHILD FOUND in Scope holding Meta: " + metaString() + " OWNER: " + owner;
+        debugLog(true, out);
+        // if (kind != ScopeKind::Root && owner != "GLOBAL") {
+        //     throw MerkError(out);
+        // } else {
+        //     debugLog(true, out);
+        // }
+        
         totalWith += 1;
     }
-
-    // KEEEEEEEEEEEEP THIS BLOCK IT IS FOR AFTER SCOPING WITHIN CALLABLES IS DETERMINANT
+    // If it already has a parent, that's a bug unless you have a real detach/reattach protocol.
+    // validateNoCycles(childScope);
+    // if (childScope->getParent()) {
+    //     childScope->getParent()->removeChildScope(childScope);
+    // }
+    
     // childScope->parentScope = shared_from_this();
-    // childScope->scopeLevel = getScopeLevel() + 1;
+    // childScope->scopeLevel  = getScopeLevel() + 1;
     // childScopes.push_back(childScope);
 
     childScope->isDetached = false;
     childScope->owner = owner;
     includeMetaData(childScope, false);
-    
-    if (update) { childScope->updateChildLevelsRecursively(); }
-    DEBUG_FLOW_EXIT();
+
+    if (update) childScope->updateChildLevelsRecursively();
 }
+
 
 
 SharedPtr<Scope> Scope::createChildScope() {
@@ -311,6 +449,7 @@ SharedPtr<Scope> Scope::createChildScope() {
                                      interpretMode);
     c->isRoot = false;
     childScopes.push_back(c);
+    Scope::counts.blocks += 1;
     return c;
   }
 
@@ -366,6 +505,8 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
     }
 
     context.setVariable(name, std::move(value));
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::declareVariable Missed variable ", name, "in The below scope: ");
+    debugPrint();
     DEBUG_FLOW_EXIT();
 }
 
@@ -374,6 +515,9 @@ void Scope::updateVariable(const String& name, const Node& value) {
         context.updateVariable(name, value);
         return;
     }
+
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::updateVariable Missed variable ", name, "in The below scope: ");
+    // debugPrint();
 
     // Delegate to parent scope if the variable is not in the current scope
     if (auto parent = parentScope.lock()) {
@@ -390,6 +534,8 @@ VarNode& Scope::getVariable(const String& name) {
     if (auto variable = context.getVariable(name)) {
         return variable.value();
     }
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::getVariable Missed variable ", name, "in The below scope: ");
+    // debugPrint();
 
     // Delegate to parent scope if it exists
     if (auto parent = parentScope.lock()) {

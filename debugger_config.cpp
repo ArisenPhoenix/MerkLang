@@ -12,8 +12,8 @@ namespace Debug
 
         auto globalLevel = FlowLevel::VERY_LOW;
         
-        debugger.setGlobalLogLevel(LogLevel::PERMISSIVE);
-        debugger.setGlobalFlowLevel(FlowLevel::NONE);
+        debugger.setGlobalLogLevel(LogLevel::NONE);
+        debugger.setGlobalFlowLevel(FlowLevel::LOW);
 
         debugger.setIncludeTimestamp(false);
         debugger.setIncludeFileInfo(true);
@@ -55,7 +55,7 @@ namespace Debug
 
         // AST - CONTROL
         debugger.setLogLevels("ast/AstControl.hpp", LogLevel::ERROR, FlowLevel::VERY_LOW);
-        debugger.setLogLevels("ast/AstControl.cpp", LogLevel::ERROR, FlowLevel::VERY_LOW);
+        debugger.setLogLevels("ast/ast_control.cpp", LogLevel::ERROR, FlowLevel::VERY_LOW);
         debugger.setLogLevels("ast/ast_clone.cpp", LogLevel::ERROR, FlowLevel::VERY_LOW);
         debugger.setLogLevels("ast/ast_collect.cpp", LogLevel::ERROR, FlowLevel::VERY_LOW); 
         debugger.setLogLevels("ast/ast_print.cpp", LogLevel::ERROR, FlowLevel::VERY_LOW);

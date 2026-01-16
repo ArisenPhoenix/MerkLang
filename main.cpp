@@ -105,6 +105,8 @@ int main(int argc, char* argv[]) {
         ast->clear();
         globalScope->clear();
         std::cout << "Execution time: " << elapsed.count() << " ms\n";
+
+        
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
 
@@ -344,7 +346,7 @@ int main(int argc, char* argv[]) {
 // // #include "core/Tokenizer.hpp"
 // // #include "core/parser/parser_main.h"
 // // #include "core/scope/scope_main.h"
-// // #include "core/evaluator.h"
+// // #include "core/Evaluator.h"
 
 // using Clock = std::chrono::high_resolution_clock;
 

@@ -18,7 +18,8 @@ String ScopeMeta::metaString() const {
     oss << "scopeLevel: " << scopeLevel << " | ";
     oss << "isDetached: " << (isDetached ? "true" : "false") << " | ";
     oss << "isCallable: " << (isCallableScope ? "true" : "false") << " | ";
-    oss << "isCloned: " << (isClonedScope ? "true" : "false");
+    oss << "isCloned: " << (isClonedScope ? "true" : "false") << " | ";
+    oss << "kind: " << scopeKindToString(kind);
     return oss.str();
 }
 
@@ -62,7 +63,7 @@ SharedPtr<Scope> Scope::clone(bool strict) const {
     return newScope;
 }
 
-Vector<SharedPtr<Scope>> Scope::getChildren() { return childScopes; }
+Vector<SharedPtr<Scope>>& Scope::getChildren() { return childScopes; }
 
 bool Scope::hasChildren() { return childScopes.size() > 0; }
 

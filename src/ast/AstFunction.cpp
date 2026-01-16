@@ -14,7 +14,7 @@
 #include "core/callables/functions/NativeFunction.hpp"
 #include "ast/ast_validate.h"
 
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 #include "ast/AstCallable.hpp"
 #include "ast/AstFunction.hpp"
 
@@ -52,7 +52,16 @@ Node FunctionBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     
     DEBUG_FLOW_EXIT();
     return val;
-} 
+}
+
+EvalResult FunctionBody::evaluateFlow(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::NONE);
+    // setScope(scope);
+    auto val = Evaluator::evaluateBlockFlow(getMutableChildren(), scope, instanceNode);
+    
+    DEBUG_FLOW_EXIT();
+    return val;
+}
 
 
 
@@ -178,7 +187,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
 
     if (func->getSubType() == CallableType::NATIVE) {
-        func->parameters.clone().verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+        func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
         if (func->getName() == "DEBUG_LOG") {
             printAST(std::cout, 0);
         }
@@ -200,20 +209,25 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     }
     
 
-    Node value;
-    try {
-        value = func->execute(evaluatedArgs, callScope);
-        if (func->getRequiresReturn()) { throw MerkError("Function did not return a value."); }
+    // Node value;
+    // try {
+    //     value = func->execute(evaluatedArgs, callScope);
+    //     if (func->getRequiresReturn()) { throw MerkError("Function did not return a value."); }
         
-    } catch (const ReturnException& e) {
-        DEBUG_FLOW_EXIT();
-        value = e.getValue();  // Extract and return function's result
-    }
-    
+    // } catch (const ReturnException& e) {
+    //     DEBUG_FLOW_EXIT();
+    //     value = e.getValue();  // Extract and return function's result
+    // }
+
+    Node value = func->execute(evaluatedArgs, callScope);
     scope->removeChildScope(callScope);
-    // func->setCapturedScope(callScope);
-    DEBUG_FLOW_EXIT();
     return value;
+
+    
+    // scope->removeChildScope(callScope);
+    // // func->setCapturedScope(callScope);
+    // DEBUG_FLOW_EXIT();
+    // return value;
 }
 
 Node FunctionRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {    

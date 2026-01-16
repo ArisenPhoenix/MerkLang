@@ -7,5 +7,5 @@
 Node handleVirtualMethod(SharedPtr<ClassInstanceNode> instanceNode, const String& methodName);
 
 
-Node handleVirtualMethod(Node currentVal, const String& methodName);
+Node handleVirtualMethod(Node currentVal, const String& methodName, NodeList args);
 

@@ -15,7 +15,7 @@
 #include "core/callables/Callable.hpp"
 #include "core/callables/functions/Function.hpp"
 
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 #include "ast/AstFunction.hpp"
 #include "ast/AstMethod.hpp"
 #include "ast/AstClass.hpp"  
@@ -146,7 +146,7 @@ ArgResultType Arguments::evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInst
             DEBUG_LOG(LogLevel::TRACE, "ABOUT TO EVALUATE ARG: ", arg.getAstTypeAsString());
             auto argVal = arg.value->evaluate(scope, instanceNode);
             DEBUG_LOG(LogLevel::TRACE, "ARG VAL: ", argVal, "ARG NAME: ", argVal.getFlags().name);
-            if (argVal.isNull()) {throw MerkError("argVal is null in Arguments::evaluateAll");}
+            // if (argVal.isNull()) {throw MerkError("argVal is null in Arguments::evaluateAll");}
             evaluated.addPositionalArg(argVal);
 
             DEBUG_LOG(LogLevel::TRACE, "ARGS SO FAR: ", evaluated.toString());
@@ -399,6 +399,8 @@ size_t CallableSignature::hash() const {
 
 ArgResultType CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    scope->debugPrint();
+    
     ArgResultType evaluatedArgs = arguments->evaluateAll(scope, instanceNode);
     return evaluatedArgs;
 }

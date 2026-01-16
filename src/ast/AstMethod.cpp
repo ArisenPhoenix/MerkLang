@@ -1,7 +1,7 @@
 #include "core/node/ArgumentNode.hpp"
 #include "core/TypesFWD.hpp"
 #include "core/Scope.hpp"
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 #include "core/callables/classes/Method.hpp"
 
 #include "ast/AstMethod.hpp"
@@ -78,6 +78,91 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
     return val;
 }
 
+// Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
+//     DEBUG_FLOW(FlowLevel::PERMISSIVE); 
+//     if (!instanceNode) {throw MerkError("MethodCall::evaluate -> " + name + " no instanceNode passed");}
+//     if (!scope) {throw MerkError("MethodCall::evaluate -> scope passed to is null");}
+
+//     auto instanceScope = instanceNode->getInstanceScope();
+//     if (!instanceScope) {throw MerkError("No Instance Scope");}
+
+//     auto executionScope = scope->createChildScope();
+//     executionScope->owner = generateScopeOwner("MethodExecutor", name);
+    
+//     auto args = handleArgs(executionScope, instanceNode);
+  
+//     auto optSig = instanceScope->getFunction(name, args);
+//     SharedPtr<CallableSignature> methodSig = nullptr;
+
+//     if (optSig.has_value()) {
+//         methodSig = optSig.value();
+//     } else {
+//         if (scope->hasVariable(name)) {
+//             auto& var = scope->getVariable(name);
+//             if (var.isFunctionNode()) {
+//                 auto funcNode = var.toFunctionNode();
+//                 optSig = funcNode.getFunction(name, args);
+//                 if (optSig.has_value()) {
+//                     methodSig = optSig.value();
+//                 }
+//             }
+//         }
+        
+
+//         if (!methodSig) {
+
+
+//             if (name == "append") {
+//                 scope->debugPrint();
+//                 throw MerkError("Didnt' Find append");
+//             }
+//             scope->debugPrint();
+//             throw MerkError("Didn't find " + name);
+//             auto returnVal = handleVirtualMethod(instanceNode, name);
+//             scope->removeChildScope(executionScope);
+//             executionScope->clear();
+//             return returnVal;
+//         }
+//     }
+
+//     if (!methodSig) {throw MerkError("Method not a signature");}
+//     SharedPtr<Method> method = std::static_pointer_cast<Method>(methodSig->getCallable());
+//     if (!method) {throw MerkError("Method " + name + " not found for given arguments");}
+
+
+//     if (method->getSubType() == CallableType::NATIVE) {
+//         return method->execute(args, scope, instanceNode);
+//     }
+
+    
+//     SharedPtr<Scope> callScope = executionScope->buildMethodCallScope(method, name);
+
+//     // instanceScope->appendChildScope(callScope, false);
+//     auto val = method->execute(args, callScope, instanceNode);
+//     // instanceScope->removeChildScope(callScope);
+
+//     scope->removeChildScope(executionScope);
+//     executionScope->clear();
+//     // instanceScope->removeChildScope(executionScope);
+    
+//     // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD(", name, ")", "RETURNED VAL: ", val.getFlags().toString());
+//     // if (name == "get") {throw MerkError("Called 'get' -> " + val.getInner()->toString() + " " + val.getFlags().toString());}
+//     DEBUG_FLOW_EXIT();
+//     return val;
+// }
+
+
+EvalResult MethodBody::evaluateFlow(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::NONE);
+    // setScope(scope);
+    if (!callScope){throw MerkError("There Is No callScope provided to MethodBody::evaluateFlow");}
+    if (!instanceNode){throw MerkError("No instanceNode was provided to MethodBody::evaluateFlow");}
+    auto val = Evaluator::evaluateBlockFlow(getMutableChildren(), scope, instanceNode);
+    
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
 Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode ) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE); 
     if (!instanceNode) {throw MerkError("MethodCall::evaluate -> " + name + " no instanceNode passed");}
@@ -86,10 +171,11 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     auto instanceScope = instanceNode->getInstanceScope();
     if (!instanceScope) {throw MerkError("No Instance Scope");}
 
-    auto executionScope = scope->createChildScope();
-    executionScope->owner = generateScopeOwner("MethodExecutor", name);
+    // auto executionScope = scope->createChildScope();
+    // executionScope->owner = generateScopeOwner("MethodExecutor", name);
     
-    auto args = handleArgs(executionScope, instanceNode);
+    // auto args = handleArgs(executionScope, instanceNode);
+    auto args = handleArgs(scope, instanceNode);
   
     auto optSig = instanceScope->getFunction(name, args);
     SharedPtr<CallableSignature> methodSig = nullptr;
@@ -119,8 +205,8 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
             scope->debugPrint();
             throw MerkError("Didn't find " + name);
             auto returnVal = handleVirtualMethod(instanceNode, name);
-            scope->removeChildScope(executionScope);
-            executionScope->clear();
+            // scope->removeChildScope(executionScope);
+            // executionScope->clear();
             return returnVal;
         }
     }
@@ -135,14 +221,17 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
     }
 
     
-    SharedPtr<Scope> callScope = executionScope->buildMethodCallScope(method, name);
+    // SharedPtr<Scope> callScope = executionScope->buildMethodCallScope(method, name);
+    SharedPtr<Scope> callScope = scope->buildMethodCallScope(method, name);
 
     // instanceScope->appendChildScope(callScope, false);
     auto val = method->execute(args, callScope, instanceNode);
+    scope->removeChildScope(callScope);
+    callScope->clear();
     // instanceScope->removeChildScope(callScope);
 
-    scope->removeChildScope(executionScope);
-    executionScope->clear();
+    // scope->removeChildScope(executionScope);
+    // executionScope->clear();
     // instanceScope->removeChildScope(executionScope);
     
     // DEBUG_LOG(LogLevel::PERMISSIVE, "METHOD(", name, ")", "RETURNED VAL: ", val.getFlags().toString());

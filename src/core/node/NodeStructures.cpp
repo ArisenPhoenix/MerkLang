@@ -23,6 +23,14 @@ ListNode::ListNode() {
     dataType = NodeValueType::List;
 }
 
+SharedPtr<NodeBase> NativeNode::clone() const {
+    throw MerkError("Cannot Clone Base Node of NativeNode");
+}
+
+SharedPtr<NodeBase> DataStructure::clone() const {
+    throw MerkError("Cannot Clone Base Node of DataStructure");
+}
+
 int ListNode::length() const { return elements.size(); }
 
 ListNode::ListNode(ArgumentList init) : elements(std::move(init.getPositional())) {setType(NodeValueType::List);}
@@ -263,7 +271,7 @@ void DictNode::remove(const Node& key) {
 }
 
 Node DictNode::get(const Node& key, const Node& defaultReturn) {
-    auto val = elements.find(Node(key.toString()));
+    auto val = elements.find(key);
     if (val != elements.end()) {
         return val->second;
     }
@@ -483,3 +491,16 @@ SharedPtr<NativeNode> HttpNode::toNative() const {
 SharedPtr<NativeNode> FileNode::toNative() const {
     throw MerkError("FileNode cannot return toNative()");
 }
+
+
+
+
+
+// SharedPtr<NodeBase> DataStructure::operator==(const NodeBase& other) const {
+//     MARK_UNUSED_MULTI(other);
+//     throw MerkError("Cannot Compare Base Type of DataStructure");
+// }
+
+// SharedPtr<NodeBase> DataStructure::operator==(const NodeBase& other) const {
+//     return makeShared<BoolNode>(other.toString() == toString());
+// }

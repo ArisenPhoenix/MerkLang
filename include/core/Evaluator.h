@@ -2,6 +2,7 @@
 
 // #include "core/types.h"
 #include "core/TypesFWD.hpp"
+#include "core/EvalResult.hpp"
 #include <string>
 #include <vector>
 #include <optional>
@@ -48,6 +49,15 @@ namespace Evaluator {
     Node evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> classScope, SharedPtr<Scope> generatedScope, String accessor, Vector<UniquePtr<BaseAST>>& children, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     Node evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgResultType argValues, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     Node evaluateMethodDef(SharedPtr<Scope> passedScope, SharedPtr<Scope> ownScope, SharedPtr<Scope> classScope, String methodName, MethodBody* body, ParamList parameters, CallableType callType, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    
+    
+    
+    
+    EvalResult evaluateBlockFlow(const Vector<UniquePtr<BaseAST>>& statements, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    EvalResult evaluateWhileLoopFlow(const ConditionalBlock& condition,
+                                 const BaseAST* body,
+                                 SharedPtr<Scope> scope,
+                                 SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 
     [[noreturn]] Node evaluateBreak();
     [[noreturn]] Node evaluateBreak(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);

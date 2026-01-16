@@ -171,11 +171,13 @@ UniquePtr<MethodDef> Parser::parseClassInitializer() {
     if (token.type != TokenType::ClassMethodDef || methodName != "construct") {
         throw SyntaxError("Class constructor must be defined as 'construct'.", token);
     }
+    Token accessor = noOpToken;
+    if (existing(TokenType::Parameter, 6)) {
+        accessor = find(TokenType::Parameter, 6);
+        DEBUG_LOG(LogLevel::DEBUG, "accessor value: ", accessor.value);
+    } else { accessor.value = ""; }
 
-    Token accessor = find(TokenType::Parameter, 6);
-    DEBUG_LOG(LogLevel::DEBUG, "accessor value: ", accessor.value);
     auto constructorMethod = parseClassMethod();
-
     String accessorVal = String(accessor.value);
     DEBUG_LOG(LogLevel::DEBUG, "Accessor is being set");
     constructorMethod->setMethodAccessor(accessorVal);

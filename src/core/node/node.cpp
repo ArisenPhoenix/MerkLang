@@ -69,6 +69,10 @@ std::pair<VariantType, NodeValueType> DynamicNode::getCoercedStringAndType(const
         return {value, NodeValueType::String};
     }
 
+    if (value == "null" && typeStr == "String") {
+        return {value, NodeValueType::Null};
+    }
+
     
 
     NodeValueType type = getNodeTypeFromString(typeStr);
@@ -205,6 +209,9 @@ SharedPtr<NodeBase> DynamicNode::dispatch(VariantType val, NodeValueType type, b
         } else {throw MerkError("Cannot Handle Type UNKNWON, valType: " + nodeTypeToString(DynamicNode::getTypeFromValue(val)));}
     }
     
+    if (type == NodeValueType::Null) {
+        return makeShared<NullNode>();
+    }
 
     auto valType = getTypeFromValue(val);
     auto passedIsANumber = type == NodeValueType::Int || type == NodeValueType::Number || type == NodeValueType::Long || type == NodeValueType::Double || type == NodeValueType::Float;
@@ -507,7 +514,7 @@ void NullNode::setValue(const VariantType& v) {
 NodeValueType NullNode::getType() const {return DynamicNode::getTypeFromValue(getValue());}
 SharedPtr<NodeBase> NullNode::clone() const { return makeShared<NullNode>(*this); }
 
-int NullNode::toInt() const { throw MerkError("Cannot Convert Null to Int"); }
+int NullNode::toInt() const { return -10000000000000000; }
 
 String NullNode::toString() const {return "null"; };
 
@@ -628,7 +635,19 @@ Node Node::clone() const {
     if (std::holds_alternative<std::map<Node, Node>>(getValue())) {
         throw MerkError("Currently Holding A Map");
     }
-    DEBUG_LOG(LogLevel::PERMISSIVE, "----------->>>>>>>>>>>>>++++++++++++++++++++++++++++++++++++++++++++ HOLDING A ", nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    auto nodeType = DynamicNode::getTypeFromValue(getValue());
+    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
+        
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
+        throw MerkError("Output ABOVE");
+        return Node(data);
+    }
+    if (isNative()) {
+        DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
+        throw MerkError("Output ABOVE");
+    }
+
+    debugLog(true, LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
     return Node(data->clone()); 
 }
 
@@ -754,7 +773,7 @@ void BoolNode::setValue(const VariantType& v)  { value = std::get<bool>(v); }
 NodeValueType BoolNode::getType() const { return NodeValueType::Bool; }
 SharedPtr<NodeBase> BoolNode::clone() const { return makeShared<BoolNode>(*this); }
 
-int BoolNode::toInt() const {  throw MerkError("Cannot Implicitly cast String to Int"); }
+int BoolNode::toInt() const {  return value ? 1 : 0; }
 String BoolNode::toString() const { return value ? "true" : "false"; }
 bool BoolNode::toBool() const { return value; }
 bool BoolNode::isTruthy() const { return toBool(); }
@@ -801,7 +820,10 @@ void CharNode::setValue(const VariantType& v)  { value = std::get<char*>(v); }
 NodeValueType CharNode::getType() const { return NodeValueType::Char; }
 SharedPtr<NodeBase> CharNode::clone() const {return makeShared<CharNode>(value);}
 
-int CharNode::toInt() const {return (int)value;}
+int CharNode::toInt() const {
+    auto v = String(value);
+    return StringNode(v).toInt();
+}
 
 bool CharNode::isString() const { return false; }
 bool CharNode::isChars() const { return true; }

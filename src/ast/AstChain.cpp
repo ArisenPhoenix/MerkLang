@@ -408,8 +408,6 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     
                     if (!instanceNode) {throw MerkError("No InstanceNode in Chain::evaluate -> ClassMethodCall");}
                     currentVal = elem.object->evaluate(methodScope, instanceNode);
-                    // if (currentVal.isInstance()) {instanceNode = currentVal.toInstance()->getInstanceNode();}
-
                     break;
                 }
                 
@@ -426,8 +424,12 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 DEBUG_LOG(LogLevel::PERMISSIVE, currentVal.toString(), currentVal.getFlags().toString());
                 currentScope->debugPrint();
                 currentScope->printChildScopes();
-                throw MerkError("Hit it! : " + elem.object->toString());
-                currentVal = handleVirtualMethod(currentVal, elem.name);                
+                // throw MerkError("Hit it! : " + elem.object->toString());
+                // auto args = 
+                auto methodCall = static_cast<MethodCall*>(elem.object.get());
+                auto args = methodCall->cloneArgs();
+                auto evaluatedArgs = args->evaluateAll(currentScope->createChildScope(), instanceNode);
+                currentVal = handleVirtualMethod(currentVal, elem.name, evaluatedArgs.getPositional());                
             } else {
                 throw MerkError("Evaluating Some other structure, the current Value is: " + nodeTypeToString(DynamicNode::getTypeFromValue(currentVal.getValue())) + " META: " + currentVal.getFlags().toString());
             }

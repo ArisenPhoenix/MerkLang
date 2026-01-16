@@ -20,7 +20,7 @@
 #include "utilities/streaming.h"
 
 #include "core/errors.h"
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 #include "core/Scope.hpp"
 #include "utilities/debugger.h"
 
@@ -28,6 +28,18 @@
 FreeVars FreeVarCollection::collectFreeVariables() const {
     return {};
 }
+
+EvalResult BaseAST::evaluateFlow(SharedPtr<Scope> scope,
+                                SharedPtr<ClassInstanceNode> instanceNode) const
+{
+    // Default: run the old path and wrap it
+    return EvalResult::Normal(evaluate(scope, instanceNode));
+}
+
+EvalResult BaseAST::evaluateFlow() const {
+    return evaluateFlow(getScope(), nullptr);
+}
+
 
 BaseAST::~BaseAST() = default;
 LiteralValue::~LiteralValue()  {

@@ -58,6 +58,7 @@ public:
 
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     Node evaluate() const override {return evaluate(getScope());}
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     SharedPtr<Scope> getScope() const override;
     bool containsReturnStatement() const;
     void setContainsReturnStatement(bool val) {containsReturn = val;}

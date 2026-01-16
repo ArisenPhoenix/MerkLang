@@ -7,7 +7,7 @@
 #include "core/callables/classes/NativeMethod.hpp"
 #include "core/callables/classes/NativeClass.hpp"
 #include "core/node/NodeStructures.hpp"
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 
 
 void validateSelf(SharedPtr<ClassInstanceNode> self, String className, String methodName) {

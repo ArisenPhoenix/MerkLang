@@ -31,6 +31,8 @@ public:
     Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     AstType getAstType() const override { return AstType::ClassMethodBlock;}
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+
 };
 
 

@@ -31,7 +31,7 @@ private:
     UniquePtr<CodeBlock> rootBlock;
 
     Token eofToken = Token(TokenType::EOF_Token, "EOF", 0, 0); // Singleton EOF token
-   
+    Token noOpToken = Token(TokenType::NoOp, "NoOp", 0, 0);
     Token currentToken() const;
     Token advance();
 
@@ -68,8 +68,7 @@ private:
     UniquePtr<BaseAST> parseStatement();
     
     std::optional<NodeValueType> getTypeFromString(String typeStr);
-    void interpret(CodeBlock* CodeBlockForEvaluation) const;
-    void interpret(ASTStatement* CodeBlockForEvaluation) const;
+    void interpretFlow(BaseAST* CodeBlockForEvaluation) const;
     void interpret(BaseAST* ASTStatementForEvaluation) const;
 
     std::optional<NodeValueType> parseStaticType();
@@ -86,6 +85,8 @@ private:
 
     UniquePtr<MethodDef> parseClassInitializer();
     UniquePtr<MethodDef> parseClassMethod();
+
+    UniquePtr<NameSpace> parseNameSpace();
 
     // UniquePtr<Chain> parseChain(bool isDeclaration = false, bool isConst = false);
 

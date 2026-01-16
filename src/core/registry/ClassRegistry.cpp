@@ -17,7 +17,7 @@ void ClassRegistry::debugPrint() const {
 
 
 ClassRegistry::~ClassRegistry() {
-    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
 
     clear();  // Clear the map itself
     DEBUG_FLOW_EXIT();

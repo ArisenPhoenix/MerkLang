@@ -81,22 +81,24 @@ SharedPtr<Scope> Scope::buildFunctionCallScope(SharedPtr<Function> func, String 
     callScope->owner = generateScopeOwner("FuncCall", name);
     this->appendChildScope(callScope, false);                       // appending for recursion
     callScope->kind = ScopeKind::FunctionCall;
+    Scope::counts.functionCalls += 1;
     return callScope;
 }
 
 SharedPtr<Scope> Scope::buildMethodCallScope(SharedPtr<Method> method, String name) {
     SharedPtr<Scope> capturedScope = method->getCapturedScope();
     if (!capturedScope) {throw MerkError("MethodCall::evaluate -> Method " + name + " Does Not Have Valid capturedScope | SubType: " + callableTypeAsString(method->getSubType()) + " MainType: " + callableTypeAsString(method->getCallableType()));}
-    
+
     capturedScope->owner = generateScopeOwner("MethodCallCaptured", name);
     capturedScope->kind = ScopeKind::Captured;
 
     auto callScope = capturedScope->makeCallScope();
     if (!callScope) {throw MerkError("Scope Is Not Valid In UserMethod::execute->Method");}
-
+    method->setCapturedScope(callScope);
     callScope->owner = generateScopeOwner("MethodCall", name);
     this->appendChildScope(callScope, false);                       // appending for recursion
     callScope->kind = ScopeKind::MethodCall;
+    Scope::counts.methodCalls += 1;
     return callScope;
 }
 
@@ -125,6 +127,7 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
     
     if (instanceScope->localFunctions.size() == 0) {throw MerkError("No Methods added to instanceScope");}
     instanceScope->kind = ScopeKind::Instance;
+
     return instanceScope;
 }
 
@@ -145,6 +148,7 @@ SharedPtr<Scope> Scope::buildInstanceScope(SharedPtr<ClassBase> classTemplate, S
     if (capturedClone->has(instanceScope)) { throw MerkError("Captured Scope Already Contains InstanceScope"); }
     capturedClone->appendChildScope(instanceScope);
     instanceScope->kind = ScopeKind::Instance;
+    Scope::counts.instanceCalls += 1;
     return instanceScope;
 }
 
@@ -159,7 +163,7 @@ SharedPtr<Scope> Scope::buildClassScope(FreeVars freeVarNames, String className)
     classDefCapturedScope->owner = generateScopeOwner("ClassDef--InitialCaptured", className);
     classDefCapturedScope->appendChildScope(classScope);  // cls->getClassScope // place classScope inside of classDefCapturedScope
     classScope->kind = ScopeKind::Instance;
-
+    Scope::counts.classCalls += 1;
     return classScope;
 }
 

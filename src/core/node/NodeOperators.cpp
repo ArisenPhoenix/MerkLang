@@ -386,7 +386,8 @@ SharedPtr<NodeBase> NodeBase::operator==(const NodeBase& other) const {
     // (void)other; 
     // throw MerkError("Invalid op == for Type " + flags.toString() + " DATA: " + toString() + " Determined as type: " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())) + " OTHER IS " + other.flags.toString() + " DATA: " + other.toString() + " Determined type as" + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
     // return makeShared<BoolNode>(true);
-    throw MerkError("NodeBase::operator==, See Above ");
+    // throw MerkError("NodeBase::operator==, See Above ");
+    return makeShared<BoolNode>(other.toString() == toString());
 }
 
 // SharedPtr<NodeBase> NodeBase::operator==(const NodeBase& other) const {(void)other; return makeShared<BoolNode>(false);}

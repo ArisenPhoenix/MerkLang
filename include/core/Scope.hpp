@@ -8,7 +8,9 @@
 using ScopeCache = std::unordered_map<String, Scope>; 
 
 
-enum class ScopeKind { Root, Block, FunctionDef, FunctionCall, ClassDef, ClassScope, Instance, Captured, Detached, Isolated, MethodCall };
+enum class ScopeKind { Root, Block, FunctionDef, FunctionCall, ClassDef, ClassScope, Instance, Captured, Detached, Isolated, MethodDef, MethodCall };
+
+String scopeKindToString(ScopeKind kind);
 
 class ScopeMeta {
 public:
@@ -26,6 +28,18 @@ public:
 }; 
 
 
+struct ScopeCounts {
+    int functionCalls = 0;
+    int methodCalls = 0;
+    int blocks = 0;
+    int roots = 0;
+    int classCalls = 0;
+    int instanceCalls = 0;
+
+    String toString();
+};
+
+
 
 
 class Scope : public ScopeMeta, public std::enable_shared_from_this<Scope> {
@@ -34,6 +48,7 @@ private:
     static inline size_t liveScopeCount = 0;
     static inline size_t totalScopeCreated = 0;
     ClassMembers classMembers;   //map for future uses
+    static inline ScopeCounts counts{};
 
 public:
     static void printScopeReport() {
@@ -45,6 +60,9 @@ public:
         } else {
             std::cout << "[Memory Clean] All scopes were properly freed." << std::endl;
         }
+
+        std::cout << "SCOPE COUNTS: " << std::endl;
+        std::cout << Scope::counts.toString() << std::endl;
         std::cout << "----------------------------" << std::endl;
     }
 
@@ -138,12 +156,13 @@ public:
     std::optional<SharedPtr<ClassSignature>> getClass(const String& name);
 
     // Scope Other
-    Vector<SharedPtr<Scope>> getChildren();
+    Vector<SharedPtr<Scope>>& getChildren();
     bool hasChildren();
     void debugPrint() const;
     void setParent(SharedPtr<Scope> scope);
 
     bool has(const SharedPtr<Scope>& scope);
+    bool isAncestorOf(const Scope* maybeDesc) const;
     bool hasImmediateChild(const SharedPtr<Scope>& candidate);
 
     void updateChildLevelsRecursively();
@@ -177,7 +196,9 @@ public:
     void registerNamedType(String&);
     TypeId getTypeOf(TypeNode val);
 
+    ScopeCounts getCounts();
 
+    void validateNoCycles(SharedPtr<Scope> childScope);
 private:
     void setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration);
     Vector<SharedPtr<Scope>> childScopes;      // List containing child scopes of (this) scope

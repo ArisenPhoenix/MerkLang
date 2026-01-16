@@ -27,7 +27,7 @@
 
 
 ParamList Parser::handleParameters(TokenType type){
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
     (void)type;
     ParamList params;
     DEBUG_LOG(LogLevel::DEBUG, highlight("Current Token In handleParameters", Colors::pink), currentToken().toColoredString());
@@ -87,7 +87,7 @@ ParamList Parser::handleParameters(TokenType type){
 
 
 UniquePtr<FunctionDef> Parser::parseFunctionDefinition() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
     Token token = currentToken();
     // setAllowScopeCreation(true);
     DEBUG_LOG(LogLevel::INFO, "Parsing function definition...", "Token: ", token.toString());
@@ -202,7 +202,7 @@ UniquePtr<Arguments> Parser::parseAnyArgument() {
 
 
 UniquePtr<FunctionCall> Parser::parseFunctionCall() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
     Token controllingToken = currentToken();
     if (controllingToken.type != TokenType::FunctionCall && controllingToken.type != TokenType::ClassMethodCall) {
         throw UnexpectedTokenError(controllingToken, "FunctionCall, ClassMethodCall", "Parser::parseFunctionCall");
@@ -224,7 +224,7 @@ UniquePtr<FunctionCall> Parser::parseFunctionCall() {
 }
 
 UniquePtr<ASTStatement> Parser::parseReturnStatement() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
 
     Token controllingToken = currentToken();
     DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parseReturnStatement: Entering with token: ", controllingToken.toColoredString());

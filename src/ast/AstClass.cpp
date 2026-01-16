@@ -9,7 +9,7 @@
 #include "utilities/helper_functions.h"
 #include "core/Scope.hpp"
 
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 #include "ast/Ast.hpp"
 
 #include "ast/AstCallable.hpp"

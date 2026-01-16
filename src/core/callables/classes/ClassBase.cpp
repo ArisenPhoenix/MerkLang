@@ -321,11 +321,11 @@ Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, Sha
     if (!captured){
         throw MerkError("Captured Scope Does Not Exist When Instantiating class: " + classBase->getName());
     }
-    if (!captured->has(instanceScope)){
-        captured->printChildScopes();
-        instanceScope->printChildScopes();
-        throw MerkError("Instance Scope does not live in captured Scope");
-    } 
+    // if (!captured->has(instanceScope)){
+    //     captured->printChildScopes();
+    //     instanceScope->printChildScopes();
+    //     throw MerkError("Instance Scope does not live in captured Scope");
+    // } 
     else {DEBUG_LOG(LogLevel::DEBUG, "Instance Scope Lives in Captured Scope");}
     auto params = classBase->getParameters().clone();
 

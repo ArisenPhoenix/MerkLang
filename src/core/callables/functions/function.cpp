@@ -49,6 +49,23 @@ Node UserFunction::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_u
     return body->evaluate(scope, instanceNode);
 }
 
+// Node UserFunction::executeFlow(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+//     DEBUG_FLOW(FlowLevel::NONE);
+//     if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
+//     placeArgsInCallScope(args, scope);
+
+//     DEBUG_FLOW_EXIT();
+//     EvalResult r = body->evaluateFlow(scope, instanceNode);
+
+//     if (r.isReturn()) return r.value;
+//     if (r.isThrow())  throw RunTimeError("Unhandled throw"); // or convert to your error model
+//     if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
+
+//     // no explicit return
+//     if (requiresReturn) throw MerkError("Function did not return a value.");
+//     return Node();
+// }
+
 FunctionBody::~FunctionBody(){if (getScope()) {DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();}} 
 
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {

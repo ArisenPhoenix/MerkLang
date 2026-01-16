@@ -25,7 +25,7 @@
 
 
 UniquePtr<IfStatement> Parser::parseIfStatement() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
     consume(TokenType::Keyword, "if", "Parser::parseIfStatement");
     auto condition = parseExpression();
     if (!condition) {throw MerkError("Parser::parseIfStatement: Failed to parse 'if' condition.");}
@@ -83,7 +83,7 @@ UniquePtr<IfStatement> Parser::parseIfStatement() {
 }
 
 UniquePtr<WhileLoop> Parser::parseWhileLoop() {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_FLOW(FlowLevel::MED);
 
     Token controllingToken = currentToken();
     if (controllingToken.value != "while") {
@@ -116,7 +116,7 @@ UniquePtr<WhileLoop> Parser::parseWhileLoop() {
 }
 
 UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
-    DEBUG_FLOW(FlowLevel::HIGH);
+    DEBUG_FLOW(FlowLevel::MED);
     
     auto blockScope = currentScope;
     if (controlScope){

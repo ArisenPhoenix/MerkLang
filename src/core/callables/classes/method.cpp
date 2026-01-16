@@ -4,7 +4,7 @@
 #include "core/types.h"
 #include "utilities/debugger.h"
 #include "core/errors.h"
-#include "core/evaluator.h"
+#include "core/Evaluator.h"
 #include "ast/Exceptions.hpp" 
 #include "ast/AstBase.hpp"
 #include "ast/AstClass.hpp"
@@ -131,27 +131,35 @@ Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe
 
         }
     }
+
+    EvalResult r = body->evaluateFlow(callScope, instanceNode);
+
+    if (r.isReturn()) return r.value;
+    if (r.isThrow())  {throw RunTimeError("Unhandled throw");}
+    if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
+
+    // no explicit return
+    if (requiresReturn) throw MerkError("Method did not return a value.");
+    return Node();
     
-    try {
-        DEBUG_LOG(LogLevel::TRACE, "In try block");
-        if (!callScope) {throw MerkError("Method " + name +" Has No Captured Scope:");}
+    // try {
+    //     DEBUG_LOG(LogLevel::TRACE, "In try block");
+    //     if (!callScope) {throw MerkError("Method " + name +" Has No Captured Scope:");}
 
-        auto capturedScope = getCapturedScope();
+    //     auto capturedScope = getCapturedScope();
 
-        if (!callScope) {throw MerkError("Method " + name +" Has No Call Scope:");}
+    //     if (!callScope) {throw MerkError("Method " + name +" Has No Call Scope:");}
 
-        String matches = callScope == capturedScope ? "true" : "false";
-
-        Node val = body->evaluate(callScope, instanceNode);
+    //     Node val = body->evaluate(callScope, instanceNode);
         
-        DEBUG_FLOW_EXIT();
-        return val;
-    } catch (const ReturnException& e) {
-        auto val = e.getValue();
-        DEBUG_LOG(LogLevel::TRACE, "METHOD " + name + " RETURNED: " + val.getFlags().toString());
-        DEBUG_FLOW_EXIT();      
-        return val;
-    }
+    //     DEBUG_FLOW_EXIT();
+    //     return val;
+    // } catch (const ReturnException& e) {
+    //     auto val = e.getValue();
+    //     DEBUG_LOG(LogLevel::TRACE, "METHOD " + name + " RETURNED: " + val.getFlags().toString());
+    //     DEBUG_FLOW_EXIT();      
+    //     return val;
+    // }
 }
 
 CallableBody* UserMethod::getInvocableBody() {return body.get();}
