@@ -32,15 +32,12 @@ int main(int argc, char* argv[]) {
     const String codeDir = "code/";
     const String defaultFile = "test1.merk";
 
-    // Step 1: Determine the file path
     String filePath = getFilePath(argc, argv, codeDir, defaultFile);
     DEBUG_LOG(LogLevel::DEBUG, "Using File: ", filePath);
    
-    // Step 2: Read file content
     String content = readFile(filePath);
 
     outputFileContents(content, 800);
-    // Step 3: Initialize Global Scope
     const bool interpretMode = true;
     const bool byBlock = false;
         
@@ -48,12 +45,7 @@ int main(int argc, char* argv[]) {
     globalScope->owner = "GLOBAL";
     globalScope->kind = ScopeKind::Root;
     
-    
-    
-    
     try {
-        // Step 4: Initialize Tokenizer
-
         DEBUG_LOG(LogLevel::DEBUG, "Initializing tokenizer...");
         Tokenizer tokenizer(content);
         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
@@ -63,7 +55,6 @@ int main(int argc, char* argv[]) {
         
         auto globalFunctions = getNativeFunctions(globalScope);
         for (auto& [name, globalFunc]: globalFunctions) {
-            // globalScope->registerFunction(name, globalFunc);
             globalScope->globalFunctions->registerFunction(name, globalFunc);
             if (globalScope->globalFunctions->getFunction(name)) {};
         }
@@ -71,12 +62,8 @@ int main(int argc, char* argv[]) {
         auto globalClasses = getNativeClasses(globalScope);
         for (auto& [name, globalCls]: globalClasses) {
             globalScope->globalClasses->registerClass(name, globalCls);
-            // globalScope->registerClass(name, globalCls);
         }
 
-        
-
-        // Step 5: Parse tokens into an AST
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
         auto start = std::chrono::high_resolution_clock::now();
         Parser parser(tokens, globalScope, interpretMode, byBlock);
@@ -95,10 +82,8 @@ int main(int argc, char* argv[]) {
         }
 
         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
-        // ast->printAST(std::cout);
         globalScope->debugPrint();
         ast->clear();
-        // globalScope->clear();
         std::cout << "Execution time: " << elapsed.count() << " ms\n";
 
         
