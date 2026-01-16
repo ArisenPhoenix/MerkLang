@@ -1,7 +1,9 @@
 #include "core/node/ArgumentNode.hpp"
 #include "core/TypesFWD.hpp"
 #include "core/Scope.hpp"
-#include "core/Evaluator.h"
+#include "core/Evaluator.hpp"
+#include "core/FlowEvaluator.hpp"
+
 #include "core/callables/classes/Method.hpp"
 
 #include "ast/AstMethod.hpp"
@@ -152,12 +154,12 @@ Node MethodBody::evaluate(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr
 // }
 
 
-EvalResult MethodBody::evaluateFlow(SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+EvalResult MethodBody::evaluateFlow(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::NONE);
     // setScope(scope);
-    if (!callScope){throw MerkError("There Is No callScope provided to MethodBody::evaluateFlow");}
+    if (!scope){throw MerkError("There Is No callScope provided to MethodBody::evaluateFlow");}
     if (!instanceNode){throw MerkError("No instanceNode was provided to MethodBody::evaluateFlow");}
-    auto val = Evaluator::evaluateBlockFlow(getMutableChildren(), scope, instanceNode);
+    auto val = FlowEvaluator::evaluateBlock(getMutableChildren(), scope, instanceNode);
     
     DEBUG_FLOW_EXIT();
     return val;

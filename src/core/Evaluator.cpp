@@ -14,7 +14,7 @@
 
 
 #include "core/Scope.hpp"
-#include "core/Evaluator.h"
+#include "core/Evaluator.hpp"
 #include "core/Scope.hpp"
 
 #include "utilities/helper_functions.h"
@@ -197,7 +197,6 @@ namespace Evaluator {
         return variable;
     }
 
-    
     Node evaluateFunction(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::NONE);
@@ -254,45 +253,6 @@ namespace Evaluator {
         return lastValue; // Return the last evaluated value
     }
 
-    EvalResult evaluateBlockFlow(const Vector<UniquePtr<BaseAST>>& children,
-                                SharedPtr<Scope> scope,
-                                SharedPtr<ClassInstanceNode> instanceNode) {
-    // Node lastValue = Node(); // or Node::Null()
-
-    // for (const auto& child : children) {
-    //     if (!child) throw MerkError("Null child node in evaluateBlockFlow");
-
-    //     EvalResult r = child->evaluateFlow(scope, instanceNode);
-    //     if (r.isControl()) return r;
-
-    //     lastValue = std::move(r.value);
-    // }
-
-    // return EvalResult::Normal(std::move(lastValue));
-
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-        Node lastValue;
-
-        for (const auto& child : children) {
-            if (child.get()) {
-
-                DEBUG_LOG(LogLevel::TRACE, "Found Child: ", child->getAstTypeAsString());
-                auto r = child.get()->evaluateFlow(scope, instanceNode);
-                lastValue = std::move(r.value);
-                if (!lastValue.isValid()){
-                    continue;
-                }
-
-            } else {
-                DEBUG_LOG(LogLevel::TRACE, highlight("Null child node encountered in CodeBlock.", Colors::red));
-                DEBUG_LOG(LogLevel::TRACE, "Null child: ", child->getAstTypeAsString());
-                throw MerkError("CHILD OF evaluateIf is null");
-            }
-        }
-
-        DEBUG_FLOW_EXIT();
-        return EvalResult::Normal(lastValue); // Return the last evaluated value
-    }
 
 
     Node evaluateIf (const IfStatement& ifStatement, SharedPtr<Scope> conditionScope, SharedPtr<ClassInstanceNode> instanceNode) {
@@ -392,62 +352,6 @@ namespace Evaluator {
         return Node();
     }
 
-    EvalResult evaluateWhileLoopFlow(const ConditionalBlock& condition,
-                                 const BaseAST* body,
-                                 SharedPtr<Scope> scope,
-                                 SharedPtr<ClassInstanceNode> instanceNode) {
-        DEBUG_FLOW(FlowLevel::LOW);
-        // if (!body) throw MerkError("WhileLoop has no body");
-        // while (true) {
-        //     Node conditionResult = condition.evaluate(scope, instanceNode);
-        //     if (!conditionResult.toBool()) break;
-
-        //     EvalResult bodyRes = body->evaluateFlow(scope, instanceNode);
-
-        //     if (bodyRes.isContinue()) continue;
-        //     if (bodyRes.isBreak())   return EvalResult::Normal(Node()); // consume break
-
-        //     if (bodyRes.isControl()) return bodyRes; // Return/Throw bubble up
-        // }
-
-        // return EvalResult::Normal(Node());
-        auto instanceScope = scope;
-
-        if (!body) {
-            DEBUG_LOG(LogLevel::INFO, "Error: WhileLoop body is nullptr!");
-            DEBUG_FLOW_EXIT();
-            throw MerkError("WhileLoop has no body");
-        }
-
-        while (true) {
-            DEBUG_LOG(LogLevel::TRACE, "About To Evaluate While Loop Condition Result");
- 
-            Node conditionResult = condition.evaluate(instanceScope, instanceNode);
-            DEBUG_LOG(LogLevel::INFO, "While Loop Condition Result: ", conditionResult);
-            if (!conditionResult.toBool()) {
-                DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to false. Exiting loop.");
-                break;  // Exit the loop if condition is false
-            }
-
-            DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to true. Executing body.");
-
-            try {
-                EvalResult bodyRes = body->evaluateFlow(scope, instanceNode);
-                if (bodyRes.isContinue()) continue;
-                if (bodyRes.isBreak())   return EvalResult::Normal(Node()); // consume break
-                if (bodyRes.isControl()) return bodyRes; // Return/Throw bubble up
-
-            } catch (const ContinueException&){
-                DEBUG_LOG(LogLevel::TRACE, "Continue statement encountered. Skipping to next iteration.");
-                continue;
-            } catch (const BreakException&) {
-                DEBUG_LOG(LogLevel::TRACE, "Break statement encountered. Exiting loop.");
-                break;  // Exit the loop if a break statement is encountered
-            }
-        }
-        DEBUG_FLOW_EXIT();
-        return EvalResult::Normal(Node());
-    }
 
     Node evaluateBinaryOperation(const String& op, const Node& leftValue, const Node& rightValue, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
         MARK_UNUSED_MULTI(instanceNode);

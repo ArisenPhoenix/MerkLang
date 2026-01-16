@@ -55,8 +55,8 @@ endif()
 
 # === Debug macro toggle ===
 # set(ENABLE_DEBUG ON BOOL "Enable debug logging")
-set(ENABLE_DEBUG ON) 
-# set(ENABLE_DEBUG OFF)
+# set(ENABLE_DEBUG ON) 
+set(ENABLE_DEBUG OFF)
 if(ENABLE_DEBUG)
     target_compile_definitions(merk PRIVATE ENABLE_DEBUG=1)
 else()

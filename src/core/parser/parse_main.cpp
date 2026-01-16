@@ -54,7 +54,8 @@ UniquePtr<CodeBlock> Parser::parse() {
                 setAllowScopeCreation(true);
                 try {
                     DEBUG_LOG(LogLevel::PERMISSIVE, highlight("EVALUATING AST TYPE: " + statement->getAstTypeAsString(), Colors::orange));
-                    interpret(statement.get());
+                    // interpret(statement.get());
+                    interpretFlow(statement.get());
                 } catch(MerkError& e) {
                     // rootBlock->printAST(std::cout, 0);
                     throw MerkError(e.what());
@@ -65,7 +66,8 @@ UniquePtr<CodeBlock> Parser::parse() {
     
         setAllowScopeCreation(true);
         if (interpretMode && !byBlock){
-            interpret(rootBlock.get());
+            // interpret(rootBlock.get());
+            interpretFlow(rootBlock.get());
         }
 
         return std::move(rootBlock); // Return the parsed block node
@@ -145,6 +147,16 @@ void Parser::exitScope(SharedPtr<Scope> manualScope) {
 
 }
 
+void Parser::interpretFlow(CodeBlock* codeBlock) const {
+    try {
+        codeBlock->evaluateFlow(); // Evaluate the updated statement
+
+    } catch (const std::exception& e) {
+        throw MerkError(e.what());
+    }
+  
+}
+
 void Parser::interpretFlow(BaseAST* ASTStatement) const {
     // DEBUG_FLOW(FlowLevel::HIGH);
 
@@ -164,6 +176,23 @@ void Parser::interpretFlow(BaseAST* ASTStatement) const {
         throw MerkError(e.what());
     }
     // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting ASTStatement ===========================", Colors::yellow));
+    // DEBUG_FLOW_EXIT();
+}
+
+void Parser::interpret(CodeBlock* block) const {
+    // DEBUG_FLOW(FlowLevel::HIGH);
+
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting CodeBlock ===========================", Colors::yellow));
+
+    try {
+        block->evaluate(); // Evaluate the updated statement
+    } catch (const std::exception& e) {
+        DEBUG_LOG(LogLevel::INFO, "DEBUG Parser::parse: Runtime Error during evaluation: ", e.what());
+        // block->printAST(std::cout, 0);
+        throw MerkError(e.what());
+    }
+    // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Finished Interpreting CodeBlock ===========================", Colors::yellow));
+
     // DEBUG_FLOW_EXIT();
 }
 

@@ -15,7 +15,9 @@
 #include "core/callables/Callable.hpp"
 #include "core/callables/functions/Function.hpp"
 
-#include "core/Evaluator.h"
+#include "core/Evaluator.hpp"
+#include "core/FlowEvaluator.hpp"
+
 #include "ast/AstFunction.hpp"
 #include "ast/AstMethod.hpp"
 #include "ast/AstClass.hpp"  
@@ -399,7 +401,7 @@ size_t CallableSignature::hash() const {
 
 ArgResultType CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    scope->debugPrint();
+    // scope->debugPrint();
     
     ArgResultType evaluatedArgs = arguments->evaluateAll(scope, instanceNode);
     return evaluatedArgs;

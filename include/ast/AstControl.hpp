@@ -59,6 +59,7 @@ public:
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     Node evaluate() const override {return evaluate(getScope());}
     EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+    using BaseAST::evaluateFlow;
     SharedPtr<Scope> getScope() const override;
     bool containsReturnStatement() const;
     void setContainsReturnStatement(bool val) {containsReturn = val;}
@@ -102,6 +103,9 @@ public:
     static UniquePtr<ConditionalBlock> create(UniquePtr<ASTStatement> condition, SharedPtr<Scope> scope) {
         return makeUnique<ConditionalBlock>(std::move(condition), scope);
     }
+
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+    
 };
 
 
@@ -122,6 +126,8 @@ public:
     FreeVars collectFreeVariables() const override;
     void setScope(SharedPtr<Scope> newScope) override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+
 };
 
 class ElifStatement : public ASTStatement { // Also contains the logic of If, parser's job to ensure if is always first.
@@ -141,6 +147,7 @@ public:
     FreeVars collectFreeVariables() const override;
     virtual void setScope(SharedPtr<Scope> newScope) override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 };
 
 
@@ -176,6 +183,8 @@ public:
     
     void setScope(SharedPtr<Scope> newScope) override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+
 };
 
 class NoOpNode: public ASTStatement {
@@ -213,6 +222,7 @@ public:
     void setScope(SharedPtr<Scope> newScope) override;
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override = 0;
     virtual FreeVars collectFreeVariables() const override {return {};}
+    virtual EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override = 0;
 
     
 
@@ -235,5 +245,6 @@ public:
     FreeVars collectFreeVariables() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     void setScope(SharedPtr<Scope> newScope) override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
 };

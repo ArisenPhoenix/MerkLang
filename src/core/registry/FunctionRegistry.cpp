@@ -17,11 +17,14 @@ FunctionRegistry::~FunctionRegistry() {
 }
 
 void FunctionRegistry::clear() {
+    for (auto& [name, obj] : functions) {
+        obj.clear();
+    }
     functions.clear();
 }
 
 void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSignature> signature) {
-    DEBUG_FLOW(FlowLevel::LOW);
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
     
     const CallableType callType = signature->getCallableType();
     const CallableType subType = signature->getSubType();
@@ -85,109 +88,6 @@ bool FunctionRegistry::hasFunction(const String& name) const {
     return func;
 }
 
-// std::optional<SharedPtr<CallableSignature>>
-// FunctionRegistry::getFunction(const String& name, const ArgumentList& args) const {
-//     DEBUG_FLOW(FlowLevel::VERY_LOW);
-
-//     auto it = functions.find(name);
-//     if (it == functions.end() || it->second.empty()) {
-//         DEBUG_LOG(LogLevel::TRACE, "Failed To Get Function:", name, "at first attempt");
-//         return std::nullopt;
-//     }
-
-//     DEBUG_LOG(LogLevel::TRACE, highlight("Function:", Colors::bold_blue), name,
-//               "was defined using", highlight("function", Colors::red));
-
-//     // Invariant: if DEF exists, it is the only variant for that name.
-//     for (auto& candidate : it->second) {
-//         if (candidate->getSubType() == CallableType::DEF) {
-//             return candidate;
-//         }
-//     }
-
-//     SharedPtr<CallableSignature> best = nullptr;
-//     int bestScore = std::numeric_limits<int>::max();
-//     bool ambiguous = false;
-
-//     for (auto& candidate : it->second) {
-//         const auto sub = candidate->getSubType();
-
-//         if (sub != CallableType::NATIVE && sub != CallableType::FUNCTION) {
-//             continue;
-//         }
-
-//         DEBUG_LOG(LogLevel::TRACE, "Checking Function Candidate", name,
-//                   candidate->getCallable()->parameters.toString());
-//         DEBUG_LOG(LogLevel::TRACE, "Function Type: ", callableTypeAsString(sub));
-
-//         // Clone params because verifyArguments mutates ParamNodes.
-//         ParamList params = candidate->getParameters().clone();
-
-//         // verifyArguments takes non-const ArgumentList& in your code, so copy args.
-//         ArgumentList argsCopy = args;
-
-//         try {
-//             params.verifyArguments(argsCopy);
-//         } catch (const MerkError&) {
-//             DEBUG_LOG(LogLevel::TRACE, "Candidate ", name, " skipped: bind failed");
-//             continue;
-//         }
-
-//         // Bind succeeded -> score type match using bound param values.
-//         int score = 0;
-//         bool reject = false;
-
-//         for (std::size_t i = 0; i < params.size(); ++i) {
-//             const auto& p = params[i];
-
-//             const NodeValueType expected = p.flags.type;
-
-//             // You need a way to get the Node bound into ParamNode and ask its NodeValueType.
-//             // I'm guessing you have something like p.getValue() returning Node, or similar.
-//             // const Node actualNode = p.getDefaultValue();          // <-- rename to your real API
-//             // const NodeValueType actual = actualNode.getType(); // <-- you already use arg.getType()
-//             // const Node actualNode = DynamicNode::fromVariant(p.getDefaultValue());
-//             // const NodeValueType actual = DynamicNode::dispatch(p.getDefaultValue());4'
-//             NodeValueType actual = DynamicNode::getTypeFromValue(p.getDefaultValue());
-//             // exact match
-//             if (actual == expected) continue;
-
-//             // if (actual == NodeValueType::Int && expected == NodeValueType::Float) { score += 1; continue; }
-
-//             // Otherwise incompatible
-//             reject = true;
-//             break;
-//         }
-
-//         if (reject) {
-//             DEBUG_LOG(LogLevel::TRACE, "Candidate ", name, " skipped: type mismatch after bind");
-//             continue;
-//         }
-
-//         // Prefer lower score
-//         if (!best || score < bestScore) {
-//             best = candidate;
-//             bestScore = score;
-//             ambiguous = false;
-//         } else if (score == bestScore) {
-//             ambiguous = true;
-//         }
-//     }
-
-//     if (!best) {
-//         DEBUG_LOG(LogLevel::TRACE, "Failed To Get Function:", name, "at end of getFunction");
-//         DEBUG_FLOW_EXIT();
-//         return std::nullopt;
-//     }
-
-//     if (ambiguous) {
-//         // You can dump candidate signatures here if you want.
-//         throw MerkError("Ambiguous overload resolution for function: " + name);
-//     }
-
-//     DEBUG_FLOW_EXIT();
-//     return best;
-// }
 
 
 std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const String& name, const ArgResultType& args) const  {
@@ -235,7 +135,7 @@ std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const 
 
 
 std::optional<Vector<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name) const {
-    DEBUG_FLOW(FlowLevel::MED);
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
     auto it = functions.find(name);
     if (it != functions.end() && !it->second.empty()) {
         DEBUG_FLOW_EXIT();

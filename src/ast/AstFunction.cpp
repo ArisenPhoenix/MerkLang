@@ -14,7 +14,8 @@
 #include "core/callables/functions/NativeFunction.hpp"
 #include "ast/ast_validate.h"
 
-#include "core/Evaluator.h"
+#include "core/Evaluator.hpp"
+#include "core/FlowEvaluator.hpp"
 #include "ast/AstCallable.hpp"
 #include "ast/AstFunction.hpp"
 
@@ -57,7 +58,7 @@ Node FunctionBody::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
 EvalResult FunctionBody::evaluateFlow(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::NONE);
     // setScope(scope);
-    auto val = Evaluator::evaluateBlockFlow(getMutableChildren(), scope, instanceNode);
+    auto val = FlowEvaluator::evaluateBlock(getMutableChildren(), scope, instanceNode);
     
     DEBUG_FLOW_EXIT();
     return val;

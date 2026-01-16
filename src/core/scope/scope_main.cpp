@@ -413,8 +413,8 @@ void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
         childScopes.push_back(childScope);
         totalWithout += 1;
     } else {
-        String out = "CHILD FOUND in Scope holding Meta: " + metaString() + " OWNER: " + owner;
-        debugLog(true, out);
+        // String out = "CHILD FOUND in Scope holding Meta: " + metaString() + " OWNER: " + owner;
+        // debugLog(true, out);
         // if (kind != ScopeKind::Root && owner != "GLOBAL") {
         //     throw MerkError(out);
         // } else {
@@ -505,8 +505,16 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
     }
 
     context.setVariable(name, std::move(value));
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::declareVariable Missed variable ", name, "in The below scope: ");
-    debugPrint();
+    // DEBUG_LOG(LogLevel::PERMISSIVE,
+    //       "DECLARE name=", name,
+    //       " this=", (void*)this,
+    //       " level=", scopeLevel,
+    //       " parent=", (void*)parentScope.lock().get(),
+    //       " owner=", owner,
+    //       " kind=", scopeKindToString(kind));
+    // context.debugPrint();
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::declareVariable Missed variable ", name, "in The below scope: ");
+    // debugPrint();
     DEBUG_FLOW_EXIT();
 }
 
@@ -543,6 +551,21 @@ VarNode& Scope::getVariable(const String& name) {
     }
 
     if (hasVariable(name)) {throw MerkError("The Variable Lives Here, yet it is not getting pulled");}
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "LOOKUP MISS name=", name,
+    //       " start this=", (void*)this,
+    //       " level=", scopeLevel,
+    //       " owner=", owner,
+    //       " kind=", scopeKindToString(kind));
+
+    // for (auto s = shared_from_this(); s; s = s->parentScope.lock()) {
+    //     DEBUG_LOG(LogLevel::PERMISSIVE,
+    //         "  chain scope=", (void*)s.get(),
+    //         " level=", s->scopeLevel,
+    //         " owner=", s->owner,
+    //         " kind=", scopeKindToString(s->kind),
+    //         " keys=", s->context.keysToString()); // add this
+    // }
+
     throw VariableNotFoundError(name);
 }
 

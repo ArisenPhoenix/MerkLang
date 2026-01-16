@@ -8,7 +8,6 @@
 #include <unordered_set>
 
 #include "core/node/Node.hpp"
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
 
 #include "ast/Ast.hpp"
@@ -20,7 +19,7 @@
 #include "utilities/streaming.h"
 
 #include "core/errors.h"
-#include "core/Evaluator.h"
+#include "core/FlowEvaluator.hpp"
 #include "core/Scope.hpp"
 #include "utilities/debugger.h"
 
@@ -29,10 +28,7 @@ FreeVars FreeVarCollection::collectFreeVariables() const {
     return {};
 }
 
-EvalResult BaseAST::evaluateFlow(SharedPtr<Scope> scope,
-                                SharedPtr<ClassInstanceNode> instanceNode) const
-{
-    // Default: run the old path and wrap it
+EvalResult BaseAST::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const{
     return EvalResult::Normal(evaluate(scope, instanceNode));
 }
 
@@ -53,6 +49,11 @@ LiteralValue::~LiteralValue()  {
 void ASTStatement::setScope(SharedPtr<Scope> newScope) {
     MARK_UNUSED_MULTI(newScope);
     // scope = newScope;
+}
+
+EvalResult ASTStatement::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_LOG(LogLevel::PERMISSIVE, "AST STATEMENT TYPE IS: ", getAstTypeAsString());
+    return EvalResult::Normal(evaluate(scope, instanceNode));
 }
 
 SharedPtr<Scope> ASTStatement::getScope() const {

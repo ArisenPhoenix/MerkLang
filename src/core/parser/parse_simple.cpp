@@ -118,8 +118,6 @@ UniquePtr<ASTStatement> Parser::parseExpression() {
 // Though a bit of a misnomer, it was named BinaryExpression or BinaryOperation due to how it only handles two values at a time (or one)
 UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
     DEBUG_FLOW(FlowLevel::MED);
-    displayPreviousTokens("Operator", 4, "parseBinaryExpression");
-    displayNextTokens("Operator", 4, "parseBinaryExpression");
     auto left = parsePrimaryExpression();
     auto current = currentToken();
     if (current.value == "." || current.value == "::") { left = parseChainOp(std::move(left)); }
@@ -311,6 +309,13 @@ UniquePtr<BaseAST> Parser::parseStatement() {
 
                 throw MerkError("Token Is Not A Function Call");
             }
+        // case TokenType::FunctionRef:
+        //     if (token.type == TokenType::FunctionRef) {
+        //         displayPreviousTokens(token.value, 4, "Parser::parseStatement::FunctionRef");
+        //         displayNextTokens(token.value, 4, "Parser::parseStatement::FunctionRef");
+        //         auto statement = parseFunctionCall();
+        //         return statement;
+        //     }
         
         case TokenType::ClassCall:
             if (token.type == TokenType::ClassCall){

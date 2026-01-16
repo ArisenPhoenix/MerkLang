@@ -134,6 +134,8 @@ void DynamicNode::clear() {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue()) && flags.isInstance) {
         auto instance = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()));
         instance->getInstanceScope()->clear();
+        instance->setScope(nullptr);
+        instance.reset();
     } 
 }
 

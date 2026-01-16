@@ -4,7 +4,7 @@
 #include "core/types.h"
 #include "utilities/debugger.h"
 #include "core/errors.h"
-#include "core/Evaluator.h"
+#include "core/FlowEvaluator.hpp"
 #include "ast/Exceptions.hpp" 
 #include "ast/AstBase.hpp"
 #include "ast/AstClass.hpp"
@@ -111,8 +111,28 @@ SharedPtr<CallableSignature> UserMethod::toCallableSignature() {
     return methodSig;
 }
 
+
+Node nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Scope> capturedScope, CallableBody* body, SharedPtr<ClassInstanceNode> instanceNode) {   
+    try {
+        DEBUG_LOG(LogLevel::TRACE, "In try block");
+        if (!callScope) {throw MerkError("Method " + name +" Has No Call Scope:");}
+
+        String matches = callScope == capturedScope ? "true" : "false";
+
+        Node val = body->evaluate(callScope, instanceNode);
+        
+        DEBUG_FLOW_EXIT();
+        return val;
+    } catch (const ReturnException& e) {
+        auto val = e.getValue();
+        DEBUG_LOG(LogLevel::TRACE, "METHOD " + name + " RETURNED: " + val.getFlags().toString());
+        DEBUG_FLOW_EXIT();      
+        return val;
+    }
+}
+
+
 Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    // MARK_UNUSED_MULTI(args);
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
     DEBUG_LOG(LogLevel::TRACE, "Validated Instance Node");
@@ -122,45 +142,21 @@ Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe
     DEBUG_LOG(LogLevel::TRACE, "Placing Args in Call Scope");
     placeArgsInCallScope(args, callScope);
 
-    if (name == "other") {
-        callScope->debugPrint();
-        callScope->printChildScopes();
-        DEBUG_LOG(LogLevel::TRACE, "ARGS ->->->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<: ", args.toString());
-        for (auto& arg : args) {
-            if (arg.isNull()) {throw MerkError("Arg is null: " + arg.toString());}
-
-        }
-    }
-
-    EvalResult r = body->evaluateFlow(callScope, instanceNode);
-
-    if (r.isReturn()) return r.value;
-    if (r.isThrow())  {throw RunTimeError("Unhandled throw");}
-    if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
-
-    // no explicit return
-    if (requiresReturn) throw MerkError("Method did not return a value.");
-    return Node();
     
-    // try {
-    //     DEBUG_LOG(LogLevel::TRACE, "In try block");
-    //     if (!callScope) {throw MerkError("Method " + name +" Has No Captured Scope:");}
+    bool executeFlow = true;
+    if (executeFlow) {
+        EvalResult r = body->evaluateFlow(callScope, instanceNode);
+        if (r.isReturn()) {return r.value;}
+        if (r.isThrow())  {throw RunTimeError("Unhandled throw");}
+        if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
 
-    //     auto capturedScope = getCapturedScope();
-
-    //     if (!callScope) {throw MerkError("Method " + name +" Has No Call Scope:");}
-
-    //     Node val = body->evaluate(callScope, instanceNode);
-        
-    //     DEBUG_FLOW_EXIT();
-    //     return val;
-    // } catch (const ReturnException& e) {
-    //     auto val = e.getValue();
-    //     DEBUG_LOG(LogLevel::TRACE, "METHOD " + name + " RETURNED: " + val.getFlags().toString());
-    //     DEBUG_FLOW_EXIT();      
-    //     return val;
-    // }
+        if (requiresReturn) throw MerkError("Method did not return a value.");
+        return Node();
+    }
+    return nonFlowHandler(callScope, getName(), getCapturedScope(), body.get(), instanceNode);
+    
 }
+
 
 CallableBody* UserMethod::getInvocableBody() {return body.get();}
 CallableBody* UserMethod::getBody() const {return body.get();}

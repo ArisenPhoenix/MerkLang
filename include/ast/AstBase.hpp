@@ -116,6 +116,7 @@ public:
 
     virtual Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     virtual FreeVars collectFreeVariables() const override {return {};}
+    virtual EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
 
 };

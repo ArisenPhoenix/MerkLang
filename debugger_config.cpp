@@ -101,7 +101,7 @@ namespace Debug
         debugger.setLogLevels("core/callables/classes/Method.cpp", LogLevel::ERROR, FlowLevel::VERY_LOW);
 
         // EVALUATOR
-        debugger.setLogLevels("core/evaluator.h", LogLevel::ERROR, FlowLevel::VERY_LOW);
+        debugger.setLogLevels("core/Evaluator.hpp", LogLevel::ERROR, FlowLevel::VERY_LOW);
         debugger.setLogLevels("core/evaluator.cpp", LogLevel::ERROR, FlowLevel::VERY_LOW);
 
         // HELPERS

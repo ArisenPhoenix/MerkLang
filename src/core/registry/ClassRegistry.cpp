@@ -31,7 +31,10 @@ void ClassRegistry::registerClass(const String& name, SharedPtr<ClassBase> class
 }
 
 void ClassRegistry::clear() {
-    classMap.clear(); // Then clear the container
+    for (auto& [name, obj] : classMap) {
+        obj.reset();
+    }
+    classMap.clear();
 }
 
 void ClassRegistry::registerClass(const String& name, SharedPtr<ClassSignature> classSignature) {

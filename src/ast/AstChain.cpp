@@ -2,7 +2,6 @@
 
 #include "core/node/Node.hpp"
 #include "core/node/ArgumentNode.hpp"
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
 #include "core/Scope.hpp"
 
@@ -83,7 +82,9 @@ void Chain::clear() {
     } 
     if (lastScope) {lastScope.reset();}
     if (getSecondaryScope()){
-        getSecondaryScope().reset();
+        scope.reset();
+        setScope(nullptr);
+        setSecondaryScope(nullptr);
     }
 }
 Chain::~Chain() { clear(); }

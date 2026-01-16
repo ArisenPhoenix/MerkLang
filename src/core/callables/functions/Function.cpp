@@ -40,13 +40,28 @@ UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList 
 
 
 Node UserFunction::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    (void)args;
+    // (void)args;
+    // DEBUG_FLOW(FlowLevel::NONE);
+    // if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
+    // placeArgsInCallScope(args, scope);
+
+    // DEBUG_FLOW_EXIT();
+    // return body->evaluate(scope, instanceNode);
+
     DEBUG_FLOW(FlowLevel::NONE);
     if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
     placeArgsInCallScope(args, scope);
 
     DEBUG_FLOW_EXIT();
-    return body->evaluate(scope, instanceNode);
+    EvalResult r = body->evaluateFlow(scope, instanceNode);
+
+    if (r.isReturn()) return r.value;
+    if (r.isThrow())  throw RunTimeError("Unhandled throw"); // or convert to your error model
+    if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
+
+    // no explicit return
+    if (requiresReturn) throw MerkError("Function did not return a value.");
+    return Node();
 }
 
 // Node UserFunction::executeFlow(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {

@@ -69,7 +69,10 @@ private:
     
     std::optional<NodeValueType> getTypeFromString(String typeStr);
     void interpretFlow(BaseAST* CodeBlockForEvaluation) const;
+    void interpretFlow(CodeBlock* CodeBlockForEvaluation) const;
     void interpret(BaseAST* ASTStatementForEvaluation) const;
+    void interpret(CodeBlock* block) const;
+
 
     std::optional<NodeValueType> parseStaticType();
 
