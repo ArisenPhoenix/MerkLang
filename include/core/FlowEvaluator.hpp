@@ -47,7 +47,7 @@ namespace FlowEvaluator {
     EvalResult evaluateFunction(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     EvalResult evaluateMethodBody(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> methodScope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     EvalResult evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> classScope, SharedPtr<Scope> generatedScope, String accessor, Vector<UniquePtr<BaseAST>>& children, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
-    EvalResult evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgResultType argValues, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    EvalResult evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgumentList argValues, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     EvalResult evaluateMethodDef(SharedPtr<Scope> passedScope, SharedPtr<Scope> ownScope, SharedPtr<Scope> classScope, String methodName, MethodBody* body, ParamList parameters, CallableType callType, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     
 

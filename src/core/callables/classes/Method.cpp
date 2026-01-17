@@ -132,7 +132,7 @@ Node nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Scope> ca
 }
 
 
-Node UserMethod::execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node UserMethod::execute(ArgumentList args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
     DEBUG_LOG(LogLevel::TRACE, "Validated Instance Node");

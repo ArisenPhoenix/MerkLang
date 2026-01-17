@@ -64,7 +64,7 @@ public:
     static String getOriginalVarName() {return "[__LIST__]";}
     ListNode();
     ~ListNode();
-    explicit ListNode(ArgResultType init);
+    explicit ListNode(ArgumentList init);
     explicit ListNode(NodeList init);
 
     virtual void append(const Node& node);
@@ -91,7 +91,7 @@ public:
 class ArrayNode: public ListNode {
 public:
     static String getOriginalVarName() {return "[__ARRAY__]";}
-    explicit ArrayNode(ArgResultType init, NodeValueType type);
+    explicit ArrayNode(ArgumentList init, NodeValueType type);
     explicit ArrayNode(NodeList init, NodeValueType type);
 
     void append(const Node& node) override;
@@ -113,7 +113,7 @@ public:
     
     DictNode();
     ~DictNode();
-    explicit DictNode(ArgResultType init);
+    explicit DictNode(ArgumentList init);
     explicit DictNode(NodeMapU elements);
     void set(const Node& key, const Node& value);
     void set(const String& key, const Node value);
@@ -151,7 +151,7 @@ public:
     String getVarName();
     SetNode();
     ~SetNode();
-    explicit SetNode(ArgResultType init);
+    explicit SetNode(ArgumentList init);
     explicit SetNode(std::unordered_set<Node> elements);
     explicit SetNode(std::unordered_set<Node>&& init);
     explicit SetNode(VariantType& val);

@@ -7,7 +7,7 @@
 NativeFunction::NativeFunction(
     String name,
     ParamList params,
-    std::function<Node(ArgResultType, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> impl
+    std::function<Node(ArgumentList, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> impl
 
 )
     : Function(std::move(name), std::move(params), CallableType::FUNCTION),
@@ -15,7 +15,7 @@ NativeFunction::NativeFunction(
     setSubType(CallableType::NATIVE);
 }
 
-Node NativeFunction::execute(ArgResultType args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+Node NativeFunction::execute(ArgumentList args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     if (!nativeImpl) { throw MerkError("NativeFunction has no implementation."); }
      
     return nativeImpl(args, scope, instanceNode);

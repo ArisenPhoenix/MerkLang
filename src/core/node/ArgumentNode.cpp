@@ -55,6 +55,74 @@ bool ArgumentList::hasNamedArg(const String& name) const {
     return namedArgs.find(name) != namedArgs.end();
 }
 
+
+BoundArgs ArgumentList::bindToBound(const ParamList& params, bool allowDefaults) const {
+    BoundArgs out;
+
+    const bool variadic = !params.empty() && params.back().isVarArgsParameter();
+    const size_t fixedCount = variadic ? (params.size() - 1) : params.size();
+
+    // ---- fixed ----
+    out.fixed.reserve(fixedCount);
+
+    for (size_t i = 0; i < fixedCount; ++i) {
+        const auto& param = params[i];
+
+        Node arg;
+        bool wasDefault = false;
+
+        if (i < positionalArgs.size()) {
+            arg = positionalArgs[i];
+
+            // Optional: keep your existing behavior of stamping flags
+            if (!param.flags.name.empty()) {
+                arg.setFlags(param.flags);
+            }
+
+        } else if (hasNamedArg(param.getName())) {
+            arg = getNamedArg(param.getName());
+
+            if (!param.flags.name.empty()) {
+                arg.setFlags(param.flags);
+            }
+
+        } else if (param.hasDefault() && allowDefaults) {
+            arg = Node::fromVariant(param.getDefaultValue());
+
+            if (!param.flags.name.empty()) {
+                arg.setFlags(param.flags);
+            }
+
+            wasDefault = true;
+        } else {
+            throw RunTimeError("Missing argument for parameter: " + param.getName());
+        }
+
+        out.fixed.push_back(BoundArg{arg, param.getName(), wasDefault});
+    }
+
+    // ---- varargs tail ----
+    out.hasVarargs = variadic;
+
+    if (variadic) {
+        if (positionalArgs.size() < fixedCount) {
+            throw MerkError("Too few arguments for variadic function.");
+        }
+
+        if (positionalArgs.size() > fixedCount) {
+            out.varargs.reserve(positionalArgs.size() - fixedCount);
+            for (size_t i = fixedCount; i < positionalArgs.size(); ++i) {
+                out.varargs.push_back(positionalArgs[i]);
+            }
+        }
+
+        // NOTE: Named varargs not supported here; same as your current comment.
+        // You can later decide whether to permit passing extra named args into varargs.
+    }
+
+    return out;
+}
+
 Vector<Node> ArgumentList::bindTo(const ParamList& params, bool allowDefaults) const {
     DEBUG_FLOW();
 
@@ -137,6 +205,10 @@ size_t ArgumentList::size() {
     return positionalArgs.size();
 }
 
+size_t ArgumentList::size() const {
+    return positionalArgs.size();
+}
+
 
 Node& ArgumentList::back() {
     if (positionalArgs.empty()) {
@@ -178,3 +250,9 @@ std::size_t ArgumentList::hash() const {
 
     return h;
 }
+
+
+
+
+
+

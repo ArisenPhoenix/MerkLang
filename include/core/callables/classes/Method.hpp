@@ -26,7 +26,7 @@ public:
     SharedPtr<Scope> getClassScope() const;
 
     virtual ~Method();
-    virtual Node execute(ArgResultType args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> self) const = 0;
+    virtual Node execute(ArgumentList args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> self) const = 0;
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
     
@@ -63,7 +63,7 @@ public:
 
     Vector<Chain*> getNonStaticElements();
 
-    Node execute(ArgResultType args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    Node execute(ArgumentList args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
     SharedPtr<CallableSignature> toCallableSignature() override;
     SharedPtr<CallableSignature> toCallableSignature(SharedPtr<UserMethod> method);
 

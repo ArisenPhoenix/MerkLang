@@ -106,40 +106,40 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
         throw MerkError("Class " + name + " Was not registered");
     }
 
-    Vector<TypeId> methodIds;
-    auto methods = cls->getAllMethodSignatures();
-    for (auto method : methods) {
-        Vector<TypeId> types;
-        for (auto paramType : method->getParameterTypes() ) {
-            types.emplace_back(TypeRegistry::primitive(paramType));
-        }
+    // Vector<TypeId> methodIds;
+    // auto methods = cls->getAllMethodSignatures();
+    // for (auto method : methods) {
+    //     Vector<TypeId> types;
+    //     for (auto paramType : method->getParameterTypes() ) {
+    //         types.emplace_back(TypeRegistry::primitive(paramType));
+    //     }
 
-        TypeNode typeNode {
-            TypeKind::Invocable,
-            NodeValueType::Method,
-            method->getCallable()->getName(),
-            types,
-        };
+    //     TypeNode typeNode {
+    //         TypeKind::Invocable,
+    //         NodeValueType::Method,
+    //         method->getCallable()->getName(),
+    //         types,
+    //     };
 
-        auto mid = classScope->localTypes.idOf(typeNode);
-        methodIds.emplace_back(mid);
-    } 
+    //     auto mid = classScope->localTypes.idOf(typeNode);
+    //     methodIds.emplace_back(mid);
+    // } 
     
-    Vector<TypeId> clsParams;
-    for (auto paramType : parameters.clone().getParameterTypes()) {
-        clsParams.emplace_back(TypeRegistry::primitive(paramType));
-    }
+    // Vector<TypeId> clsParams;
+    // for (auto paramType : parameters.clone().getParameterTypes()) {
+    //     clsParams.emplace_back(TypeRegistry::primitive(paramType));
+    // }
 
-    TypeNode classType {
-        TypeKind::Named,
-        NodeValueType::Class,
-        name,
-        clsParams,
-        "",
-        methodIds
-    };
+    // TypeNode classType {
+    //     TypeKind::Named,
+    //     NodeValueType::Class,
+    //     name,
+    //     clsParams,
+    //     "",
+    //     methodIds
+    // };
 
-    defScope->localTypes.idOf(classType);
+    // defScope->localTypes.idOf(classType);
     
     DEBUG_LOG(LogLevel::TRACE, "ClassDef::classScope created: ");
     auto classNode = ClassNode(cls);

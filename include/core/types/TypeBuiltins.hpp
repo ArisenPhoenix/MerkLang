@@ -1,6 +1,6 @@
 #pragma once
 #include "core/TypesFWD.hpp"
-#include "core/Type.hpp" // your new TypeRegistry/TypeNode
+#include "core/types/Type.hpp" // your new TypeRegistry/TypeNode
 
 class Scope;
 

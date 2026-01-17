@@ -651,7 +651,7 @@ std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const 
   }
 
 
-std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const ArgResultType& args) const {
+std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const ArgumentList& args) const {
     if (globalFunctions && globalFunctions->hasFunction(name)) {
         auto sig = globalFunctions->getFunction(name, args);
         if (sig.has_value()) { return sig; }
@@ -669,22 +669,30 @@ std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& 
 }
 
 void Scope::registerType(TypeId id) {
-    globalTypes->add(id);
+    // globalTypes->add(id);
 }
 
 void Scope::registerPrimitiveType(NodeValueType t) {
-    globalTypes->addPrim(t);
+    // globalTypes->addPrim(t);
 }
 
 void Scope::registerNamedType(String& name) {
-    globalTypes->addNamed(name);
+    // globalTypes->addNamed(name);
 }
 
-TypeId Scope::getTypeOf(TypeNode val) {
-    return TypeRegistry::idOf(val);
+SharedPtr<TypeRegistry> Scope::getTypeRegistry() {
+    return globalTypes;
 }
 
-std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name, const ArgResultType& args) {
+// TypeId Scope::getTypeOf(TypeNode val) {
+//     // return TypeRegistry::idOf(val);
+//     return 0
+// }
+
+
+
+
+std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name, const ArgumentList& args) {
     
     DEBUG_FLOW(FlowLevel::MED);
     if (globalFunctions) {

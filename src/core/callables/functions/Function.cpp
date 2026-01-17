@@ -39,7 +39,7 @@ UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList 
 
 
 
-Node UserFunction::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node UserFunction::execute(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     // (void)args;
     // DEBUG_FLOW(FlowLevel::NONE);
     // if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
@@ -64,7 +64,7 @@ Node UserFunction::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_u
     return Node();
 }
 
-// Node UserFunction::executeFlow(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+// Node UserFunction::executeFlow(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
 //     DEBUG_FLOW(FlowLevel::NONE);
 //     if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
 //     placeArgsInCallScope(args, scope);
@@ -152,7 +152,7 @@ FunctionBody* UserFunction::getThisBody() const {return body.get();}
 UniquePtr<CallableBody> UserFunction::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}
 
 
-SharedPtr<CallableSignature> FunctionNode::getFunction(String name, ArgResultType args) {
+SharedPtr<CallableSignature> FunctionNode::getFunction(String name, ArgumentList args) {
     if (!std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue())) {
         throw MerkError("FunctionNode holds type " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
     }

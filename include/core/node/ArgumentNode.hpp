@@ -2,7 +2,7 @@
 #define ARGUMENT_LIST_H
 
 #include "core/node/Node.hpp"
-
+#include "core/node/BoundArgs.hpp"
 
 class ParamList;
 
@@ -29,6 +29,7 @@ public:
     bool hasNamedArg(const String& name) const;
 
     NodeList bindTo(const ParamList& params, bool allowDefaults = false) const;
+    BoundArgs bindToBound(const ParamList& params, bool allowDefaults = false) const;
 
     String toString() const;
 
@@ -50,6 +51,7 @@ public:
     const Node& operator[](size_t index) const;
     bool empty();
     size_t size();
+    size_t size() const;
 
     std::size_t hash() const override;
 };

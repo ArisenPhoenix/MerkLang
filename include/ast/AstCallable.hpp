@@ -7,6 +7,7 @@
 #include "ast/AstBase.hpp"
 #include "ast/Ast.hpp"
 #include "ast/AstControl.hpp" 
+#include "core/types/Type.hpp"
 
 class MethodDef;
 class MethodBody;
@@ -70,7 +71,7 @@ public:
     String toString() const override;
     void setScope(SharedPtr<Scope> newScope) override;
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
-    ArgResultType evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    ArgumentList evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     UniquePtr<BaseAST> clone() const override;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
@@ -98,6 +99,7 @@ private:
     CallableType subType; // DEF, FUNCTION, etc.
     mutable Vector<NodeValueType> parameterTypes; 
     ParamList parameters;
+    TypeSignatureId typeSigId = kInvalidTypeSignatureId;
 
 public:
     // explicit CallableSignature(SharedPtr<Callable> callable, CallableType callType);
@@ -123,6 +125,8 @@ public:
     void setParameters(ParamList params);
 
     virtual std::size_t hash() const;
+    void setTypeSignature(TypeSignatureId id) { typeSigId = id; }
+    TypeSignatureId getTypeSignature() const { return typeSigId; }
  
 };
 
@@ -220,7 +224,7 @@ public:
 
     String toString() const override {return "<" + astTypeToString(getAstType()) + "name" + getName() + ">";}
     String getName() const {return name;}
-    ArgResultType handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
+    ArgumentList handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
     Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
     FreeVars collectFreeVariables() const override;
     void setScope(SharedPtr<Scope>) override;

@@ -23,7 +23,7 @@ public:
 
     std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name) const;
 
-    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name, const ArgResultType& args) const;
+    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name, const ArgumentList& args) const;
 
     void debugPrint() const;
 

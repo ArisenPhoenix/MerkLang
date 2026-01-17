@@ -92,9 +92,9 @@ void Scope::debugPrint() const {
 
     localFunctions.debugPrint();
     localClasses.debugPrint();
-    if (kind == ScopeKind::Root) {
-        localTypes.debugPrint();
-    }
+    // if (kind == ScopeKind::Root) {
+    //     localTypes.debugPrint();
+    // }
     
     for (const auto& child : childScopes) {
         if (child.get() != this) {

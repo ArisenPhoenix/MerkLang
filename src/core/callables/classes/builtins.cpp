@@ -144,7 +144,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     String varName = ListNode::getOriginalVarName();
     
 
-    auto constructFunction = [className, varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto constructFunction = [className, varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         validateSelf(self, className, "constructFunction");
         auto list = makeShared<ListNode>(args);
@@ -154,7 +154,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
         return Node();
     };
 
-    auto appendFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto appendFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
@@ -169,7 +169,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     auto removeParams = ParamList();
     auto rmParam = ParamNode("value", NodeValueType::Any);
     removeParams.addParameter(rmParam);
-    auto removeFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto removeFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'remove' method without instance");}
         if (args.size() != 1) {throw MerkError("Only One Argument is allowed in List.remove, provided: " + joinVectorNodeStrings(args.getPositional()));}
@@ -185,7 +185,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     auto insParam2 = ParamNode("value", NodeValueType::Any);
     insertParams.addParameter(insParam1);
     insertParams.addParameter(insParam2);
-    auto insertFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto insertFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'insert' method without instance");}
         if (args.size() != 2) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));}
@@ -201,7 +201,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     auto popParam1 = ParamNode("index", NodeValueType::Int);
     popParam1.setIsVarArgsParam(true);
     popParams.addParameter(popParam1);
-    auto popFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto popFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'pop' method without instance");}
         if (args.size() > 1) {throw MerkError("Only Two Arguments are allowed in List.insert, provided: " + joinVectorNodeStrings(args.getPositional()));}
@@ -254,7 +254,7 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
     
     // DEBUG_LOG(LogLevel::PERMISSIVE, "Got the Dict Class initialized");
 
-    auto constructFunction = [className, varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto constructFunction = [className, varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         validateSelf(self, className, "constructFunction");
         // DictNode(args);
@@ -272,7 +272,7 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
     setParams.addParameter(setParam);
     setParams.addParameter(setParam2);
 
-    auto setFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto setFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
@@ -293,7 +293,7 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
     getParams.addParameter(getParam2);
 
 
-    auto getFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto getFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 1 && args.size() != 2) {throw MerkError("Only Two Arguments are allowed in Dict.get, provided: " + args.toString());}
@@ -309,7 +309,7 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
     auto popParam1 = ParamNode("key", NodeValueType::Any);
     popParams.addParameter(popParam1);
     
-    auto popFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto popFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() > 1) {throw MerkError("Only Two Arguments are allowed in Dict.pop, provided: " + joinVectorNodeStrings(args.getPositional()));}
@@ -322,7 +322,7 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
     auto insParam1 = ParamNode("key", NodeValueType::Int);
     removeParams.addParameter(insParam1);
 
-    auto removeFunction = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto removeFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 2) {throw MerkError("Only Two Arguments are allowed in Dict.remove, provided: " + joinVectorNodeStrings(args.getPositional()));}
@@ -380,7 +380,7 @@ auto [className, accessor] = getClassAccessorName("Array");
     classDefCapturedScope->appendChildScope(classScope);
     globalScope->appendChildScope(classDefCapturedScope);
 
-    auto constructFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto constructFunction = [className](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         String funcName = "arrayConstruct";
         // validateSelf(self, className, "constructFunction");
@@ -398,7 +398,7 @@ auto [className, accessor] = getClassAccessorName("Array");
         return var;
     };
 
-    auto appendFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto appendFunction = [className](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 1) {throw MerkError("Method append can only accept 1 argument");}
@@ -412,7 +412,7 @@ auto [className, accessor] = getClassAccessorName("Array");
     auto removeParams = ParamList();
     auto rmParam = ParamNode("value", NodeValueType::Any);
     removeParams.addParameter(rmParam);
-    auto removeFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto removeFunction = [](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 1) {
@@ -429,7 +429,7 @@ auto [className, accessor] = getClassAccessorName("Array");
     auto insParam2 = ParamNode("value", NodeValueType::Any);
     insertParams.addParameter(insParam1);
     insertParams.addParameter(insParam2);
-    auto insertFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto insertFunction = [](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 2) {
@@ -446,7 +446,7 @@ auto [className, accessor] = getClassAccessorName("Array");
     auto popParam1 = ParamNode("index", NodeValueType::Int);
 
     popParams.addParameter(popParam1);
-    auto popFunction = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto popFunction = [](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         (void)callScope;
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 1) {
@@ -491,7 +491,7 @@ SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
     classDefCapturedScope->appendChildScope(classScope);
     globalScope->appendChildScope(classDefCapturedScope);
 
-    auto constructFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto constructFunction = [className](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         DEBUG_LOG(LogLevel::PERMISSIVE, "CREATING SET: ");
         // throw MerkError("CLASS NAME: " + className);
@@ -516,7 +516,7 @@ SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
     ParamList addParams;
     auto addParam = ParamNode("value", NodeValueType::Any);
     addParams.addParameter(addParam);
-    auto addFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto addFunction = [className](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         String funcName = "add";
         validateNativeInstance(funcName, className, self, callScope); 
         if (args.size() != 1) {throw MerkError("Method add can only accept 1 argument");}
@@ -527,7 +527,7 @@ SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
 
 
     ParamList lengthParams;
-    auto lengthFunction = [className](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto lengthFunction = [className](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(callScope);
         String funcName = "length";
         validateNativeInstance(funcName, className, self, callScope);        
@@ -575,7 +575,7 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
 
     String varName = DictNode::getOriginalVarName();
     
-    auto constructFunction = [className, varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto constructFunction = [className, varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(args, callScope, self);
         validateSelf(self, className, "constructFunction");
         auto instance = self->getInstance();
@@ -583,7 +583,7 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
 
         auto instanceScope = instance->getInstanceScope();
 
-        auto methodArgs = ArgResultType();
+        auto methodArgs = ArgumentList();
         if (args.size() >= 1) { instance->declareField("url", args[0]); } else {instance->declareField("url", Node("http"));}
         if (args.size() >= 2) {instance->declareField("method", args[1]); } else {instance->declareField("method", Node("GET")); }
         
@@ -600,7 +600,7 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
     setHeaderParams.addParameter(setHeaderParam);
     setHeaderParams.addParameter(setHeaderParam2);
 
-    auto setHeader = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto setHeader = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
@@ -615,7 +615,7 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
     auto getHeaderParams = ParamList();
     auto getHeaderParam = ParamNode("key", NodeValueType::String);
     getHeaderParams.addParameter(getHeaderParam);
-    auto getHeader = [varName](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto getHeader = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
@@ -629,7 +629,7 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
 
 
     auto sendParams = ParamList(); // no args for now
-    auto sendFn = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
+    auto sendFn = [](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(args, callScope);
         if (!self) throw MerkError("Http.send requires instance");
         auto native = self->getInstance()->getNativeData(); // however you store it
@@ -665,7 +665,7 @@ SharedPtr<NativeClass> createNativeFileClass(SharedPtr<Scope> globalScope) {
     cls->setCapturedScope(classScope->getParent());
 
     // construct(path, mode="r")
-    auto constructFn = [](ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)->Node {
+    auto constructFn = [](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)->Node {
         MARK_UNUSED_MULTI(args, callScope);
         auto inst = self->getInstance();
         inst->declareField("path",   args.size() >= 1 ? args[0] : Node(""));
@@ -680,24 +680,24 @@ SharedPtr<NativeClass> createNativeFileClass(SharedPtr<Scope> globalScope) {
 
     // open(), close(), readAll(), read(n), write(s), exists(path), size(path), remove(path)
     auto noArgs = ParamList{};
-    auto openFn = [](ArgResultType, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
+    auto openFn = [](ArgumentList, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
         pullNative<FileNode>(self)->open(); return Node();
     };
 
     
 
-    auto closeFn = [](ArgResultType, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
+    auto closeFn = [](ArgumentList, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
         pullNative<FileNode>(self)->close(); return Node();
     };
 
-    auto readAllFn = [](ArgResultType, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
+    auto readAllFn = [](ArgumentList, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
         return Node(pullNative<FileNode>(self)->readAll());
     };
 
     ParamList readN;
     auto readN1 = ParamNode("n", NodeValueType::Int, true);
     readN.addParameter(readN1);
-    auto readFn = [](ArgResultType a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
+    auto readFn = [](ArgumentList a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
         size_t arg = 0;
         if (a.size() != 0) {
             arg = a[0].toInt();
@@ -706,7 +706,7 @@ SharedPtr<NativeClass> createNativeFileClass(SharedPtr<Scope> globalScope) {
     };
 
     ParamList writeP; writeP.addParameter(ParamNode("s", NodeValueType::Any));
-    auto writeFn = [](ArgResultType a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
+    auto writeFn = [](ArgumentList a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode> self)->Node {
         auto val = a[0].toString();
         // throw MerkError("Trying to write \n" + val);
         pullNative<FileNode>(self)->write(a[0].toString()); return Node();
@@ -721,20 +721,20 @@ SharedPtr<NativeClass> createNativeFileClass(SharedPtr<Scope> globalScope) {
     };
 
     ParamList pathP; pathP.addParameter(ParamNode("path", NodeValueType::String));
-    addStatic("exists", pathP, [](ArgResultType a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
+    addStatic("exists", pathP, [](ArgumentList a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
         return Node(FileNode::exists(a[0].toString()));
     });
 
-    addStatic("size", pathP, [](ArgResultType a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
+    addStatic("size", pathP, [](ArgumentList a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
         return Node(static_cast<int>(FileNode::sizeOf(a[0].toString())));
     });
 
-    addStatic("remove", pathP, [](ArgResultType a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
+    addStatic("remove", pathP, [](ArgumentList a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
         FileNode::removeFile(a[0].toString()); return Node();
     });
 
     ParamList rAllP = pathP;
-    addStatic("readAll", rAllP, [](ArgResultType a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
+    addStatic("readAll", rAllP, [](ArgumentList a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
         std::ifstream ifs(a[0].toString(), std::ios::binary);
         if (!ifs) throw MerkError("File.readAll failed");
         std::ostringstream oss; oss << ifs.rdbuf(); return Node(oss.str());
@@ -742,7 +742,7 @@ SharedPtr<NativeClass> createNativeFileClass(SharedPtr<Scope> globalScope) {
 
     ParamList wAllP; wAllP.addParameter(ParamNode("path", NodeValueType::String));
     wAllP.addParameter(ParamNode("data", NodeValueType::Any));
-    addStatic("writeAll", wAllP, [](ArgResultType a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
+    addStatic("writeAll", wAllP, [](ArgumentList a, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>){
         std::ofstream ofs(a[0].toString(), std::ios::binary|std::ios::trunc);
         if (!ofs) throw MerkError("File.writeAll failed");
         auto s = a[1].toString(); ofs.write(s.data(), static_cast<std::streamsize>(s.size())); return Node();

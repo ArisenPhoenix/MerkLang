@@ -92,7 +92,7 @@ SharedPtr<Scope> ClassBase::getClassScope() const {return classScope;}
 
 String ClassBase::toString() const {return "Class(" + name + ") <Params>" + parameters.toShortString();}
 
-Node ClassBase::execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node ClassBase::execute(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
     MARK_UNUSED_MULTI(args, scope);
     DEBUG_FLOW_EXIT();
@@ -217,7 +217,7 @@ SharedPtr<ClassInstanceNode> ClassInstance::getInstanceNode() {
 
 
 
-void ClassInstance::construct(const ArgResultType& args, SharedPtr<ClassInstance> self) {
+void ClassInstance::construct(const ArgumentList& args, SharedPtr<ClassInstance> self) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
    
     if (!getInstanceScope()->hasFunction("construct")) {throw MerkError("A construct method must be implemented in class: " + getName());}
@@ -260,7 +260,7 @@ void ClassInstance::construct(const ArgResultType& args, SharedPtr<ClassInstance
     DEBUG_FLOW_EXIT();
 }
     
-Node ClassInstance::execute(const ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node ClassInstance::execute(const ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     MARK_UNUSED_MULTI(args, scope);
     return Node("Null");
 }
@@ -294,7 +294,7 @@ SharedPtr<Scope> ClassInstance::getInstanceScope() const { return instanceScope;
 void ClassInstance::setInstanceScope(SharedPtr<Scope> scope) {instanceScope = scope;};
 
 // Optional: override call() to auto-instantiate when the class is "called"
-Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
+Node ClassSignature::call(const ArgumentList& args, SharedPtr<Scope> scope, SharedPtr<Scope> instanceScope) const {
     DEBUG_FLOW(FlowLevel::HIGH);
     (void)args;
 
@@ -321,7 +321,7 @@ Node ClassSignature::call(const ArgResultType& args, SharedPtr<Scope> scope, Sha
 }
 
 
-Node ClassInstance::call(String name, ArgResultType args) {
+Node ClassInstance::call(String name, ArgumentList args) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     auto methodOpt = getInstanceScope()->getFunction(name, args);
     SharedPtr<CallableSignature> methodSig;

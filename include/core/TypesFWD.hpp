@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <span>
 
 template <typename T, typename... Args>
 std::unique_ptr<T> makeUnique(Args&&... args) {
@@ -84,7 +85,6 @@ using NodeSetU = std::unordered_set<Node>;
 using DependencyGraph = std::unordered_map<String, std::unordered_set<String>>;
 using ClassMembers = std::unordered_map<String, String>;
 using ArgumentType = Arguments;
-using ArgResultType = ArgumentList;
 
 
 // Enum for the type of the value held by the variant
@@ -301,6 +301,8 @@ public:
 
     String getBaseType() {return baseType;}
     Vector<ResolvedType> getInnerType() {return inner;}
+    const String getBaseType() const {return baseType;}
+    const Vector<ResolvedType> getInnerType() const {return inner;}
     bool matches(const ResolvedType& other) const;
     size_t hash() const;
 

@@ -31,7 +31,7 @@
 #include "core/helpers/class_helpers.h"
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/Method.hpp"
-#include "core/Type.hpp"
+#include "core/types/Type.hpp"
 
 namespace {
 
@@ -467,7 +467,7 @@ EvalResult evaluateClassBody(SharedPtr<Scope> classCapturedScope,
 
 EvalResult evaluateClassCall(SharedPtr<Scope> callScope,
                             String className,
-                            ArgResultType argValues,
+                            ArgumentList argValues,
                             SharedPtr<ClassInstanceNode> instanceNode)
 {
     MARK_UNUSED_MULTI(instanceNode);

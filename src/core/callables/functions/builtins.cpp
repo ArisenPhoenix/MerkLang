@@ -12,7 +12,7 @@
 
 // Define native functions 
 
-Node print(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node print(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     // throw MerkError("Showed Print Node to String");
     for (size_t i = 0; i < args.size(); ++i) {
         // DEBUG_LOG(LogLevel::PERMISSIVE, args[i].toString(), "  META", args[i].getFlags().toString());
@@ -25,7 +25,7 @@ Node print(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_
     return Node(Null); // null
 }
 
-Node debug_log(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node debug_log(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     DEBUG_LOG(LogLevel::DEBUG, "ALL ARGS: ", args.toString());
     debugLog(true, highlight("\n====================================== DEBUG_LOG MERK INTERNALS BEGIN ======================================\n", Colors::bg_bright_red));
     for (size_t i = 0; i < args.size(); ++i) {
@@ -51,22 +51,22 @@ Node debug_log(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[ma
     return Node(Null); // none
 }
 
-// Node floatFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+// Node floatFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
 //     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
 //     return Node(args[0].toFloat());
 // }
 
-Node intFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node intFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
     return Node(args[0].toInt());
 }
 
-Node stringFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node stringFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
     return Node(args[0].toString());
 }
 
-Node isInstanceFunc(ArgResultType args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node isInstanceFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 2) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
 
     auto var = args[0];

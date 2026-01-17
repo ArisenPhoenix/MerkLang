@@ -11,16 +11,16 @@
 
 class NativeClass : public ClassBase {
 private:
-    std::function<void(ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> constructorFn;
+    std::function<void(ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> constructorFn;
  
 public:
     NativeClass(String name, String accessor, SharedPtr<Scope> classScope);
     ~NativeClass() override;
     void addMethod(const String& name, SharedPtr<NativeMethod> method);
 
-    void setConstructor(std::function<void(ArgResultType, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> fn);
+    void setConstructor(std::function<void(ArgumentList, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode>)> fn);
 
-    Node execute(ArgResultType args,
+    Node execute(ArgumentList args,
                  SharedPtr<Scope> scope,
                  [[maybe_unused]] SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 

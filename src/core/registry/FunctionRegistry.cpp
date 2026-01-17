@@ -5,7 +5,7 @@
 #include "core/callables/functions/Function.hpp"
 #include "core/registry/FunctionRegistry.hpp"
 #include "utilities/debugger.h"
-
+// #include "core/callables/helpers.hpp"
 
 FunctionRegistry::~FunctionRegistry() {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
@@ -90,7 +90,7 @@ bool FunctionRegistry::hasFunction(const String& name) const {
 
 
 
-std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const String& name, const ArgResultType& args) const  {
+std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const String& name, const ArgumentList& args) const  {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     auto it = functions.find(name);
     if (it == functions.end() || it->second.empty()){
@@ -98,7 +98,6 @@ std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const 
         return std::nullopt;
     }
 
-        
     Vector<NodeValueType> argTypes;
     for (const auto &arg : args) { argTypes.push_back(arg.getType()); }
     DEBUG_LOG(LogLevel::TRACE, highlight("Function:", Colors::bold_blue), name, "was defined using", highlight("function", Colors::red));

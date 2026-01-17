@@ -100,7 +100,7 @@ Node Argument::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> ins
     if (isKeyword()) {
         auto k = key->evaluate(scope, instanceNode);
         auto v = value->evaluate(scope, instanceNode);
-
+        
         v.setFlags(v.getFlags().merge({{"name", k.toString()}}));
         // v.setFlags(v.getFlags().mergeFlagsWith())
         // v.key = k.toString();
@@ -113,13 +113,13 @@ Node Argument::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> ins
     }
 }
 Argument Argument::clone() const {
-    auto arg = Argument();
-    if (isKeyword()) { arg.key = std::move(key->clone()); }
-
-    arg.value = std::move(value->clone());
-    
+    Argument arg;
+    if (key) arg.key = key->clone();
+    if (!value) {throw MerkError("Argument::clone value is null");}
+    arg.value = value->clone();
     return arg;
 }
+
 
 
 Arguments::Arguments(SharedPtr<Scope> scope) : ASTStatement(scope) {}
@@ -134,9 +134,9 @@ void Arguments::setScope(SharedPtr<Scope> newScope) {
 } 
 
 
-ArgResultType Arguments::evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
+ArgumentList Arguments::evaluateAll(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    ArgResultType evaluated;
+    ArgumentList evaluated;
     
     for (auto& arg : arguments) {
         if (arg.isKeyword()) {
@@ -258,7 +258,7 @@ CallableDef::CallableDef(String name, ParamList parameters, UniquePtr<CallableBo
 CallableRef::CallableRef(String name, SharedPtr<Scope> scope)
     : ASTStatement(scope), name(name) {
         branch = "Callable";
-}
+    }
 
 CallableSignature::CallableSignature(SharedPtr<NodeBase> newCallable) {
     // callType(newCallable->callType), subType(newCallable->subType), parameters(newCallable->parameters.clone())
@@ -399,11 +399,11 @@ size_t CallableSignature::hash() const {
 }
 
 
-ArgResultType CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+ArgumentList CallableCall::handleArgs(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     // scope->debugPrint();
     
-    ArgResultType evaluatedArgs = arguments->evaluateAll(scope, instanceNode);
+    ArgumentList evaluatedArgs = arguments->evaluateAll(scope, instanceNode);
     return evaluatedArgs;
 }
 

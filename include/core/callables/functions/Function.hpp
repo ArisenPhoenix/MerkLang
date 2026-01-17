@@ -18,7 +18,7 @@ class Function : public Invocable {
 public:
     Function(String name, ParamList params, CallableType functionType, bool requiresReturn = true, bool isStatic = false);
     virtual ~Function() = default;
-    virtual Node execute(const ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
+    virtual Node execute(const ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const = 0;
     virtual SharedPtr<CallableSignature> toCallableSignature() = 0;
 
     virtual FunctionBody* getThisBody() const = 0;
@@ -45,7 +45,7 @@ public:
 public:
     UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType);
 
-    Node execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    Node execute(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     SharedPtr<CallableSignature> toCallableSignature() override;
     
@@ -70,7 +70,7 @@ public:
 
     FunctionNode(String originalName, Vector<SharedPtr<CallableSignature>>);
 
-    SharedPtr<CallableSignature> getFunction(String name, ArgResultType args);
+    SharedPtr<CallableSignature> getFunction(String name, ArgumentList args);
 
     SharedPtr<Callable> getCallable() const override;
 

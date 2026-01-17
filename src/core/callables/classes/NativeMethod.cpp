@@ -10,7 +10,7 @@ NativeMethod::NativeMethod(
     String name,
     ParamList params,
     SharedPtr<Scope> classScope,
-    std::function<Node(ArgResultType args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn) 
+    std::function<Node(ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)> methodFn) 
     : Method(std::move(name), params, CallableType::METHOD), methodFn(methodFn) {
         DEBUG_FLOW(FlowLevel::NONE);
         setClassScope(classScope);
@@ -25,7 +25,7 @@ NativeMethod::~NativeMethod() {
 };
 
 Node NativeMethod::execute(
-    ArgResultType args,
+    ArgumentList args,
     SharedPtr<Scope> callScope,
     SharedPtr<ClassInstanceNode> instanceNode) const 
 {

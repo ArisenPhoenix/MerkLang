@@ -34,7 +34,7 @@
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/Method.hpp"
 
-#include "core/Type.hpp"
+#include "core/types/Type.hpp"
 
 
 enum class Operator {
@@ -525,7 +525,7 @@ namespace Evaluator {
     }
     
 
-    Node evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgResultType argValues, SharedPtr<ClassInstanceNode> instanceNode) {
+    Node evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgumentList argValues, SharedPtr<ClassInstanceNode> instanceNode) {
         MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         auto classOpt = callScope->getClass(className);

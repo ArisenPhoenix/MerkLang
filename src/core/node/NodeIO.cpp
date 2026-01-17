@@ -49,7 +49,7 @@ static curl_slist* dictToCurlHeaders(const DictNode& dict) {
 
 HttpNode::HttpNode() = default;
 HttpNode::HttpNode(SharedPtr<ClassInstanceNode> instanceNode): InstanceBoundNative(instanceNode) {
-    auto dictArgs = ArgResultType();
+    auto dictArgs = ArgumentList();
     auto dictType = ResolvedType("Dict");
     auto dictFlags = DataTypeFlags(false, true, true, dictType);
     auto instance = getInstance();
@@ -150,7 +150,7 @@ Node HttpNode::send() {
     // headers out: libcurl doesn’t give easy header map via easy API. If you need response headers:
     // use CURLOPT_HEADERFUNCTION to capture them into a temporary map<str,str> and build a DictNode here.
 
-    auto respDictArgs = ArgResultType();
+    auto respDictArgs = ArgumentList();
     auto respNode = Evaluator::evaluateClassCall(scope, "Dict", respDictArgs, nullptr);
     auto resp = respNode.toInstance();
     // auto resp = std::static_pointer_cast<DictNode>(respNode.toInstance()->getNativeData());

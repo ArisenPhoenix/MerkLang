@@ -18,7 +18,7 @@
 #include "core/FlowEvaluator.hpp"
 #include "ast/AstCallable.hpp"
 #include "ast/AstFunction.hpp"
-
+// #include "core/callables/helpers.hpp"
 
 
 
@@ -165,17 +165,23 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     DEBUG_FLOW(FlowLevel::PERMISSIVE); 
     if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
     if (name == "showScope") {scope->debugPrint(); return Node(Null);}
-    auto evaluatedArgs = handleArgs(scope, instanceNode);
+    // auto evaluatedArgs = handleArgs(scope, instanceNode);
+    auto callArgs = arguments->evaluateAll(scope, instanceNode);
+    // auto* sig = resolveOverload()s
+
     SharedPtr<CallableSignature> optSig;
 
-    auto sigOpt = scope->getFunction(name, evaluatedArgs);
+    auto sigOpt = scope->getFunction(name, callArgs);
+    BoundArgs evaluatedArgs;
+
     if (sigOpt.has_value()) {
         optSig = sigOpt.value();
+        evaluatedArgs = callArgs.bindToBound(optSig->getParameters(), /*allowDefaults=*/true);
     } else {
         auto& var = scope->getVariable(name);
         if (var.isFunctionNode()) {
             auto funcNode = var.toFunctionNode();
-            optSig = funcNode.getFunction(name, evaluatedArgs);
+            optSig = funcNode.getFunction(name, callArgs);
         }
         
         // throw MerkError("Got FuncSigOpts");
@@ -188,11 +194,13 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
 
     if (func->getSubType() == CallableType::NATIVE) {
-        func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+        // func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+        auto m = scope->localTypes.matchCall(optSig->getTypeSignature(), callArgs);
+        if (!m.ok) {}
         if (func->getName() == "DEBUG_LOG") {
             printAST(std::cout, 0);
         }
-        return func->execute(evaluatedArgs, scope, instanceNode);
+        return func->execute(callArgs, scope, instanceNode);
     }
 
     
@@ -220,7 +228,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     //     value = e.getValue();  // Extract and return function's result
     // }
 
-    Node value = func->execute(evaluatedArgs, callScope);
+    Node value = func->execute(callArgs, callScope);
     scope->removeChildScope(callScope);
     return value;
 

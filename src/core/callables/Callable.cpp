@@ -171,7 +171,7 @@ String CallableNode::toString() const {
 }
 
 
-void Callable::placeArgsInCallScope(ArgResultType evaluatedArgs, SharedPtr<Scope> callScope) const {
+void Callable::placeArgsInCallScope(ArgumentList evaluatedArgs, SharedPtr<Scope> callScope) const {
     DEBUG_FLOW(FlowLevel::MED);
     parameters.verifyArguments(evaluatedArgs);
     ArgumentList args;

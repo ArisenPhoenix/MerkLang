@@ -36,7 +36,7 @@ public:
     // Retrieve a member variable's value.
     Node getMember(const String& name);
 
-    virtual Node execute(ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    virtual Node execute(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     void setCapturedScope(SharedPtr<Scope> scope) override;
     void setClassScope(SharedPtr<Scope> scope);
@@ -97,9 +97,9 @@ public:
     
     ~ClassInstance() override;
     
-    Node execute(const ArgResultType args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
-    void construct(const ArgResultType& args, SharedPtr<ClassInstance> classInstance);
-    Node call(String name, ArgResultType args);
+    Node execute(const ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const;
+    void construct(const ArgumentList& args, SharedPtr<ClassInstance> classInstance);
+    Node call(String name, ArgumentList args);
 
     SharedPtr<Scope> getCapturedScope() const override;
     SharedPtr<Scope> getInstanceScope() const;
@@ -179,7 +179,7 @@ public:
 
     SharedPtr<ClassBase> getClassDef() const;
 
-    SharedPtr<ClassInstance> instantiate(const ArgResultType& args) const;
+    SharedPtr<ClassInstance> instantiate(const ArgumentList& args) const;
 
-    Node call(const ArgResultType& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
+    Node call(const ArgumentList& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 };

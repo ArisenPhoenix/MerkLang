@@ -8,18 +8,18 @@
 
 class NativeFunction : public Function {
 private:
-    std::function<Node(ArgResultType, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> nativeImpl;
+    std::function<Node(ArgumentList, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> nativeImpl;
     SharedPtr<Scope> capturedScope; // For consistency with UserFunction
 
 public:
     NativeFunction(
         String name,
         ParamList params,
-        std::function<Node(ArgResultType, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> impl
+        std::function<Node(ArgumentList, SharedPtr<Scope>, SharedPtr<ClassInstanceNode>)> impl
 
     );
 
-    Node execute(ArgResultType args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    Node execute(ArgumentList args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     SharedPtr<CallableSignature> toCallableSignature() override;
 

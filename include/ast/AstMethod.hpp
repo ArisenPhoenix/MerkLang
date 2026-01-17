@@ -61,6 +61,7 @@ public:
 
     void setClassScope(SharedPtr<Scope> scope);
     SharedPtr<Scope> getClassScope() const;
+    // SharedPtr<Scope>& getClassScope() const;
     bool isConstructor() const;
     void setNonStaticElements(Vector<Chain*> nonStaticEls);
     Vector<Chain*> getNonStaticElements();

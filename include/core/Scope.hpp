@@ -4,7 +4,8 @@
 #include "core/registry/Context.hpp"
 #include "core/registry/FunctionRegistry.hpp"
 #include "core/registry/ClassRegistry.hpp"
-#include "core/Type.hpp"
+#include "core/registry/TypeRegistry.hpp"
+#include "core/types/Type.hpp"
 using ScopeCache = std::unordered_map<String, Scope>; 
 
 
@@ -124,11 +125,11 @@ public:
 
 
     // void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
-    SharedPtr<CallableSignature> handleLookupFunction(String& name, const ArgResultType& args) const;
+    SharedPtr<CallableSignature> handleLookupFunction(String& name, const ArgumentList& args) const;
     
     //// Registry Management
     //// Function Management
-    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const ArgResultType& args) const;
+    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const ArgumentList& args) const;
     std::optional<Vector<SharedPtr<CallableSignature>>> lookupFunction(const String& name) const;
 
     const SharedPtr<FunctionRegistry> getFunctionRegistry() const;
@@ -140,7 +141,7 @@ public:
     void registerFunction(const String& name, SharedPtr<UserFunction> function);
     void registerFunction(const String& name, SharedPtr<CallableSignature> function);
     void registerFunction(const String& name, SharedPtr<Callable> anyCallable);
-    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name, const ArgResultType& args);
+    std::optional<SharedPtr<CallableSignature>> getFunction(const String& name, const ArgumentList& args);
     std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name);
 
 
@@ -191,20 +192,21 @@ public:
     SharedPtr<Scope> buildClassDefScope(const FreeVars& freeVars, const String& className);
     
 
+
+    SharedPtr<TypeRegistry> getTypeRegistry();
     void registerType(TypeId);
     void registerPrimitiveType(NodeValueType);
     void registerNamedType(String&);
-    TypeId getTypeOf(TypeNode val);
 
+
+
+    
     ScopeCounts getCounts();
-
     void validateNoCycles(SharedPtr<Scope> childScope);
 private:
     void setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration);
     Vector<SharedPtr<Scope>> childScopes;      // List containing child scopes of (this) scope
     Context context;                           // The context for variable management
-    // FunctionRegistry functionRegistry;         // Registry for function management
-    // ClassRegistry classRegistry;               // Add class registry
 
     bool interpretMode;
     // bool isRoot;

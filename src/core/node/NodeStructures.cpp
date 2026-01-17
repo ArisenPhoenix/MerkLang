@@ -397,7 +397,7 @@ SetNode::SetNode(VariantType& val) {
     throw MerkError("This shouldn't execute...I think");
 }
 
-SetNode::SetNode(ArgResultType val) {
+SetNode::SetNode(ArgumentList val) {
     auto args = val.getPositional();
     if (args.size() != 0) {
         if (args.size() == 1) {
@@ -418,7 +418,7 @@ SetNode::SetNode(ArgResultType val) {
                 }
             }
         } else {
-            throw MerkError("args passed to SetNode(ArgResultType) is more than 1");
+            throw MerkError("args passed to SetNode(ArgumentList) is more than 1");
         }
     } else if (args.size() == 0) {
         elements.emplace(Node(0));
@@ -428,7 +428,7 @@ SetNode::SetNode(ArgResultType val) {
     else {
         // (void)val;
 
-        throw MerkError("Haven't Handled Set from ArgResultType: val is " + val.toString());
+        throw MerkError("Haven't Handled Set from ArgumentList: val is " + val.toString());
     }
     setType(NodeValueType::Set);
     
