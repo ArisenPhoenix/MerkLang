@@ -6,7 +6,7 @@
 #include "utilities/debugging_functions.h"
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/functions/Function.hpp"
-
+#include "core/callables/Callable.hpp"
 
 // DynamicNode
 NodeValueType DynamicNode::inferTypeFromString (String& valueStr, String& typeStr) {
@@ -322,31 +322,43 @@ void DynamicNode::setValue(const VariantType& v)  {
 
 NodeValueType DynamicNode::getType() const { return NodeValueType::Any; }
 
-SharedPtr<NodeBase> DynamicNode::clone() const {
-    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) { throw MerkError("Clone called on an DynamicNode holding an instance"); }
-    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
-        throw MerkError("Cloning a Callable");
-        auto instance = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()));
-        auto clonedInstance = instance->cloneInstance();
-        clonedInstance->setNativeData(instance->getNativeData() ? std::static_pointer_cast<NativeNode>(instance->getNativeData()->clone()) : nullptr);
-        auto data = clonedInstance->getInstanceNode()->getValue();
-        if (std::get<SharedPtr<NativeNode>>(data)) {
-            throw MerkError("Found the Missing Data Structure 1");
-        } else {
-            throw MerkError("1 Actually found " + nodeTypeToString(DynamicNode::getTypeFromValue(data)));
-        }
-        auto node = makeShared<DynamicNode>(instance->clone());
-        node->flags = flags;
-        return node;
-    } 
-    else if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
-        throw MerkError("Cloning a DataStructure");
+void DynamicNode::validateMutability(const NodeBase& value) {
+    if (!value.flags.isMutable) {
+        throw MerkError("Cannot mutate immutable value");
     }
+}
 
-    throw MerkError("Calling Clone on DynamicNode holding " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+void DynamicNode::validateMutability(const Node& value) {
+    if (!value.getFlags().isMutable) {
+        throw MerkError("Cannot mutate immutable value");
+    }
+}
+
+SharedPtr<NodeBase> DynamicNode::clone() const {
+    // auto val = getValue();
+    // if (std::holds_alternative<SharedPtr<Callable>>(val)) {
+    //     auto callable = std::get<SharedPtr<Callable>>(val);
+    //     auto node = this->getValue();
+    //     switch (DynamicNode::getTypeFromValue(callable)) {
+    //         case NodeValueType::ClassInstance:
+    //             return std::static_pointer_cast<ClassInstance>(callable)->clone();
+    //         default:
+    //             return makeShared<DynamicNode>(*this);
+    //     }
+    // } else if (std::holds_alternative<SharedPtr<NativeNode>>(val)) {
+    //     throw MerkError("Cloning a DataStructure");
+    // } else {
+    //     auto node = makeShared<DynamicNode>(*this); 
+    //     node->flags = flags;
+    //     return node;
+    // }
+
     auto node = makeShared<DynamicNode>(*this); 
     node->flags = flags;
     return node;
+
+    throw MerkError("Calling Clone on DynamicNode holding " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    
 }
  
 int DynamicNode::toInt() const {  
@@ -364,7 +376,17 @@ int DynamicNode::toInt() const {
 bool DynamicNode::isString() const {return std::holds_alternative<String>(value);}
 bool DynamicNode::isBool() const {return std::holds_alternative<bool>(value);}
 bool DynamicNode::isValid() const { return DynamicNode::getTypeFromValue(value) == getNodeType(); }
-String DynamicNode::toString() const { return DynamicNode::forceToString(value); }
+String DynamicNode::toString() const {
+    switch (DynamicNode::getTypeFromValue(value))
+    {
+    case NodeValueType::ClassInstance:
+    case NodeValueType::Callable:
+        return std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(value))->toString();    
+    default:
+        return DynamicNode::forceToString(value); 
+    }
+    
+}
 bool DynamicNode::toBool() const { 
     NodeValueType ofThis = DynamicNode::getTypeFromValue(value);
     auto node = DynamicNode::dispatchNode(value, nodeTypeToString(ofThis, false));
@@ -403,7 +425,38 @@ float NodeBase::toFloat() const { throw MerkError("Not A Float"); }
 
 bool NodeBase::isNative() const { return false; }
 SharedPtr<NativeNode> NodeBase::toNative() const {throw MerkError("Not A NativeNode");}
-void NodeBase::setFlags(DataTypeFlags newOnes) { flags = newOnes; }
+void NodeBase::setFlags(DataTypeFlags newOnes) { 
+    // if (flags.type != NodeValueType::Any &&
+    //     newOnes.type != NodeValueType::Any &&
+    //     flags.type != newOnes.type) {
+    //     String out = flags.toString() + " -> " + newOnes.toString();
+    //     throw MerkError("Flags.type doesn't match in NodeBase::setFlags\n" + out);
+    // }
+    // flags = newOnes; 
+
+    // Runtime category must match the node's actual type (except Any for DynamicNode, if you allow that)
+    auto actual = getType();
+
+    // If this node is not DynamicNode: force flags.type == actual
+    // (or at least forbid contradicting types)
+    if (actual != NodeValueType::Any && // if you use Any for DynamicNode
+        newOnes.type != NodeValueType::Any &&
+        newOnes.type != actual) {
+        throw MerkError("setFlags would contradict node runtime type: actual=" +
+            nodeTypeToString(actual) + " new=" + nodeTypeToString(newOnes.type));
+    }
+
+    // Also forbid clobbering non-Any existing type with Any
+    if (flags.type != NodeValueType::Any && newOnes.type == NodeValueType::Any) {
+        // unless you explicitly want to allow it
+        // throw MerkError("setFlags would erase runtime type");
+    }
+
+    flags = newOnes;
+
+    // Optionally: force to actual
+    flags.type = actual;
+}
 
 
 bool NodeBase::isList() const {
@@ -468,10 +521,15 @@ std::size_t NodeBase::hash() const {
         }
     }, getValue());
 
+    return h1 ^ (h2 << 1); /* ^ (h3 << 2) ^ (h4 << 3); */
+}
+
+
+std::size_t NodeBase::strictHash() const {
+    auto base = hash();
     std::size_t h3 = std::hash<std::string>()(flags.fullType.getBaseType());
     std::size_t h4 = (flags.isConst << 1) ^ (flags.isMutable << 2) ^ (flags.isStatic << 3);
-
-    return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3);
+    return base ^ (h3 << 2) ^ (h4 << 3);
 }
 
 NullNode::NullNode() {
@@ -514,7 +572,10 @@ void NullNode::setValue(const VariantType& v) {
 NodeValueType NullNode::getType() const {return DynamicNode::getTypeFromValue(getValue());}
 SharedPtr<NodeBase> NullNode::clone() const { return makeShared<NullNode>(*this); }
 
-int NullNode::toInt() const { return -10000000000000000; }
+int NullNode::toInt() const { 
+    throw MerkError("NullNode Cannot be an Integer");
+    // return -10000000000000000; 
+}
 
 String NullNode::toString() const {return "null"; };
 
@@ -621,35 +682,47 @@ void Node::setValue(const VariantType& v) {
 
 NodeValueType Node::getType() const { return data->getType(); }
 Node Node::clone() const {
-    if (isInstance()) {
-        return Node(toInstance()->clone());
-    }
-    if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
-        throw MerkError("Currently Holding A NativeNode");
-    }
-
-    if (std::holds_alternative<std::unordered_map<Node, Node>>(getValue())) {
-        throw MerkError("Currently Holding A Map");
-    }
-
-    if (std::holds_alternative<std::map<Node, Node>>(getValue())) {
-        throw MerkError("Currently Holding A Map");
-    }
-    auto nodeType = DynamicNode::getTypeFromValue(getValue());
-    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
-        
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
-        throw MerkError("Output ABOVE");
-        return Node(data);
-    }
-    if (isNative()) {
-        DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
-        throw MerkError("Output ABOVE");
-    }
-
-    debugLog(true, LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
-    return Node(data->clone()); 
+    if (!data) throw MerkError("clone: null data");
+    auto t = data->getType();
+    DEBUG_LOG(LogLevel::ERROR, "CLONE type=", nodeTypeToString(t), " str=", data->toString());
+    auto c = data->clone();
+    
+    if (!c) throw MerkError("clone returned null for type " + nodeTypeToString(t));
+    c->flags = getFlags();
+    DEBUG_LOG(LogLevel::ERROR, "CLONE RESULT type=", nodeTypeToString(c->getType()), " str=", c->toString());
+    return Node(c);
 }
+
+// Node Node::clone() const {
+//     if (isInstance()) {
+//         return Node(toInstance()->clone());
+//     }
+//     if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
+//         throw MerkError("Currently Holding A NativeNode");
+//     }
+
+//     if (std::holds_alternative<std::unordered_map<Node, Node>>(getValue())) {
+//         throw MerkError("Currently Holding A Map");
+//     }
+
+//     if (std::holds_alternative<std::map<Node, Node>>(getValue())) {
+//         throw MerkError("Currently Holding A Map");
+//     }
+//     auto nodeType = DynamicNode::getTypeFromValue(getValue());
+//     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
+        
+//         DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
+//         throw MerkError("Output ABOVE");
+//         return Node(data);
+//     }
+//     if (isNative()) {
+//         DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
+//         throw MerkError("Output ABOVE");
+//     }
+
+//     debugLog(true, LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
+//     return Node(data->clone()); 
+// }
 
 bool Node::isNumeric() const { return data->isNumeric(); }
 int Node::toInt() const { return data->toInt(); }
@@ -663,16 +736,16 @@ String Node::toString() const {
     } 
 
     // The following are currently only possible if it is typed
-    else if (isDict()) {
-        throw MerkError("Trying to represent a Dict");
-    } else if (isList()) {
-        throw MerkError("Trying to represent a List");
-    } else if (isSet()) {
-        return toSet()->toString();
-        // throw MerkError("Trying to represent a Set");
-    } else if (isArray()) {
-        throw MerkError("Trying to represent a Array");
-    }
+    // else if (isDict()) {
+    //     throw MerkError("Trying to represent a Dict");
+    // } else if (isList()) {
+    //     throw MerkError("Trying to represent a List");
+    // } else if (isSet()) {
+    //     return toSet()->toString();
+    //     // throw MerkError("Trying to represent a Set");
+    // } else if (isArray()) {
+    //     throw MerkError("Trying to represent a Array");
+    // }
     // DEBUG_LOG(LogLevel::PERMISSIVE, "DATA: ", getFlags().toString());
     return data->toString(); 
 }
@@ -707,39 +780,39 @@ double Node::toDouble() const { return data->toDouble(); }
 
 
 SharedPtr<ListNode> Node::toList() const {
-    if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
-        auto native = std::get<SharedPtr<NativeNode>>(getValue());
-        auto list = std::static_pointer_cast<ListNode>(native);
-        return list;
+    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
+        auto v = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()))->getNativeData();
+        auto inst = std::static_pointer_cast<ListNode>(v); 
+        return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not a list");
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
 }
 
 SharedPtr<ArrayNode> Node::toArray() const {
-    if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
-        auto native = std::get<SharedPtr<NativeNode>>(getValue());
-        auto list = std::static_pointer_cast<ArrayNode>(native);
-        return list;
+    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
+        auto v = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()))->getNativeData();
+        auto inst = std::static_pointer_cast<ArrayNode>(v); 
+        return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not an array");
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
 }
 
 SharedPtr<DictNode> Node::toDict() const {
-    if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
-        auto native = std::get<SharedPtr<NativeNode>>(getValue());
-        auto dict = std::static_pointer_cast<DictNode>(native);
-        return dict;
+    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
+        auto v = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()))->getNativeData();
+        auto inst = std::static_pointer_cast<DictNode>(v); 
+        return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not an array");
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
 }
 
 SharedPtr<SetNode> Node::toSet() const {
-    if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
-        auto native = std::get<SharedPtr<NativeNode>>(getValue());
-        auto set = std::static_pointer_cast<SetNode>(native);
-        return set;
+    if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
+        auto v = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()))->getNativeData();
+        auto inst = std::static_pointer_cast<SetNode>(v); 
+        return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not a set");
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
 }
 
 bool Node::isString() {return data->isString();}
@@ -757,6 +830,15 @@ std::size_t Node::hash() const {
     if (data) {
         return data->hash();
     }
+    return Null.hash();
+}
+
+
+std::size_t Node::strictHash() const {
+    if (data) {
+        return data->strictHash();
+    }
+
     return Null.hash();
 }
 
@@ -922,9 +1004,7 @@ String NodeWrapper::toString() const {
     // return valueNode.isInstance() ? valueNode.toInstance()->toString() : valueNode.toString();
     String string;
     if (valueNode.isInstance()) {
-         // A band-aid fix for output of native data structures, since the hierarchy has become unclear
         string = valueNode.toInstance()->toString();
-        string = string.substr(0, string.size() > 50 ? 50 : string.size());
     } else {
          string = valueNode.toString();
     }
@@ -940,9 +1020,12 @@ bool NodeWrapper::getIsStatic() {return valueNode.getFlags().isStatic;}
 bool NodeWrapper::getIsConst() {return valueNode.getFlags().isConst;}
 bool NodeWrapper::isBool() const {return valueNode.isBool();}
 bool NodeWrapper::isInt() const {return valueNode.isInt();}
-bool NodeWrapper::isString() const {if (isValid()) { 
-    return valueNode.isString(); } 
-    else {throw MerkError("NodeWrapper::toString() -> Cannot Validate String Because Node is Invalid");}}
+bool NodeWrapper::isString() const {
+    if (isValid()) { 
+        return valueNode.isString(); 
+    } 
+    else {throw MerkError("NodeWrapper::toString() -> Cannot Validate String Because Node is Invalid");}
+}
 void NodeWrapper::clear() { valueNode.clear(); }
 
 bool NodeWrapper::isList() const {return valueNode.isList();}
@@ -1020,7 +1103,9 @@ Node& VarNode::pullValue() {return valueNode;}
 
 bool VarNode::isFunctionNode() const { return valueNode.isFunctionNode();}
 FunctionNode VarNode::toFunctionNode() const {return valueNode.toFunctionNode();}
-
+DataTypeFlags VarNode::getVarFlags() {
+    return varFlags;
+}
 
 
 

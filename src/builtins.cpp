@@ -1,6 +1,6 @@
 #include "core/types.h"
 #include "core/builtins.h"
-#include "core/types/TypeBuiltins.hpp"
+// #include "core/types/TypeBuiltins.hpp"
 // #include "core/Scope.hpp"
 
 
@@ -13,6 +13,6 @@ std::unordered_map<String, SharedPtr<CallableSignature>> getNativeFunctions(Shar
     return getAllNativeFunctions(scope);
 }
 
-void getNativeTypes(SharedPtr<Scope> scope) {
-    return registerBuiltinTypes(scope);
-}
+// void getNativeTypes(SharedPtr<Scope> scope) {
+//     return registerBuiltinTypes(scope);
+// }

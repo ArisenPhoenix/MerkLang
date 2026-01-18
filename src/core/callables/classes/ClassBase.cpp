@@ -12,6 +12,7 @@
 #include "core/Scope.hpp"
 #include "ast/ast_validate.h"
 #include <cassert>
+#include "core/Evaluator.hpp"
 
 
 String ClassBase::getAccessor() {return accessor;}
@@ -166,29 +167,58 @@ void ClassInstance::setScope(SharedPtr<Scope> newScope) const {
     instanceScope = newScope;
 }
 
+static String truncateField(const String& s) {
+    const auto& cfg = debugStringifyConfig();
+    auto maxLen = cfg.maxString;
+    auto ellipses = cfg.alwaysEllipsis ? "..." : "";
+    auto remainder = cfg.showRemainder ? "(+" + std::to_string(s.size() - maxLen) + " chars)" : "";
+    if (s.size() < maxLen) return s;
+    return s.substr(0, maxLen) + ellipses + remainder;
+}
+
 String ClassInstance::toString() const {
     const auto& vars = getInstanceScope()->getContext().getVariables();
-    if (!vars.size()) {
-        if (value) {
-            return value->toString();
-        }
+    if (vars.empty()) {
+        if (value) return value->toString();
+        return "<ClassInstance> ( )";
     }
 
-    String out = name;
-    if (vars.size() > 0) {
-        out = "( ";
-        for (const auto& [varName, var] : vars) {
-            out += varName + ": " + var->varString() + ", ";
-        }
+    // Tunables
+    // constexpr size_t kMaxFieldLen = 120;  // per field cap
+    // constexpr size_t kMaxTotalLen = 800;  // overall cap (optional)
+    auto& cfg = debugStringifyConfig();
+    String out = "( ";
+    for (const auto& [varName, var] : vars) {
+        // var->varString() is where the body explosion happens
+        String v = var ? var->varString() : "<null>";
+
+        // Per-field clamp
+        // v = truncateField(v);
+        cfg.handle(v);
+
+        out += varName + ": " + v + ", ";
+
+        // // Optional: early stop if total already too big
+        // if (out.size() > kMaxTotalLen) {
+        //     out += "...";
+        //     break;
+        // }
     }
 
-    out += ")";
-
-    if (out.size() > 2) {
-        out.replace(out.size() - 1, out.size(), " )");
+    // Close nicely
+    if (out.size() >= 2 && out.back() == ' ' && out[out.size() - 2] == ',') {
+        out.erase(out.size() - 2); // drop trailing ", "
+        out += " )";
+    } else if (out.size() >= 2 && out.substr(out.size() - 2) == ", ") {
+        out.erase(out.size() - 2);
+        out += " )";
+    } else {
+        out += ")";
     }
-    return "<ClassInstance> " + out.substr(0, out.size() > 100 ? 100 : out.size());
+
+    return "<ClassInstance> " + name + " " + out;
 }
+
 
 SharedPtr<CallableSignature> ClassInstance::toCallableSignature() {throw MerkError("Instances are not directly callable unless '__call__' is defined.");}
 
@@ -374,12 +404,17 @@ Node ClassInstance::getField(const String& fieldName) const {                   
     return getInstanceScope()->getVariable(fieldName).getValueNode();
 }                     
 
+void ClassInstance::declareField(const String& fieldName, DataTypeFlags varMeta, const ASTStatement *valueNode) {
+    MARK_UNUSED_MULTI(fieldName, varMeta, valueNode);
+    // String& name, const ASTStatement* valueNode, DataTypeFlags varMeta, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode
+    // String varName = fieldName;
+    // Evaluator::evaluateVariableDeclaration(varName, valueNode, varMeta, getInstanceScope(), getInstanceNode());
 
-
+}
 
 void ClassInstance::declareField(const String& fieldName, const Node& var) {             // probably only used in dynamic construction of a class
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    if (var.isValid()){ 
+    if (var.isValid()){  
         UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
         instanceScope->declareVariable(fieldName, std::move(newVar));
     } else {
@@ -491,38 +526,72 @@ ClassInstance::~ClassInstance() {
 
 ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : CallableNode(callable, "ClassInstance") {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // (void)callable;
-    // data.type = NodeValueType::ClassInstance;
-    // auto val = std::static_pointer_cast<ClassInstance>(callable);
-    // setValue(val);
-    // getFlags().type = NodeValueType::ClassInstance;
-    // getFlags().fullType.setBaseType("ClassInstance");
-    // getFlags().isInstance = true;
 
-    // getFlags().name = callableType + "(" + callable->name + ")";
-    // setValue(callable);
-    setFlags(getFlags().merge({{"isInstance", "true"}, {"type", "ClassInstance"}, {"fullType", "ClassInstance"}, {"name", callable->getName()}}));
-    
-    // data.value = callable;
-    // name = callable->getName();
+    const String cls = callable ? callable->getName() : "<?>";
+
+    // IMPORTANT: concrete identity
+    setFlags(getFlags().merge({
+        {"isCallable", "true"},               // if you treat instances as callables
+        {"isInstance", "true"},
+        {"type", "ClassInstance"},            // storage kind is fine
+        {"fullType", cls},                    // <-- THIS is the big fix
+        {"name", "ClassInstance(" + cls + ")"}
+    }));
+
+    // If you have these in flags structurally, set them directly too:
+    getFlags().inferredSig = getScope()->localTypes.classType(cls);
 
     DEBUG_FLOW_EXIT();
-    // throw MerkError("HIT ClassInstanceNode::ClassInstanceNode(SharedPtr<Callable> WITH META: " + getFlags().toString() + " DETERMINED TYPE: " + nodeTypeToString(DynamicNode::getTypeFromValue(callable)));    
+    
+    // DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    // // (void)callable;
+    // // data.type = NodeValueType::ClassInstance;
+    // // auto val = std::static_pointer_cast<ClassInstance>(callable);
+    // // setValue(val);
+    // // getFlags().type = NodeValueType::ClassInstance;
+    // // getFlags().fullType.setBaseType("ClassInstance");
+    // // getFlags().isInstance = true;
+
+    // // getFlags().name = callableType + "(" + callable->name + ")";
+    // // setValue(callable);
+    // setFlags(getFlags().merge({{"isInstance", "true"}, {"type", "ClassInstance"}, {"fullType", "ClassInstance"}, {"name", callable->getName()}}));
+    
+    // // data.value = callable;
+    // // name = callable->getName();
+
+    // DEBUG_FLOW_EXIT();
+    // // throw MerkError("HIT ClassInstanceNode::ClassInstanceNode(SharedPtr<Callable> WITH META: " + getFlags().toString() + " DETERMINED TYPE: " + nodeTypeToString(DynamicNode::getTypeFromValue(callable)));    
 }
 
 
 ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     : CallableNode(callableNode) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // auto instance = std::get<SharedPtr<Callable>>(data.value);
-    // auto instance = getInstance();
-    // if (!instance) {throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");}
-    // setValue(instance);
-    // data.value = instance; 
-    // data.type = NodeValueType::ClassInstance;
-    // name = callableNode->getCallable()->getName();
-    setFlags(getFlags().merge({{"isInstance", "true"}, {"type", "ClassInstance"}, {"fullType", "ClassInstance"}}));
+    // // auto instance = std::get<SharedPtr<Callable>>(data.value);
+    // // auto instance = getInstance();
+    // // if (!instance) {throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");}
+    // // setValue(instance);
+    // // data.value = instance; 
+    // // data.type = NodeValueType::ClassInstance;
+    // // name = callableNode->getCallable()->getName();
+    // setFlags(getFlags().merge({{"isInstance", "true"}, {"type", "ClassInstance"}, {"fullType", "ClassInstance"}}));
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
+    auto call = getCallable();
+    const String cls = call ? call->getName() : "<?>";
+
+    auto f = getFlags();
+    f.isCallable  = true;
+    f.isInstance  = true;
+    f.type        = NodeValueType::ClassInstance;
+    f.fullType.setBaseType(cls);
+    f.inferredSig = getFlags().inferredSig = getScope()->localTypes.classType(cls);
+
+    f.name        = "ClassInstance(" + cls + ")";
+
+    setFlags(f);
+
+    DEBUG_FLOW_EXIT();
     DEBUG_FLOW_EXIT();
 
 }
@@ -632,9 +701,14 @@ SharedPtr<CallableNode> ClassInstanceNode::clone() const { return cloneInstance(
 void ClassInstanceNode::clear() { getInstance()->clear(); } 
 
 SharedPtr<ClassInstanceNode> ClassInstanceNode::cloneInstance() const {
-    auto cloned = Node::clone();
-    auto node = makeShared<ClassInstanceNode>(cloned.toInstance());
-    return node;
+    auto copy = std::make_shared<ClassInstanceNode>(*this);
+    // or explicitly copy->instance = instance;
+    copy->getFlags() = this->getFlags();
+    return copy;
+    
+    // auto cloned = Node::clone();
+    // auto node = makeShared<ClassInstanceNode>(cloned.toInstance());
+    // return node;
     // auto clonedInstance = getInstance()->clone();
     // auto newInstanceNode = makeShared<ClassInstanceNode>(clonedInstance);
     // if (std::holds_alternative<SharedPtr<DataStructure>>(getValue())) {

@@ -83,6 +83,7 @@ NodeValueType stringToNodeType(String type) {
         if (type == "NativeUMap") {return NodeValueType::NativeUMap; }
         if (type == "NativeOSet") {return NodeValueType::NativeOSet; }
         if (type == "NativeUSet") {return NodeValueType::NativeUSet; }
+        if (type == "Chars") {return NodeValueType::Char;}
         
         return NodeValueType::UNKNOWN;
 }
@@ -374,3 +375,18 @@ size_t ResolvedType::hash() const {
 
     return h;
 }
+
+
+
+DebugStringifyConfig& debugStringifyConfig() {
+    static DebugStringifyConfig cfg{};
+    return cfg;
+}
+
+String DebugStringifyConfig::handle(String s) {
+    if (s.size() < maxString) { return s; } 
+    auto ellipses = alwaysEllipsis ? "..." : "";
+    auto remainder = "(+" + std::to_string(s.size() - maxString) + " chars)";
+    
+    return s.substr(0, maxString) + ellipses + remainder;
+}   

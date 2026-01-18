@@ -4,7 +4,7 @@
 
 // namespace Typer {
 // TypeSignatureId TypeMethod(SharedPtr<Method> method, TypeRegistry& typeRegistry) {
-//     MethodType mt;
+//     InvocableType mt;
 //     mt.methodName = method->getName();
 //     SharedPtr<Scope> scope = method->getCapturedScope();
 //     SharedPtr<Scope>& workingScope = scope;
@@ -31,7 +31,7 @@
 //     }
 
 //     // Intern canonical signature
-//     sig.typeSig = typeRegistry.methodType(std::move(mt));
+//     sig.typeSig = typeRegistry.invocableType(std::move(mt));
 // }
 
 //     TypeSignatureId TypeClass() {

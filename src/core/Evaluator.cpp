@@ -34,42 +34,42 @@
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/Method.hpp"
 
-#include "core/types/Type.hpp"
+#
 
 
-enum class Operator {
-    Equals,
-    NotEquals,
-    LessThan,
-    GreaterThan,
-    LessThanOrEquals,
-    GreaterThanOrEquals,
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Modulo,
-    Invalid
-};
+// enum class Operator {
+//     Equals,
+//     NotEquals,
+//     LessThan,
+//     GreaterThan,
+//     LessThanOrEquals,
+//     GreaterThanOrEquals,
+//     Plus,
+//     Minus,
+//     Multiply,
+//     Divide,
+//     Modulo,
+//     Invalid
+// };
 
-Operator stringToOperator(const String& op) {
-    static const std::unordered_map<String, Operator> operatorMap = {
-        {"==", Operator::Equals},
-        {"!=", Operator::NotEquals},
-        {"<", Operator::LessThan},
-        {">", Operator::GreaterThan},
-        {"<=", Operator::LessThanOrEquals},
-        {">=", Operator::GreaterThanOrEquals},
-        {"+", Operator::Plus},
-        {"-", Operator::Minus},
-        {"*", Operator::Multiply},
-        {"/", Operator::Divide},
-        {"%", Operator::Modulo}
-    };
+// Operator stringToOperator(const String& op) {
+//     static const std::unordered_map<String, Operator> operatorMap = {
+//         {"==", Operator::Equals},
+//         {"!=", Operator::NotEquals},
+//         {"<", Operator::LessThan},
+//         {">", Operator::GreaterThan},
+//         {"<=", Operator::LessThanOrEquals},
+//         {">=", Operator::GreaterThanOrEquals},
+//         {"+", Operator::Plus},
+//         {"-", Operator::Minus},
+//         {"*", Operator::Multiply},
+//         {"/", Operator::Divide},
+//         {"%", Operator::Modulo}
+//     };
 
-    auto it = operatorMap.find(op);
-    return (it != operatorMap.end()) ? it->second : Operator::Invalid;
-}
+//     auto it = operatorMap.find(op);
+//     return (it != operatorMap.end()) ? it->second : Operator::Invalid;
+// }
 
 bool isDebug = Debugger::getInstance().getLogLevel() == LogLevel::DEBUG;
 
@@ -114,54 +114,176 @@ namespace Evaluator {
         return value;
     }
 
-    Node evaluateVariableDeclaration(String& name, const ASTStatement* valueNode, DataTypeFlags varMeta, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        MARK_UNUSED_MULTI(instanceNode);
-        DEBUG_FLOW(FlowLevel::PERMISSIVE);    
-        SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-        bool usingInstanceScope = instanceScope != scope;
+    // Node evaluateVariableDeclaration(String& name, const ASTStatement* valueNode, DataTypeFlags varMeta, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
+    //     MARK_UNUSED_MULTI(instanceNode);
+    //     DEBUG_FLOW(FlowLevel::PERMISSIVE);    
+    //     SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+    //     bool usingInstanceScope = instanceScope != scope;
         
-        String varName = name;
+    //     String varName = name;
         
-        auto resolvedVariable = valueNode->evaluate(scope, instanceNode);
-        // VarNode finalVar;
-        // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic);
-        // if (varName != "dict3") { throw MerkError("VAR DEC -1"); }
-        // if (var.getFullType().getBaseType().size()) {
-            
-            
-        // }
-        auto finalVar = makeUnique<VarNode>(resolvedVariable, varMeta);
-        // if (finalVar->getValueNode().isNull()) {throw MerkError("Variable Declared is Null");}
-        
-        auto returnVal = finalVar->getValueNode();
-        // if (!finalVar->getValueNode().isValid()) {
-        //     throw MerkError("VALUE NODE IS NOT VALID");
-        // }
-        // else {
-            
-        //     finalVar = VarNode(resolvedVariable, var.getIsConst(), var.getIsMutable(), typeTag, var.getIsStatic());
-        // }
-        // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, var.getFullType(), var.isStatic);
-        // auto thing = VarNode(finalVar);
-        // auto varNode = makeUnique<VarNode>(finalVar);
-        
-        if (usingInstanceScope && instanceScope->hasMember(varName)) {
-            
-            instanceScope->declareVariable(varName, std::move(finalVar));
-        } 
+    //     auto resolvedVariable = valueNode->evaluate(scope, instanceNode);
+    //     // VarNode finalVar;
+    //     // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic);
+    //     // if (varName != "dict3") { throw MerkError("VAR DEC -1"); }
+    //     // if (var.getFullType().getBaseType().size()) {
+    //     auto& tr = TypeRegistry::global();
+    //     varMeta.declaredSig = tr.bindResolvedType(varMeta.fullType, *scope);
+             
+    //     // }
+    //     auto finalVar = makeUnique<VarNode>(resolvedVariable, varMeta);
+    //     // if (finalVar->getValueNode().isNull()) {throw MerkError("Variable Declared is Null");}
 
-        else {
-            scope->declareVariable(varName, std::move(finalVar));
-        }
-        if (name.empty() || varName.empty()) {throw MerkError("VarName Is empty in evaluateVariableDeclaration");}
-        // if (name == "list") {throw MerkError("Evaluated VariableDeclaration for list");}
-        // scope->declareVariable(varName, std::move(varNode));
+    //     auto returnVal = finalVar->getValueNode();
+    //     debugLog(true, "Var Declaration Results for var", name, ": ==========================================");
+    //     valueNode->printAST(std::cout, 0);
+    //     debugLog(true, "RETURN VAL: ", returnVal.toString());
         
-        DEBUG_FLOW_EXIT();
-        if (!returnVal.isValid()) {throw MerkError("VariableDeclaration returnVal is not valid");}
-        // return returnVal;
-        return Node();
+    //     // if (!finalVar->getValueNode().isValid()) {
+    //     //     throw MerkError("VALUE NODE IS NOT VALID");
+    //     // }
+    //     // else {
+            
+    //     //     finalVar = VarNode(resolvedVariable, var.getIsConst(), var.getIsMutable(), typeTag, var.getIsStatic());
+    //     // }
+    //     // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, var.getFullType(), var.isStatic);
+    //     // auto thing = VarNode(finalVar);
+    //     // auto varNode = makeUnique<VarNode>(finalVar);
+        
+    //     if (usingInstanceScope && instanceScope->hasMember(varName)) {
+            
+    //         instanceScope->declareVariable(varName, std::move(finalVar));
+    //     } 
+
+    //     else {
+    //         scope->declareVariable(varName, std::move(finalVar));
+    //     }
+
+        
+
+    //     if (name.empty() || varName.empty()) {throw MerkError("VarName Is empty in evaluateVariableDeclaration");}
+    //     // if (name == "list") {throw MerkError("Evaluated VariableDeclaration for list");}
+    //     // scope->declareVariable(varName, std::move(varNode));
+        
+    //     DEBUG_FLOW_EXIT();
+    //     if (!returnVal.isValid()) {throw MerkError("VariableDeclaration returnVal is not valid");}
+    //     // return returnVal;
+    //     return Node();
+    // }
+
+
+    Node evaluateVariableDeclaration(
+    String& name,
+    const ASTStatement* valueNode,
+    DataTypeFlags varMeta,
+    SharedPtr<Scope> scope,
+    SharedPtr<ClassInstanceNode> instanceNode
+){
+    MARK_UNUSED_MULTI(instanceNode);
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+
+    SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
+    bool usingInstanceScope = instanceScope != scope;
+
+    String varName = name;
+
+    // 1) Evaluate RHS
+    Node rhs = valueNode->evaluate(scope, instanceNode);
+
+    auto& tr = scope->localTypes;
+
+    // 2) Ensure declaredSig is always set (at least Any)
+    // Only bind the annotation if it’s not empty/Any.
+    const auto anyId = tr.any();
+
+    const auto base = varMeta.fullType.getBaseType();
+    if (!base.empty() && base != "Any") {
+        varMeta.declaredSig = tr.bindResolvedType(varMeta.fullType, *scope);
+    } else {
+        varMeta.declaredSig = anyId;
     }
+
+    // 3) Stamp inferredSig on the RHS value (runtime)
+    // (Do this BEFORE VarNode ctor if your VarNode ctor wants to use it.)
+    rhs.getFlags().inferredSig = tr.inferFromValue(rhs);
+
+    // 4) Enforce declared type against RHS (if annotation enforced)
+    // If declaredSig is Any, allow anything.
+    if (varMeta.declaredSig != anyId) {
+        auto m = tr.matchValue(varMeta.declaredSig, rhs, {/*opt*/});
+        debugLog(true,
+        "DBG Dict() rhs type=", rhs.getTypeAsString(),
+        " isInstance=", rhs.isInstance(),
+        " baseType=", rhs.getFlags().fullType.getBaseType()
+        );
+
+        if (!m.ok) {
+            throw TypeMismatchError(
+                tr.toString(varMeta.declaredSig),
+                rhs.getTypeAsString(),
+                "evaluateVariableDeclaration"
+            );
+        }
+    }
+
+    // 5) Construct VarNode (VarNode should NOT clobber inferredSig)
+    auto finalVar = makeUnique<VarNode>(rhs, varMeta);
+    auto returnVal = finalVar->getValueNode();
+    // 6) Store it
+    auto targetScope = (usingInstanceScope ? instanceScope : scope);
+    targetScope->declareVariable(varName, std::move(finalVar));
+
+    // 7) Debug
+    // debugLog(true, "Var Declaration Results for var", name, ": ==========================================");
+    // valueNode->printAST(std::cout, 0);
+    // debugLog(true, "RETURN VAL: ", rhs.toString(),
+    //          " declaredSig=", tr.toString(varMeta.declaredSig),
+    //          " inferredSig=", tr.toString(rhs.getFlags().inferredSig));
+
+    DEBUG_FLOW_EXIT();
+
+    // IMPORTANT:
+    // If var-decl is a statement in your language, returning Node() is fine.
+    // If callers rely on the RHS value, return rhs.
+    
+    // return rhs;
+    return returnVal;
+}
+
+
+
+    // void matchSigs() {
+    //     auto& tr = TypeRegistry::global();
+
+    //     TypeSignatureId expected = kInvalidTypeSignatureId;
+
+    //     // Prefer declared type if meaningful
+    //     if (flags.declaredSig != kInvalidTypeSignatureId && flags.declaredSig != tr.any()) {
+    //         expected = flags.declaredSig;
+    //     } else if (flags.inferredSig != kInvalidTypeSignatureId) {
+    //         // If you do "infer once" typing, enforce future assignments against inferred type
+    //         expected = flags.inferredSig;
+    //     }
+
+    //     if (expected != kInvalidTypeSignatureId) {
+    //         auto r = tr.matchValue(expected, valueNode);
+    //         if (!r.ok) {
+    //             throw MerkError(
+    //                 "Type mismatch for '" + flags.name + "': expected " +
+    //                 tr.toString(expected) + ", got " + tr.toString(valueNode.typeSigId /*or infer*/));
+    //         }
+    //     }
+
+    //     // If declared is Any and inferred is empty, infer now (optional policy)
+    //     if ((flags.declaredSig == kInvalidTypeSignatureId || flags.declaredSig == tr.any()) &&
+    //         flags.inferredSig == kInvalidTypeSignatureId) {
+
+    //         // simplest inference: primitives/class/container based on value
+    //         flags.inferredSig = valueNode.getTypeSig(tr /*or*/); // see note below
+    //     }
+
+    // }
+
 
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         MARK_UNUSED_MULTI(instanceNode);
@@ -171,8 +293,13 @@ namespace Evaluator {
         if (finalVal.toString() == "var") {throw MerkError("finalVal is var in evaluateVariableAssignment" );};
         DEBUG_LOG(LogLevel::TRACE, "========================");
         DEBUG_LOG(LogLevel::TRACE, "Assigning: ", finalVal.toString() + " META: " + finalVal.getFlags().toString());
-        DEBUG_LOG(LogLevel::TRACE, "========================");
-        scope->updateVariable(name, finalVal);
+        DEBUG_LOG(LogLevel::TRACE, "========================");        
+        if (instanceNode) {
+            instanceNode->getInstanceScope()->updateVariable(name, finalVal);
+        } else {
+            scope->updateVariable(name, finalVal);
+        }
+        
         DEBUG_FLOW_EXIT();
         return finalVal;
     }
@@ -552,10 +679,15 @@ namespace Evaluator {
         instance->construct(argValues, instance);
         
         
+        
+        auto inst = ClassInstanceNode(instance);
+        inst.getFlags().isInstance = true;
+        inst.getFlags().isCallable = true;                  // if you store instances as Callable
+        inst.getFlags().type = NodeValueType::ClassInstance; // or Callable, but be consistent
+        inst.getFlags().fullType.setBaseType(className);     // "Types"
+        inst.getFlags().inferredSig = callScope->localTypes.classType(className);
         DEBUG_FLOW_EXIT();
-        auto node = ClassInstanceNode(instance);
-
-        return node;
+        return inst;
     }
     
     Node evaluateMethodDef(

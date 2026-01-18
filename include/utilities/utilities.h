@@ -1,5 +1,4 @@
-#ifndef UTILITIES_H
-#define UTILITIES_H
+#pragma once
 
 #include <stdexcept>
 #include <string>
@@ -99,9 +98,6 @@ inline VariantType resolveVariantTypeValue(const VariantType& value) {
 //     }
 //     std::cout << "\n";
 // }
-
-
-#endif //UTILITIES_H
 
 
 

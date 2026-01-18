@@ -123,6 +123,30 @@ SharedPtr<DictNode> pullHttpDict(String varName, SharedPtr<ClassInstanceNode> se
     }
 }
 
+static Node returnConstructedInstanceOf(SharedPtr<ClassInstanceNode> self, const String& className) {
+    if (!self) throw MerkError("returnConstructedInstanceOf: self is null");
+
+    Node out(*self);  // assuming this wraps the ClassInstanceNode
+
+    auto& f = out.getFlags();
+    f.isInstance = true;
+    f.isCallable  = false;                 // optional, but usually right for instances
+    f.type = NodeValueType::ClassInstance; // IMPORTANT
+
+    // IMPORTANT: stamp nominal type for inference
+    f.fullType.setBaseType(className);
+
+    // optional debug cosmetics
+    f.name = className;
+    debugLog(true,
+    "DBG Dict() rhs type=", out.getTypeAsString(),
+    " isInstance=", out.isInstance(),
+    " baseType=", out.getFlags().fullType.getBaseType()
+    );
+    return out;
+}
+
+
 SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     SharedPtr<Scope> classScope = generateScope(globalScope);
 
@@ -130,10 +154,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
     auto param = ParamNode("items", NodeValueType::Any);
     param.setIsVarArgsParam(true);
     parameters.addParameter(param);
-    
-
-    String className = "List";
-    String accessor = "list";
+    auto [className, accessor] = getClassAccessorName("List");
 
     auto listClass = makeShared<NativeClass>(className, accessor, classScope);
     if (listClass->getSubType() != CallableType::NATIVE) {throw MerkError("NativeClass is not properly subtyped: is " + callableTypeAsString(listClass->getSubType()));}
@@ -151,7 +172,7 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
         if (!list) {throw MerkError("List Doesn't Exist");}
         
         self->getInstance()->setNativeData(list);
-        return Node();
+        return returnConstructedInstanceOf(self, className);
     };
 
     auto appendFunction = [varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
@@ -236,13 +257,12 @@ SharedPtr<NativeClass> createNativeListClass(SharedPtr<Scope> globalScope) {
 
 SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
     SharedPtr<Scope> classScope = generateScope(globalScope);
-
+    auto [className, accessor] = getClassAccessorName("Dict");
     ParamList parameters;
     auto param = ParamNode("items", NodeValueType::Any);
     param.setIsVarArgsParam(true);
     parameters.addParameter(param);
-    String className = "Dict";
-    String accessor = "dict";
+    
 
     auto dictClass = makeShared<NativeClass>(className, accessor, classScope);
     if (dictClass->getSubType() != CallableType::NATIVE) {throw MerkError("NativeClass is not properly subtyped: is " + callableTypeAsString(dictClass->getSubType()));}
@@ -263,7 +283,8 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
         if (!dict) {throw MerkError("Dict Doesn't Exist");}
         // self->getInstance()->setNativeData(dict);
         self->getInstance()->setNativeData(dict);
-        return Node();
+        // return Node();
+        return returnConstructedInstanceOf(self, className);
     };
 
     auto setParams = ParamList();
@@ -358,7 +379,7 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
 }
 
 SharedPtr<NativeClass> createNativeArrayClass(SharedPtr<Scope> globalScope) {
-auto [className, accessor] = getClassAccessorName("Array");
+    auto [className, accessor] = getClassAccessorName("Array");
     String varName = ArrayNode::getOriginalVarName();
 
     if (!globalScope) {throw MerkError("Class Scope Not Provided to Native Class Array");}
@@ -395,7 +416,7 @@ auto [className, accessor] = getClassAccessorName("Array");
 
         if (!var.isArray()) {throw MerkError("Var created is not an Array");}        
         self->getInstance()->setNativeData(arr);
-        return var;
+        return returnConstructedInstanceOf(self, className);
     };
 
     auto appendFunction = [className](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
@@ -510,7 +531,7 @@ SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
       
         self->getInstance()->setNativeData(set);
         // throw MerkError("RETURNING construction");
-        return var;
+        return returnConstructedInstanceOf(self, className);
     };
 
     ParamList addParams;
@@ -557,15 +578,14 @@ SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
 
 SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
     SharedPtr<Scope> classScope = generateScope(globalScope);
-
+    auto [className, accessor] = getClassAccessorName("Http");
     ParamList parameters;
     auto param = ParamNode("url", NodeValueType::String);
     auto param2 = ParamNode("method", NodeValueType::String, true);
 
     parameters.addParameter(param);
     parameters.addParameter(param2);
-    String className = "Http";
-    String accessor = "http";
+    
     
     auto httpClass = makeShared<NativeClass>(className, accessor, classScope);
     if (httpClass->getSubType() != CallableType::NATIVE) {throw MerkError("NativeClass is not properly subtyped: is " + callableTypeAsString(httpClass->getSubType()));}
@@ -591,7 +611,7 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
         self->getInstance()->setNativeData(http);
 
         if (!http) { throw MerkError("Http Doesn't Exist"); }
-        return Node();
+        return returnConstructedInstanceOf(self, className);
     };
 
     auto setHeaderParams = ParamList();
@@ -656,26 +676,27 @@ SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
 
 SharedPtr<NativeClass> createNativeFileClass(SharedPtr<Scope> globalScope) {
     auto classScope = generateScope(globalScope);
+    auto [className, accessor] = getClassAccessorName("File");
     ParamList params;
     params.addParameter(ParamNode("path",   NodeValueType::String));
     params.addParameter(ParamNode("mode",   NodeValueType::String, true)); // default "r"
-
-    auto cls = makeShared<NativeClass>("File", "file", classScope);
+    
+    auto cls = makeShared<NativeClass>(className, accessor, classScope);
     cls->setParameters(params);
     cls->setCapturedScope(classScope->getParent());
-
+    
     // construct(path, mode="r")
-    auto constructFn = [](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)->Node {
+    auto constructFunction = [className](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self)->Node {
         MARK_UNUSED_MULTI(args, callScope);
         auto inst = self->getInstance();
         inst->declareField("path",   args.size() >= 1 ? args[0] : Node(""));
         inst->declareField("mode",   args.size() >= 2 ? args[1] : Node("r"));
         auto f = makeShared<FileNode>(self);
         inst->setNativeData(f);
-        return Node();
+        return returnConstructedInstanceOf(self, className);
     };
 
-    auto m_construct = makeShared<NativeMethod>("construct", params.clone(), classScope, constructFn);
+    auto m_construct = makeShared<NativeMethod>("construct", params.clone(), classScope, constructFunction);
     
 
     // open(), close(), readAll(), read(n), write(s), exists(path), size(path), remove(path)

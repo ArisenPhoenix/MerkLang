@@ -49,12 +49,14 @@ void FunctionRegistry::registerFunction(const String& name, SharedPtr<CallableSi
     }
 
     else if (subType == CallableType::FUNCTION) {
-        const auto& newParamTypes = signature->getParameterTypes();
+        // Duplicate check: compare parameter hashes (includes annotation info).
+        const auto newHash = signature->hash();
         for (const auto& existingSig : overloads) {
-            if (existingSig->getSubType() == CallableType::FUNCTION && existingSig->matches(newParamTypes)) {
-                DEBUG_FLOW_EXIT();
-                
-                throw MerkError("Duplicate overload for function: " + name);
+            if (existingSig && existingSig->getSubType() == CallableType::FUNCTION) {
+                if (existingSig->hash() == newHash) {
+                    DEBUG_FLOW_EXIT();
+                    throw MerkError("Duplicate overload for function: " + name);
+                }
             }
         }
         overloads.push_back(signature);
@@ -88,49 +90,6 @@ bool FunctionRegistry::hasFunction(const String& name) const {
     return func;
 }
 
-
-
-std::optional<SharedPtr<CallableSignature>> FunctionRegistry::getFunction(const String& name, const ArgumentList& args) const  {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-    auto it = functions.find(name);
-    if (it == functions.end() || it->second.empty()){
-        DEBUG_LOG(LogLevel::TRACE, "Failed To Get Function:", name, "at first attempt");
-        return std::nullopt;
-    }
-
-    Vector<NodeValueType> argTypes;
-    for (const auto &arg : args) { argTypes.push_back(arg.getType()); }
-    DEBUG_LOG(LogLevel::TRACE, highlight("Function:", Colors::bold_blue), name, "was defined using", highlight("function", Colors::red));
-
-    // Search for a matching overload.
-    for (auto candidate : it->second) {
-        if (candidate->getSubType() == CallableType::DEF) {            
-            return candidate;
-        }
-        if (candidate->getSubType() == CallableType::NATIVE) {
-            if (candidate->matches(argTypes)) {return candidate;}
-            // return candidate;
-        }
-        DEBUG_LOG(LogLevel::TRACE, "Checking Function Candidate", name, candidate->getCallable()->parameters.toString());
-
-        // If this is a def function, return it regardless.
-        DEBUG_LOG(LogLevel::TRACE, "Function Type: ", callableTypeAsString(candidate->getSubType()));
-        
-        if (candidate->getSubType() == CallableType::FUNCTION) {
-
-            if (candidate->matches(argTypes)){
-                DEBUG_FLOW_EXIT();
-                return candidate;
-            }
-            DEBUG_LOG(LogLevel::TRACE, "Candidate ", name, " skipped: subtype=", callableTypeAsString(candidate->getSubType()));
-        }
-    }
-
-    DEBUG_LOG(LogLevel::TRACE, "Failed To Get Function:", name, "at end of getFunction");
-
-    DEBUG_FLOW_EXIT();
-    return std::nullopt;
-}
 
 
 std::optional<Vector<SharedPtr<CallableSignature>>> FunctionRegistry::getFunction(const String& name) const {

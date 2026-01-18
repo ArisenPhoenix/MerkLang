@@ -26,6 +26,8 @@ public:
     bool isNative() const {return true;}
     virtual SharedPtr<NativeNode> toNative() const override = 0;
     virtual SharedPtr<NodeBase> clone() const override;
+
+    
     // SharedPtr<NodeBase> operator==(const NodeBase& other) const override = 0;
 };
 
@@ -106,6 +108,8 @@ public:
 class DictNode: public DataStructure {
 private:
     std::unordered_map<Node, Node> elements;
+    // NodeMapU elements;
+    // DictStorage elements;
     NodeValueType type = NodeValueType::Dict;
     NodeValueType contains = NodeValueType::Any;
 public:
@@ -187,6 +191,7 @@ public:
     InstanceBoundNative();
     ~InstanceBoundNative();
     SharedPtr<ClassInstance> getInstance();
+    SharedPtr<ClassInstance> getInstance() const;
     void setInstance(SharedPtr<ClassInstance>);
     String toString() const override = 0;
     std::size_t hash() const override = 0;
@@ -211,8 +216,6 @@ public:
     
     NodeValueType getType() const override { return NodeValueType::Http; }
 
-    
-
     Node send(); // performs the HTTP request and returns a response Node
 
     String toString() const override;
@@ -226,17 +229,6 @@ public:
     bool holdsValue() override;
 
     SharedPtr<NativeNode> toNative() const override;
-
-    // HttpNode(const Node& url, const Node& method = Node("GET"));
-
-    // void setHeader(const Node& key, const Node& value);
-    // Node getHeader(const Node& key);
-
-    // void setBody(const DictNode& bodyContent);
-    // DictNode getBody() const;
-
-    // void setUrl(const Node& newUrl);
-    // Node getUrl() const;
 };
 
 
@@ -255,7 +247,7 @@ public:
     std::size_t hash() const override { return 0; }
     VariantType getValue() const override { return "[FILE]"; }
     void setValue(const VariantType&) override { /* not assignable */ }
-    SharedPtr<NodeBase> clone() const override { return makeShared<FileNode>(); }
+    SharedPtr<NodeBase> clone() const override;
     void clear() override { closeQuiet(); }
     bool holdsValue() override { return true; }
 

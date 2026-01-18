@@ -7,7 +7,7 @@
       },
       {
         "name": "keyword.control.merk",
-        "match": "\\b(if|else|while|for|return|function|def|Class|var|const)\\b"
+        "match": "\\b(if|elif|else|while|for|return|function|def|Class|var|const|print)\\b"
       },
       {
         "name": "string.quoted.double.merk",
@@ -29,7 +29,7 @@
     "names": [],
     "fileTypes": ["merk"],
     "firstLineMatch": "",
-    "foldingStartMarker": "\\b(if|function|def|Class)\\b",
+    "foldingStartMarker": "\\b(if|elif|else|function|def|Class)\\b",
     "foldingStopMarker": "\\b(end)\\b"
   }
   

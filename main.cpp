@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include <cassert>
 
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
 #include "utilities/streaming.h"
 
@@ -40,8 +39,9 @@ int main(int argc, char* argv[]) {
     outputFileContents(content, 800);
     const bool interpretMode = true;
     const bool byBlock = false;
-        
-    SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode, true);
+    
+    SharedPtr<Scope> globalScope = makeShared<Scope>(0, interpretMode, true);
+
     globalScope->owner = "GLOBAL";
     globalScope->kind = ScopeKind::Root;
     
@@ -52,7 +52,13 @@ int main(int argc, char* argv[]) {
         auto tokens = tokenizer.tokenize();
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
         if (Debugger::getInstance().getLogLevel() <= LogLevel::PERMISSIVE) { tokenizer.printTokens(true); }
+        // tokenizer.printTokens(true);
         
+        // globalScope->globalTypes = makeShared<TypeRegistry>();
+        // registerBuiltinTypes(globalScope);
+        
+        // TypeRegistry::setGlobal(globalScope->globalTypes.get());
+
         auto globalFunctions = getNativeFunctions(globalScope);
         for (auto& [name, globalFunc]: globalFunctions) {
             globalScope->globalFunctions->registerFunction(name, globalFunc);
@@ -63,6 +69,7 @@ int main(int argc, char* argv[]) {
         for (auto& [name, globalCls]: globalClasses) {
             globalScope->globalClasses->registerClass(name, globalCls);
         }
+    
 
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
         auto start = std::chrono::high_resolution_clock::now();

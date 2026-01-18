@@ -155,9 +155,9 @@ Node HttpNode::send() {
     auto resp = respNode.toInstance();
     // auto resp = std::static_pointer_cast<DictNode>(respNode.toInstance()->getNativeData());
 
-    // inst->updateField("status", Node(static_cast<int>(status)));
-    // inst->updateField("ok", Node(status >= 200 && status < 300));
-    // inst->updateField("body", Node(response));
+    inst->updateField("status", Node(static_cast<int>(status)));
+    inst->updateField("ok", Node(status >= 200 && status < 300));
+    inst->updateField("body", Node(response));
     
     // DEBUG_LOG(LogLevel::PERMISSIVE, "RESP: " + resp->toString());
     // throw MerkError("GOt Response");
@@ -187,6 +187,48 @@ Node HttpNode::send() {
 
 } // performs the HTTP request and returns a response Node
 
+// Node HttpNode::send() {
+//     auto inst = getInstance();
+//     if (!inst) throw MerkError("HttpNode has no bound instance");
+
+//     const auto url    = getStringField(inst, "url");
+//     const auto method = getStringField(inst, "method");
+
+//     auto headersDict = getDictField(inst, "headers");
+//     auto bodyDict    = getDictField(inst, "body");
+
+//     // ... do curl request ...
+//     String response;
+//     long status = 0;
+//     // fill response/status...
+
+//     // ✅ Update the Http instance itself (THIS is what makes io print “good”)
+//     inst->updateField("status", Node((int)status));
+//     inst->updateField("ok",     Node(status >= 200 && status < 300));
+//     inst->updateField("body",   Node(response));
+//     // (Optional) inst->updateField("headers", ...);
+
+//     // Build response object (what you're already doing)
+//     auto scope = inst->getInstanceScope();
+
+//     auto respNode = Evaluator::evaluateClassCall(scope, "Dict", ArgumentList(), nullptr);
+//     auto respInst = respNode.toInstance();
+//     auto respDict = std::static_pointer_cast<DictNode>(respInst->getNativeData());
+
+//     respDict->set("status", Node((int)status));
+//     respDict->set("ok",     Node(status >= 200 && status < 300));
+//     respDict->set("body",   Node(response));
+
+//     // if Dict class uses native DictNode only, you may not need declareField at all.
+//     // But if your Dict instance mirrors fields, keep these:
+//     respInst->declareField("status", respDict->get("status"));
+//     respInst->declareField("ok",     respDict->get("ok"));
+//     respInst->declareField("body",   respDict->get("body"));
+
+//     return respNode;
+// }
+
+
 String HttpNode::toString() const {
     return "";
 }
@@ -204,7 +246,9 @@ void HttpNode::setValue(const VariantType& v) {
 bool HttpNode::holdsValue() { return true; }
 
 SharedPtr<NodeBase> HttpNode::clone() const {
-    return makeShared<HttpNode>();
+    auto c = makeShared<HttpNode>();
+    c->setInstance(this->getInstance());
+    return c;
 }
 void HttpNode::clear() {
     if (getInstance()) {
@@ -246,6 +290,12 @@ void FileNode::open() {
 }
 
 void FileNode::close() { closeQuiet(); }
+
+SharedPtr<NodeBase> FileNode::clone() const { 
+    auto c = makeShared<FileNode>();
+    c->setInstance(this->getInstance());
+    return c;
+}
 
 String FileNode::readAll() {
     if (!isOpen()) open();

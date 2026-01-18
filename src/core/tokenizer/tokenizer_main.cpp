@@ -40,7 +40,7 @@ static bool isCompoundPair(char a, char b) {
         case '/': return b == '=' || b == '/';
         case '&': return b == '&' || b == '=';
         case '|': return b == '|' || b == '=';
-        case ':': return b == ':';   // only if you want ::
+        case ':': return b == ':' || b == '=';
         default: return false;
     }
 }
@@ -154,7 +154,6 @@ Vector<Token> Tokenizer::tokenize() {
             continue;
         }
 
-
         else if (source[position] == ',') {
             tokens.push_back(Token(TokenType::Punctuation, ",", line, column));
             position++;
@@ -190,12 +189,14 @@ Vector<Token> Tokenizer::tokenize() {
             char nextChar = position < sourceLength ? source[position] : '\0';
             char nextNextChar = peek();
         
-            if (identifier.type == TokenType::Variable && (nextChar == '.' || (nextChar == ':' && nextNextChar == ':'))) {
+            if (identifier.type == TokenType::Variable &&
+                previousToken().value != "." &&
+                (nextChar == '.' || (nextChar == ':' && nextNextChar == ':'))) {
                 identifier.type = TokenType::ChainEntryPoint;
             }
 
             if (identifier.type == TokenType::Type && nextChar == '(') {
-                if (identifier.value == "List" || identifier.value == "Array" || identifier.value == "Dict" || identifier.value == "Set" || identifier.value == "Http" || identifier.value == "File") {
+                if (knownTypes.count(identifier.value)) {
                     identifier.type = TokenType::ClassCall;
                 }
                 else {
@@ -211,12 +212,21 @@ Vector<Token> Tokenizer::tokenize() {
             skipWhitespace();
 
             
-            if (previousToken().type == TokenType::Variable) {
+            // if (previousToken().type == TokenType::Variable) {
+            //     if (source[position] == ':' && peek() != '=') {
+            //         handleOptionalType();
+            //     } 
+            //     continue;  // already tokenized the type annotation
+            // }
+
+            if (previousToken().type == TokenType::Variable ||
+                previousToken().type == TokenType::ChainEntryPoint) {
                 if (source[position] == ':' && peek() != '=') {
                     handleOptionalType();
-                } 
-                continue;  // already tokenized the type annotation
+                }
+                continue;
             }
+
         } else if (isDigit(source[position])) {
             tokens.push_back(readNumber());
         } else if (source[position] == '"' || source[position] == '\'' || source[position] == '`') {
@@ -496,37 +506,68 @@ bool Tokenizer::isPunctuation(char c) const {
 }
 
 bool Tokenizer::handleOptionalType() {
-    if (position < sourceLength && source[position] == ':') {
+    if (position < sourceLength && source[position] == ':' && peek() != '=') {
         tokens.emplace_back(Token(TokenType::Punctuation, ":", line, column));
-        if (!isFunction(previousToken().value) && !isClass(previousToken().value)){
-            skipWhitespace();  // Allow optional space
-            position++;
-            column++;
+        position++; column++;          // consume ':'
+        skipWhitespace();              // now at type name
 
-            if (typeContainers.count(source[position])) {  //&& source[position] != '(' && source[position] != ')'
-                handleContainers();
-            }
+        // parse single identifier as type-name
+        if (!isLetter(source[position])) return false;
 
-            if (isCapitalizedType(position)) {
-                size_t typeStart = position;
-                int typeCol = column;
-                while (position < sourceLength &&
-                    (isLetter(source[position]) || isDigit(source[position]))) {
-                    position++;
-                    column++;
-                }
-
-                String typeStr = source.substr(typeStart, position - typeStart);
-                
-                tokens.emplace_back(Token(TokenType::Type, typeStr, line, typeCol));
-
-                skipWhitespace();
-                if (typeContainers.count(source[position])) {  //&& source[position] != '(' && source[position] != ')'
-                    handleContainers();
-                }
-            }
-            return true;
+        size_t start = position;
+        int typeCol = column;
+        while (position < sourceLength &&
+               (isLetter(source[position]) || isDigit(source[position]) || source[position]=='_')) {
+            position++; column++;
         }
+        String typeName = source.substr(start, position - start);
+
+        tokens.emplace_back(Token(TokenType::Type, typeName, line, typeCol));
+
+        // (optional) parse container syntax immediately after, like List[Int]
+        skipWhitespace();
+        if (position < sourceLength && typeContainers.count(source[position])) {
+            handleContainers();
+        }
+
+        return true;
     }
     return false;
 }
+
+
+// bool Tokenizer::handleOptionalType() {
+//     if (position < sourceLength && source[position] == ':') {
+//         tokens.emplace_back(Token(TokenType::Punctuation, ":", line, column));
+//         if (!isFunction(previousToken().value) && !isClass(previousToken().value)) {
+//             skipWhitespace();  // Allow optional space
+//             position++;
+//             column++;
+
+//             if (typeContainers.count(source[position])) {  //&& source[position] != '(' && source[position] != ')'
+//                 handleContainers();
+//             }
+
+//             if (isCapitalizedType(position)) {
+//                 size_t typeStart = position;
+//                 int typeCol = column;
+//                 while (position < sourceLength &&
+//                     (isLetter(source[position]) || isDigit(source[position]))) {
+//                     position++;
+//                     column++;
+//                 }
+
+//                 String typeStr = source.substr(typeStart, position - typeStart);
+                
+//                 tokens.emplace_back(Token(TokenType::Type, typeStr, line, typeCol));
+
+//                 skipWhitespace();
+//                 if (typeContainers.count(source[position])) {  //&& source[position] != '(' && source[position] != ')'
+//                     handleContainers();
+//                 }
+//             }
+//             return true;
+//         }
+//     }
+//     return false;
+// }

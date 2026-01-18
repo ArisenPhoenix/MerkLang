@@ -322,7 +322,7 @@ public:
 
 class VariableNotFoundError : public ScopeError {
 public:
-    explicit VariableNotFoundError(const String& variableName);
+    explicit VariableNotFoundError(const String& variableName, const String& context = "");
 
     String errorPrefix() const override;
 

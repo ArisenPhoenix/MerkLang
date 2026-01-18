@@ -152,40 +152,92 @@ FunctionBody* UserFunction::getThisBody() const {return body.get();}
 UniquePtr<CallableBody> UserFunction::getBody() {return static_unique_ptr_cast<CallableBody>(body->clone());}
 
 
-SharedPtr<CallableSignature> FunctionNode::getFunction(String name, ArgumentList args) {
+std::optional<SharedPtr<CallableSignature>> FunctionNode::getFunction(String name, const ArgumentList& args, SharedPtr<Scope> scope) {
+    if (!scope) { throw MerkError("FunctionNode::getFunction called with null scope"); }
     if (!std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue())) {
         throw MerkError("FunctionNode holds type " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
     }
     auto funcSigs = std::get<Vector<SharedPtr<CallableSignature>>>(getValue());
-    
-    Vector<NodeValueType> argTypes;
-    for (const auto &arg : args) { argTypes.push_back(arg.getType()); }
 
-    if (funcSigs.size() == 0) { throw MerkError("There Were No Function signatures to pull from"); }
-    for (auto funcSig : funcSigs) {
-        if (funcSig->getSubType() == CallableType::DEF) {  
-            return funcSig;
+    if (funcSigs.empty()) { throw MerkError("There were no function signatures to pull from"); }
+
+    auto typeReg = scope->localTypes;
+    // if (!typeReg) { throw MerkError("No TypeRegistry available on scope"); }
+
+    struct Cand { SharedPtr<CallableSignature> sig; TypeMatchResult m; };
+    Vector<Cand> viable;
+    viable.reserve(funcSigs.size());
+
+    for (auto& sig : funcSigs) {
+        if (!sig) continue;
+
+        // DEF: keep as fallback
+        if (sig->getSubType() == CallableType::DEF) {
+            viable.push_back(Cand{sig, TypeMatchResult::Yes(0, 1000)});
+            continue;
         }
-        if (funcSig->getSubType() == CallableType::NATIVE) {
-            if (funcSig->matches(argTypes)) {
-                return funcSig;
+
+        if (sig->getSubType() == CallableType::NATIVE) {
+            // if (funcSig->matches(argTypes)) {
+            //     return funcSig;
+            // }
+            viable.push_back(Cand{sig, TypeMatchResult::Yes(0, 1000)});
+        }
+
+        ParamList params = sig->getParameters();
+        BoundArgs bound;
+        try {
+            bound = args.bindToBound(params, /*allowDefaults=*/true);
+        } catch (...) {
+            continue;
+        }
+
+        // Lazily build signature id
+        if (sig->getTypeSignature() == kInvalidTypeSignatureId) {
+            params.bindTypes(typeReg, *scope);
+            InvocableSigType mt;
+            mt.methodName = name;
+            mt.variadic = (!params.empty() && params.back().isVarArgsParameter());
+            mt.ret = typeReg.any();
+            mt.retEnforced = false;
+            mt.params.reserve(params.size());
+            mt.enforced.reserve(params.size());
+            for (size_t i = 0; i < params.size(); ++i) {
+                const auto& p = params[i];
+                if (p.isTyped() && p.getTypeSig() != 0) {
+                    mt.params.push_back(p.getTypeSig());
+                    mt.enforced.push_back(1);
+                } else {
+                    mt.params.push_back(typeReg.any());
+                    mt.enforced.push_back(0);
+                }
             }
+            sig->setTypeSignature(typeReg.invocableType(mt));
         }
-        DEBUG_LOG(LogLevel::TRACE, "Checking Function Candidate", name, funcSig->getCallable()->parameters.toString());
 
-        // If this is a def function, return it regardless.
-        DEBUG_LOG(LogLevel::TRACE, "Function Type: ", callableTypeAsString(funcSig->getSubType()));
-        
-        if (funcSig->getSubType() == CallableType::FUNCTION) {
-
-            if (funcSig->matches(argTypes)){
-                return funcSig;
-            }
-            DEBUG_LOG(LogLevel::TRACE, "Candidate ", name, " skipped: subtype=", callableTypeAsString(funcSig->getSubType()));
-        }
+        ArgumentList flat;
+        for (auto& n : bound.flatten()) flat.addPositionalArg(n);
+        auto m = typeReg.matchCall(sig->getTypeSignature(), flat);
+        if (!m.ok) continue;
+        viable.push_back(Cand{sig, m});
     }
-    
 
-    throw MerkError("FunctionRef " + name + " Was Not Found");
+    if (viable.empty()) return std::nullopt;
+
+    auto best = viable[0];
+    for (auto& c : viable) {
+        if (c.m.score > best.m.score) best = c;
+        else if (c.m.score == best.m.score && c.m.cost < best.m.cost) best = c;
+    }
+
+    int ties = 0;
+    for (auto& c : viable) {
+        if (c.m.score == best.m.score && c.m.cost == best.m.cost) ties++;
+    }
+    if (ties > 1) {
+        throw MerkError("Ambiguous overload for function reference '" + name + "'");
+    }
+
+    return best.sig;
     
 }

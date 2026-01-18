@@ -48,9 +48,9 @@ MethodDef::MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> bo
     }
 
     
-    this->methodType = funcType;
-    if (this->methodType == CallableType::METHOD) {
-        throw MerkError("MethodDef::methodType is a METHOD");
+    this->InvocableType = funcType;
+    if (this->InvocableType == CallableType::METHOD) {
+        throw MerkError("MethodDef::InvocableType is a METHOD");
     } 
     
 
@@ -59,7 +59,7 @@ MethodDef::MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> bo
 MethodDef::MethodDef(UniquePtr<FunctionDef> funcDef)
     : CallableDef(funcDef->getName(), funcDef->getParameters(), makeUnique<MethodBody>(std::move(funcDef->getBody())), CallableType::METHOD, funcDef->getScope()) 
 {
-    methodType = funcDef->callType;
+    InvocableType = funcDef->callType;
     funcDef.reset();
 }
 
@@ -116,7 +116,7 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
             auto& var = scope->getVariable(name);
             if (var.isFunctionNode()) {
                 auto funcNode = var.toFunctionNode();
-                optSig = funcNode.getFunction(name, args);
+                optSig = funcNode.getFunction(name, args, scope);
                 if (optSig.has_value()) {
                     methodSig = optSig.value();
                 }
@@ -212,5 +212,5 @@ Node MethodDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Clas
         throw MerkError("Class Scope was not supplied to Method: " + name);
     }
     auto methodBody = static_cast<MethodBody*>(getBody());
-    return Evaluator::evaluateMethodDef(scope, getScope(), getClassScope(), name, methodBody, parameters, methodType, instanceNode);
+    return Evaluator::evaluateMethodDef(scope, getScope(), getClassScope(), name, methodBody, parameters, InvocableType, instanceNode);
 }

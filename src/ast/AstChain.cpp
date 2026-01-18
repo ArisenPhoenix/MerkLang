@@ -22,7 +22,7 @@
 
 #include "core/errors.h"
 #include "core/Scope.hpp"
-
+#include "core/FlowEvaluator.hpp"
 
 String opKindAsString(ChainOpKind opKind){
     switch (opKind) {
@@ -374,9 +374,10 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     auto varDec = static_cast<VariableDeclaration*>(elem.object.get());
                     auto varName = varDec->getName();
                     
-                    auto res = varDec->getExpression()->evaluate(methodScope, instanceNode);
-                    
-                    instance->declareField(varName, res);
+                    // auto res = varDec->getExpression()->evaluate(methodScope, instanceNode);
+                    auto res = Evaluator::evaluateVariableDeclaration(varName, varDec->getExpression().get(), varDec->getVariableMeta(), currentScope, instanceNode);
+
+                    // instance->declareField(varName, res);
                     currentScope->addMember(varName);  // ensures downstream logic will correctly resolve
 
                     currentVal = res;
@@ -388,9 +389,9 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                     auto varAss = static_cast<VariableAssignment*>(elem.object.get());
                     auto varName = varAss->getName();
                     
-                    currentVal = varAss->getExpression()->evaluate(methodScope, instanceNode);
-                    
-                    instance->updateField(varName, currentVal);
+                    // currentVal = varAss->getExpression()->evaluate(methodScope, instanceNode);
+                    // instance->updateField(varName, currentVal);
+                    currentVal = Evaluator::evaluateVariableAssignment(varName, varAss, methodScope, instanceNode);
 
                     break;
                 }
@@ -432,7 +433,9 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
                 auto evaluatedArgs = args->evaluateAll(currentScope->createChildScope(), instanceNode);
                 currentVal = handleVirtualMethod(currentVal, elem.name, evaluatedArgs.getPositional());                
             } else {
-                throw MerkError("Evaluating Some other structure, the current Value is: " + nodeTypeToString(DynamicNode::getTypeFromValue(currentVal.getValue())) + " META: " + currentVal.getFlags().toString());
+                    throw MerkError("Evaluating Some other structure, the current Value is: " + 
+                    nodeTypeToString(DynamicNode::getTypeFromValue(currentVal.getValue())) + " META: " + 
+                    currentVal.getFlags().toString() + " \n AST_INFO: " + elem.object->toString());            
             }
             
             DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));            

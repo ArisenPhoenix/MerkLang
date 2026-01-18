@@ -79,32 +79,116 @@ String scopeKindToString(ScopeKind kind) {
     }
 };
 
-// constructor for root.
-Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool) 
-    : interpretMode(interpretMode) {
-        isRoot = isRootBool;
-        if (isRoot) {
-            Scope::counts.roots += 1;
-        }
-        scopeLevel = scopeNum;
-        DEBUG_FLOW(FlowLevel::LOW);
 
-    DEBUG_LOG(LogLevel::DEBUG, "[Ctor(root)] this=", this, " level=", scopeLevel, "\n");
+void Scope::linkTypes() {
+    if (auto parent = this->parentScope.lock()) {
+        scopeLevel = parent->scopeLevel + 1;
+        globalFunctions = parent->globalFunctions;
+        globalClasses   = parent->globalClasses;
+        globalTypes     = parent->globalTypes;
+        globalTypeSigs  = parent->globalTypeSigs;
+
+        if (!globalTypes)    throw MerkError("Child Scope: globalTypes is null");
+        if (!globalTypeSigs) throw MerkError("Child Scope: globalTypeSigs is null");
+
+        localTypes.attach(*globalTypeSigs);
+    } else {
+        throw MerkError("Scope Initialized Incorrectly -> Scope::linkTypes() && " + metaString());
+    }
+}
+
+
+void Scope::initRootTypes() {
+    if (!isRoot) throw MerkError("initRootTypes called on non-root scope");
+
+    if (!globalTypes) throw MerkError("initRootTypes: globalTypes is null");
+
+    if (!globalTypeSigs) {
+        globalTypeSigs = makeShared<TypeSignatureRegistryManager>(*globalTypes);
+    }
+
+    localTypes.attach(*globalTypeSigs);
+}
+
+
+// constructor for root.
+// Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool) 
+//     : interpretMode(interpretMode) {
+//         isRoot = isRootBool;
+//         if (isRoot) {
+//             Scope::counts.roots += 1;
+//         }
+//         scopeLevel = scopeNum;
+//         DEBUG_FLOW(FlowLevel::LOW);
+
+//     DEBUG_LOG(LogLevel::DEBUG, "[Ctor(root)] this=", this, " level=", scopeLevel, "\n");
+//     // if (!globalTypes) {
+        
+//     // }
+//     if (isRoot) {
+//         globalFunctions = makeShared<FunctionRegistry>();
+//         globalClasses = makeShared<ClassRegistry>();
+//         globalTypes = makeShared<TypeRegistry>();
+//     }
+//     // String rootStr = isRoot ? "true" : "false";
+//     // if (!globalTypes) {
+//     //     throw MerkError("Global Types Was Not Initialized and isRoot is set to: " + rootStr);
+//     // }
+
+//     DEBUG_LOG(LogLevel::TRACE, 
+//              "Initialized Root Scope with level: ", scopeLevel, 
+//              " | Memory Loc: ", this, 
+//              " | Parent Loc: ", formatPointer(nullptr));
+
+//     ++liveScopeCount;
+//     ++totalScopeCreated;
+//     DEBUG_FLOW_EXIT();
+// }
+
+// Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
+//   : interpretMode(interpretMode)
+// {
+//     isRoot = isRootBool;
+//     scopeLevel = scopeNum;
+
+//     if (isRoot) {
+//         globalFunctions = makeShared<FunctionRegistry>();
+//         globalClasses   = makeShared<ClassRegistry>();
+//         if (!globalTypes) {
+//             globalTypes = makeShared<TypeRegistry>();         // nominal ids live here
+//         }
+        
+//         localTypes      = TypeSignatureRegistry(*globalTypes, nullptr);
+//     } 
+    
+//     // else {
+//     //     throw MerkError("Non-root Scope(int,...) ctor used with isRoot=false");
+//     // }
+
+//     ++liveScopeCount;
+//     ++totalScopeCreated;
+// }
+
+Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
+  : interpretMode(interpretMode)
+{
+    isRoot = isRootBool;
+    scopeLevel = scopeNum;
 
     if (isRoot) {
         globalFunctions = makeShared<FunctionRegistry>();
-        globalClasses = makeShared<ClassRegistry>();
-    }
+        globalClasses   = makeShared<ClassRegistry>();
 
-    DEBUG_LOG(LogLevel::TRACE, 
-             "Initialized Root Scope with level: ", scopeLevel, 
-             " | Memory Loc: ", this, 
-             " | Parent Loc: ", formatPointer(nullptr));
+        globalTypes = makeShared<TypeRegistry>();                 // nominal TypeId space
+        globalTypeSigs = makeShared<TypeSignatureRegistryManager>(*globalTypes); // signature pool
+
+        initRootTypes();
+    }
 
     ++liveScopeCount;
     ++totalScopeCreated;
-    DEBUG_FLOW_EXIT();
 }
+
 
 
 String Scope::formattedScope() {
@@ -118,27 +202,23 @@ ScopeCounts Scope::getCounts() {
 }
 
 // Constructor for child
-Scope::Scope(WeakPtr<Scope> parentScope, bool interpretMode)
-    : parentScope(std::move(parentScope)), interpretMode(interpretMode) {
-        DEBUG_FLOW(FlowLevel::LOW);
-        if (auto parent = this->parentScope.lock()) {
-            scopeLevel = parent->scopeLevel + 1;
-            globalFunctions = parent->globalFunctions;
-            globalClasses = parent->globalClasses;
-        } else { throw MerkError("Scope Initialized Incorrectly"); }
-
-        ++liveScopeCount;
-        ++totalScopeCreated;
-        DEBUG_FLOW_EXIT();
-}
-
-Scope::Scope(SharedPtr<Scope> parent, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpretMode)
+Scope::Scope(SharedPtr<Scope> parent, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, SharedPtr<TypeRegistry> globalT, bool interpretMode)
 : parentScope(parent), 
     globalFunctions(std::move(globalF)),
     globalClasses(std::move(globalC)),
+    globalTypes(std::move(globalT)),
     interpretMode(interpretMode)
 {
     scopeLevel = parent ? parent->scopeLevel + 1 : 0;
+
+    if (!parent) throw MerkError("Scope ctor: parent is null");
+    globalTypeSigs = parent->globalTypeSigs;
+
+    if (!globalTypes)    throw MerkError("Scope ctor: globalTypes is null");
+    if (!globalTypeSigs) throw MerkError("Scope ctor: globalTypeSigs is null");
+
+    localTypes.attach(*globalTypeSigs);
+
     ++liveScopeCount;
     ++totalScopeCreated;
 
@@ -197,7 +277,6 @@ void Scope::clear(bool internalCall) {
     
     localFunctions.clear();
     localClasses.clear();
-
     for (auto& child : childScopes) {
         if (child) {
             if (child.get() != this) {
@@ -212,6 +291,7 @@ void Scope::clear(bool internalCall) {
     if (isRoot) {
         if (globalFunctions) globalFunctions->clear();
         if (globalClasses) globalClasses->clear();
+        if (globalTypes) globalTypes.reset();
     }
 }
 
@@ -446,6 +526,7 @@ SharedPtr<Scope> Scope::createChildScope() {
     auto c = makeShared<Scope>(shared_from_this(),
                                      globalFunctions,
                                      globalClasses,
+                                     globalTypes,
                                      interpretMode);
     c->isRoot = false;
     childScopes.push_back(c);
@@ -503,8 +584,13 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
         }
         throw VariableAlreadyDeclaredError(name, shared_from_this());
     }
-
+    debugLog(true,
+        "DECL x declaredSig=", localTypes.toString(value->getVarFlags().declaredSig),
+        " inferredSig=", localTypes.toString(value->getVarFlags().inferredSig),
+        " fullType=", value->getVarFlags().fullType.toString()
+        );
     context.setVariable(name, std::move(value));
+    
     // DEBUG_LOG(LogLevel::PERMISSIVE,
     //       "DECLARE name=", name,
     //       " this=", (void*)this,
@@ -518,16 +604,96 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
     DEBUG_FLOW_EXIT();
 }
 
+Context& Scope::getContextWith(const String& varName) {
+    if (hasVariable(varName)) {
+        return getContext();
+    }
+
+    if (auto parent = getParent()) {
+        if (parent->hasVariable(varName)) {
+            return parent->getContext();
+        }
+    }
+
+    throw VariableNotFoundError(varName, "Scope::getContextWith");
+}
+
 void Scope::updateVariable(const String& name, const Node& value) {
+    // If variable is in this context, validate and update here
     if (context.hasVariable(name)) {
-        context.updateVariable(name, value);
+        auto varRef = context.getVariable(name);
+        if (!varRef.has_value()) {
+            throw VariableNotFoundError(name, "Scope::updateVariable -> context.getVariable failed");
+        }
+
+        VarNode& var = varRef.value().get();
+        DataTypeFlags vf = var.getVarFlags();   // add accessor if you don't have it
+
+        // 1) const blocks reassignment (binding-level)
+        if (vf.isConst) {
+            throw MerkError("Cannot assign to const variable '" + name + "'");
+        }
+
+        // 2) type enforcement / inference
+        auto& tsr = localTypes;
+        bool hasDeclared = (vf.declaredSig != kInvalidTypeSignatureId && vf.declaredSig != tsr.any());
+
+        if (hasDeclared) {
+            TypeSignatureId rhsSig = tsr.inferFromValue(value);
+            auto r = tsr.matchValue(vf.declaredSig, value);
+            if (!r.ok) {
+                throw MerkError(
+                    "Type mismatch for '" + name + "': expected " +
+                    tsr.toString(vf.declaredSig) + ", got " + tsr.toString(rhsSig)
+                );
+            }
+        } else {
+            vf.inferredSig = tsr.inferFromValue(value);
+        }
+
+        // TypeSignatureId rhsSig = inferSigFromRuntimeNode(value, tr);
+
+        // TypeSignatureId expected = kInvalidTypeSignatureId;
+        // if (vf.declaredSig != kInvalidTypeSignatureId && vf.declaredSig != tr.any()) {
+        //     expected = vf.declaredSig;
+        // } else if (vf.inferredSig != kInvalidTypeSignatureId) {
+        //     expected = vf.inferredSig;
+        // }
+
+        // if (expected != kInvalidTypeSignatureId) {
+        //     auto r = tr.matchValue(expected, value);
+        //     if (!r.ok) {
+        //         debugLog(true,
+        //             "ASSIGN name=", name,
+        //             " value.getType()=", nodeTypeToString(value.getType()),
+        //             " value.isInstance()=", value.isInstance() ? "true" : "false",
+        //             " value.toString()=", value.toString(),
+        //             " expected=", tr.toString(expected),
+        //             " rhsSig=", tr.toString(rhsSig)
+        //         );
+
+        //         throw MerkError(
+        //             "Type mismatch for '" + name + "': expected " +
+        //             tr.toString(expected) + ", got " + tr.toString(rhsSig)
+        //         );
+        //     }
+        // } else {
+        //     // infer-on-first-assign for var x = ...
+        //     vf.inferredSig = rhsSig;
+        // }
+
+        // 3) apply value mutability semantics (:= freezes value)
+        Node stored = value;
+        // stored.getFlags().isMutable = vf.isMutable;
+        if (stored.getFlags().isMutable != vf.isMutable) {
+            stored.getFlags().isMutable = vf.isMutable;
+        }
+        // 4) store using existing mechanism (calls VarNode::setValue once)
+        context.updateVariable(name, stored);
         return;
     }
 
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::updateVariable Missed variable ", name, "in The below scope: ");
-    // debugPrint();
-
-    // Delegate to parent scope if the variable is not in the current scope
+    // Not in this scope -> delegate to parent
     if (auto parent = parentScope.lock()) {
         parent->updateVariable(name, value);
         return;
@@ -535,6 +701,26 @@ void Scope::updateVariable(const String& name, const Node& value) {
 
     throw VariableNotFoundError(name);
 }
+
+
+
+// void Scope::updateVariable(const String& name, const Node& value) {
+//     if (context.hasVariable(name)) {
+//         context.updateVariable(name, value);
+//         return;
+//     }
+
+//     // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::updateVariable Missed variable ", name, "in The below scope: ");
+//     // debugPrint();
+
+//     // Delegate to parent scope if the variable is not in the current scope
+//     if (auto parent = parentScope.lock()) {
+//         parent->updateVariable(name, value);
+//         return;
+//     }
+
+//     throw VariableNotFoundError(name);
+// }
 
 VarNode& Scope::getVariable(const String& name) {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
@@ -566,7 +752,7 @@ VarNode& Scope::getVariable(const String& name) {
     //         " keys=", s->context.keysToString()); // add this
     // }
 
-    throw VariableNotFoundError(name);
+    throw VariableNotFoundError(name, "Scope::getVariable");
 }
 
 // Check if a variable exists in the current scope or parent scopes
@@ -639,45 +825,149 @@ bool Scope::hasFunction(const String& name) const {
 
 
 std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const String& name) const {
+    // Prefer local overload sets (shadowing). If not found, walk up parents, then fall back to globals.
+    if (auto funcs = localFunctions.getFunction(name)) { return funcs; }
+    if (auto parent = parentScope.lock()) { return parent->lookupFunction(name); }
     if (globalFunctions && globalFunctions->hasFunction(name)) {
         auto sig = globalFunctions->getFunction(name);
         if (sig.has_value()) return sig;
     }
-
-    if (auto funcs = localFunctions.getFunction(name)) { return funcs; }
-    if (auto parent = parentScope.lock()) { return parent->lookupFunction(name); }
-    
     return std::nullopt;
   }
 
-
-std::optional<SharedPtr<CallableSignature>> Scope::lookupFunction(const String& name, const ArgumentList& args) const {
-    if (globalFunctions && globalFunctions->hasFunction(name)) {
-        auto sig = globalFunctions->getFunction(name, args);
-        if (sig.has_value()) { return sig; }
+// ------------------------------------------------------------
+// Type-aware overload resolution
+// ------------------------------------------------------------
+std::optional<SharedPtr<CallableSignature>> Scope::resolveFunctionOverload(
+    const String& name,
+    const ArgumentList& args,
+    const TypeMatchOptions& opt
+) {
+    auto overloadOpt = lookupFunction(name);
+    if (!overloadOpt.has_value() || overloadOpt.value().empty()) {
+        return std::nullopt;
     }
 
-    if (auto sig = localFunctions.getFunction(name, args)) {
-        if (sig.has_value()) { return sig; }
+    auto& reg = localTypes; // shared across scope chain
+
+    struct Candidate {
+        SharedPtr<CallableSignature> sig;
+        TypeMatchResult match;
+        BoundArgs bound;
+    };
+
+    Vector<Candidate> viable;
+    viable.reserve(overloadOpt.value().size());
+
+    for (auto& sig : overloadOpt.value()) {
+        if (!sig) continue;
+
+        // DEF: keep as a fallback if nothing else matches.
+        if (sig->getSubType() == CallableType::DEF) {
+            Candidate c;
+            c.sig = sig;
+            c.match = TypeMatchResult::Yes(0, 1000);
+            viable.push_back(std::move(c));
+            continue;
+        }
+
+        // First: bind args to params (named/default/varargs). If it fails, this overload isn't viable.
+        ParamList params = sig->getParameters();
+        BoundArgs bound;
+        try {
+            bound = args.bindToBound(params, /*allowDefaults=*/true);
+        } catch (...) {
+            continue;
+        }
+
+        // Ensure callable has a type signature id (lazily built).
+        if (sig->getTypeSignature() == kInvalidTypeSignatureId) {
+            // Bind param annotations to TypeSignatureIds
+            params.bindTypes(reg, *this);
+
+            InvocableSigType m;
+            m.methodName = name;
+            m.variadic = (!params.empty() && params.back().isVarArgsParameter());
+            m.ret = reg.any();
+            m.retEnforced = false;
+
+            m.params.reserve(params.size());
+            m.enforced.reserve(params.size());
+            for (size_t i = 0; i < params.size(); ++i) {
+                const auto& p = params[i];
+                if (p.isTyped() && p.getTypeSig() != 0) {
+                    m.params.push_back(p.getTypeSig());
+                    m.enforced.push_back(1);
+                } else {
+                    m.params.push_back(reg.any());
+                    m.enforced.push_back(0);
+                }
+            }
+
+            sig->setTypeSignature(reg.invocableType(m));
+        }
+
+        // Match types against the bound/flattened args.
+        ArgumentList flat;
+        auto flatNodes = bound.flatten();
+        for (auto& n : flatNodes) flat.addPositionalArg(n);
+
+        auto match = reg.matchCall(sig->getTypeSignature(), flat, opt);
+        if (!match.ok) continue;
+
+        viable.push_back(Candidate{sig, match, std::move(bound)});
     }
 
-    if (auto parent = parentScope.lock()) {
-        return parent->lookupFunction(name, args);
+    if (viable.empty()) {
+        return std::nullopt;
     }
-    
-    return std::nullopt;
+
+    // Pick best by score, then lowest cost.
+    auto bestIt = viable.begin();
+    for (auto it = viable.begin(); it != viable.end(); ++it) {
+        if (it->match.score > bestIt->match.score) bestIt = it;
+        else if (it->match.score == bestIt->match.score && it->match.cost < bestIt->match.cost) bestIt = it;
+    }
+
+    // Ambiguity check: same score+cost but different signatures.
+    int bestScore = bestIt->match.score;
+    int bestCost = bestIt->match.cost;
+    int ties = 0;
+    for (auto& c : viable) {
+        if (c.match.score == bestScore && c.match.cost == bestCost) ties++;
+    }
+    if (ties > 1) {
+        throw MerkError("Ambiguous overload for '" + name + "' (" + std::to_string(ties) + " candidates match equally)");
+    }
+
+    return bestIt->sig;
 }
 
 void Scope::registerType(TypeId id) {
-    // globalTypes->add(id);
+    if (!globalTypes) throw MerkError("registerType: globalTypes is null");
+    if (!localTypes.isAttached()) linkTypes();
+    // Ensure the signature exists in this scope and bind the canonical name.
+    const String& n = globalTypes->nameOf(id);
+    if (!n.empty() && n != "<invalid>") {
+        localTypes.bindName(n, localTypes.nominal(id));
+    }
 }
 
 void Scope::registerPrimitiveType(NodeValueType t) {
-    // globalTypes->addPrim(t);
+    if (!globalTypes) throw MerkError("registerPrimitiveType: globalTypes is null");
+    if (!localTypes.isAttached()) linkTypes();
+    TypeId id = globalTypes->primitiveId(t);
+    const String& n = globalTypes->nameOf(id);
+    if (!n.empty() && n != "<invalid>") {
+        localTypes.bindName(n, localTypes.nominal(id));
+    }
 }
 
 void Scope::registerNamedType(String& name) {
-    // globalTypes->addNamed(name);
+    if (!globalTypes) throw MerkError("registerNamedType: globalTypes is null");
+    if (!localTypes.isAttached()) linkTypes();
+    TypeId id = globalTypes->getOrCreate(name);
+    localTypes.bindName(name, localTypes.nominal(id));
 }
 
 SharedPtr<TypeRegistry> Scope::getTypeRegistry() {
@@ -693,26 +983,13 @@ SharedPtr<TypeRegistry> Scope::getTypeRegistry() {
 
 
 std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& name, const ArgumentList& args) {
-    
+
     DEBUG_FLOW(FlowLevel::MED);
-    if (globalFunctions) {
-        auto globalFunc = globalFunctions->getFunction(name, args);
-        if (globalFunc.has_value()) {
-            
-            return globalFunc.value();
-        }
-    }
 
-    if (auto func = lookupFunction(name, args)) {
-        return func.value();
-    }
-
-    if (auto parent = parentScope.lock()) {
-        return parent->getFunction(name, args);
-    }
-
+    // Overload resolution is now type-aware and centralized here.
+    auto resolved = resolveFunctionOverload(name, args);
     DEBUG_FLOW_EXIT();
-    return std::nullopt;
+    return resolved;
 }
 
 // For Function Reference
@@ -757,7 +1034,7 @@ void Scope::registerClass(const String& name, SharedPtr<ClassBase> classBase) {
     auto sig = std::static_pointer_cast<ClassSignature>(classBase->toCallableSignature());
     
     if (!sig) {throw MerkError("ClassSignature is null when registering: " + name);}
-
+    globalTypes->getOrCreate(name);
     localClasses.registerClass(name, std::move(sig));
     DEBUG_FLOW_EXIT();
 }

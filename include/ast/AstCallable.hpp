@@ -7,7 +7,6 @@
 #include "ast/AstBase.hpp"
 #include "ast/Ast.hpp"
 #include "ast/AstControl.hpp" 
-#include "core/types/Type.hpp"
 
 class MethodDef;
 class MethodBody;
@@ -110,7 +109,7 @@ public:
     Node call(const ArgumentList& args, SharedPtr<Scope> scope) const;
     virtual Node call(const ArgumentList& args, SharedPtr<Scope> scope, SharedPtr<Scope> classScope) const;
 
-    bool matches(const Vector<NodeValueType>& otherTypes) const;
+    // Overload resolution is performed at Scope level (type-aware).
     
     SharedPtr<Callable> getCallable() const;
  

@@ -10,7 +10,7 @@
 #include "ast/AstMethod.hpp"
 #include "core/Parser.hpp"
 #include "ast/Exceptions.hpp"
-
+ 
 #include "ast/AstFunction.hpp"
 
 
@@ -80,11 +80,15 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
         advance();
     }
     
-    else if (baseToken.type == TokenType::FunctionCall) {
+    else if (baseToken.type == TokenType::FunctionCall || baseToken.type == TokenType::ClassMethodCall) {
         baseExpr = parseFunctionCall();
+        if (baseToken.type == TokenType::ClassMethodCall) {
+            auto func = static_unique_ptr_cast<FunctionCall>(std::move(baseExpr));
+            baseExpr = makeUnique<MethodCall>(func->getName(), std::move(func->arguments), func->getScope());
+        }
     }
     else {
-        throw UnexpectedTokenError(baseToken, "Variable or FunctionCall");
+        throw UnexpectedTokenError(baseToken, "Variable or FunctionCall or ClassMethodCall");
     }
 
     auto punct = currentToken();
@@ -114,6 +118,25 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
         chain->addElement(createChainElement(next, delim, std::move(rhs)));
     }
 
+    ResolvedType declaredType("Any");
+    bool hasAnnotation = false;
+
+    // If tokenizer emits ":" then a TokenType::Type (or ClassRef), consume it here
+    if (check(TokenType::Punctuation, ":")) {
+        advance(); // consume ':'
+
+        Token t = currentToken();
+        if (t.type == TokenType::Type || t.type == TokenType::ClassRef || t.type == TokenType::Variable) {
+            declaredType = ResolvedType(t.value);
+            hasAnnotation = true;
+            advance(); // consume type name
+        } else {
+            throw UnexpectedTokenError(t, "Type name after ':'");
+        }
+
+        // Optional: support containers immediately (List[Int], Dict[String, Int]) later
+    }
+
     // Handle declaration or assignment
     Token maybeAssign = currentToken();
     if (maybeAssign.type == TokenType::VarAssignment) {
@@ -124,7 +147,7 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
 
         auto &last = chain->getLast();
         if (isDeclaration) {
-            DataTypeFlags flags(last.name, isConst, isMutable, false, ResolvedType("Any"));
+            DataTypeFlags flags(last.name, isConst, isMutable, false, declaredType);
             last.object = makeUnique<VariableDeclaration>(last.name, flags, currentScope, std::move(rhsExpr));
         } else {
             last.object = makeUnique<VariableAssignment>(last.name, std::move(rhsExpr), currentScope);
@@ -199,7 +222,7 @@ UniquePtr<MethodDef> Parser::parseClassMethod() {
     //     methodName,
     //     std::move(parameters),
     //     std::move(methodBlock),
-    //     methodType,  
+    //     InvocableType,  
     //     currentScope
     // );
 

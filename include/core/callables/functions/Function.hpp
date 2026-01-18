@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory> 
+#include <optional>
 
 // #include "core/types.h"
 #include "core/TypesFWD.hpp"
@@ -70,7 +71,8 @@ public:
 
     FunctionNode(String originalName, Vector<SharedPtr<CallableSignature>>);
 
-    SharedPtr<CallableSignature> getFunction(String name, ArgumentList args);
+    // Resolve a specific overload from the stored overload-set.
+    std::optional<SharedPtr<CallableSignature>> getFunction(String name, const ArgumentList& args, SharedPtr<Scope> scope);
 
     SharedPtr<Callable> getCallable() const override;
 

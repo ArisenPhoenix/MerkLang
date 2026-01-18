@@ -72,7 +72,7 @@ public:
     const UniquePtr<ASTStatement>& getExpression() const {return valueExpression;}
     const ASTStatement* getRawExpression() const {return valueExpression.get();}
     void setScope(SharedPtr<Scope> newScope) override;
-
+    DataTypeFlags getVariableMeta();
     virtual Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
     virtual void printAST(std::ostream& os, int indent = 0) const override;
     virtual AstType getAstType() const override {return AstType::VariableDeclaration;}

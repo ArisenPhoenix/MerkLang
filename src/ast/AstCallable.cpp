@@ -364,31 +364,6 @@ const Vector<NodeValueType>& CallableSignature::getParameterTypes() const {
 
 
 
-bool CallableSignature::matches(const Vector<NodeValueType>& argTypes) const {
-    size_t paramCount = parameters.size();
-    size_t argCount = argTypes.size();
-
-    if (!parameters.empty() && parameters.back().isVarArgsParameter()) {
-        if (argCount < paramCount - 1) { DEBUG_LOG(LogLevel::TRACE, "RETURNING FALSE ON argCount < paramCount"); return false;}
-    } else {
-        if (argCount != paramCount) { DEBUG_LOG(LogLevel::TRACE, "RETURNING FALSE ON argCount != paramCount"); return false; }
-    }
-
-    for (size_t i = 0; i < parameters.size(); ++i) {
-        if (parameters[i].isVarArgsParameter()) break;
-
-        NodeValueType expected = parameters[i].flags.type;
-        NodeValueType provided = i < argTypes.size() ? argTypes[i] : NodeValueType::Uninitialized;
-
-        if (expected == NodeValueType::Any || provided == NodeValueType::Uninitialized)
-            continue;
-
-        if (expected != provided) {DEBUG_LOG(LogLevel::TRACE, "RETURNING FALSE ON expected != provided "); return false; }
-    }
-
-    return true;
-}
-
 size_t CallableSignature::hash() const {
     size_t fullSig = 0;
     for (auto& param: parameters) {

@@ -284,7 +284,9 @@ enum class CallableType {
 };
 
 
+using TypeSignatureId = uint32_t;
 using TypeId = uint32_t;
+static constexpr TypeSignatureId kInvalidTypeSignatureId = 0;
 static constexpr TypeId kInvalidTypeId = 0;
 
 class ResolvedType {
@@ -300,10 +302,28 @@ public:
     void setInner(Vector<ResolvedType>);
 
     String getBaseType() {return baseType;}
-    Vector<ResolvedType> getInnerType() {return inner;}
-    const String getBaseType() const {return baseType;}
-    const Vector<ResolvedType> getInnerType() const {return inner;}
+
+    const String& getBaseType() const { return baseType; }
+    const Vector<ResolvedType>& getInnerType() const { return inner; }
+
     bool matches(const ResolvedType& other) const;
     size_t hash() const;
 
 };
+
+
+class TypeRegistry;
+
+
+struct DebugStringifyConfig {
+    size_t maxTotal = 300;          // max chars per printed value
+    size_t maxString = 220;         // max chars for a string field
+    size_t maxContainer = 400;      // max chars for list/dict/set/etc.
+    size_t maxFields = 32;          // max fields printed for instances
+    bool showRemainder = true;      // ...(+N chars)
+    bool alwaysEllipsis = true;    // if you want " ..." always
+    String handle(String s);
+};
+
+// global accessors (single instance)
+DebugStringifyConfig& debugStringifyConfig();

@@ -18,7 +18,7 @@ class Method : public Invocable {
     SharedPtr<Scope> classScope;
     
 public:
-    Method(String name, ParamList params, CallableType methodType, bool requiresReturn = false, bool isStatic = false);
+    Method(String name, ParamList params, CallableType InvocableType, bool requiresReturn = false, bool isStatic = false);
     void setAccessor(String access);
     String getAccessor();
 

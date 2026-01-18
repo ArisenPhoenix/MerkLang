@@ -40,12 +40,12 @@ public:
 class MethodDef : public CallableDef {
 protected:
     String accessor;
-    CallableType methodType = CallableType::DEF;
+    CallableType InvocableType = CallableType::DEF;
     SharedPtr<Scope> classScope;
     Vector<Chain*> nonStaticElements;
 public:
     // Constructor: Force the FunctionType to METHOD.
-    MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, CallableType methodType, SharedPtr<Scope> scope);
+    MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, CallableType InvocableType, SharedPtr<Scope> scope);
     MethodDef(UniquePtr<FunctionDef> funcDef);
     ~MethodDef();
 

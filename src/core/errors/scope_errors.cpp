@@ -35,8 +35,8 @@ String ParentScopeNotFoundError::errorHint() const {
 
     
     
-VariableNotFoundError::VariableNotFoundError(const String& variableName)
-    : ScopeError("Variable '" + variableName + "' not found in any accessible scope.") {}
+VariableNotFoundError::VariableNotFoundError(const String& variableName, const String& context)
+    : ScopeError("Variable '" + variableName + "' not found in any accessible scope. \n" + context) {}
 
 String VariableNotFoundError::errorPrefix() const {
     return highlight("VariableNotFoundError: ", Colors::red);

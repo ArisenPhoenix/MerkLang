@@ -181,7 +181,12 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
         auto& var = scope->getVariable(name);
         if (var.isFunctionNode()) {
             auto funcNode = var.toFunctionNode();
-            optSig = funcNode.getFunction(name, callArgs);
+            auto opt = funcNode.getFunction(name, callArgs, scope);
+            if (opt.has_value()) {
+                optSig = opt.value();
+            } else {
+                throw MerkError("Could Not Determine Overload for function " + name);
+            }
         }
         
         // throw MerkError("Got FuncSigOpts");

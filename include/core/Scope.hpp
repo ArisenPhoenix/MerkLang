@@ -4,8 +4,11 @@
 #include "core/registry/Context.hpp"
 #include "core/registry/FunctionRegistry.hpp"
 #include "core/registry/ClassRegistry.hpp"
-#include "core/registry/TypeRegistry.hpp"
-#include "core/types/Type.hpp"
+#include "core/registry/TypeRegistry_NEW.hpp"
+#include "core/registry/TypeSignatureRegistry.hpp"
+#include "core/registry/TypeSignatureRegistryManager.hpp"
+
+#
 using ScopeCache = std::unordered_map<String, Scope>; 
 
 
@@ -70,7 +73,7 @@ public:
     // Constructor
     explicit Scope(int scopeLevel, bool interpretMode, bool isRoot = false);
     explicit Scope(WeakPtr<Scope> parentScope = WeakPtr<Scope>(), bool interpretMode = false);
-    explicit Scope(SharedPtr<Scope> parentScope, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, bool interpreMode);
+    explicit Scope(SharedPtr<Scope> parentScope, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, SharedPtr<TypeRegistry> globalT, bool interpreMode);
 
     // // DESTRUCTOR
     ~Scope();
@@ -80,11 +83,12 @@ public:
     SharedPtr<FunctionRegistry>  globalFunctions;
     SharedPtr<ClassRegistry>     globalClasses;
     SharedPtr<TypeRegistry>      globalTypes;
+    SharedPtr<TypeSignatureRegistryManager> globalTypeSigs;
     
     // // Local Storage
     FunctionRegistry localFunctions;
     ClassRegistry localClasses;
-    TypeRegistry  localTypes;
+    TypeSignatureRegistry localTypes;
     
 
     ClassMembers getClassMembers() const;
@@ -113,6 +117,7 @@ public:
 
     // Context Management
     const Context& getContext() const { return context; }
+    Context& getContextWith(const String& varName);
     Context& getContext() { return context; }
     const Context& getAllVariables(Context& callingContext) const;
 
@@ -123,13 +128,22 @@ public:
     VarNode& getVariable(const String& name);
     void printContext(int depth = 0) const;
 
+    void linkTypes();
+
 
     // void handleFunctionRegistration(String funcMethName, SharedPtr<CallableSignature> funcMeth);
     SharedPtr<CallableSignature> handleLookupFunction(String& name, const ArgumentList& args) const;
+
+    // Type-aware overload resolution lives at the Scope level.
+    std::optional<SharedPtr<CallableSignature>> resolveFunctionOverload(
+        const String& name,
+        const ArgumentList& args,
+        const TypeMatchOptions& opt = {}
+    );
     
     //// Registry Management
     //// Function Management
-    std::optional<SharedPtr<CallableSignature>> lookupFunction(const String& name, const ArgumentList& args) const;
+    // Legacy (arg-based) lookup removed: use resolveFunctionOverload instead.
     std::optional<Vector<SharedPtr<CallableSignature>>> lookupFunction(const String& name) const;
 
     const SharedPtr<FunctionRegistry> getFunctionRegistry() const;
@@ -198,17 +212,25 @@ public:
     void registerPrimitiveType(NodeValueType);
     void registerNamedType(String&);
 
-
+    
 
     
     ScopeCounts getCounts();
     void validateNoCycles(SharedPtr<Scope> childScope);
+
+    // Type signature lookup is scope-aware.
+    // - Built-in/"global" nominal types come from globalTypes.
+    // - User-defined/aliased type signatures live in localTypes and parent scopes.
+    std::optional<TypeSignatureId> lookupTypeSigName(const String& name);
+
+    TypeSignatureId inferSigFromNode(const Node& n, TypeSignatureRegistry& reg);
 private:
     void setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration);
     Vector<SharedPtr<Scope>> childScopes;      // List containing child scopes of (this) scope
     Context context;                           // The context for variable management
 
     bool interpretMode;
+    void initRootTypes();
     // bool isRoot;
 };
 

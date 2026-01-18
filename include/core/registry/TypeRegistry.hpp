@@ -1,101 +1,39 @@
 #pragma once
+#include <unordered_map>
+#include <vector>
 
-#include "core/types/Type.hpp"
-
-
-// --------------------
-// TypeSignature facade
-// --------------------
-
-class TypeSignature {
-public:
-    TypeSignatureId id() const;
-    TypeSigKind kind() const;
-    const String& name() const;
-    String toString() const;
-
-    TypeMatchResult matchValue(
-        const Node&,
-        const TypeRegistry&,
-        const TypeMatchOptions& opt = {}
-    ) const;
-
-    TypeMatchResult matchCall(
-        const ArgumentList&,
-        const TypeRegistry&,
-        const TypeMatchOptions& opt = {}
-    ) const;
-
-    TypeSignature(TypeSignatureId id, String name, SharedPtr<TypeBase> t);
-private:
-    friend class TypeRegistry;
-
-    TypeSignatureId id_;
-    String name_;
-    SharedPtr<TypeBase> type_;
-
-    
-};
-
-// --------------------
-// Registry
-// --------------------
+#include "core/types/TypeIds.hpp"
+#include "core/TypesFWD.hpp" // String, Vector, NodeValueType
 
 class TypeRegistry {
 public:
     TypeRegistry();
-    static TypeRegistry& global();
 
-    TypeSignatureId any();
-    TypeSignatureId primitive(NodeValueType prim);
-    TypeSignatureId classType(const String& className);
-    TypeSignatureId methodType(MethodType m);
-    TypeSignatureId unite(Vector<TypeSignatureId> members);
-    TypeSignatureId container(const String& base, Vector<TypeSignatureId> args);
+    // Nominal identity
+    TypeId getOrCreate(const String& name);
+    TypeId lookupOrInvalid(const String& name) const;
+    const String& nameOf(TypeId id) const;
 
-    const TypeSignature& get(TypeSignatureId id) const;
+    // Primitives
+    TypeId primitiveId(NodeValueType t) const;
 
-    void bindName(const String& name, TypeSignatureId id);
-    std::optional<TypeSignatureId> lookupName(const String& name) const;
+    // Convenience (optional)
+    TypeId anyId() const { return anyId_; }
+    TypeId listId() const { return listId_; }
+    TypeId dictId() const { return dictId_; }
 
-    TypeSignatureId bindResolvedType(const ResolvedType& rt, Scope& scope);
-
-    TypeMatchResult matchValue(
-        TypeSignatureId expected,
-        const Node& v,
-        const TypeMatchOptions& opt = {}
-    ) const;
-
-    TypeMatchResult matchCall(
-        TypeSignatureId sigId,
-        const ArgumentList& args,
-        const TypeMatchOptions& opt = {}
-    ) const;
-
-    static bool isNumeric(NodeValueType t);
-    static int numericRank(NodeValueType t);
-    String toString(TypeSignatureId id) const;
 private:
-    struct Key {
-        TypeSigKind kind = TypeSigKind::Any;
-        NodeValueType prim = NodeValueType::Any;
-        String name;
-        Vector<TypeSignatureId> kids;
-        Vector<uint8_t> enforced;
-        TypeSignatureId ret = 0;
-        bool variadic = false;
-        bool retEnforced = false;
+    std::unordered_map<String, TypeId> nameToId_;
+    Vector<String> idToName_;
+    TypeId nextId_ = 1;
 
-        bool operator==(const Key& o) const;
-    };
+    TypeId anyId_  = kInvalidTypeId;
+    TypeId listId_ = kInvalidTypeId;
+    TypeId dictId_ = kInvalidTypeId;
+    TypeId setId_  = kInvalidTypeId;
+    TypeId arrId_   = kInvalidTypeId;
 
-    struct KeyHash {
-        size_t operator()(const Key& k) const;
-    };
-
-    TypeSignatureId intern(const Key& key, SharedPtr<TypeBase> node, String displayName);
-
-    Vector<TypeSignature> pool_;
-    std::unordered_map<Key, TypeSignatureId, KeyHash> intern_;
-    std::unordered_map<String, TypeSignatureId> nameToId_;
+    TypeId httpId_ = kInvalidTypeId;
+    TypeId fileId_ = kInvalidTypeId;
+    void seedBase();
 };

@@ -174,6 +174,10 @@ Node VariableDeclaration::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shar
     return val;
 }
 
+DataTypeFlags VariableDeclaration::getVariableMeta() {
+    return variableMeta;
+}
+
 Node VariableAssignment::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::HIGH);
 

@@ -47,7 +47,7 @@ void Context::updateVariable(const String& name, const Node& newValue) {
     auto it = variables.find(name);
     if (it == variables.end()) {
         DEBUG_LOG(LogLevel::ERROR, "From Context");
-        throw VariableNotFoundError(name);
+        throw VariableNotFoundError(name, "Context::updateVariable");
     }
     // throw MerkError("Variable " + name  + " found ");
     VarNode& currentVar = *(it->second);
@@ -119,7 +119,7 @@ void Context::debugPrint() const {
         if (value) {
             // debugLog(true, "      ", name, " = ", value->toString()); // Dereference pointer
              String string = value->toString();
-             string = string.substr(0, string.size() > 100 ? 100 : string.size());
+             string = string.substr(0, string.size() > 300 ? 300 : string.size()) + " ...";
              debugLog(true, "      ", name, " = ", string);
         } else {
             debugLog(true, "      ", name, " = ", "[null]");

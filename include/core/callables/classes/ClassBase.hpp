@@ -114,7 +114,7 @@ public:
 
     virtual void declareField(const String& name, const Node& val);             // probably only used in dynamic construction of a class
     virtual void declareField(const String& name, const VarNode& val);             // probably only used in dynamic construction of a class
-
+    virtual void declareField(const String& fieldName, DataTypeFlags varMeta, const ASTStatement *valueNode);
     virtual void updateField(const String& name, Node val) const;                 // most commonly used
     VariantType getValue() const override;
     SharedPtr<Scope> getInstanceScope();

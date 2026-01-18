@@ -44,19 +44,22 @@ SharedPtr<Scope> Scope::getRoot() {
 SharedPtr<Scope> Scope::clone(bool strict) const {
     SharedPtr<Scope> newScope;
     if (auto parent = parentScope.lock()) {
-        newScope = makeShared<Scope>(parent, globalFunctions, globalClasses, interpretMode);
+        newScope = makeShared<Scope>(parent, globalFunctions, globalClasses, globalTypes, interpretMode);
     } else {
         if (strict) { throw ParentScopeNotFoundError(); }
 
         newScope = makeShared<Scope>(0, interpretMode);
         newScope->globalClasses = globalClasses;
         newScope->globalFunctions = globalFunctions;
+        newScope->globalTypes = globalTypes;
     }
 
     newScope->context = context.clone();
 
     newScope->localFunctions = this->localFunctions.clone();
     newScope->localClasses = this->localClasses.clone();
+    newScope->localTypes = this->localTypes;
+
     newScope->isClonedScope  = true;
     includeMetaData(newScope, isDetached);
 
@@ -212,3 +215,63 @@ void Scope::setParent(SharedPtr<Scope> scope) {
 
 
 
+std::optional<TypeSignatureId> Scope::lookupTypeSigName(const String& name) {
+    // Ensure TSR attached
+    if (!localTypes.isAttached()) {
+        if (!globalTypeSigs) throw MerkError("Scope::lookupTypeSigName: globalTypeSigs is null");
+        localTypes.attach(*globalTypeSigs);
+    }
+
+    // 1) Local aliases first (shadowing)
+    if (auto local = localTypes.lookupName(name)) return local;
+
+    // 2) If the name is a nominal type in globalTypes, return its nominal signature
+    if (globalTypes) {
+        TypeId tid = globalTypes->lookupOrInvalid(name);
+        if (tid != kInvalidTypeId) {
+            return localTypes.nominal(tid); // forwards to manager
+        }
+    }
+
+    // 3) Parent chain
+    if (auto parent = parentScope.lock()) {
+        return parent->lookupTypeSigName(name);
+    }
+
+    return std::nullopt;
+}
+
+
+
+TypeSignatureId Scope::inferSigFromNode(const Node& n, TypeSignatureRegistry& reg) {
+    // FIRST: instances
+
+    if (n.isNull()) {return reg.any();}
+    if (n.isInstance()) {
+        auto inst = n.toInstance();
+        if (inst) {
+            const String& cn = inst->getName();  // whatever yours is
+            // Treat list/dict as containers if they are native classes
+            if (cn == "List") return reg.container("List", { reg.any() });
+            if (cn == "Dict") return reg.container("Dict", { reg.any(), reg.any() });
+            return reg.classType(cn);
+        }
+        return reg.any();
+    }
+
+    // SECOND: direct container nodes (if any)
+    if (n.isList()) return reg.container("List", { reg.any() });
+    if (n.isDict()) return reg.container("Dict", { reg.any(), reg.any() });
+
+    // LAST: primitives by actual runtime node type
+    switch (n.getType()) {
+        case NodeValueType::Bool:
+        case NodeValueType::Int:
+        case NodeValueType::Float:
+        case NodeValueType::Double:
+        case NodeValueType::String:
+            return reg.primitive(n.getType());
+        default:
+            return reg.any();
+    }
+}

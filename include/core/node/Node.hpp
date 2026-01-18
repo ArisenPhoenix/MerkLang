@@ -1,5 +1,4 @@
-#ifndef NODE_H
-#define NODE_H
+#pragma once
 
 #include <string>
 #include <stdexcept>
@@ -34,7 +33,7 @@ using TypeRef = SharedPtr<const TypeNode>;
 
 //     size_t hash() const; // include declaredType hash (or pointer)
 // };
-
+using TypeSignatureId = uint32_t;
 
 struct DataTypeFlags {
     bool isConst = false;
@@ -42,6 +41,17 @@ struct DataTypeFlags {
     bool isStatic = false;
     NodeValueType type = NodeValueType::Any;
     mutable ResolvedType fullType;
+    TypeSignatureId declaredSig = kInvalidTypeSignatureId; // canonical declared type
+    TypeSignatureId inferredSig = kInvalidTypeSignatureId; // optional: what it became at runtime
+    DataTypeFlags& mergeVarMetaFromDecl(const DataTypeFlags& decl);
+
+    // Apply *runtime identity* based on an evaluated value node.
+    // This should be used for valueNode.flags, not for VarNode.varFlags.
+    DataTypeFlags& applyRuntimeIdentityFromValue(const DataTypeFlags& valueFlags);
+
+    // Optional convenience: only apply the variable name without touching anything else.
+    DataTypeFlags& applyDeclName(const String& n, const String& k = "");
+
     bool isCallable = false;
     bool isInstance = false;
     mutable String name = "";
@@ -54,6 +64,8 @@ struct DataTypeFlags {
     DataTypeFlags(bool isConst, bool isMutable, bool isStatic, ResolvedType type);
 
     DataTypeFlags(String& thisName, bool isConst, bool isMutable, bool isStatic, ResolvedType type);
+
+    DataTypeFlags declarationMerge(DataTypeFlags);
 
     String toString() const;
 
@@ -136,7 +148,8 @@ public:
 
     void setFlags(DataTypeFlags newOnes);
     virtual std::size_t hash() const;
-
+    virtual std::size_t strictHash() const;
+    
 };
 
 
@@ -274,6 +287,7 @@ public:
     String getTypeAsString() const;
 
     virtual std::size_t hash() const;
+    virtual std::size_t strictHash() const;
     void setFlags(DataTypeFlags);
     
     friend std::ostream& operator<<(std::ostream& os, const Node& node);
@@ -664,8 +678,8 @@ public:
     static SharedPtr<NodeBase> applyGt(const NodeBase& lhs, const NodeBase& rhs);
     static SharedPtr<NodeBase> applyLe(const NodeBase& lhs, const NodeBase& rhs);
     static SharedPtr<NodeBase> applyGe(const NodeBase& lhs, const NodeBase& rhs);
-
-
+    static void validateMutability(const NodeBase&);
+    static void validateMutability(const Node&);
 
 
     DynamicNode();
@@ -776,6 +790,8 @@ public:
 
     void setValue(Node other) override;
 
+    DataTypeFlags getVarFlags();
+
     bool getIsMutable() override;
     bool getIsStatic() override;
     bool getIsConst() override;
@@ -816,7 +832,6 @@ public:
 
 
 
-#endif // NODE_H  
 
 
 

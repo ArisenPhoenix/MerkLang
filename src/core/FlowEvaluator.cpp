@@ -31,62 +31,62 @@
 #include "core/helpers/class_helpers.h"
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/Method.hpp"
-#include "core/types/Type.hpp"
 
-namespace {
 
-// Keep this if you still use it elsewhere
-enum class Operator {
-    Equals,
-    NotEquals,
-    LessThan,
-    GreaterThan,
-    LessThanOrEquals,
-    GreaterThanOrEquals,
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Modulo,
-    Invalid
-};
+// namespace {
 
-Operator stringToOperator(const String& op) {
-    static const std::unordered_map<String, Operator> operatorMap = {
-        {"==", Operator::Equals},
-        {"!=", Operator::NotEquals},
-        {"<",  Operator::LessThan},
-        {">",  Operator::GreaterThan},
-        {"<=", Operator::LessThanOrEquals},
-        {">=", Operator::GreaterThanOrEquals},
-        {"+",  Operator::Plus},
-        {"-",  Operator::Minus},
-        {"*",  Operator::Multiply},
-        {"/",  Operator::Divide},
-        {"%",  Operator::Modulo}
-    };
+// // Keep this if you still use it elsewhere
+// enum class Operator {
+//     Equals,
+//     NotEquals,
+//     LessThan,
+//     GreaterThan,
+//     LessThanOrEquals,
+//     GreaterThanOrEquals,
+//     Plus,
+//     Minus,
+//     Multiply,
+//     Divide,
+//     Modulo,
+//     Invalid
+// };
 
-    auto it = operatorMap.find(op);
-    return (it != operatorMap.end()) ? it->second : Operator::Invalid;
-}
+// Operator stringToOperator(const String& op) {
+//     static const std::unordered_map<String, Operator> operatorMap = {
+//         {"==", Operator::Equals},
+//         {"!=", Operator::NotEquals},
+//         {"<",  Operator::LessThan},
+//         {">",  Operator::GreaterThan},
+//         {"<=", Operator::LessThanOrEquals},
+//         {">=", Operator::GreaterThanOrEquals},
+//         {"+",  Operator::Plus},
+//         {"-",  Operator::Minus},
+//         {"*",  Operator::Multiply},
+//         {"/",  Operator::Divide},
+//         {"%",  Operator::Modulo}
+//     };
 
-bool isDebug = Debugger::getInstance().getLogLevel() == LogLevel::DEBUG;
+//     auto it = operatorMap.find(op);
+//     return (it != operatorMap.end()) ? it->second : Operator::Invalid;
+// }
 
-void evaluatingFor(const String& value, const String& methodName, int scopeLevel = -2) {
-    MARK_UNUSED_MULTI(value, methodName);
-    if (!isDebug) return;
-    String level = (scopeLevel > -2) ? std::to_string(scopeLevel) : "[NOT USED]";
-    DEBUG_LOG(LogLevel::INFO, "DEBUG Evaluator: Evaluating ", methodName, " for ", value, ", scopeLevel: ", level);
-}
+// bool isDebug = Debugger::getInstance().getLogLevel() == LogLevel::DEBUG;
 
-void evaluatingFor(const Node& value, const String& methodName, int scopeLevel = -2) {
-    MARK_UNUSED_MULTI(value, methodName, scopeLevel);
-    if (!isDebug) return;
-    String level = (scopeLevel > -2) ? std::to_string(scopeLevel) : "[NOT USED]";
-    DEBUG_LOG(LogLevel::INFO, "DEBUG Evaluator: Evaluating ", methodName, " for ", value, ", scopeLevel: ", level);
-}
+// void evaluatingFor(const String& value, const String& methodName, int scopeLevel = -2) {
+//     MARK_UNUSED_MULTI(value, methodName);
+//     if (!isDebug) return;
+//     String level = (scopeLevel > -2) ? std::to_string(scopeLevel) : "[NOT USED]";
+//     DEBUG_LOG(LogLevel::INFO, "DEBUG Evaluator: Evaluating ", methodName, " for ", value, ", scopeLevel: ", level);
+// }
 
-} // namespace
+// void evaluatingFor(const Node& value, const String& methodName, int scopeLevel = -2) {
+//     MARK_UNUSED_MULTI(value, methodName, scopeLevel);
+//     if (!isDebug) return;
+//     String level = (scopeLevel > -2) ? std::to_string(scopeLevel) : "[NOT USED]";
+//     DEBUG_LOG(LogLevel::INFO, "DEBUG Evaluator: Evaluating ", methodName, " for ", value, ", scopeLevel: ", level);
+// }
+
+// } // namespace
 
 namespace FlowEvaluator {
 
@@ -114,10 +114,11 @@ EvalResult evaluateVariableDeclaration(String& name,
 
     String varName = name;
     if (varName.empty()) throw MerkError("VarName is empty in evaluateVariableDeclaration");
-
+    auto& tr = scope->localTypes;
+    varMeta.declaredSig = tr.bindResolvedType(varMeta.fullType, *scope);
     Node resolved = valueNode->evaluate(scope, instanceNode);
     auto finalVar = makeUnique<VarNode>(resolved, varMeta);
-
+    auto returnVal =  finalVar->getValueNode();
     // Same rule you had: if assigning to a member name, go to instance scope
     if (usingInstanceScope && instanceScope && instanceScope->hasMember(varName)) {
         instanceScope->declareVariable(varName, std::move(finalVar));
@@ -126,7 +127,7 @@ EvalResult evaluateVariableDeclaration(String& name,
     }
 
     DEBUG_FLOW_EXIT();
-    return EvalResult::Normal(Node()); // declarations don't yield meaningful value (Merk style)
+    return EvalResult::Normal(returnVal);
 }
 
 EvalResult evaluateVariableAssignment(String name,
@@ -178,8 +179,8 @@ EvalResult evaluateBinaryOperation(const String& op,
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!scope) throw MerkError("evaluateBinaryOperation: scope is null");
 
-    evaluatingFor(leftValue, "evaluateBinaryOperation", scope->getScopeLevel());
-    evaluatingFor(rightValue, "evaluateBinaryOperation", scope->getScopeLevel());
+    // evaluatingFor(leftValue, "evaluateBinaryOperation", scope->getScopeLevel());
+    // evaluatingFor(rightValue, "evaluateBinaryOperation", scope->getScopeLevel());
 
     Node val;
 
@@ -491,8 +492,14 @@ EvalResult evaluateClassCall(SharedPtr<Scope> callScope,
     instance->construct(argValues, instance);
 
     DEBUG_FLOW_EXIT();
-    Node node = ClassInstanceNode(instance);
-    return EvalResult::Normal(std::move(node));
+    Node inst = ClassInstanceNode(instance);
+    inst.getFlags().isInstance = true;
+    inst.getFlags().isCallable = true;                  // if you store instances as Callable
+    inst.getFlags().type = NodeValueType::ClassInstance; // or Callable, but be consistent
+    inst.getFlags().fullType.setBaseType(className);     // "Types"
+    inst.getFlags().inferredSig = callScope->localTypes.classType(className);
+
+    return EvalResult::Normal(std::move(inst));
 }
 
 EvalResult evaluateMethodDef(SharedPtr<Scope> passedScope,

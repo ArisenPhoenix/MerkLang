@@ -12,7 +12,12 @@ SharedPtr<Scope> Scope::makeCallScope() {
     auto c = makeShared<Scope>(shared_from_this(),
                                 globalFunctions,
                                 globalClasses,
+                                globalTypes,
                                 interpretMode);
+    c->globalTypes    = globalTypes;
+    c->globalTypeSigs = globalTypeSigs;
+    c->localTypes.attach(*c->globalTypeSigs);
+
     c->isCallableScope = true;
     c->isDetached = true;
     c->isClonedScope = true;
@@ -28,7 +33,11 @@ SharedPtr<Scope> Scope::makeCallScope() {
 SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::MED);
 
-    auto detached = makeShared<Scope>(shared_from_this(), globalFunctions, globalClasses, interpretMode);
+    auto detached = makeShared<Scope>(shared_from_this(), globalFunctions, globalClasses, globalTypes, interpretMode);
+    detached->globalTypes    = globalTypes;
+    detached->globalTypeSigs = globalTypeSigs;
+    detached->localTypes.attach(*detached->globalTypeSigs);
+
     detached->isDetached = true;
     detached->owner = owner+"(detached)";
     includeMetaData(detached, true);
@@ -48,6 +57,10 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
 SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::NONE);
     auto isolated = makeShared<Scope>(0, interpretMode, false);
+    isolated->globalTypes    = globalTypes;
+    isolated->globalTypeSigs = globalTypeSigs;
+    isolated->localTypes.attach(*isolated->globalTypeSigs);
+
     includeMetaData(isolated, true);
 
     for (const auto& name : freeVarNames) {
@@ -59,6 +72,7 @@ SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNa
             }
         }
     }
+    isolated->globalTypes = globalTypes;
 
     isolated->localFunctions = this->localFunctions;
     isolated->localClasses = this->localClasses;

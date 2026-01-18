@@ -72,6 +72,7 @@ Callable::Callable(String name, ParamList params, CallableType callType, bool re
 }
 
 void Callable::setValue(const VariantType&) {throw MerkError("Cannot Set a Value on Base Callable Class");}
+
 NodeValueType Callable::getType() const {return NodeValueType::Callable;}
 SharedPtr<NodeBase> Callable::clone() { throw MerkError("Cannot Clone Base Callable"); }
 void Callable::clear() {} 
@@ -97,6 +98,8 @@ CallableNode::CallableNode(Vector<SharedPtr<CallableSignature>> callableSigs, St
         {"fullType", "Callable"},
         {"type", callableTypeAsString(callableSigs[0]->getSubType())}
     };
+    auto& flags = getFlags();     // <-- reference
+    flags.merge(instanceSpecificFlags);
 }
 
         
@@ -108,7 +111,7 @@ CallableNode::CallableNode(SharedPtr<Callable> callable, String callableType ) {
         {"fullType", "Callable"},
         {"type", callableTypeAsString(callable->getSubType())}
     };
-    auto flags = getFlags();
+    auto& flags = getFlags();     // <-- reference
     flags.merge(instanceSpecificFlags);
     setValue(callable);
 }
@@ -118,25 +121,34 @@ VariantType CallableNode::getValue() const {return Node::getValue();}
 
 
 CallableNode::CallableNode(SharedPtr<CallableNode> callableNode) {
-    auto instanceSpecificFlags = std::unordered_map<String, String>{
-        {"isCallable", "true"},
-        {"isInstance", "true"},
-        {"name", callableNode->getTypeAsString() + "(" + callableNode->getFlags().name + ")"},
-        {"fullType", "Callable"}
+    // auto instanceSpecificFlags = std::unordered_map<String, String>{
+    //     {"isCallable", "true"},
+    //     {"isInstance", "true"},
+    //     {"name", callableNode->getTypeAsString() + "(" + callableNode->getFlags().name + ")"},
+    //     {"fullType", "Callable"}
+    // };
+
+    auto instanceSpecificFlags = std::unordered_map<String, String> {
+        {"isCallable","true"},
+        {"isInstance","false"},
+        {"fullType","Callable"},
+        {"type", nodeTypeToString(NodeValueType::Callable)} // or NodeValueType::Callable
     };
     // setFlags()
-    auto flags = getFlags();
+    auto& flags = getFlags();     // <-- reference
     flags.merge(instanceSpecificFlags);
-    setFlags(flags);
     setValue(callableNode->getCallable());
     if (getFlags().name.find("Method") != String::npos) {
         throw MerkError("HIT CallableNode::CallableNode(SharedPtr<CallableNode> WITH META: " + getFlags().toString());
     }
 }
 
+bool CallableNode::isInstance() { return getFlags().isInstance; }
+bool CallableNode::isInstance() const { return getFlags().isInstance; }
 
-bool CallableNode::isInstance() { return true; }
-bool CallableNode::isInstance() const { return true; }
+
+// bool CallableNode::isInstance() { return true; }
+// bool CallableNode::isInstance() const { return true; }
 
 SharedPtr<ClassInstance> CallableNode::toInstance() {
     if (isInstance()) {

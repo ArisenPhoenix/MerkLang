@@ -7,6 +7,44 @@
 #include "utilities/debugging_functions.h"
 #include "core/Scope.hpp"
 
+
+// static void stampRuntimeType(Node& n) {
+//     auto& tr = TypeRegistry::global();
+//     auto& f  = n.getFlags();
+
+//     // Always keep these coherent:
+//     if (f.fullType.getBaseType().empty()) {
+//         f.fullType.setBaseType(nodeTypeToString(f.type));
+//     }
+
+//     // Only set inferredSig if it's not set yet (or invalid)
+//     if (f.inferredSig == kInvalidTypeSignatureId) {
+//         const auto base = f.fullType.getBaseType();
+
+//         // If you represent class instances by fullType name:
+//         if (f.isInstance && !base.empty() && base != "Any") {
+//             // If Dict/List are modeled as containers, use bindResolvedType or bindName lookup
+//             if (auto id = tr.lookupName(base)) {
+//                 f.inferredSig = *id;
+//             } else {
+//                 f.inferredSig = tr.classType(base);
+//             }
+//         } else {
+//             // primitives + null + any
+//             switch (f.type) {
+//                 case NodeValueType::Int:    f.inferredSig = tr.primitive(NodeValueType::Int); break;
+//                 case NodeValueType::Float:  f.inferredSig = tr.primitive(NodeValueType::Float); break;
+//                 case NodeValueType::Double: f.inferredSig = tr.primitive(NodeValueType::Double); break;
+//                 case NodeValueType::Bool:   f.inferredSig = tr.primitive(NodeValueType::Bool); break;
+//                 case NodeValueType::String: f.inferredSig = tr.primitive(NodeValueType::String); break;
+//                 case NodeValueType::Null:   f.inferredSig = tr.lookupName("Null").value_or(tr.any()); break; // if you have Null type
+//                 default:                    f.inferredSig = tr.any(); break;
+//             }
+//         }
+//     }
+// }
+
+
 DataTypeFlags::DataTypeFlags() = default;
 
 DataTypeFlags::DataTypeFlags(bool isConst, bool isMutable, bool isStatic, NodeValueType mainType, ResolvedType type) {
@@ -35,6 +73,64 @@ DataTypeFlags::DataTypeFlags(String& thisName, bool isConst, bool isMutable, boo
     if (t != NodeValueType::UNKNOWN) {this->type = t;}
 }
 
+DataTypeFlags& DataTypeFlags::mergeVarMetaFromDecl(const DataTypeFlags& decl) {
+        // name/key are optional; depends on how you use them
+        if (!decl.name.empty()) name = decl.name;
+        if (!decl.key.empty())  key  = decl.key;
+
+        // These three are "var properties" (but see note below about tri-state)
+        // If you have tri-state, replace these with "if (decl.hasConst) ..."
+        isConst   = decl.isConst;
+        isMutable = decl.isMutable;
+        isStatic  = decl.isStatic;
+
+        // Declared typing constraints belong here
+        if (decl.declaredSig != kInvalidTypeSignatureId) declaredSig = decl.declaredSig;
+        if (decl.inferredSig != kInvalidTypeSignatureId) inferredSig = decl.inferredSig;
+
+        // If you use fullType as the declared type constraint, copy it
+        const auto& b = decl.fullType.getBaseType();
+        if (!b.empty() && b != "Any") {
+            fullType = decl.fullType;
+        }
+
+        // Intentionally DO NOT copy:
+        // - isInstance/isCallable (runtime identity)
+        // - type (NodeValueType) if you treat it as runtime category
+        // - fullType if decl is Any/empty
+        return *this;
+    }
+
+// Apply *runtime identity* based on an evaluated value node.
+// This should be used for valueNode.flags, not for VarNode.varFlags.
+DataTypeFlags& DataTypeFlags::applyRuntimeIdentityFromValue(const DataTypeFlags& valueFlags) {
+    // Runtime identity
+    isInstance = valueFlags.isInstance;
+    isCallable = valueFlags.isCallable;
+
+    // Runtime category (NodeValueType)
+    type = valueFlags.type;
+
+    // Runtime fullType (if you track it on values)
+    if (!valueFlags.fullType.getBaseType().empty()) {
+        fullType = valueFlags.fullType;
+    }
+
+    // Optionally propagate debug/name info (usually fine)
+    if (!valueFlags.name.empty()) name = valueFlags.name;
+    if (!valueFlags.key.empty())  key  = valueFlags.key;
+
+    // Intentionally DO NOT copy declaredSig/inferredSig/isConst/isMutable/isStatic
+    // Those are var-level constraints, not runtime identity.
+    return *this;
+}
+
+// Optional convenience: only apply the variable name without touching anything else.
+DataTypeFlags& DataTypeFlags::applyDeclName(const String& n, const String& k) {
+    if (!n.empty()) name = n;
+    if (!k.empty()) key = k;
+    return *this;
+}
 String DataTypeFlags::toString() const {
     std::ostringstream oss;
     oss << "--> Flags (" << (isConst ? " isConst" : "") << (isMutable ? " isMutable," : "") << (isStatic ? " isStatic" : "") << " ) ";
@@ -54,6 +150,8 @@ DataTypeFlags DataTypeFlags::merge(DataTypeFlags other) {
     fullType = other.fullType;
     isCallable = other.isCallable;
     isInstance = other.isInstance;
+    declaredSig = other.declaredSig;   // <-- add
+    inferredSig = other.inferredSig;   // <-- add
     return *this;
 }
 
@@ -113,22 +211,42 @@ DynamicNode::DynamicNode(SharedPtr<NodeBase> val) { value = val->getValue(); }
 DynamicNode::DynamicNode(const VariantType val) { value = val; }
 
 DynamicNode DynamicNode::fromVariant(VariantType v) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
-    auto node = DynamicNode();
-    node.flags.type = NodeValueType::Any; 
-    
+    DynamicNode node;
     node.value = v;
-    DEBUG_FLOW_EXIT();
+
+    auto t = DynamicNode::getTypeFromValue(v);
+    node.flags.type = t;
+    node.flags.fullType.setBaseType(nodeTypeToString(t));
+    node.flags.isInstance = (t == NodeValueType::ClassInstance); // if that’s your rule
+    node.flags.isCallable = (t == NodeValueType::Callable);
+
     return node;
 }
 
-DynamicNode::DynamicNode(const NodeBase& dyn): value(dyn.getValue()) {DEBUG_FLOW(FlowLevel::PERMISSIVE); flags.type = NodeValueType::Any; DEBUG_FLOW_EXIT();}
+DynamicNode::DynamicNode(Node& node)
+  : value(node.getValue())
+{
+    flags = node.getFlags();  // preserve runtime identity
+}
 
-DynamicNode::DynamicNode(NodeBase&& dyn): value(dyn.getValue()) {DEBUG_FLOW(FlowLevel::PERMISSIVE); flags.type = NodeValueType::Any; DEBUG_FLOW_EXIT();}
+DynamicNode::DynamicNode(const Node& node)
+  : value(node.getValue())
+{
+    flags = node.getFlags();
+}
 
-DynamicNode::DynamicNode(Node& node): value(node.getValue()) {DEBUG_FLOW(FlowLevel::PERMISSIVE); flags.type = NodeValueType::Any; DEBUG_FLOW_EXIT();}
+DynamicNode::DynamicNode(const NodeBase& dyn)
+  : value(dyn.getValue())
+{
+    flags = dyn.flags;  // assuming NodeBase stores flags
+}
 
-DynamicNode::DynamicNode(const Node& node): value(node.getValue()) {DEBUG_FLOW(FlowLevel::PERMISSIVE); flags.type = NodeValueType::Any; DEBUG_FLOW_EXIT(); }
+DynamicNode::DynamicNode(NodeBase&& dyn)
+  : value(dyn.getValue())
+{
+    flags = dyn.flags;
+}
+
 
 void DynamicNode::clear() {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue()) && flags.isInstance) {
@@ -239,7 +357,7 @@ VarNode::VarNode(Node node, bool isC, bool isMut, ResolvedType t, bool isStatic)
     valueNode.getFlags().merge({{"isMutable", varFlags.isMutable ? "true" : "false"}});
     // valueNode.setFlags(varFlags);
     if (varFlags.type != NodeValueType::Any && valueNode.getType() != varFlags.type) {
-        throw TypeMismatchError(t.getBaseType(), nodeTypeToString(valueNode.getType()));
+        throw TypeMismatchError(t.getBaseType(), nodeTypeToString(valueNode.getType()), "(Node node, bool isC, bool isMut, ResolvedType t, bool isStatic)");
     }
     DEBUG_FLOW_EXIT();
 }
@@ -254,7 +372,7 @@ UniquePtr<VarNode> VarNode::uniqClone() {
     uniqCloned->varFlags = varFlags;
     auto type = DynamicNode::getTypeFromValue(valueNode.getValue());
     auto isTarget = (type == NodeValueType::Dict || type == NodeValueType::Callable || type == NodeValueType::DataStructure || type == NodeValueType::List || type == NodeValueType::ClassInstance);
-    
+    (void) isTarget;
     // if (!oldValue.isNative() && !oldValue.isInstance() && isTarget && uniqCloned->valueNode == valueNode) {
     //     String isDynamic = " isn't dynamic";
     //     if (dynamic_cast<DynamicNode*>(oldValue.getInner().get())) {
@@ -307,6 +425,7 @@ VarNode::VarNode(Node defaultValue, bool isConst, bool isStatic, bool isMutable)
 }
 
 void printTypeComparison(Node& startingValue, DataTypeFlags flags) {
+    MARK_UNUSED_MULTI(startingValue, flags);
         DEBUG_LOG(LogLevel::PERMISSIVE, 
         "\nValue Name: ", startingValue.getFlags().name,
         "\nValue: ", startingValue.toString(), 
@@ -329,55 +448,116 @@ void validateTypes(NodeValueType defType, Node& startValue) {
     }
 }
 
-VarNode::VarNode(Node startingValue, DataTypeFlags flags) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    auto definedType = flags.type;
-    // validateTypes(definedType, startingValue);
-    staticType = nodeTypeToString(flags.type);
 
+static bool matchesPrimitive(const Node& v, const String& t) {
+    if (t=="String") return v.isString();
+    if (t=="Char")   return v.isChars();
+    if (t=="Float")  return v.isFloat();
+    if (t=="Double") return v.isDouble();
+    if (t=="Long")   return v.isDouble();
+    if (t=="Number") return v.isInt() || v.isDouble() || v.isFloat();
+    if (t=="Int")    return v.isInt();
+    if (t=="Bool")   return v.isBool();
+    if (t=="Null")   return v.isNull();
+    if (t=="None")   return v.isNull();
+    return false;
+}
+
+static bool isPrimitiveAnnotation(const String& t) {
+    return t=="String" || t=="Char" || t=="Number" ||
+           t=="Int" || t=="Bool" || t=="Float" || t=="Double" || t=="Long" ||
+           t=="Null" || t=="None";
+}
+
+
+void stringBasedValidation(Node& valueNode, DataTypeFlags& varFlags) {
+    const String expectedName = varFlags.fullType.getBaseType();
+    if (!expectedName.empty() && expectedName != "Any") {
+
+        if (isPrimitiveAnnotation(expectedName)) {
+            if (!matchesPrimitive(valueNode, expectedName)) {
+                throw TypeMismatchError(expectedName, valueNode.getTypeAsString(), "VarNode::VarNode -> stringBasedValidation 1");
+            }
+            return;
+        }
+
+        // Nominal (classes, including Dict/List/Set/Array)
+        if (!valueNode.getFlags().isInstance) {
+            throw TypeMismatchError(expectedName, "<not an instance>", "VarNode::VarNode -> stringBasedValidation 2");
+        }
+
+        const String gotName = valueNode.getFlags().fullType.getBaseType();
+        if (gotName.empty()) {
+            throw TypeMismatchError(expectedName, "<unknown instance type>", "VarNode::VarNode -> stringBasedValidation 3");
+        }
+
+        if (gotName != expectedName) {
+            throw TypeMismatchError(expectedName, gotName, "VarNode::VarNode -> stringBasedValidation 4");
+        }
+    }
+
+}
+
+void typeIdBasedValidation(Node& startingValue, DataTypeFlags& varFlags) {
+    if (varFlags.declaredSig != kInvalidTypeSignatureId) {
+    // Enforce only if not Any (you need a way to compare to Any without registry;
+    // easiest is: if fullType.base != "Any" as your signal)
+    }
+
+    if (!varFlags.fullType.getBaseType().empty() && varFlags.fullType.getBaseType() != "Any") {
+        // Here we assume evaluateVariableDeclaration already set startingValue.flags.inferredSig
+        if (startingValue.getFlags().inferredSig == kInvalidTypeSignatureId) {
+            throw MerkError("VarNode: inferredSig missing on startingValue -> typeIdBasedValidation 1");
+        }
+
+        // Strict equality of sig ids is ok for nominal types in your current system
+        if (startingValue.getFlags().inferredSig != varFlags.declaredSig) {
+            throw TypeMismatchError(
+                varFlags.fullType.getBaseType(),
+                "<sig " + std::to_string(startingValue.getFlags().inferredSig) + ">",
+                "VarNode::VarNode -> typeIdBasedValidation 2"
+            );
+        }
+    }
+}
+
+
+VarNode::VarNode(Node startingValue, DataTypeFlags declFlags) {
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    DEBUG_LOG(LogLevel::DEBUG,
+        "VarNode ctor: decl.fullBase=", declFlags.fullType.getBaseType(),
+        " declSig=", declFlags.declaredSig,
+        " start.base=", startingValue.getFlags().fullType.getBaseType(),
+        " start.isInst=", startingValue.isInstance(),
+        " start.type=", startingValue.getTypeAsString(),
+        " start.inferredSig=", startingValue.getFlags().inferredSig
+    );
 
     if (!startingValue.getFlags().isMutable) {
-        // auto cloned = startingValue.clone();
-        // if (startingValue.isInstance() && !cloned.isInstance()) {
-        //     valueNode = cloned;
-        //     // valueNode.getFlags().merge({{"isInstance", "true"},{"name", varFlags.name}, {"isMutable", flags.isMutable ? "true" : "false"}, {"isConst", flags.isConst ? "true" : "false"}, {"type", nodeTypeToString(flags.type)}, {"fullType", flags.fullType.getBaseType()}});
-        // }
-        // else {
-        //     valueNode = cloned;
-        // }
         valueNode = startingValue.clone();
-        
-        
+        valueNode.getFlags().applyRuntimeIdentityFromValue(startingValue.getFlags());
     } else {
         valueNode = startingValue;
     }
+
+    if (valueNode.isNull() && !valueNode.isValid()) {
+        throw MerkError("Set VarNode to Null Value");
+    }
+
+    varFlags = DataTypeFlags{};
+    varFlags.mergeVarMetaFromDecl(declFlags);
+
     
-    if (valueNode.isNull() && !valueNode.isValid()) {throw MerkError("Set VarNode to Null Value");}  
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Starting Value BEFORE Merge");
-    printTypeComparison(startingValue, flags);
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ValueNode Value BEFORE Merge");
-    printTypeComparison(valueNode, flags);
-    
-    valueNode.getFlags().merge({
-        {"name", varFlags.name.size() > 0 ? varFlags.name : flags.name}, 
-        {"type", nodeTypeToString(flags.type)}, 
-        {"fullType", flags.fullType.getBaseType()},
-        {"isInstance", (startingValue.isInstance() ? "true" : "false")}, 
-        {"isMutable", flags.isMutable ? "true" : "false"}, 
-        {"isConst", flags.isConst ? "true" : "false"}
-    });
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Starting Value AFTER Merge");
-    printTypeComparison(startingValue, flags);
-
-    DEBUG_LOG(LogLevel::PERMISSIVE, "ValueNode Value AFTER Merge");
-    printTypeComparison(valueNode, flags);
-
-    // throw MerkError("Entered: VarNode::VarNode(Node startingValue, DataTypeFlags flags)");
+    if (!declFlags.name.empty()) {
+        varFlags.applyDeclName(declFlags.name, declFlags.key);
+        valueNode.getFlags().applyDeclName(declFlags.name, declFlags.key);
+    }
+    // typeIdBasedValidation(startingValue, varFlags);
+    stringBasedValidation(valueNode, varFlags);
     DEBUG_FLOW_EXIT();
 }
+
 
 VarNode::VarNode(VariantType value, bool isConst, bool isStatic, bool isMutable) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
@@ -521,13 +701,25 @@ Node::Node(SharedPtr<ArrayNode> v) {
     // throw MerkError("No Instance Associated With DictNode");
 }
 
+// Node::Node(SharedPtr<DictNode> v) {
+//     // throw MerkError("Attempted ListNode construction");
+//     // setValue(v);
+//     // throw MerkError("Node Constructing DictNode");
+//     data = v;
+//     getFlags().type = NodeValueType::Dict;
+//     getFlags().fullType.setBaseType("Dict");
+//     if (!data) { throw MerkError("Data is Invalid in Node::Node(VariantType v)"); }
+//     // throw MerkError("No Instance Associated With DictNode");
+// }
+
 Node::Node(SharedPtr<DictNode> v) {
     // throw MerkError("Attempted ListNode construction");
     // setValue(v);
     // throw MerkError("Node Constructing DictNode");
     data = v;
-    getFlags().type = NodeValueType::Dict;
-    getFlags().fullType.setBaseType("Dict");
+    setFlags(data->flags);
+    // getFlags().type = NodeValueType::Dict;
+    // getFlags().fullType.setBaseType("Dict");
     if (!data) { throw MerkError("Data is Invalid in Node::Node(VariantType v)"); }
     // throw MerkError("No Instance Associated With DictNode");
 }
@@ -551,23 +743,32 @@ Node::Node(SharedPtr<SetNode> v) {
     // throw MerkError("No Instance Associated With SetNode");
 }
 
-Node& Node::operator=(const Node& other) {
+// Node& Node::operator=(const Node& other) {
     
+
+//     data = other.data;
+
+//     if (other.isInstance()) {
+//         // auto type = DynamicNode::getTypeFromValue(other.getValue());
+//         // other.getFlags().merge({{"isInstance", "true"}});
+//         // DEBUG_LOG(LogLevel::PERMISSIVE, "Assigning Instance to Node, it holds a " + nodeTypeToString(type) + " and holds meta of " + other.getFlags().toString());
+//         data->flags.merge({{"isInstance", "true"}});
+//         // *this = ClassInstanceNode(std::get<SharedPtr<Callable>>(other.getValue()));
+//     } else {
+//         data->flags = other.getFlags();
+//     }
+    
+//     return *this;
+// }
+
+Node& Node::operator=(const Node& other) {
+    if (this == &other) return *this;
 
     data = other.data;
-
-    if (other.isInstance()) {
-        // auto type = DynamicNode::getTypeFromValue(other.getValue());
-        // other.getFlags().merge({{"isInstance", "true"}});
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "Assigning Instance to Node, it holds a " + nodeTypeToString(type) + " and holds meta of " + other.getFlags().toString());
-        data->flags.merge({{"isInstance", "true"}});
-        // *this = ClassInstanceNode(std::get<SharedPtr<Callable>>(other.getValue()));
-    } else {
-        data->flags = other.getFlags();
-    }
-    
+    data->flags = other.getFlags(); // always copy full flags
     return *this;
 }
+
 
 Node& Node::operator=(Node&& other) noexcept {
     if (this != &other) {

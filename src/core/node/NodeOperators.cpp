@@ -7,6 +7,20 @@
 
 #include <cmath>
 
+static inline Node evalNotEqual(const Node& a, const Node& b) {
+    // Null handling
+    if (a.isNull() && b.isNull()) return Node(false);
+    if (a.isNull() != b.isNull()) return Node(true);
+
+    // If both are non-null:
+    // - compare by type then value
+    if (a.getType() != b.getType()) return Node(true);
+
+    // then compare underlying variant / or specialized compare
+    return Node(a.getValue() != b.getValue());
+}
+
+
 
 SharedPtr<NodeBase> DynamicNode::applyAdd(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs + rhs;
@@ -186,11 +200,11 @@ SharedPtr<NodeBase> DynamicNode::operator/=(const NodeBase& other) {
 SharedPtr<NodeBase> DynamicNode::operator==(const NodeBase& other) const {
     // throw MerkError("Attempting Equality Check With DynamicNode Holding " + toString() + "OTHER HOLDING " + other.toString());
     return makeShared<BoolNode>(getValue() == other.getValue()); 
-    throw MerkError("Attempted == on DynamicNode::operator== -> " + nodeTypeToString(DynamicNode::getTypeFromValue(value)) + " Other " + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
+    // throw MerkError("Attempted == on DynamicNode::operator== -> " + nodeTypeToString(DynamicNode::getTypeFromValue(value)) + " Other " + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
     // return makeShared<DynamicNode>(toInt() == other.toInt());
 }
 SharedPtr<NodeBase> DynamicNode::operator!=(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() != other.toInt());
+    return makeShared<BoolNode>(getValue() != other.getValue()); 
 }
 SharedPtr<NodeBase> DynamicNode::operator<(const NodeBase& other) const {
     return makeShared<DynamicNode>(toInt() < other.toInt());
@@ -384,11 +398,12 @@ bool Node::operator==(const Node& other) const {
     // if (toString() == "null") {
     //     return false;
     // }
-    return Node((*data) == (*other.data)).toBool(); 
+    // return Node((*data) == (*other.data)).toBool(); 
+    return !evalNotEqual(*this, other).toBool(); 
     
     // throw MerkError("Attempting Equality Check With Node Holding " + toString()); 
 }
-bool Node::operator!=(const Node& other) const {return Node((*data) != (*other.data)).toBool(); }
+bool Node::operator!=(const Node& other) const {return evalNotEqual(*this, other).toBool(); /*return Node((*data) != (*other.data)).toBool();*/ }
 bool Node::operator<(const Node& other) const {return Node((*data) < (*other.data)).toBool(); }
 bool Node::operator>(const Node& other) const {return Node((*data) > (*other.data)).toBool(); }
 bool Node::operator<=(const Node& other) const {return Node((*data) <= (*other.data)).toBool(); }

@@ -1,5 +1,4 @@
-#ifndef HELPER_FUNCTIONS_H
-#define HELPER_FUNCTIONS_H
+#pragma once
 
 #include <string>
 #include "core/node/Node.hpp"
@@ -23,4 +22,3 @@ String generateScopeOwner(String userName, String itemName);
 String joinUnorderedSetStrings(const std::unordered_set<String>& input, const String& delimiter = ",");
 String joinVectorNodeStrings(const NodeList& nodes, const String& delimiter = ",");
 String joinVectorStrings(const Vector<String>, const String& delimiter = ",");
-#endif // HELPER_FUNCTIONS_H
