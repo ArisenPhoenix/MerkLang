@@ -129,6 +129,42 @@ String DynamicNode::forceTo<String>(const VariantType& v, CoerceMode mode) {
     }
 }
 
+template <>
+bool DynamicNode::forceTo<bool>(const VariantType& v, CoerceMode mode) {
+    if (std::holds_alternative<bool>(v)) {return std::get<bool>(v);}
+
+    NodeValueType t = getTypeFromValue(v);
+
+    switch (t) {
+        case NodeValueType::Char:   {return (bool)std::get<char>(v);}
+
+        case NodeValueType::Float:
+            if (mode == CoerceMode::Strict) fail(t, "float->int not allowed");
+            return (bool)std::get<float>(v);
+
+        case NodeValueType::Double:
+            if (mode == CoerceMode::Strict) fail(t, "double->int not allowed");
+            return (bool)std::get<double>(v);
+
+        case NodeValueType::Long:
+            if (mode == CoerceMode::Strict) fail(t, "long->int not allowed");
+            return (bool)std::get<long>(v);
+
+        case NodeValueType::String:
+        case NodeValueType::Text: {
+            // normalize extraction in ONE place
+            if (std::holds_alternative<String>(v)) {
+                const auto& s = std::get<String>(v);
+                return s.size() > 0;
+            }
+            fail(t, "text storage not bool");
+        }
+
+        default:
+            fail(t);
+    }
+}
+
 
 template<>
 long DynamicNode::forceTo<long>(const VariantType& v, CoerceMode mode) {
@@ -256,8 +292,6 @@ const char* DynamicNode::forceToCString(const VariantType& v, String& scratch) {
     scratch = forceTo<String>(v);
     return scratch.c_str();
 }
-
-
 
 NodeValueType DynamicNode::inferTypeFromString (String& valueStr, String& typeStr) {
     if (typeStr == "Variable" || typeStr == "Argument" || typeStr == "FunctionCall" || typeStr == "ClassMethodCall" || typeStr == "Parameter") {
@@ -538,17 +572,13 @@ int DynamicNode::forceToInt(VariantType value) {
     }
 }
 
-
-
 float DynamicNode::forceToFloat(Node& node) {
     if (node.isNumeric()) {return node.toFloat();}
-    throw MerkError("Not Implemented: forceToFloat");
+    return forceTo<float>(node);
 }
-
 double DynamicNode::forceToDouble(Node& node) {
     if (node.isDouble()) {return node.toDouble();}
-    throw MerkError("Not Implemented: forceToDouble");
-
+    return forceTo<double>(node);
 }
 char* DynamicNode::forceToChar(Node& node) {
     (void)node;
@@ -559,14 +589,12 @@ char* DynamicNode::forceToChar(Node& node) {
 }
 bool DynamicNode::forceToBool(Node& node) {
     if (node.isBool()) {return node.toBool();}
-    throw MerkError("Not Implemented: forceToBool");
+    else return forceTo<bool>(node.getValue());
 }
-
 int DynamicNode::forceToInt(Node& node) {
     if (node.isNumeric()) {return node.toInt();}
     return forceToInt(node.getValue());
 }
-
 String DynamicNode::forceToString(Node& node) {
     return node.toString();
 }
@@ -632,45 +660,13 @@ SharedPtr<NodeBase> DynamicNode::dispatch(VariantType val, NodeValueType type, b
         case NodeValueType::Callable:
             {
                 auto call = std::get<SharedPtr<Callable>>(val);
-                // return makeShared<CallableNode>(call);
                 throw MerkError("Tried to create Callable " + call->toString());
             }
-            
-        // case NodeValueType::DataStructure:
-        //     {
-        //         DEBUG_FLOW_EXIT();
-        //         auto data = std::get<SharedPtr<DataStructure>>(val);
-        //         return makeShared<DynamicNode>(std::get<SharedPtr<DataStructure>>(val));
-        //         // if (data->getType() == NodeValueType::List) {
-        //         //     throw MerkError("Got A List");
-        //         // }
-
-        //         // throw MerkError("Found Another DataStructure, Need to disambiguate it");
-        //     }
-            
-
-        
         default:
             DEBUG_FLOW_EXIT();
             throw MerkError("Not A Currently Supported Type: " + nodeTypeToString(type));
         }
     }
-
-    // else if (coerce) {
-    //     switch (valType)
-    //     {
-    //     case NodeValueType::String:
-    //         if (type == NodeValueType::Number) {}
-    //         /* code */
-    //         break;
-        
-    //     default:
-    //         break;
-    //     }
-    // }
-
-
-
     DEBUG_FLOW_EXIT();
     throw MerkError("Not A supported Type " + nodeTypeToString(valType) + ". Tried to dispatch to: " + nodeTypeToString(type));
 }
@@ -744,8 +740,7 @@ int DynamicNode::toInt() const {
     } else if (isBool()) {
         return toBool();
     } else if (isNumeric()) {
-        // when other types are added
-        throw MerkError("Need To Handle Numeric Types in DynamicNode::toInt()");
+        return forceTo<int>(value, CoerceMode::Strict);
     }
 
     throw MerkError("Cannnot cast " + nodeTypeToString(getType()) + " to " + "Int");
