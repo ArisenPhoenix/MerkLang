@@ -138,11 +138,11 @@ static Node returnConstructedInstanceOf(SharedPtr<ClassInstanceNode> self, const
 
     // optional debug cosmetics
     f.name = className;
-    debugLog(true,
-    "DBG Dict() rhs type=", out.getTypeAsString(),
-    " isInstance=", out.isInstance(),
-    " baseType=", out.getFlags().fullType.getBaseType()
-    );
+    // debugLog(true,
+    // "DBG Dict() rhs type=", out.getTypeAsString(),
+    // " isInstance=", out.isInstance(),
+    // " baseType=", out.getFlags().fullType.getBaseType()
+    // );
     return out;
 }
 

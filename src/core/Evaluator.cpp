@@ -156,11 +156,11 @@ namespace Evaluator {
     // If declaredSig is Any, allow anything.
     if (varMeta.declaredSig != anyId) {
         auto m = tr.matchValue(varMeta.declaredSig, rhs, {/*opt*/});
-        debugLog(true,
-        "DBG Dict() rhs type=", rhs.getTypeAsString(),
-        " isInstance=", rhs.isInstance(),
-        " baseType=", rhs.getFlags().fullType.getBaseType()
-        );
+        // debugLog(true,
+        // "DBG Dict() rhs type=", rhs.getTypeAsString(),
+        // " isInstance=", rhs.isInstance(),
+        // " baseType=", rhs.getFlags().fullType.getBaseType()
+        // );
 
         if (!m.ok) {
             throw TypeMismatchError(

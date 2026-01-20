@@ -21,8 +21,8 @@
 
 
 // Constructor
-Parser::Parser(Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpretMode, bool byBlock)
-    : tokens(tokens), rootScope(rootScope), currentScope(rootScope), interpretMode(interpretMode), byBlock(byBlock) {
+Parser::Parser(Vector<Token>& tokens, SharedPtr<Scope> rootScope, bool interpreting, bool byBlock)
+    : tokens(tokens), rootScope(rootScope), currentScope(rootScope), interpretMode(interpreting), byBlock(byBlock) {
         // DEBUG_FLOW(FlowLevel::HIGH);
         if (!rootScope) {
             throw MerkError("Root scope must not be null when initializing the parser.");
@@ -161,7 +161,9 @@ void Parser::interpretFlow(BaseAST* ASTStatement) const {
     // DEBUG_FLOW(FlowLevel::HIGH);
 
     // DEBUG_LOG(LogLevel::INFO, highlight("=========================== Interpreting ASTStatement ===========================", Colors::yellow));
+    // if (interpretMode) {
 
+    // }
     try {
         ASTStatement->evaluateFlow(currentScope); // Evaluate the updated statement
 

@@ -22,6 +22,7 @@
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
 #include "utilities/debugger.h"
+#include "utilities/utilities.h"
 
 
 #include "lex/Scanner.hpp"
@@ -29,7 +30,7 @@
 #include "lex/Lexer.hpp"
 
 
-String getFileContents(int argc, char* argv[]) {
+std::tuple<String, String> getFileContents(int argc, char* argv[]) {
     const String codeDir = "code/";
     const String defaultFile = "test1.merk";
 
@@ -39,7 +40,7 @@ String getFileContents(int argc, char* argv[]) {
     String content = readFile(filePath);
     outputFileContents(content, 800);
 
-    return content;
+    return std::tuple(content, filePath);
 }
 
 SharedPtr<Scope> generateGlobalScope(bool interpretMode, LexerConfig& lCfg) {
@@ -67,11 +68,43 @@ SharedPtr<Scope> generateGlobalScope(bool interpretMode, LexerConfig& lCfg) {
 }
 
 
+long fib_memoized(long n, std::unordered_map<long, long>& cache) {
+        auto it = cache.find(n);
+        if (it != cache.end()) {
+            return it->second;
+        }
+
+        if (n <= 1) {
+            cache[n] = n;
+            return n;
+        } else {
+            long value = fib_memoized(n - 1, cache) + fib_memoized(n - 2, cache);
+
+            cache[n] = value;
+            return value;
+        }
+    }
+
+void testFunc() {
+    std::unordered_map<long, long> cached;
+
+    
+    auto val = fib_memoized(35, cached);
+
+    String out = DynamicNode::forceTo<String>(val);
+    debugLog(true, out);
+};
+
+
+
+
+
+
 int run_original(int argc, char* argv[]) {
 // Debug::configureDebugger();
     Debug::configureDebugger();
-    String content = getFileContents(argc, argv);
-    const bool interpretMode = true;
+    auto [content, fileName] = getFileContents(argc, argv);
+    const bool interpretMode = false;
     const bool byBlock = false;
     LexerConfig lCfg;
     SharedPtr<Scope> globalScope = generateGlobalScope(interpretMode, lCfg);
@@ -93,26 +126,37 @@ int run_original(int argc, char* argv[]) {
     
 
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
-        auto start = std::chrono::high_resolution_clock::now();
+        
         Parser parser(tokens, globalScope, interpretMode, byBlock);
         DEBUG_LOG(LogLevel::DEBUG, "\nStarting parser...");
+        Timer timer = Timer();
         auto ast = parser.parse();
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> elapsed = end - start;
         
-        debugLog("Parsing complete. \n");
+        if (!interpretMode) {
+            ast->evaluateFlow(globalScope);
+        }
+
+        globalScope->debugPrint();
+
+
+        
+        timer.printElapsed(fileName);
+
+        timer.reset();
+        testFunc();
+        timer.printElapsed("C++ fib_memoized");
+        
+        
 
         DEBUG_LOG(LogLevel::DEBUG, "Terminating Program...");
         DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
         
-        if (!interpretMode) {
-            ast->evaluate(globalScope);
-        }
+        
 
-        debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
-        globalScope->debugPrint();
+        // debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
+        // globalScope->debugPrint();
         ast->clear();
-        std::cout << "Execution time: " << elapsed.count() << " ms\n";
+        // std::cout << "Execution time: " << elapsed.count() << " ms\n";
 
         
         DEBUG_LOG(LogLevel::DEBUG, "");
