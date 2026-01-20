@@ -57,7 +57,7 @@ String UnionSig::describe(const ITypeSigContext& ctx) const {
 
 String InvocableSig::describe(const ITypeSigContext& ctx) const {
     String s;
-    if (!data.methodName.empty()) s += data.methodName;
+    if (!data.name.empty()) s += data.name;
     s += "(";
     for (size_t i = 0; i < data.params.size(); ++i) {
         if (i) s += ", ";
@@ -108,6 +108,12 @@ TypeMatchResult NominalSig::matchValue(const Node& v, const ITypeSigContext& ctx
     const auto& tr = ctx.types();
 
     TypeId got = typeIdOfValue(v, tr);
+
+    // If this nominal is Any, accept anything when allowAny
+    // if (base == tr.anyId()) {
+    //     return opt.allowAny ? TypeMatchResult::Yes(1) : TypeMatchResult::No();
+    // }
+
     if (got == base) return TypeMatchResult::Yes(100);
 
     if (opt.allowNumericWidening && v.getType() != NodeValueType::Any) {
@@ -142,35 +148,81 @@ TypeMatchResult UnionSig::matchValue(const Node& v, const ITypeSigContext& ctx, 
     return (best >= 0) ? TypeMatchResult::Yes(best) : TypeMatchResult::No();
 }
 
-TypeMatchResult InvocableSig::matchCall(const ArgumentList& args, const ITypeSigContext& ctx, const TypeMatchOptions& opt) const {
-    const size_t pcount = data.params.size();
+// TypeMatchResult InvocableSig::matchCall(const ArgumentList& args, const ITypeSigContext& ctx, const TypeMatchOptions& opt) const {
+//     const size_t pcount = data.params.size();
 
+//     if (!data.variadic) {
+//         if (args.size() != pcount) return TypeMatchResult::No();
+//     } else {
+//         // Variadic: require at least pcount-1 args if last param is varargs bucket.
+//         if (pcount == 0) return TypeMatchResult::Yes(1); // weird but ok
+//         if (args.size() < pcount - 1) return TypeMatchResult::No();
+//     }
+
+//     int score = 0;
+
+//     for (size_t i = 0; i < args.size(); ++i) {
+//         size_t pi = i;
+
+//         if (data.variadic && pcount > 0 && i >= pcount) {
+//             pi = pcount - 1; // extra args match last param type
+//         } else if (pi >= pcount) {
+//             return TypeMatchResult::No();
+//         }
+
+//         if (pi >= data.enforced.size()) return TypeMatchResult::No(); // sanity
+//         if (!data.enforced[pi]) { score += 1; continue; }
+
+//         auto r = ctx.matchValue(data.params[pi], args[i], opt);
+//         if (!r.ok) return TypeMatchResult::No();
+//         score += r.score;
+//     }
+
+//     return TypeMatchResult::Yes(score);
+// }
+
+
+TypeMatchResult InvocableSig::matchCall(
+    const ArgumentList& args,
+    const ITypeSigContext& ctx,
+    const TypeMatchOptions& opt
+) const {
+    const auto& P = data.params;
+    const auto& E = data.enforced;
+
+    // You must be matching against the flattened/bound positional nodes
+    const auto nodes = args.getPositionalArgs(); // implement this accessor
+
+    // arity
     if (!data.variadic) {
-        if (args.size() != pcount) return TypeMatchResult::No();
+        if (nodes.size() != P.size()) return TypeMatchResult::No();
     } else {
-        // Variadic: require at least pcount-1 args if last param is varargs bucket.
-        if (pcount == 0) return TypeMatchResult::Yes(1); // weird but ok
-        if (args.size() < pcount - 1) return TypeMatchResult::No();
+        if (P.empty()) return TypeMatchResult::No();
+        if (nodes.size() < P.size() - 1) return TypeMatchResult::No();
     }
 
     int score = 0;
+    int cost  = 0;
 
-    for (size_t i = 0; i < args.size(); ++i) {
-        size_t pi = i;
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        const bool isVarArg = data.variadic && i >= P.size() - 1;
+        TypeSignatureId expected = isVarArg ? P.back() : P[i];
 
-        if (data.variadic && pcount > 0 && i >= pcount) {
-            pi = pcount - 1; // extra args match last param type
-        } else if (pi >= pcount) {
-            return TypeMatchResult::No();
+        const uint8_t enforced = isVarArg
+            ? (E.empty() ? 0 : E.back())
+            : (E.empty() ? 0 : E[i]);
+
+        if (!enforced) {
+            score += 1;       // “matches” but weak
+            continue;
         }
 
-        if (pi >= data.enforced.size()) return TypeMatchResult::No(); // sanity
-        if (!data.enforced[pi]) { score += 1; continue; }
-
-        auto r = ctx.matchValue(data.params[pi], args[i], opt);
+        auto r = ctx.matchValue(expected, nodes[i], opt);
         if (!r.ok) return TypeMatchResult::No();
-        score += r.score;
+        score += 10 + r.score;
+        cost  += r.cost;
     }
 
-    return TypeMatchResult::Yes(score);
+    return TypeMatchResult::Yes(score, cost);
 }
+

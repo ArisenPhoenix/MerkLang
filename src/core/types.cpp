@@ -216,7 +216,7 @@ String tokenTypeToString(TokenType type, bool colored) {
         case TokenType::ChainEntryPoint: return colored ? highlight("ChainEntryPoint", Colors::yellow) : "ChainEntryPoint";
 
         case TokenType::EOF_Token: return colored ? highlight("EOF_Token", Colors::red) : "EOF_Token";
-
+        case TokenType::SOF_Token: return colored ? highlight("SOF_Token", Colors::red) : "SOF_Token"; 
         case TokenType::LeftBracket: return colored ? highlight("LeftBracket", Colors::bold_yellow) : "LeftBracket";
         case TokenType::RightBracket: return colored ? highlight("RightBracket", Colors::bold_yellow) : "RightBracket";
         case TokenType::LeftArrow: return colored ? highlight("LeftArrow", Colors::bold_yellow) : "LeftArrow";

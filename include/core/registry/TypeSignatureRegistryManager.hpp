@@ -101,6 +101,7 @@ private:
 private:
     TypeRegistry* types_ = nullptr;
     TypeSignatureId anySigId_ = kInvalidTypeSignatureId;
+    std::unordered_map<TypeId, TypeSignatureId> nominalCache_;
 
     Vector<TypeSignature> pool_;
     std::unordered_map<Key, TypeSignatureId, KeyHash> intern_;

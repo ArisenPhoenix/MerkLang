@@ -52,6 +52,7 @@ void ParamNode::bindType(TypeSignatureRegistry& reg, Scope& scope) {
         return;
     }
     typeSig = reg.bindResolvedType(flags.fullType, scope);
+    // scope.resolveTypeNameSig(name);
 }
 
 String ParamNode::toShortString() const {

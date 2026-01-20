@@ -196,23 +196,35 @@ std::optional<SharedPtr<CallableSignature>> FunctionNode::getFunction(String nam
         if (sig->getTypeSignature() == kInvalidTypeSignatureId) {
             params.bindTypes(typeReg, *scope);
             InvocableSigType mt;
-            mt.methodName = name;
+            mt.name = name;
             mt.variadic = (!params.empty() && params.back().isVarArgsParameter());
             mt.ret = typeReg.any();
             mt.retEnforced = false;
             mt.params.reserve(params.size());
             mt.enforced.reserve(params.size());
             for (size_t i = 0; i < params.size(); ++i) {
-                const auto& p = params[i];
-                if (p.isTyped() && p.getTypeSig() != 0) {
-                    mt.params.push_back(p.getTypeSig());
-                    mt.enforced.push_back(1);
-                } else {
-                    mt.params.push_back(typeReg.any());
-                    mt.enforced.push_back(0);
+                TypeSignatureId ps = kInvalidTypeSignatureId;
+                auto& p = params[i];
+                bool enforce = false;
+
+                if (p.isTyped()) {
+                    ps = p.getTypeSig();
+                    enforce = (typeReg.isValid(ps) && ps != typeReg.any());
                 }
+
+                mt.params.push_back(enforce ? ps : typeReg.any());
+                mt.enforced.push_back(enforce ? 1 : 0);
+
             }
             sig->setTypeSignature(typeReg.invocableType(mt));
+
+            debugLog(true,
+                "CALLSIG name=", name,
+                " subType=", callableTypeAsString(sig->getSubType()),
+                " inv=", typeReg.toString(sig->getTypeSignature()),
+                " params=", sig->getParameters().toString()
+                );
+
         }
 
         ArgumentList flat;

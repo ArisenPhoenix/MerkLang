@@ -7,7 +7,7 @@
 #include <iostream>
 #include <ostream> 
 #include "core/TypesFWD.hpp"
-
+#include "lex/Lexer.hpp"
 
 class Tokenizer {
 private:
@@ -96,6 +96,8 @@ public:
     const Vector<Token>& getTokens() const {
         return tokens;
     }
+
+    Vector<Token> lex(LexerConfig&);
 
 };
 

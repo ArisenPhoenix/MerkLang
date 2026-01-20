@@ -32,6 +32,13 @@ ChainElement createChainElement(const Token& token, const Token& delim, UniquePt
     return elem;
 }
 
+
+bool Parser::isTypeStart(TokenType tt) {
+    return tt == TokenType::Type
+        || tt == TokenType::ClassRef
+        || tt == TokenType::Variable;
+}
+
 UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     
@@ -122,19 +129,12 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
     bool hasAnnotation = false;
 
     // If tokenizer emits ":" then a TokenType::Type (or ClassRef), consume it here
-    if (check(TokenType::Punctuation, ":")) {
-        advance(); // consume ':'
-
+    if (check(TokenType::Punctuation, ":") && isTypeStart(peek().type)) {
+        advance(); // ':'
         Token t = currentToken();
-        if (t.type == TokenType::Type || t.type == TokenType::ClassRef || t.type == TokenType::Variable) {
-            declaredType = ResolvedType(t.value);
-            hasAnnotation = true;
-            advance(); // consume type name
-        } else {
-            throw UnexpectedTokenError(t, "Type name after ':'");
-        }
-
-        // Optional: support containers immediately (List[Int], Dict[String, Int]) later
+        declaredType = ResolvedType(t.value);
+        hasAnnotation = true;
+        advance(); // type name
     }
 
     // Handle declaration or assignment

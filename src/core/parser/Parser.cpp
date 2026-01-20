@@ -493,7 +493,7 @@ void Parser::processDedent(SharedPtr<Scope> manualScope) {
 }
 bool Parser::processNewLines(){
     int count = 0;
-    while (currentToken().type == TokenType::Newline){
+    while (currentToken().type == TokenType::Newline || currentToken().type == TokenType::Comment){
         advance(); //Consume NewLine Token
         count += 1;
     }
@@ -568,6 +568,10 @@ ResolvedType Parser::parseResolvedType() {
         }
     }
 
+    if (isTypeStart(currentToken().type)) {
+        advance();
+        return ResolvedType(previousToken().value);
+    }
     if (consumeIf(TokenType::Type)) {
         DEBUG_FLOW_EXIT();
         return ResolvedType(previousToken().value);

@@ -5,6 +5,7 @@
 #include "core/errors.h"
 
 
+
 bool Tokenizer::isLogicOperator() {
     size_t lookahead = position;
     while (lookahead < sourceLength &&

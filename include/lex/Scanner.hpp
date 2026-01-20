@@ -36,6 +36,9 @@ enum class RawKind : uint8_t {
     Punctuation,    // (), {}, [], :, ,, .
     Unknown,
     NoOp,
+    
+    Indent,
+    Dedent,
 };
 
 struct RawToken {
@@ -143,6 +146,11 @@ public:
     // Returns true if it consumed and emitted a comment delimiter token.
     bool tryScanCommentDelimiter();
 
+    RawToken scanLineCommentBody();
+
+    RawToken scanBlockCommentBody(int pairIndex);
+
+
     Vector<RawToken> scan();
 private:
     // ---- helpers ----
@@ -167,7 +175,7 @@ private:
     RawToken scanBlockComment(int pairIndex);
 
     RawToken scanLineComment(const String& startLexeme);
-    
+
     bool tryScanComment();
 };
 

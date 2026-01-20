@@ -114,62 +114,6 @@ namespace Evaluator {
         return value;
     }
 
-    // Node evaluateVariableDeclaration(String& name, const ASTStatement* valueNode, DataTypeFlags varMeta, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-    //     MARK_UNUSED_MULTI(instanceNode);
-    //     DEBUG_FLOW(FlowLevel::PERMISSIVE);    
-    //     SharedPtr<Scope> instanceScope = instanceNode ? instanceNode->getInstanceScope() : scope;
-    //     bool usingInstanceScope = instanceScope != scope;
-        
-    //     String varName = name;
-        
-    //     auto resolvedVariable = valueNode->evaluate(scope, instanceNode);
-    //     // VarNode finalVar;
-    //     // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, typeTag, var.isStatic);
-    //     // if (varName != "dict3") { throw MerkError("VAR DEC -1"); }
-    //     // if (var.getFullType().getBaseType().size()) {
-    //     auto& tr = TypeRegistry::global();
-    //     varMeta.declaredSig = tr.bindResolvedType(varMeta.fullType, *scope);
-             
-    //     // }
-    //     auto finalVar = makeUnique<VarNode>(resolvedVariable, varMeta);
-    //     // if (finalVar->getValueNode().isNull()) {throw MerkError("Variable Declared is Null");}
-
-    //     auto returnVal = finalVar->getValueNode();
-    //     debugLog(true, "Var Declaration Results for var", name, ": ==========================================");
-    //     valueNode->printAST(std::cout, 0);
-    //     debugLog(true, "RETURN VAL: ", returnVal.toString());
-        
-    //     // if (!finalVar->getValueNode().isValid()) {
-    //     //     throw MerkError("VALUE NODE IS NOT VALID");
-    //     // }
-    //     // else {
-            
-    //     //     finalVar = VarNode(resolvedVariable, var.getIsConst(), var.getIsMutable(), typeTag, var.getIsStatic());
-    //     // }
-    //     // auto final = VarNode(resolvedVariable, var.isConst, var.isMutable, var.getFullType(), var.isStatic);
-    //     // auto thing = VarNode(finalVar);
-    //     // auto varNode = makeUnique<VarNode>(finalVar);
-        
-    //     if (usingInstanceScope && instanceScope->hasMember(varName)) {
-            
-    //         instanceScope->declareVariable(varName, std::move(finalVar));
-    //     } 
-
-    //     else {
-    //         scope->declareVariable(varName, std::move(finalVar));
-    //     }
-
-        
-
-    //     if (name.empty() || varName.empty()) {throw MerkError("VarName Is empty in evaluateVariableDeclaration");}
-    //     // if (name == "list") {throw MerkError("Evaluated VariableDeclaration for list");}
-    //     // scope->declareVariable(varName, std::move(varNode));
-        
-    //     DEBUG_FLOW_EXIT();
-    //     if (!returnVal.isValid()) {throw MerkError("VariableDeclaration returnVal is not valid");}
-    //     // return returnVal;
-    //     return Node();
-    // }
 
 
     Node evaluateVariableDeclaration(
@@ -199,6 +143,7 @@ namespace Evaluator {
     const auto base = varMeta.fullType.getBaseType();
     if (!base.empty() && base != "Any") {
         varMeta.declaredSig = tr.bindResolvedType(varMeta.fullType, *scope);
+        // scope->resolveTypeNameSig(base);
     } else {
         varMeta.declaredSig = anyId;
     }
@@ -225,12 +170,14 @@ namespace Evaluator {
             );
         }
     }
-
+    
     // 5) Construct VarNode (VarNode should NOT clobber inferredSig)
     auto finalVar = makeUnique<VarNode>(rhs, varMeta);
     auto returnVal = finalVar->getValueNode();
     // 6) Store it
     auto targetScope = (usingInstanceScope ? instanceScope : scope);
+
+    
     targetScope->declareVariable(varName, std::move(finalVar));
 
     // 7) Debug
@@ -249,40 +196,6 @@ namespace Evaluator {
     // return rhs;
     return returnVal;
 }
-
-
-
-    // void matchSigs() {
-    //     auto& tr = TypeRegistry::global();
-
-    //     TypeSignatureId expected = kInvalidTypeSignatureId;
-
-    //     // Prefer declared type if meaningful
-    //     if (flags.declaredSig != kInvalidTypeSignatureId && flags.declaredSig != tr.any()) {
-    //         expected = flags.declaredSig;
-    //     } else if (flags.inferredSig != kInvalidTypeSignatureId) {
-    //         // If you do "infer once" typing, enforce future assignments against inferred type
-    //         expected = flags.inferredSig;
-    //     }
-
-    //     if (expected != kInvalidTypeSignatureId) {
-    //         auto r = tr.matchValue(expected, valueNode);
-    //         if (!r.ok) {
-    //             throw MerkError(
-    //                 "Type mismatch for '" + flags.name + "': expected " +
-    //                 tr.toString(expected) + ", got " + tr.toString(valueNode.typeSigId /*or infer*/));
-    //         }
-    //     }
-
-    //     // If declared is Any and inferred is empty, infer now (optional policy)
-    //     if ((flags.declaredSig == kInvalidTypeSignatureId || flags.declaredSig == tr.any()) &&
-    //         flags.inferredSig == kInvalidTypeSignatureId) {
-
-    //         // simplest inference: primitives/class/container based on value
-    //         flags.inferredSig = valueNode.getTypeSig(tr /*or*/); // see note below
-    //     }
-
-    // }
 
 
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
@@ -312,9 +225,7 @@ namespace Evaluator {
         auto workingScope = scope;
         auto parent = scope->getParent();
         auto& variable = workingScope->getVariable(name);
-        // if (variable.getValueNode().isNull()) {
-        //     throw MerkError("Variable " + name + " Is Null For Some Reason");
-        // }
+
         if (instanceScope) {
             scope->removeChildScope(workingScope);
         }

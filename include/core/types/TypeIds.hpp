@@ -5,13 +5,19 @@
 
 #include "core/TypesFWD.hpp" // String, Vector, NodeValueType, ArgumentList, TypeId, TypeSignatureId
 
+
+
 enum class TypeSigKind : uint8_t {
     Any,
-    Nominal,    // base TypeId (Int, String, Types, Square, List, Dict, ...)
-    Container,  // base TypeId + args
+    Nominal,
+    Container,
     Union,
-    Invocable,  // callable/method signature
-    Interface   // future
+    Interface,
+    Invocable,
+    // Primitive,
+    // Class,
+    // Method,
+
 };
 
 struct TypeMatchOptions {

@@ -1,10 +1,11 @@
 #pragma once
-
+#ifndef _WIN32
+#include <execinfo.h>
+#endif
 #include "core/TypesFWD.hpp"
 #include "core/registry/Context.hpp"
 #include "core/registry/FunctionRegistry.hpp"
 #include "core/registry/ClassRegistry.hpp"
-#include "core/registry/TypeRegistry_NEW.hpp"
 #include "core/registry/TypeSignatureRegistry.hpp"
 #include "core/registry/TypeSignatureRegistryManager.hpp"
 
@@ -157,7 +158,8 @@ public:
     void registerFunction(const String& name, SharedPtr<Callable> anyCallable);
     std::optional<SharedPtr<CallableSignature>> getFunction(const String& name, const ArgumentList& args);
     std::optional<Vector<SharedPtr<CallableSignature>>> getFunction(const String& name);
-
+    TypeSignatureId resolveTypeNameSig(const String& name);
+    void bindTypeAlias(const String& alias, TypeSignatureId sig);
 
     //// Class Management
     std::optional<SharedPtr<ClassSignature>> lookupClass(const String& name) const;
@@ -205,6 +207,7 @@ public:
 
     SharedPtr<Scope> buildClassDefScope(const FreeVars& freeVars, const String& className);
     
+    TypeSignatureId bindResolvedType(const ResolvedType& rt, const String& aliasName = "");
 
 
     SharedPtr<TypeRegistry> getTypeRegistry();

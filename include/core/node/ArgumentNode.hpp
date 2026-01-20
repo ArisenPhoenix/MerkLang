@@ -22,6 +22,7 @@ public:
     Node getNamedArg(const String& name) const;
     NodeList getRemainingArgs(size_t start) const;
     NodeList getPositional();
+    NodeList getPositionalArgs() const;
 
     std::unordered_map<String, Node> getNamedArgs();
 

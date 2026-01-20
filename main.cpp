@@ -1,23 +1,23 @@
-// #include <iostream>
-// #include <fstream>
-// #include <unordered_map>
-// #include <cassert>
+#include <iostream>
+#include <fstream>
+#include <unordered_map>
+#include <cassert>
 
-// #include "core/TypesFWD.hpp"
-// #include "utilities/streaming.h"
+#include "core/TypesFWD.hpp"
+#include "utilities/streaming.h"
 
 
-// #include "core/node/Node.hpp"
-// #include "core/Tokenizer.hpp"
-// #include "core/Parser.hpp"
-// #include "core/registry/Context.hpp"
+#include "core/node/Node.hpp"
+#include "core/Tokenizer.hpp"
+#include "core/Parser.hpp"
+#include "core/registry/Context.hpp"
 
-// #include "ast/AstBase.hpp"
-// #include "ast/AstControl.hpp"
-// #include "ast/Ast.hpp"
+#include "ast/AstBase.hpp"
+#include "ast/AstControl.hpp"
+#include "ast/Ast.hpp"
 
-// #include "core/Scope.hpp"
-// #include "core/builtins.h"
+#include "core/Scope.hpp"
+#include "core/builtins.h"
 
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
@@ -25,106 +25,11 @@
 
 
 #include "lex/Scanner.hpp"
+#include "lex/Structurizer.hpp"
+#include "lex/Lexer.hpp"
 
 
-// int run_original(int argc, char* argv[]) {
-// // Debug::configureDebugger();
-//     Debug::configureDebugger();
-
-//     const String codeDir = "code/";
-//     const String defaultFile = "test1.merk";
-
-//     String filePath = getFilePath(argc, argv, codeDir, defaultFile);
-//     DEBUG_LOG(LogLevel::DEBUG, "Using File: ", filePath);
-   
-//     String content = readFile(filePath);
-
-//     outputFileContents(content, 800);
-//     const bool interpretMode = true;
-//     const bool byBlock = false;
-    
-//     SharedPtr<Scope> globalScope = makeShared<Scope>(0, interpretMode, true);
-
-//     globalScope->owner = "GLOBAL";
-//     globalScope->kind = ScopeKind::Root;
-    
-//     try {
-//         DEBUG_LOG(LogLevel::DEBUG, "Initializing tokenizer...");
-//         Tokenizer tokenizer(content);
-//         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
-//         auto tokens = tokenizer.tokenize();
-//         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
-//         if (Debugger::getInstance().getLogLevel() <= LogLevel::PERMISSIVE) { tokenizer.printTokens(true); }
-//         // tokenizer.printTokens(true);
-        
-//         // globalScope->globalTypes = makeShared<TypeRegistry>();
-//         // registerBuiltinTypes(globalScope);
-        
-//         // TypeRegistry::setGlobal(globalScope->globalTypes.get());
-
-//         auto globalFunctions = getNativeFunctions(globalScope);
-//         for (auto& [name, globalFunc]: globalFunctions) {
-//             globalScope->globalFunctions->registerFunction(name, globalFunc);
-//             if (globalScope->globalFunctions->getFunction(name)) {};
-//         }
-
-//         auto globalClasses = getNativeClasses(globalScope);
-//         for (auto& [name, globalCls]: globalClasses) {
-//             globalScope->globalClasses->registerClass(name, globalCls);
-//         }
-    
-
-//         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
-//         auto start = std::chrono::high_resolution_clock::now();
-//         Parser parser(tokens, globalScope, interpretMode, byBlock);
-//         DEBUG_LOG(LogLevel::DEBUG, "\nStarting parser...");
-//         auto ast = parser.parse();
-//         auto end = std::chrono::high_resolution_clock::now();
-//         std::chrono::duration<double, std::milli> elapsed = end - start;
-        
-//         debugLog("Parsing complete. \n");
-
-//         DEBUG_LOG(LogLevel::DEBUG, "Terminating Program...");
-//         DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
-        
-//         if (!interpretMode) {
-//             ast->evaluate(globalScope);
-//         }
-
-//         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
-//         globalScope->debugPrint();
-//         ast->clear();
-//         std::cout << "Execution time: " << elapsed.count() << " ms\n";
-
-        
-//         DEBUG_LOG(LogLevel::DEBUG, "");
-//         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
-
-//     } catch (MerkError& e){
-//         std::cerr << e.errorString() << std::endl;
-        
-//     } catch (const std::exception& ex) {
-//         std::cerr << "Error during execution: " << ex.what() << std::endl;
-//         return 1;
-//     } 
-
-//     // Print the final state of the Global Scope right before exiting
-//     DEBUG_LOG(LogLevel::DEBUG, "");
-//     DEBUG_LOG(LogLevel::DEBUG, "==================== FINAL GLOBAL SCOPE ====================");
-//     globalScope->clear();
-//     globalScope.reset();
-//     // Scope::liveScopeCount -= 1;
-//     Scope::printScopeReport();
-    
-//     return 0;
-// }
-
-
-
-
-int main(int argc, char* argv[]) {
-    // return run_original(argc, argv);
-
+String getFileContents(int argc, char* argv[]) {
     const String codeDir = "code/";
     const String defaultFile = "test1.merk";
 
@@ -132,11 +37,111 @@ int main(int argc, char* argv[]) {
     DEBUG_LOG(LogLevel::DEBUG, "Using File: ", filePath);
    
     String content = readFile(filePath);
-    CommentConfig cfg;
-    cfg.lineStarts = {"#"};
-    Scanner scanner(content, cfg);
-    auto toks = scanner.scan();
-    printRawTokens(toks, std::cout);
+    outputFileContents(content, 800);
+
+    return content;
+}
+
+SharedPtr<Scope> generateGlobalScope(bool interpretMode, LexerConfig& lCfg) {
+    SharedPtr<Scope> globalScope = makeShared<Scope>(0, interpretMode, true);
+    globalScope->owner = "GLOBAL";
+    globalScope->kind = ScopeKind::Root;
+
+    
+    auto globalFunctions = getNativeFunctions(globalScope);
+    for (auto& [name, globalFunc]: globalFunctions) {
+        globalScope->globalFunctions->registerFunction(name, globalFunc);
+        if (globalScope->globalFunctions->getFunction(name)) {};
+        const String n = name;
+        lCfg.nativeFuncs.emplace(n);
+    }
+
+    auto globalClasses = getNativeClasses(globalScope);
+    for (auto& [name, globalCls]: globalClasses) {
+        globalScope->globalClasses->registerClass(name, globalCls);
+        const String n = name;
+        lCfg.nativeClasses.emplace(n);
+    }
+
+    return globalScope;
+}
+
+
+int run_original(int argc, char* argv[]) {
+// Debug::configureDebugger();
+    Debug::configureDebugger();
+    String content = getFileContents(argc, argv);
+    const bool interpretMode = true;
+    const bool byBlock = false;
+    LexerConfig lCfg;
+    SharedPtr<Scope> globalScope = generateGlobalScope(interpretMode, lCfg);
+    
+    
+    
+    try {
+        
+
+        DEBUG_LOG(LogLevel::DEBUG, "Initializing tokenizer...");
+        Tokenizer tokenizer(content);
+        DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
+        // auto tokens = tokenizer.tokenize();
+        // tokenizer.printTokens(true);
+        auto tokens = tokenizer.lex(lCfg);
+        DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
+        // if (Debugger::getInstance().getLogLevel() <= LogLevel::PERMISSIVE) { tokenizer.printTokens(true); }
+ 
+    
+
+        DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
+        auto start = std::chrono::high_resolution_clock::now();
+        Parser parser(tokens, globalScope, interpretMode, byBlock);
+        DEBUG_LOG(LogLevel::DEBUG, "\nStarting parser...");
+        auto ast = parser.parse();
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> elapsed = end - start;
+        
+        debugLog("Parsing complete. \n");
+
+        DEBUG_LOG(LogLevel::DEBUG, "Terminating Program...");
+        DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
+        
+        if (!interpretMode) {
+            ast->evaluate(globalScope);
+        }
+
+        debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
+        globalScope->debugPrint();
+        ast->clear();
+        std::cout << "Execution time: " << elapsed.count() << " ms\n";
+
+        
+        DEBUG_LOG(LogLevel::DEBUG, "");
+        DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
+
+    } catch (MerkError& e){
+        std::cerr << e.errorString() << std::endl;
+        
+    } catch (const std::exception& ex) {
+        std::cerr << "Error during execution: " << ex.what() << std::endl;
+        return 1;
+    } 
+
+    // Print the final state of the Global Scope right before exiting
+    DEBUG_LOG(LogLevel::DEBUG, "");
+    DEBUG_LOG(LogLevel::DEBUG, "==================== FINAL GLOBAL SCOPE ====================");
+    globalScope->clear();
+    globalScope.reset();
+    // Scope::liveScopeCount -= 1;
+    Scope::printScopeReport();
+    
+    return 0;
+}
+
+
+
+
+int main(int argc, char* argv[]) {
+    return run_original(argc, argv);
 }   
 
 

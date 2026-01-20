@@ -114,11 +114,6 @@ constexpr NodeValueType getNodeTypeFromType() {
 }
 
 
-String nodeTypeToString(NodeValueType type, bool colored = true); 
-NodeValueType stringToNodeType(String);
-String astTypeToString(AstType type);
-String tokenTypeToString(TokenType type, bool colored = false);
-String getTokenDescription(TokenType type);
 
 
 struct Colors {

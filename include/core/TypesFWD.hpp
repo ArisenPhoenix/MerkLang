@@ -197,6 +197,7 @@ enum class TokenType {
     BeginTyping,
 
     NoOp,
+    Comment,
 };
 
 
@@ -327,3 +328,11 @@ struct DebugStringifyConfig {
 
 // global accessors (single instance)
 DebugStringifyConfig& debugStringifyConfig();
+
+
+
+String nodeTypeToString(NodeValueType type, bool colored = true); 
+NodeValueType stringToNodeType(String);
+String astTypeToString(AstType type);
+String tokenTypeToString(TokenType type, bool colored = false);
+String getTokenDescription(TokenType type);

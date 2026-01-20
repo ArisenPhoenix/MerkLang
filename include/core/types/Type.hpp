@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "core/TypesFWD.hpp"   // String, Vector, SharedPtr, NodeValueType, ResolvedType, ArgumentList
-
+#include "core/types/TypeSig.hpp"
 class Node;
 class Scope;
 
@@ -18,32 +18,9 @@ class Scope;
 // --------------------
 
 using TypeSignatureId = uint32_t;
-static constexpr TypeSignatureId kInvalidTypeSignatureId = 0;
 
-enum class TypeSigKind : uint8_t {
-    Any,
-    Primitive,
-    Class,
-    Method,
-    Union,
-    Container,
-    Interface
-};
 
-struct TypeMatchOptions {
-    bool allowAny = true;
-    bool allowNumericWidening = true;
-    bool allowDuck = false;
-};
 
-struct TypeMatchResult {
-    bool ok = false;
-    int score = -1;
-    int cost = 0;
-
-    static TypeMatchResult No();
-    static TypeMatchResult Yes(int score_, int cost_ = 0);
-};
 
 class TypeRegistry;
 

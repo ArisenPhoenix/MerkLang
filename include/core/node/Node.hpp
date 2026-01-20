@@ -646,6 +646,9 @@ public:
     void clear() override;
 };
 
+
+enum class CoerceMode : uint8_t { Strict, Permissive };
+
 class DynamicNode: public NodeBase {
     VariantType value;
 public:
@@ -655,6 +658,30 @@ public:
     static std::pair<VariantType, NodeValueType> validateAndCopy(const VariantType& value, NodeValueType type);
     static NodeValueType getTypeFromValue(const VariantType& value);
     static String forceToString(VariantType value);
+    static float forceToFloat(VariantType value);
+    static double forceToDouble(VariantType value);
+    static char* forceToChar(VariantType value);
+    static bool forceToBool(VariantType value);
+    static int forceToInt(VariantType value);
+    static const char* forceToCString(const VariantType& v, String& scratch);
+    
+    template <typename T>
+    static T parseExact(std::string_view s, const char* what);
+
+    template <typename T>
+    static T forceTo(const VariantType& v, CoerceMode mode = CoerceMode::Permissive);
+
+    template <typename T>
+    static T forceTo(const Node&, CoerceMode mode = CoerceMode::Permissive);
+
+
+    static String forceToString(Node& value);
+    static float forceToFloat(Node& value);
+    static double forceToDouble(Node& value);
+    static char* forceToChar(Node& value);
+    static bool forceToBool(Node& value);
+    static int forceToInt(Node& value);
+
     static SharedPtr<NodeBase> dispatch(VariantType val, NodeValueType type, bool coerce = false);
     static Node dispatchNode(VariantType val, String typeStr, bool coerce = false);
     static DynamicNode fromVariant(VariantType v);

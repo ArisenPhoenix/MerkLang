@@ -58,7 +58,7 @@ Node debug_log(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[may
 
 Node intFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
-    return Node(args[0].toInt());
+    return Node(DynamicNode::forceTo<int>(args[0]));
 }
 
 Node stringFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {

@@ -521,17 +521,21 @@ void typeIdBasedValidation(Node& startingValue, DataTypeFlags& varFlags) {
     }
 }
 
+// static void displaySigInfo(Node startingValue, DataTypeFlags& declFlags) {
+//     DEBUG_LOG(LogLevel::DEBUG,
+//         "VarNode ctor: decl.fullBase=", declFlags.fullType.getBaseType(),
+//         " declSig=", declFlags.declaredSig,
+//         " start.base=", startingValue.getFlags().fullType.getBaseType(),
+//         " start.isInst=", startingValue.isInstance(),
+//         " start.type=", startingValue.getTypeAsString(),
+//         " start.inferredSig=", startingValue.getFlags().inferredSig
+//     );
+// }
+
 
 VarNode::VarNode(Node startingValue, DataTypeFlags declFlags) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    DEBUG_LOG(LogLevel::DEBUG,
-        "VarNode ctor: decl.fullBase=", declFlags.fullType.getBaseType(),
-        " declSig=", declFlags.declaredSig,
-        " start.base=", startingValue.getFlags().fullType.getBaseType(),
-        " start.isInst=", startingValue.isInstance(),
-        " start.type=", startingValue.getTypeAsString(),
-        " start.inferredSig=", startingValue.getFlags().inferredSig
-    );
+    
 
     if (!startingValue.getFlags().isMutable) {
         valueNode = startingValue.clone();

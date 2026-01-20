@@ -51,6 +51,11 @@ NodeList ArgumentList::getPositional() {
     return positionalArgs;
 }
 
+
+NodeList ArgumentList::getPositionalArgs() const {
+    return positionalArgs;
+}
+
 bool ArgumentList::hasNamedArg(const String& name) const {
     return namedArgs.find(name) != namedArgs.end();
 }
@@ -65,34 +70,31 @@ BoundArgs ArgumentList::bindToBound(const ParamList& params, bool allowDefaults)
     // ---- fixed ----
     out.fixed.reserve(fixedCount);
 
+    auto setFlagsFunc = [](Node& arg, ParamNode param) {
+        if (!param.flags.name.empty()) {
+            arg.setFlags(param.flags);
+        }
+    };
+
     for (size_t i = 0; i < fixedCount; ++i) {
         const auto& param = params[i];
 
         Node arg;
         bool wasDefault = false;
 
+
         if (i < positionalArgs.size()) {
             arg = positionalArgs[i];
-
-            // Optional: keep your existing behavior of stamping flags
-            if (!param.flags.name.empty()) {
-                arg.setFlags(param.flags);
-            }
+            setFlagsFunc(arg, param);
 
         } else if (hasNamedArg(param.getName())) {
             arg = getNamedArg(param.getName());
+            setFlagsFunc(arg, param);
 
-            if (!param.flags.name.empty()) {
-                arg.setFlags(param.flags);
-            }
 
         } else if (param.hasDefault() && allowDefaults) {
             arg = Node::fromVariant(param.getDefaultValue());
-
-            if (!param.flags.name.empty()) {
-                arg.setFlags(param.flags);
-            }
-
+            setFlagsFunc(arg, param);
             wasDefault = true;
         } else {
             throw RunTimeError("Missing argument for parameter: " + param.getName());
@@ -132,6 +134,11 @@ Vector<Node> ArgumentList::bindTo(const ParamList& params, bool allowDefaults) c
     if (params.size() > 0 && positionalArgs.size() == 0) {
         throw MerkError("NO ARGS");
     }
+    auto setFlagsFunc = [](Node& arg, ParamNode param) {
+        if (!param.flags.name.empty()) {
+            arg.setFlags(param.flags);
+        }
+    };
     // Bind fixed parameters
     for (size_t i = 0; i < fixedCount; ++i) {
         // DEBUG_LOG(LogLevel::PERMISSIVE, "POSITIONAL ARG ", positionalArgs[i].toString(), "POSITIONAL ARG NAME: ", positionalArgs[i].getFlags().name);
@@ -140,7 +147,7 @@ Vector<Node> ArgumentList::bindTo(const ParamList& params, bool allowDefaults) c
             auto arg = positionalArgs[i];
             if (param.flags.name.empty()) {throw MerkError("Positional Arg " + std::to_string(i) + " Is EMPTY");}
             // DEBUG_LOG(LogLevel::PERMISSIVE, "ARG META BEFORE: ", arg.getFlags().toString());
-            arg.setFlags(param.flags);
+            setFlagsFunc(arg, param);
             // DEBUG_LOG(LogLevel::PERMISSIVE, "ARG META AFTER: ", arg.getFlags().toString());
 
             // throw MerkError("Set NodeBase Flags");

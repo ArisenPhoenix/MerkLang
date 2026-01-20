@@ -98,9 +98,19 @@ TypeSignatureId TypeSignatureRegistryManager::any() {
 }
 
 TypeSignatureId TypeSignatureRegistryManager::nominal(TypeId base) {
+    // ensureInit();
+    // Key k; k.kind = TypeSigKind::Nominal; k.base = base;
+    // auto node = std::make_shared<NominalSig>(base);
+    // return intern(k, node, node->describe(*this), base);
     ensureInit();
+
+    // Treat nominal Any as the real AnySig
+    if (base == types_->anyId()) {
+        return any();
+    }
+
     Key k; k.kind = TypeSigKind::Nominal; k.base = base;
-    auto node = std::make_shared<NominalSig>(base);
+    auto node = makeShared<NominalSig>(base);
     return intern(k, node, node->describe(*this), base);
 }
 
@@ -144,14 +154,21 @@ TypeSignatureId TypeSignatureRegistryManager::invocableType(InvocableSigType m) 
 
     Key k;
     k.kind        = TypeSigKind::Invocable;
-    k.name        = m.methodName;
+    k.name        = m.name;
     k.kids        = m.params;
     k.enforced    = m.enforced;
     k.ret         = m.ret;
     k.variadic    = m.variadic;
     k.retEnforced = m.retEnforced;
-
+    // debugLog(true,
+    // "CALLSIG name=", m.methodName,
+    // " subType=", callableTypeAsString(m->getSubType()),
+    // " inv=", reg.toString(sig->getTypeSignature()),
+    // " params=", sig->getParameters().toString()
+    // );
     auto node = std::make_shared<InvocableSig>(std::move(m));
+    
+
     return intern(k, node, node->describe(*this), types_->lookupOrInvalid("Invocable"));
 }
 

@@ -73,7 +73,6 @@ private:
     void interpret(BaseAST* ASTStatementForEvaluation) const;
     void interpret(CodeBlock* block) const;
 
-
     std::optional<NodeValueType> parseStaticType();
 
     UniquePtr<ASTStatement> parseClassCall();
@@ -121,7 +120,8 @@ private:
 
     UniquePtr<ASTStatement> parseThrowStatement();
     UniquePtr<ASTStatement> parseKeyWord();
-    
+    bool isTypeStart(TokenType tt);
+
 
 public:
     explicit Parser(Vector<Token>& tokens, SharedPtr<Scope> scope, bool interpretMode=true, bool byBlock=false);

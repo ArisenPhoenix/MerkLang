@@ -167,14 +167,14 @@ void ClassInstance::setScope(SharedPtr<Scope> newScope) const {
     instanceScope = newScope;
 }
 
-static String truncateField(const String& s) {
-    const auto& cfg = debugStringifyConfig();
-    auto maxLen = cfg.maxString;
-    auto ellipses = cfg.alwaysEllipsis ? "..." : "";
-    auto remainder = cfg.showRemainder ? "(+" + std::to_string(s.size() - maxLen) + " chars)" : "";
-    if (s.size() < maxLen) return s;
-    return s.substr(0, maxLen) + ellipses + remainder;
-}
+// static String truncateField(const String& s) {
+//     const auto& cfg = debugStringifyConfig();
+//     auto maxLen = cfg.maxString;
+//     auto ellipses = cfg.alwaysEllipsis ? "..." : "";
+//     auto remainder = cfg.showRemainder ? "(+" + std::to_string(s.size() - maxLen) + " chars)" : "";
+//     if (s.size() < maxLen) return s;
+//     return s.substr(0, maxLen) + ellipses + remainder;
+// }
 
 String ClassInstance::toString() const {
     const auto& vars = getInstanceScope()->getContext().getVariables();

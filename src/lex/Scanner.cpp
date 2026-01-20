@@ -60,16 +60,21 @@ Scanner::Scanner(String src, CommentConfig cfg)
 
 Scanner::Scanner(const char* src, const CommentConfig& cfg) : Scanner(String(src), cfg) {}
 
-bool Scanner::hasNext() { return position < sourceLength; }
-
-
 char Scanner::next() {
-    if (!hasNext()) return '\0';
-    position++;
     column++;
+    if (position + 1 >= sourceLength) {
+        // move to EOF sentinel state
+        position = sourceLength;
+        current = '\0';
+        return current;
+    }
+    position++;
     current = source[position];
     return current;
 }
+
+bool Scanner::hasNext() { return position < sourceLength; }
+
 
 bool Scanner::isWhiteSpace(char c) {
     return c == ' ' || c == '\t' || c == '\n';
@@ -82,35 +87,26 @@ bool Scanner::isDigit(char c) {
 
 void Scanner::handleWhiteSpace() {
     while (isWhiteSpace(current) && hasNext()) {
+        int startLine = line;
+        int startCol = column;
         if (current == '\n') {
             int numNewLines = 0;
-            while (current == '\n') {
-                numNewLines += 1;
-                line++;
-                column = 0;
-                next();
-            }
-            rawTokens.emplace_back(RawKind::Newline, "\n", line, column, numNewLines);            
+            while (current == '\n') { ++numNewLines; line++; column = 0; next(); }
+            rawTokens.emplace_back(RawKind::Newline, "\n", startLine, startCol, numNewLines);            
         }
         if (current == '\t') {
             int numTabs = 0;
-            while (current == '\t') {
-                numTabs += 1;
-                next();
-            }
-            rawTokens.emplace_back(RawToken(RawKind::Tab, "    ", line, column, numTabs));
+            while (current == '\t') { ++numTabs; next(); }
+            rawTokens.emplace_back(RawToken(RawKind::Tab, "    ", startLine, startCol, numTabs));
         }
         
         if (current == ' ') {
             int numSpaces = 0;
-            while (current == ' ') {
-                numSpaces += 1;
-                next();
-            }
-            
-            rawTokens.emplace_back(RawToken(RawKind::Space, " ", line, column, numSpaces));
-            
+            while (current == ' ') { ++numSpaces; next(); }
+            rawTokens.emplace_back(RawToken(RawKind::Space, " ", startLine, startCol, numSpaces));
+            continue;
         }
+
     }
 }
 
@@ -133,7 +129,7 @@ bool Scanner::isSpecialChar(char c) {
 bool Scanner::handleSpecialChar(char nextChar, char startChar, String& resultAccum) {
     if (nextChar == startChar) { return true; }
     if (isSpecialChar(nextChar)) {
-        resultAccum += nextChar;
+        resultAccum += '\\' + nextChar;
         return true;
     }
     return false;
@@ -159,13 +155,15 @@ bool Scanner::isLetter(char c) {
 }
 
 bool Scanner::isCommentBegin(char c) {
+    String s(1, c);
     for (auto& starts : commentCfg.lineStarts) {
-        if (starts == std::to_string(c)) {
+        if (starts == s) {
             return true;
         }
     }
     for (auto& pair : commentCfg.blockPairs) {
-        if (pair.start == std::to_string(c)) {
+        
+        if (pair.start == s) {
             return true;
         }
     }
@@ -309,9 +307,6 @@ int Scanner::matchBlockStartIndex() const {
     return best;
 }
 
-
-
-
 bool Scanner::tryScanCommentDelimiter() {
     // Prefer starts over ends so "/*" is treated as start, not '/' then '*'
     if (tryScanCommentStart()) return true;
@@ -441,6 +436,8 @@ const char* rawKindToString(RawKind k) {
         case RawKind::Unknown: return "Unknown";
         case RawKind::NoOp: return "NoOp";
         case RawKind::Comment: return "Comment";
+        case RawKind::Indent: return "Indent";
+        case RawKind::Dedent: return "Dedent";
         default: return "<RawKind?>";
     }
 }
@@ -526,7 +523,6 @@ bool Scanner::tryScanComment() {
             bestBlockIndex = -1;
         }
     }
-
     for (int i = 0; i < (int)commentCfg.blockPairs.size(); ++i) {
         const auto& bs = commentCfg.blockPairs[i].start;
         if (matchAt(position, bs) && bs.size() > bestLen) {
@@ -539,19 +535,77 @@ bool Scanner::tryScanComment() {
 
     if (bestKind == StartKind::None) return false;
 
+    const int startLine = line;
+    const int startCol  = column;
+
     if (bestKind == StartKind::Line) {
-        rawTokens.emplace_back(scanLineComment(bestLexeme));
+        // emit delimiter token
+        rawTokens.emplace_back(RawKind::CommentLineStart, bestLexeme, startLine, startCol, -1);
+
+        // emit body token (scanLineComment consumes the delimiter itself right now)
+        // so: either change scanLineComment to assume delimiter already consumed,
+        // OR keep it consuming and remove the advanceN here.
+        // I recommend: delimiter already emitted -> consume it here.
+        advanceN(bestLexeme.size());
+        rawTokens.emplace_back(scanLineCommentBody()); // new helper below
         return true;
     }
 
-    if (isWhiteSpace(current)) {
-        handleWhiteSpace();
-    }
-    
-    rawTokens.emplace_back(scanBlockComment(bestBlockIndex));
+    // Block comment
+    rawTokens.emplace_back(RawKind::CommentBlockStart, bestLexeme, startLine, startCol, bestBlockIndex);
+    advanceN(bestLexeme.size());
+    rawTokens.emplace_back(scanBlockCommentBody(bestBlockIndex)); // new helper below
+    // scanBlockCommentBody should consume the end delimiter and stop right after it.
+    // then emit the end token:
+    rawTokens.emplace_back(RawKind::CommentBlockEnd, commentCfg.blockPairs[bestBlockIndex].end, line, column, bestBlockIndex);
     return true;
 }
 
+RawToken Scanner::scanLineCommentBody() {
+    const int startLine = line;
+    const int startCol  = column;
+
+    String text;
+    while (position < sourceLength && current != '\n') {
+        text += current;
+        next();
+    }
+    if (!text.empty() && text[0] == ' ') text.erase(0, 1);
+    return RawToken(RawKind::Comment, text, startLine, startCol, -1);
+}
+
+RawToken Scanner::scanBlockCommentBody(int pairIndex) {
+    const int startLine = line;
+    const int startCol  = column;
+    const auto& pair = commentCfg.blockPairs[pairIndex];
+
+    String text;
+    int depth = 1;
+
+    while (position < sourceLength) {
+        // nested start
+        if (pair.nestable && matchAt(position, pair.start)) {
+            advanceN(pair.start.size());
+            depth++;
+            continue;
+        }
+
+        // end
+        if (matchAt(position, pair.end)) {
+            advanceN(pair.end.size());
+            depth--;
+            if (depth == 0) {
+                return RawToken(RawKind::Comment, text, startLine, startCol, pairIndex);
+            }
+            continue;
+        }
+
+        text += current;
+        next();
+    }
+
+    throw ScannerError("Unterminated block comment", startLine, startCol);
+}
 
 String escapeLexeme(const String& s) {
     String out;

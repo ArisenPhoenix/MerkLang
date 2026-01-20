@@ -4,6 +4,148 @@
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/classes/Method.hpp"
+#include "core/registry/TypeRegistry.hpp"
+
+
+
+
+
+Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
+  : interpretMode(interpretMode)
+{
+    isRoot = isRootBool;
+    scopeLevel = scopeNum;
+
+    if (isRoot) {
+        globalFunctions = makeShared<FunctionRegistry>();
+        globalClasses   = makeShared<ClassRegistry>();
+
+        globalTypes = makeShared<TypeRegistry>();                 // nominal TypeId space
+        globalTypeSigs = makeShared<TypeSignatureRegistryManager>(*globalTypes); // signature pool
+
+        initRootTypes();
+    }
+
+    ++liveScopeCount;
+    ++totalScopeCreated;
+}
+
+
+
+
+SharedPtr<Scope> Scope::createChildScope() {
+    auto c = makeShared<Scope>(shared_from_this(),
+                                     globalFunctions,
+                                     globalClasses,
+                                     globalTypes,
+                                     interpretMode);
+    c->isRoot = false;
+    childScopes.push_back(c);
+    Scope::counts.blocks += 1;
+    return c;
+  }
+
+
+
+
+// Constructor for child
+Scope::Scope(SharedPtr<Scope> parent, SharedPtr<FunctionRegistry> globalF, SharedPtr<ClassRegistry> globalC, SharedPtr<TypeRegistry> globalT, bool interpretMode)
+: parentScope(parent), 
+    globalFunctions(std::move(globalF)),
+    globalClasses(std::move(globalC)),
+    globalTypes(std::move(globalT)),
+    interpretMode(interpretMode)
+{
+    scopeLevel = parent ? parent->scopeLevel + 1 : 0;
+
+    if (!parent) throw MerkError("Scope ctor: parent is null");
+    globalTypeSigs = parent->globalTypeSigs;
+
+    if (!globalTypes)    throw MerkError("Scope ctor: globalTypes is null");
+    if (!globalTypeSigs) throw MerkError("Scope ctor: globalTypeSigs is null");
+
+    localTypes.attach(*globalTypeSigs);
+
+    ++liveScopeCount;
+    ++totalScopeCreated;
+
+}
+
+Scope::~Scope() {
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    if (scopeLevel == 0 && isRoot) {
+        if (interpretMode) {
+        } else {
+            return; // Avoid clearing child scopes in compile mode
+        }
+    } else {
+    
+        clear();
+        --liveScopeCount;
+    }
+
+
+
+
+    DEBUG_FLOW_EXIT();
+}
+
+void Scope::clear(bool internalCall) {
+    auto weak = weak_from_this();
+
+    // DEBUG_LOG(LogLevel::TRACE,
+    //     "Destroying Scope addr=", this,
+    //     " owner=", owner,
+    //     " parent=", getParent() ? getParent().get() : 0,
+    //     " (captured?) children=", childScopes.size(),
+    //     " use_count=", weak.use_count()
+    // );
+    
+        
+    // if (owner.find("ClassInstance") != std::string::npos) {
+    //     String funcs;
+    //     for (auto& [funcName, funcSigs] : localFunctions) {(void)funcSigs; funcs += ", " + funcName;}
+    //     String classes;
+    //     DEBUG_LOG(LogLevel::TRACE,
+    //               "Destroying Instance Scope functions=", localFunctions.size(), metaString(), "Scope Address: ", formattedScope(), "Funcs: ", funcs);
+    // }
+    context.clear();
+    if (isRoot && internalCall) {
+        // DEBUG_LOG(LogLevel::TRACE, metaString(), "InternalCall: ", (internalCall ? "true": "false"));
+        // auto funIt = localFunctions.find("pop");
+        // if (funIt != localFunctions.end()) {throw MerkError("Trying To Destroy Scope containing pop Method");}
+
+        // auto it = localClasses.find("List");
+        // if (it != localClasses.end()) {throw MerkError("Trying To Destroy Scope containing List class");}
+    }
+    
+
+    
+    
+    localFunctions.clear();
+    localClasses.clear();
+    for (auto& child : childScopes) {
+        if (child) {
+            if (child.get() != this) {
+                child->clear();  // Recursively clear
+            }
+            
+        }
+    }
+    childScopes.clear();
+
+    // Only for Root Scope
+    if (isRoot) {
+        if (globalFunctions) globalFunctions->clear();
+        if (globalClasses) globalClasses->clear();
+        if (globalTypes) globalTypes.reset();
+    }
+}
+
+
+
+
+
 
 
 // Builds a simple shell scope for callables with only globalFunctions and globalClasses

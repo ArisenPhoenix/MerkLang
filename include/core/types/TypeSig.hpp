@@ -9,7 +9,7 @@ class Node;
 class ITypeSigContext;
 
 struct InvocableSigType {
-    String methodName;
+    String name;
     Vector<TypeSignatureId> params;
     Vector<uint8_t> enforced;
     TypeSignatureId ret = kInvalidTypeSignatureId;

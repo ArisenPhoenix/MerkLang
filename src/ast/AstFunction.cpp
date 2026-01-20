@@ -135,7 +135,7 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
     
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
     auto clonedBody = static_unique_ptr_cast<FunctionBody>(std::move(clonedBodyBase));
-    clonedBody->setScope(getScope());
+    // clonedBody->setScope(getScope());
 
     DEBUG_LOG(LogLevel::DEBUG, "FunctionDef Defining Scope: ", scope->getScopeLevel());
     
@@ -165,10 +165,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     DEBUG_FLOW(FlowLevel::PERMISSIVE); 
     if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
     if (name == "showScope") {scope->debugPrint(); return Node(Null);}
-    // auto evaluatedArgs = handleArgs(scope, instanceNode);
     auto callArgs = arguments->evaluateAll(scope, instanceNode);
-    // auto* sig = resolveOverload()s
-
     SharedPtr<CallableSignature> optSig;
 
     auto sigOpt = scope->getFunction(name, callArgs);
@@ -178,6 +175,8 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
         optSig = sigOpt.value();
         evaluatedArgs = callArgs.bindToBound(optSig->getParameters(), /*allowDefaults=*/true);
     } else {
+        scope->debugPrint();
+        
         auto& var = scope->getVariable(name);
         if (var.isFunctionNode()) {
             auto funcNode = var.toFunctionNode();
@@ -187,9 +186,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
             } else {
                 throw MerkError("Could Not Determine Overload for function " + name);
             }
-        }
-        
-        // throw MerkError("Got FuncSigOpts");
+        }        
         if (DynamicNode::getTypeFromValue(var.getValueNode().getValue()) == NodeValueType::Function) {
             throw MerkError("IS A FUNCTION>>>>YAAAAAAY");
         }
@@ -217,7 +214,7 @@ Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<C
     if (captured->getContext().getVariables().size() == 0) {
         callScope = captured;
         scope->appendChildScope(callScope, false);
-
+        
     } else {
         callScope = scope->buildFunctionCallScope(func, func->getName());
     }
