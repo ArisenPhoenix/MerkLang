@@ -17,7 +17,6 @@ const char* ReturnException::what() const noexcept {
     return "Return statement encountered";
 }
 
-// ThrowStatement.h
 
 Throw::Throw(UniquePtr<ASTStatement> value, SharedPtr<Scope> scope)
     : ASTStatement(scope), expr(std::move(value)) {}
@@ -27,10 +26,6 @@ Node Throw::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> Instan
     if (!expr) { throw MerkError("Throw Exception"); }
     
     Node err = expr->evaluate(scope, InstanceNode);
-
-    // Can perform some other handling for constructing the message
-
-
     throw ThrowException(err);
 }
 
@@ -43,15 +38,11 @@ EvalResult Throw::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNo
 
 Node Return::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const  {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    
-    if (!returnValue) {throw MerkError("Return statement must have a value.");}
-
+    if (!returnValue) { throw MerkError("Return statement must have a value."); }
     auto value = returnValue->evaluate(scope, instanceNode);
 
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Value after return evaluation: ", value, "Type: ", value.getFlags().toString());
-
     DEBUG_FLOW_EXIT();
-    throw ReturnException(value);  // Immediately exit function with value
+    throw ReturnException(value);
 
 }
 
@@ -70,13 +61,9 @@ UniquePtr<BaseAST> Throw::clone() const {
 Return::Return(SharedPtr<Scope> scope, UniquePtr<ASTStatement> value)
 : ASTStatement(scope), returnValue(std::move(value)) {}
 EvalResult Return::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance) const {
-    
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
-    if (!returnValue) throw MerkError("Return statement must have a value.");
-
+    if (!returnValue) { throw MerkError("Return statement must have a value."); }
     Node value = returnValue->evaluate(scope, instance);
-
     DEBUG_FLOW_EXIT();
     return EvalResult::Return(std::move(value));
 }
