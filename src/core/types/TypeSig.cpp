@@ -109,23 +109,21 @@ TypeMatchResult NominalSig::matchValue(const Node& v, const ITypeSigContext& ctx
 
     TypeId got = typeIdOfValue(v, tr);
 
-    // If this nominal is Any, accept anything when allowAny
-    // if (base == tr.anyId()) {
-    //     return opt.allowAny ? TypeMatchResult::Yes(1) : TypeMatchResult::No();
-    // }
-
-    if (got == base) return TypeMatchResult::Yes(100);
+    if (got == base) { return TypeMatchResult::Yes(100); }
 
     if (opt.allowNumericWidening && v.getType() != NodeValueType::Any) {
         const auto& expName = tr.nameOf(base);
         NodeValueType expectedNvt = NodeValueType::Any;
-        if (expName == "Int") expectedNvt = NodeValueType::Int;
-        else if (expName == "Float") expectedNvt = NodeValueType::Float;
-        else if (expName == "Double") expectedNvt = NodeValueType::Double;
+
+        auto nodeType = stringToNodeType(expName);
+        if (nodeType != NodeValueType::UNKNOWN) {
+            expectedNvt = nodeType;
+        }
 
         auto vt = v.getType();
-        if (isNumeric(vt) && isNumeric(expectedNvt) && numericRank(vt) <= numericRank(expectedNvt))
+        if (isNumeric(vt) && isNumeric(expectedNvt) && numericRank(vt) <= numericRank(expectedNvt)) {
             return TypeMatchResult::Yes(60);
+        }
     }
 
     return TypeMatchResult::No();

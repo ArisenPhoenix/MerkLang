@@ -40,18 +40,17 @@ It enforces:
 - **VarNode**: Stores variables, determines if they can be updated, and ensures type safety.
 - **LitNode**: Stores literal values.
 - **ParamNode**:  Used as a placeholder for function parameters, holding type information.
+- **ArgumentList**: Used as the basic argument type for binding to parameters.
 
 ### Function Execution
-Merk distinguishes between:
-
 - **User-defined functions** (parsed from Merk code, stored in scopes).
 - **Native functions** (predefined C++ implementations).
+- **These apply to Methods and Classes as well**
+
 
 ### Function Storage & Execution Flow
-- Function definitions are stored in the scope in which they are declared.
-- Function calls pass the current scope for execution.
-- Function arguments are stored in `ParamNode`, preventing direct scope modifications.
-- Return values propagate back to the calling scope.
+- Function/Method definitions are stored in the scope in which they are declared.
+- Function calls pass the current (calling) scope for execution.
 - Function execution follows the AST evaluation flow, ensuring consistency with other AST structures.
 
 ## AST Structure
@@ -63,9 +62,11 @@ Merk distinguishes between:
 - **FunctionDef**: Represents function definitions.
 - **Methods**: Follow the same convention as that of functions
 - **Classes**: Follow the same convention as that of methods and functions, but are stored in a separate registry, allowing scope based storage of member methods and functions
-
+- **Many More**: The above are just examples
 - **Evaluator**: A namespace dedicated to AST node evaluation.
-
+- **Evaluator**: A namespace dedicated to AST node evaluation.
+- **FlowEvaluator**: New for certain structures to ensure cooperation with calls
+- **TypeEvaluator**: Also new and used for handling AnyNode, operations between static types, and debugging
 
 ### Numerical Scoping
 - **Global Scope (Level 0)**
@@ -76,52 +77,34 @@ Merk distinguishes between:
 ```
 Global Scope (Level 0)
 │
-├── Child Scope (Level 1)   [Variables, Functions]
+├── Child Scope (Level 1)   [Variables, Functions (defined thereof)]
 │   ├── Variable: x
-│   ├── Function: myFunction()
+│   ├── Function: someFunction()
 │
 ├── Child Scope (Level 1)   [Classes]
-│   ├── Class: MyClass
-│   │   ├── Method: myMethod()
+│   ├── Class: SomeClass
+│   │   ├── Method: someMethod()
 ```
 
 ## Evaluation & Execution
-- **Deferred execution** (compilation-like behavior)
+- **Deferred execution** (for later compilation)
 - **Immediate execution** (interpretation-like behavior)
 - Each AST node has an `evaluate()` method that executes its logic
 
-## Current Development Priorities
-- **Functions:** Implementing function storage, execution, and handling parameters.
-- **Scope refinement:** Ensuring optimal resolution of variables and functions.
-- **Performance improvements:** Optimizing AST traversal and evaluation.
-- **Better error handling:** Improving debugging and error reporting within the parser and evaluator.
-
 ## Future Considerations
 - **Function compilation & optimization**
-- **Extending function nodes for native function support**
-- **Integrating Return handling for function calls**
 - **Advanced class system & method resolution**
 - **Potential immutability optimizations**
 
-## SAL Overview
-SAL (Super Assembly Language) aims to abstract hardware-specific details while retaining high performance. It would serve as a unified intermediary language for high-level languages.
-
-### Key Features:
-- Cross-architecture mapping
-- Ontology-based abstraction
-- BNF-defined functional grammar
-- Optimized execution paths for hardware
-
-
-
-<h2>Typing Rules and Conversions in Merk</h2>
+#
+<h1> Furthermore </h1>
 
 <h3>Static vs Dynamic Typing</h3>
-<p>Merk allows both static and dynamic typing. If a variable is declared with a type annotation, it is statically typed and cannot change type. If no type is provided, the variable is dynamically typed and can change type based on usage.</p>
+<p>Merk allows both static and dynamic typing. If a variable is declared with a type annotation, it is statically typed and cannot change type. If no type is provided, the variable is dynamically typed and can change type based on usage. (AnyNode)</p>
 
 <ul>
   <li><strong>Static Typed Variable:</strong> <code>var x: Int = 12</code> (Fixed as an integer)</li>
-  <li><strong>Dynamic Typed Variable:</strong> <code>var x = 12</code> (Type inferred and can change within rules)</li>
+  <li><strong>Dynamic Typed Variable:</strong> <code>var x = 12</code> (Type inferred and can change, but the type is subject to typing rules, so best to be explicit)</li>
 </ul>
 
 <h3>Mutability, Constness, and Locked Variables</h3>
@@ -137,7 +120,7 @@ SAL (Super Assembly Language) aims to abstract hardware-specific details while r
 <pre><code>const x := 12  // Fully locked: immutable, non-reassignable, statically typed</code></pre>
 
 <h3>Type Promotion for Dynamic Variables</h3>
-<p>For dynamically typed variables, Merk ensures the type is promoted only when necessary. The system follows these rules:</p>
+<p>For dynamically typed variables, Merk ensures the type is promoted only when necessary. The system follows these rules for mutable values:</p>
 
 <ul>
   <li><strong>Integer + Integer → Integer</strong></li>
@@ -177,20 +160,20 @@ x = Float(y) + 2.5  // Explicit cast ensures behavior
 
 Merk uses three key boolean flags to determine variable behavior:
 
-- `isConst`: Whether the variable name can be reassigned.
+- `isConst`:   Whether the variable name can be reassigned.
 - `isMutable`: Whether the internal data can be changed.
-- `isStatic`: Whether the type is fixed after assignment.
+- `isStatic`:  Whether the type is fixed after assignment.
 
-| `isConst` | `isMutable` | `isStatic` | Description                                                                 | Tags         |
-|-----------|-------------|------------|-----------------------------------------------------------------------------|--------------|
+| `isConst` | `isMutable` | `isStatic` | Description                                                                 | Tags          |
+|-----------|-------------|------------|-----------------------------------------------------------------------------|---------------|
 | `false`   | `false`     | `false`    | Reassignable, data locked, type flexible.                                   | ⚠️🧩          |
-| `false`   | `false`     | `true`     | Reassignable, data locked, type fixed.                                      | 🚀           |
+| `false`   | `false`     | `true`     | Reassignable, data locked, type fixed.                                      | 🚀            |
 | `false`   | `true`      | `false`    | Reassignable, data mutable, type flexible (default `var`).                  | ⚠️🧩          |
-| `false`   | `true`      | `true`     | Reassignable, data mutable, type fixed — stable & performant.              | 🚀🧩          |
-| `true`    | `false`     | `false`    | Not reassignable, data locked, type flexible — weak `const`.               | 🔒⚠️          |
-| `true`    | `false`     | `true`     | Fully immutable constant (`const x := val`) — ideal for optimization.      | 🔒🚀✅         |
-| `true`    | `true`      | `false`    | Not reassignable, but mutable internals — dynamic objects with permanence. | 🧩⚠️          |
-| `true`    | `true`      | `true`     | Not reassignable, mutable internals, type fixed — ideal for classes/maps.  | 🔒🚀          |
+| `false`   | `true`      | `true`     | Reassignable, data mutable, type fixed — stable & performant.               | 🚀🧩          |
+| `true`    | `false`     | `false`    | Not reassignable, data locked, type flexible — weak `const`.                | 🔒⚠️          |
+| `true`    | `false`     | `true`     | Fully immutable constant (`const x := val`) — ideal for optimization.       | 🔒🚀✅        |
+| `true`    | `true`      | `false`    | Not reassignable, but mutable internals — dynamic objects with permanence.  | 🧩⚠️          |
+| `true`    | `true`      | `true`     | Not reassignable, mutable internals, type fixed — ideal for classes/maps.   | 🔒🚀          |
 
 ---
 

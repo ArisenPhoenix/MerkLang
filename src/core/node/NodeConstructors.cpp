@@ -437,11 +437,15 @@ void typeIdBasedValidation(Node& startingValue, DataTypeFlags& varFlags) {
         }
 
         if (startingValue.getFlags().inferredSig != varFlags.declaredSig) {
-            throw TypeMismatchError(
-                varFlags.fullType.getBaseType(),
+            DEBUG_LOG(LogLevel::WARNING, 
+                "Type is Being Promoted: ", varFlags.fullType.getBaseType(),
                 "<sig " + std::to_string(startingValue.getFlags().inferredSig) + ">",
-                "VarNode::VarNode -> typeIdBasedValidation 2"
-            );
+                "VarNode::VarNode -> typeIdBasedValidation 2");
+            // throw TypeMismatchError(
+            //     varFlags.fullType.getBaseType(),
+            //     "<sig " + std::to_string(startingValue.getFlags().inferredSig) + ">",
+            //     "VarNode::VarNode -> typeIdBasedValidation 2"
+            // );
         }
     }
 }
@@ -471,8 +475,8 @@ VarNode::VarNode(Node startingValue, DataTypeFlags declFlags) {
         varFlags.applyDeclName(declFlags.name, declFlags.key);
         valueNode.getFlags().applyDeclName(declFlags.name, declFlags.key);
     }
-    // typeIdBasedValidation(startingValue, varFlags);
-    stringBasedValidation(valueNode, varFlags);
+    typeIdBasedValidation(startingValue, varFlags);
+    // stringBasedValidation(valueNode, varFlags);
     DEBUG_FLOW_EXIT();
 }
 

@@ -177,9 +177,9 @@ int run_original(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
     auto code = run_original(argc, argv);
-    Timer timer = Timer();
-    testFunc();
-    timer.printElapsed("C++ fib_memoized");
+//    Timer timer = Timer();
+//    testFunc();
+ //   timer.printElapsed("C++ fib_memoized");
     return code;
 }   
 
