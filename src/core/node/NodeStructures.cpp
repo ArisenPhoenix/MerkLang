@@ -4,6 +4,7 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
 #include "algorithm"
+#include "core/evaluators/TypeEvaluator.hpp"
 
 #include <functional> 
 
@@ -41,14 +42,14 @@ ListNode::ListNode(NodeList init) : elements(std::move(init)) {setType(NodeValue
 bool ListNode::holdsValue() { return elements.size() > 0; }
 
 void ListNode::append(const Node& node) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     DEBUG_LOG(LogLevel::PERMISSIVE, "Appending to List: ", this, " New state: ", this->toString());
 
     elements.push_back(node);
 }
 
 bool ListNode::remove(const Node& value) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     auto position = std::find(elements.begin(), elements.end(), value);
     if (position != elements.end()) {
         elements.erase(position);
@@ -58,12 +59,12 @@ bool ListNode::remove(const Node& value) {
 }
 
 void ListNode::insert(const Node& index, const Node& value) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     elements.insert(elements.begin() + index.toInt(), value);
 }
 
 Node ListNode::pop(const Node& index) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     auto valToGet = !index.isValid() ? elements.size() - 1 : index.toInt();
 
     auto position = std::find(elements.begin(), elements.end(), elements[valToGet]);
@@ -97,7 +98,7 @@ SharedPtr<NodeBase> ListNode::clone() const {
     return copy;
     // NodeList clonedElements;
     // for (auto& ele: elements) {
-    //     auto type = DynamicNode::getTypeFromValue(ele.getValue());
+    //     auto type = TypeEvaluator::getTypeFromValue(ele.getValue());
     //     auto isTarget = (type == NodeValueType::Dict || type == NodeValueType::Callable || type == NodeValueType::DataStructure || type == NodeValueType::List || type == NodeValueType::ClassInstance);
     //     auto valClone = ele.clone();
     //     if ((ele == valClone || ele.getValue() == valClone.getValue()) && isTarget) {
@@ -144,7 +145,7 @@ ArrayNode::ArrayNode(NodeList init, NodeValueType type) : ListNode(init) {
 }
 
 void ArrayNode::append(const Node& node) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     if (contains == NodeValueType::Any || node.getType() == contains) {
         elements.push_back(node);
     } else {
@@ -161,7 +162,7 @@ ArrayNode::ArrayNode(ArgumentList init, NodeValueType nodeType)
 }
 
 void ArrayNode::setValue(const VariantType& v) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     if (std::holds_alternative<SharedPtr<NativeNode>>(v)) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         auto arr = static_cast<ArrayNode*>(ds.get());
@@ -170,7 +171,7 @@ void ArrayNode::setValue(const VariantType& v) {
 }
 
 void ArrayNode::insert(const Node& index, const Node& value) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     if (contains == NodeValueType::Any || value.getType() == contains) {
         elements.insert(elements.begin() + index.toInt(), value);
         return;
@@ -267,7 +268,7 @@ bool DictNode::holdsValue() {
 }
 
 void DictNode::set(const Node& key, const Node& value) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     if (value.isNull()) {throw MerkError("Setting A null Value");}
     elements[key] = value;
 }
@@ -279,14 +280,14 @@ void DictNode::set(const String& key, const Node value) {
 void DictNode::set(const char* key, Node value) { set(Node(key), std::move(value)); }
 
 Node DictNode::pop(const Node& key) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     auto val = elements.find(key);
     // elements.erase(val);
     return val->second;
 }
 
 void DictNode::remove(const Node& key) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     elements.erase(key);
 }
 
@@ -304,7 +305,7 @@ Node DictNode::get(const Node& key, const Node& defaultReturn) {
 VariantType DictNode::getValue() const {return elements;}
 
 void DictNode::setValue(const VariantType& v) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     if (std::holds_alternative<SharedPtr<NativeNode>>(v)) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         auto dict = static_cast<DictNode*>(ds.get());
@@ -318,7 +319,7 @@ void DictNode::setValue(const VariantType& v) {
 SharedPtr<NodeBase> DictNode::clone() const {
     std::unordered_map<Node, Node> clonedElements;
     for (auto& [key, val] : elements) {
-        auto type = DynamicNode::getTypeFromValue(val.getValue());
+        auto type = TypeEvaluator::getTypeFromValue(val.getValue());
         auto isTarget = (type == NodeValueType::Dict || type == NodeValueType::Callable || type == NodeValueType::DataStructure || type == NodeValueType::List || type == NodeValueType::ClassInstance);
         auto valClone = val.clone();
         if ((val == valClone || val.getValue() == valClone.getValue()) && isTarget) {
@@ -377,7 +378,7 @@ int SetNode::length() const {
 }
 
 void SetNode::add(const Node& value) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     elements.emplace(value);
 }
 
@@ -391,7 +392,7 @@ Node SetNode::get(const Node& value) {
 }
 
 void SetNode::remove(const Node& value) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     elements.erase(value);
 }
 
@@ -411,7 +412,7 @@ std::size_t SetNode::hash() const {
 VariantType SetNode::getValue() const {return elements;}
 
 void SetNode::setValue(const VariantType& v) {
-    DynamicNode::validateMutability(*this);
+    AnyNode::validateMutability(*this);
     if (std::holds_alternative<SharedPtr<NativeNode>>(v)) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         auto set = static_cast<SetNode*>(ds.get());

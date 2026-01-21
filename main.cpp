@@ -28,18 +28,24 @@
 #include "lex/Scanner.hpp"
 #include "lex/Structurizer.hpp"
 #include "lex/Lexer.hpp"
+#include "core/evaluators/TypeEvaluator.hpp"
 
 
-std::tuple<String, String> getFileContents(int argc, char* argv[]) {
+
+std::tuple<String, String> getFileContents(int argc, char* argv[], bool onlyPath) {
     const String codeDir = "code/";
     const String defaultFile = "test1.merk";
 
     String filePath = getFilePath(argc, argv, codeDir, defaultFile);
     DEBUG_LOG(LogLevel::DEBUG, "Using File: ", filePath);
-   
+    
+    if (onlyPath) {
+        String content = "";
+
+        return std::tuple(content, filePath);
+    }
     String content = readFile(filePath);
     outputFileContents(content, 800);
-
     return std::tuple(content, filePath);
 }
 
@@ -91,7 +97,7 @@ void testFunc() {
     
     auto val = fib_memoized(35, cached);
 
-    String out = DynamicNode::forceTo<String>(val);
+    String out = TypeEvaluator::as<String>(val);
     debugLog(true, out);
 };
 
@@ -103,27 +109,23 @@ void testFunc() {
 int run_original(int argc, char* argv[]) {
 // Debug::configureDebugger();
     Debug::configureDebugger();
-    auto [content, fileName] = getFileContents(argc, argv);
+    auto [content, filePath] = getFileContents(argc, argv, true);
     const bool interpretMode = false;
     const bool byBlock = false;
     LexerConfig lCfg;
     SharedPtr<Scope> globalScope = generateGlobalScope(interpretMode, lCfg);
-    
-    
+    auto logLevel = Debugger::getInstance().getLogLevel();
+    // auto flowLevel = Debugger::getInstance().getFlowLevel();
     
     try {
         
 
         DEBUG_LOG(LogLevel::DEBUG, "Initializing tokenizer...");
-        Tokenizer tokenizer(content);
+        Tokenizer tokenizer(filePath, true);
         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
-        // auto tokens = tokenizer.tokenize();
-        // tokenizer.printTokens(true);
-        auto tokens = tokenizer.lex(lCfg);
-        DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
-        // if (Debugger::getInstance().getLogLevel() <= LogLevel::PERMISSIVE) { tokenizer.printTokens(true); }
- 
-    
+
+        auto tokens = tokenizer.tokenize(lCfg);
+        DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n"); 
 
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
         
@@ -136,28 +138,18 @@ int run_original(int argc, char* argv[]) {
             ast->evaluateFlow(globalScope);
         }
 
-        globalScope->debugPrint();
+        timer.printElapsed(filePath);
 
-
-        
-        timer.printElapsed(fileName);
-
-        timer.reset();
-        testFunc();
-        timer.printElapsed("C++ fib_memoized");
-        
-        
+             
 
         DEBUG_LOG(LogLevel::DEBUG, "Terminating Program...");
-        DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
-        
+        if (logLevel == LogLevel::PERMISSIVE) {
+            DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
+            globalScope->debugPrint();   
+        }
         
 
-        // debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
-        // globalScope->debugPrint();
         ast->clear();
-        // std::cout << "Execution time: " << elapsed.count() << " ms\n";
-
         
         DEBUG_LOG(LogLevel::DEBUG, "");
         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
@@ -175,7 +167,6 @@ int run_original(int argc, char* argv[]) {
     DEBUG_LOG(LogLevel::DEBUG, "==================== FINAL GLOBAL SCOPE ====================");
     globalScope->clear();
     globalScope.reset();
-    // Scope::liveScopeCount -= 1;
     Scope::printScopeReport();
     
     return 0;
@@ -185,7 +176,11 @@ int run_original(int argc, char* argv[]) {
 
 
 int main(int argc, char* argv[]) {
-    return run_original(argc, argv);
+    auto code = run_original(argc, argv);
+    Timer timer = Timer();
+    testFunc();
+    timer.printElapsed("C++ fib_memoized");
+    return code;
 }   
 
 

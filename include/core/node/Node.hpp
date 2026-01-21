@@ -9,30 +9,11 @@
 #include <functional>
 #include <unordered_map>
 #include "core/TypesFWD.hpp"
-#include "core/errors.h"
+#include "core/types.h"
 
 struct TypeNode;
 using TypeRef = SharedPtr<const TypeNode>;
 
-// struct DataTypeFlags {
-//     bool isConst = false;
-//     bool isMutable = true;
-//     bool isStatic = false;
-
-//     // Optional runtime tag/hint (keep for now if you want)
-//     NodeValueType runtimeTag = NodeValueType::Any;
-
-//     // The actual canonical type (this is what you compare)
-//     TypeRef declaredType;  // from annotation (or Any)
-//     TypeRef runtimeType;   // inferred from value node (optional cache)
-
-//     bool isCallable = false;
-//     bool isInstance = false;
-//     String name = "";
-//     String key = "";
-
-//     size_t hash() const; // include declaredType hash (or pointer)
-// };
 using TypeSignatureId = uint32_t;
 
 struct DataTypeFlags {
@@ -94,6 +75,9 @@ public:
 
     virtual bool isString() const;
     virtual String toString() const;
+
+    virtual bool isChar() const;
+    virtual char toChar() const;
 
     virtual bool isChars() const;
     virtual char* toChars() const;
@@ -550,7 +534,7 @@ public:
 };
 
 class CharNode : public NodeBase {
-    char* value;
+    char value;
 public:
     explicit CharNode(char v);
     CharNode(VariantType v);
@@ -566,6 +550,8 @@ public:
     String toString() const override;
     bool isChars() const override;
     char* toChars() const override;
+    bool isChar() const override;
+    char toChar() const override;
 
     bool isBool() const override;
     bool toBool() const override;
@@ -647,44 +633,15 @@ public:
 };
 
 
-enum class CoerceMode : uint8_t { Strict, Permissive };
-
-class DynamicNode: public NodeBase {
+class AnyNode: public NodeBase {
     VariantType value;
 public:
-    static NodeValueType inferTypeFromString (String& valueStr, String& typeStr);
-    static NodeValueType getNodeTypeFromString(String& type);
-    static std::pair<VariantType, NodeValueType> getCoercedStringAndType(const String& value, String& typeStr);
     static std::pair<VariantType, NodeValueType> validateAndCopy(const VariantType& value, NodeValueType type);
-    static NodeValueType getTypeFromValue(const VariantType& value);
-    static String forceToString(VariantType value);
-    static float forceToFloat(VariantType value);
-    static double forceToDouble(VariantType value);
-    static char* forceToChar(VariantType value);
-    static bool forceToBool(VariantType value);
-    static int forceToInt(VariantType value);
-    static const char* forceToCString(const VariantType& v, String& scratch);
-    
-    template <typename T>
-    static T parseExact(std::string_view s, const char* what);
 
-    template <typename T>
-    static T forceTo(const VariantType& v, CoerceMode mode = CoerceMode::Permissive);
-
-    template <typename T>
-    static T forceTo(const Node&, CoerceMode mode = CoerceMode::Permissive);
-
-
-    static String forceToString(Node& value);
-    static float forceToFloat(Node& value);
-    static double forceToDouble(Node& value);
-    static char* forceToChar(Node& value);
-    static bool forceToBool(Node& value);
-    static int forceToInt(Node& value);
 
     static SharedPtr<NodeBase> dispatch(VariantType val, NodeValueType type, bool coerce = false);
     static Node dispatchNode(VariantType val, String typeStr, bool coerce = false);
-    static DynamicNode fromVariant(VariantType v);
+    static AnyNode fromVariant(VariantType v);
 
     static SharedPtr<NodeBase> applyAdd(const NodeBase& lhs, const NodeBase& rhs);
     static SharedPtr<NodeBase> applySub(const NodeBase& lhs, const NodeBase& rhs);
@@ -709,13 +666,13 @@ public:
     static void validateMutability(const Node&);
 
 
-    DynamicNode();
-    explicit DynamicNode(const VariantType);
-    explicit DynamicNode(SharedPtr<NodeBase>);
-    explicit DynamicNode(const NodeBase&);
-    explicit DynamicNode(NodeBase&&);
-    explicit DynamicNode(Node&);
-    explicit DynamicNode(const Node&);
+    AnyNode();
+    explicit AnyNode(const VariantType);
+    explicit AnyNode(SharedPtr<NodeBase>);
+    explicit AnyNode(const NodeBase&);
+    explicit AnyNode(NodeBase&&);
+    explicit AnyNode(Node&);
+    explicit AnyNode(const Node&);
     VariantType getValue() const override;
     void setValue(const VariantType& v) override;
 

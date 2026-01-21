@@ -17,10 +17,11 @@ public:
     Lexer(LexerConfig);
     Lexer();
 
-    Vector<Token> lex(const Vector<RawToken>& raw);
+    Vector<Token> lex(const Vector<RawToken>& raw, Vector<Token>&);
 
 private:
     LexerConfig cfg;
+
     // state flags (ported from Tokenizer)
     bool insideParams = false;
     bool insideArgs   = false;

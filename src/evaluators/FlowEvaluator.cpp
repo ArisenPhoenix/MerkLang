@@ -13,8 +13,8 @@
 #include "core/Scope.hpp"
 
 // New flow types
-#include "core/EvalResult.hpp"
-#include "core/FlowEvaluator.hpp"   // your new header (or core/Evaluator.h if you keep name)
+#include "core/evaluators/EvalResult.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"   // your new header (or core/Evaluator.h if you keep name)
 
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
@@ -28,7 +28,7 @@
 #include "ast/AstClass.hpp"
 #include "ast/ast_validate.h"
 
-#include "core/helpers/class_helpers.h"
+#include "ast/helpers.h"
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/Method.hpp"
 

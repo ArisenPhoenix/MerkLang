@@ -1,19 +1,10 @@
 #pragma once
-#include <unordered_set>
 
-// #include "core/types.h"
+#include <unordered_set>
 #include "core/TypesFWD.hpp"
 #include "ast/AstBase.hpp"
 #include "core/errors.h"
 
-// This alias was used for clarity, when dealing with free variables specifically. 
-// The codebase is getting quite large so being explicit has helped to avoid unnecessary problems
-
-class Control {
-public:
-    virtual void setCapturedScope(SharedPtr<Scope> newScope) = 0;
-
-};
 
 // Used as sort of a mixin class for a common interface among only those classes needing it.
 class AstCollector {
@@ -199,11 +190,10 @@ public:
     UniquePtr<BaseAST> clone() const override;
 }; 
 
-// New base class for loops
 class LoopBlock : public ASTStatement {
 protected:
-    UniquePtr<ConditionalBlock> condition; // Condition to check before each iteration
-    UniquePtr<CodeBlock> body;             // The loop's body
+    UniquePtr<ConditionalBlock> condition; 
+    UniquePtr<CodeBlock> body;             
 
 public:
     explicit LoopBlock(UniquePtr<ConditionalBlock> condition, UniquePtr<CodeBlock> body, SharedPtr<Scope> scope);

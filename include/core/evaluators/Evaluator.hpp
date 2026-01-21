@@ -1,8 +1,5 @@
-#pragma once
-
-// #include "core/types.h"
+#pragma once 
 #include "core/TypesFWD.hpp"
-#include "core/EvalResult.hpp"
 #include <string>
 #include <vector>
 #include <optional>
@@ -11,17 +8,7 @@
 // This is for future considerations when implementing compilation. 
 // Also, it keeps other files smaller and more easily sifted...
 
-class ConditionalBlock;  // Forward declaration
-class BaseAST;
-class ASTStatement;
-class ElifStatement;
-class ElseStatement;
-class CodeBlock;
-class IfStatement;
-class FunctionBlock;
-class ClassInstanceNode;
-class CallableBody;
-class MethodBody;
+
 
 namespace Evaluator {
    
@@ -51,6 +38,9 @@ namespace Evaluator {
     Node evaluateMethodDef(SharedPtr<Scope> passedScope, SharedPtr<Scope> ownScope, SharedPtr<Scope> classScope, String methodName, MethodBody* body, ParamList parameters, CallableType callType, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
     
 
+    Node evaluateFunctionCall(String name, SharedPtr<Scope> scope, Arguments* arguments, SharedPtr<ClassInstanceNode> instanceNode);
+    Node evaluateChain(SharedPtr<Scope> currentScope, SharedPtr<Scope> methodScope, int resolutionStartIndex, const Vector<ChainElement>& elements, SharedPtr<ClassInstanceNode> instanceNode);
+    
     [[noreturn]] Node evaluateBreak();
     [[noreturn]] Node evaluateBreak(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 

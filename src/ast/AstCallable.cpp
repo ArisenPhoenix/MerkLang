@@ -15,8 +15,8 @@
 #include "core/callables/Callable.hpp"
 #include "core/callables/functions/Function.hpp"
 
-#include "core/Evaluator.hpp"
-#include "core/FlowEvaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"
 
 #include "ast/AstFunction.hpp"
 #include "ast/AstMethod.hpp"

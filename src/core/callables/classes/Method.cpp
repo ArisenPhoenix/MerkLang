@@ -4,14 +4,14 @@
 #include "core/types.h"
 #include "utilities/debugger.h"
 #include "core/errors.h"
-#include "core/FlowEvaluator.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"
 #include "ast/Exceptions.hpp" 
 #include "ast/AstBase.hpp"
 #include "ast/AstClass.hpp"
 #include "ast/AstChain.hpp"
 #include "ast/AstCallable.hpp"
 #include "core/callables/classes/Method.hpp"
-
+#include "core/evaluators/Executor.hpp"
 
 Method::Method(String name, ParamList params, CallableType definedType, bool requiresReturn, bool isStatic)
     : Invocable(name, params, CallableType::METHOD, requiresReturn, isStatic)
@@ -134,26 +134,27 @@ Node nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Scope> ca
 
 Node UserMethod::execute(ArgumentList args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
-    DEBUG_LOG(LogLevel::TRACE, "Validated Instance Node");
-    callScope->owner = generateScopeOwner("MethodExecutor", name);
+    return Executor::Method(name, callScope, getCapturedScope(), requiresReturn, args, body.get(), parameters, instanceNode);
+    // if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
+    // DEBUG_LOG(LogLevel::TRACE, "Validated Instance Node");
+    // callScope->owner = generateScopeOwner("MethodExecutor", name);
     
-    if (callScope == instanceNode->getInstanceScope()) {throw MerkError("callScope cannot be the same as instanceScope");}
-    DEBUG_LOG(LogLevel::TRACE, "Placing Args in Call Scope");
-    placeArgsInCallScope(args, callScope);
+    // if (callScope == instanceNode->getInstanceScope()) {throw MerkError("callScope cannot be the same as instanceScope");}
+    // DEBUG_LOG(LogLevel::TRACE, "Placing Args in Call Scope");
+    // placeArgsInCallScope(args, callScope);
 
     
-    bool executeFlow = true;
-    if (executeFlow) {
-        EvalResult r = body->evaluateFlow(callScope, instanceNode);
-        if (r.isReturn()) {return r.value;}
-        if (r.isThrow())  {throw RunTimeError("Unhandled throw");}
-        if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
+    // bool executeFlow = true;
+    // if (executeFlow) {
+    //     EvalResult r = body->evaluateFlow(callScope, instanceNode);
+    //     if (r.isReturn()) {return r.value;}
+    //     if (r.isThrow())  {throw RunTimeError("Unhandled throw");}
+    //     if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
 
-        if (requiresReturn) throw MerkError("Method did not return a value.");
-        return Node();
-    }
-    return nonFlowHandler(callScope, getName(), getCapturedScope(), body.get(), instanceNode);
+    //     if (requiresReturn) throw MerkError("Method did not return a value.");
+    //     return Node();
+    // }
+    // return nonFlowHandler(callScope, getName(), getCapturedScope(), body.get(), instanceNode);
     
 }
 

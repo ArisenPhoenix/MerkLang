@@ -1,17 +1,14 @@
 #pragma once
 
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
-#include "core/EvalResult.hpp"
+#include "core/evaluators/EvalResult.hpp"
 #include <string>
 #include <vector>
 #include <optional>
-#include "core/Evaluator.hpp"
-// This acts as a separate module for evaluation logic - as its name implies
-// This is for future considerations when implementing compilation. 
-// Also, it keeps other files smaller and more easily sifted...
+#include "core/evaluators/Evaluator.hpp"
 
-class ConditionalBlock;  // Forward declaration
+
+class ConditionalBlock;
 class BaseAST;
 class ASTStatement;
 class ElifStatement;

@@ -1,13 +1,13 @@
 #include "core/node/ArgumentNode.hpp"
 #include "core/TypesFWD.hpp"
 #include "core/Scope.hpp"
-#include "core/Evaluator.hpp"
-#include "core/FlowEvaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"
 
 #include "core/callables/classes/Method.hpp"
 
 #include "ast/AstMethod.hpp"
-#include "ast/ast_helpers.h"
+#include "ast/helpers.h"
 #include "core/node/NodeStructures.hpp"
 
 MethodDef::~MethodDef() {

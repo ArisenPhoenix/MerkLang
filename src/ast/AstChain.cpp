@@ -4,8 +4,6 @@
 #include "core/node/ArgumentNode.hpp"
 #include "core/TypesFWD.hpp"
 #include "core/Scope.hpp"
-
-
 #include "ast/AstBase.hpp"
 
 #include "utilities/debugger.h"
@@ -15,14 +13,15 @@
 
 #include "ast/AstFunction.hpp"
 #include "ast/AstClass.hpp"
-#include "ast/ast_helpers.h"
+#include "ast/helpers.h"
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/classes/Method.hpp"
 #include "ast/AstChain.hpp"
 
 #include "core/errors.h"
 #include "core/Scope.hpp"
-#include "core/FlowEvaluator.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
 
 String opKindAsString(ChainOpKind opKind){
     switch (opKind) {
@@ -109,28 +108,6 @@ const Vector<ChainElement>& Chain::getElements() const {
     return elements;
 }
 
-
-// SharedPtr<Scope> getAssociatedScope(const Node& node) {
-//     switch (node.getType()) {
-//         case NodeValueType::Class:
-//             return std::get<SharedPtr<ClassBase>>(node.getValue())->getCapturedScope();
-//         case NodeValueType::Function:
-//             return std::get<SharedPtr<Function>>(node.getValue())->getCapturedScope();
-//         case NodeValueType::Method:
-//             return std::get<SharedPtr<Method>>(node.getValue())->getCapturedScope();
-
-//         case NodeValueType::ClassInstance: {
-//             auto instance = std::get<SharedPtr<ClassInstance>>(node.getValue());
-//             DEBUG_LOG(LogLevel::TRACE, "getAssociatedScope -> ClassInstance scope resolved");
-//             return std::get<SharedPtr<ClassInstance>>(node.getValue())->getCapturedScope();
-//         }
-
-            
-//         default:
-//             return nullptr;  // Caller should handle this case
-//     }
-// }
-
 void Chain::setScope(SharedPtr<Scope> newScope) {
     MARK_UNUSED_MULTI(newScope);
     // scope = newScope;
@@ -202,18 +179,10 @@ UniquePtr<BaseAST> Chain::clone() const {
 }
 
 SharedPtr<Scope> Chain::getLastScope() {
-    // if (auto scope = lastScope.lock()) {
-    //     return scope;
-    // }
-    // return nullptr;
     return lastScope;
 }
 
 SharedPtr<Scope> Chain::getLastScope() const {
-    // if (auto scope = lastScope.lock()) {
-    //     return scope;
-    // }
-    // return nullptr;
     return lastScope;
 }
 
@@ -321,135 +290,140 @@ void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, Shar
 
 void ChainOperation::setScope(SharedPtr<Scope> newScope) {
     MARK_UNUSED_MULTI(newScope);
-    // scope = newScope;
-    // lhs->setScope(newScope);
-    // if (rhs){
-    //     rhs->setScope(newScope);
-    // }
 }
 
 
 
 Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    // DEBUG_FLOW(FlowLevel::PERMISSIVE);
+    // SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
+    
+    // if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
+    // int index = resolutionStartIndex;
+    
+    // setLastScope(currentScope);
+    // Node currentVal;
+
+    // auto& baseElem = elements[index];
+    // if (baseElem.object->getAstType() == AstType::Accessor){
+    //     currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
+    //     // if (!currentVal.isInstance()) {throw MerkError("Pulled Out A Non Instance Instace from currentVal");}
+    // } else {
+    //     currentVal = baseElem.object->evaluate(currentScope, instanceNode);
+    //     // if (!currentVal.isInstance()) {throw MerkError("Pulled Out A Non Instance Instace from currentVal");}
+    // }
+    // index ++;
+
+    // if (baseElem.object->getAstType() == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
+
+    // for (size_t i = index; i < elements.size(); ++i) {
+    //     const auto& elem = elements[i];
+    //     AstType objType = elem.object->getAstType();
+
+    //     if (objType == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
+    //     if (!currentVal.isValid()) {throw MerkError("Cannot Chain off of a null return value");}
+
+    //     if (currentVal.isInstance()) {
+    //         auto instance = currentVal.toInstance();
+    //         currentScope = instance->getInstanceScope();
+    //         if (!currentScope) {throw MerkError("Scope Invalid During Chain Iteration");}
+    //         // if (!instanceNode) {methodScope->debugPrint(); methodScope->printChildScopes(); throw MerkError("An InstanceNode was not passed to Chain::evaluate");}
+    //         instanceNode = instance->getInstanceNode();
+
+
+    //         switch (objType)
+    //         {
+    //         case AstType::VariableDeclaration:
+    //             {
+    //                 auto varDec = static_cast<VariableDeclaration*>(elem.object.get());
+    //                 auto varName = varDec->getName();
+                    
+    //                 // auto res = varDec->getExpression()->evaluate(methodScope, instanceNode);
+    //                 auto res = Evaluator::evaluateVariableDeclaration(varName, varDec->getExpression().get(), varDec->getVariableMeta(), currentScope, instanceNode);
+
+    //                 // instance->declareField(varName, res);
+    //                 currentScope->addMember(varName);  // ensures downstream logic will correctly resolve
+
+    //                 currentVal = res;
+
+    //                 break;
+    //             }
+    //         case AstType::VariableAssignment:
+    //             {
+    //                 auto varAss = static_cast<VariableAssignment*>(elem.object.get());
+    //                 auto varName = varAss->getName();
+                    
+    //                 // currentVal = varAss->getExpression()->evaluate(methodScope, instanceNode);
+    //                 // instance->updateField(varName, currentVal);
+    //                 currentVal = Evaluator::evaluateVariableAssignment(varName, varAss, methodScope, instanceNode);
+
+    //                 break;
+    //             }
+    //         case AstType::VariableReference:
+    //             {
+                    
+    //                 auto varRef = static_cast<VariableReference*>(elem.object.get());
+    //                 auto varName = varRef->getName();
+                    
+    //                 currentVal = instance->getField(varRef->getName());
+    //                 break;
+    //             }
+            
+    //         case AstType::ClassMethodCall:
+    //             {
+                    
+    //                 if (!instanceNode) {throw MerkError("No InstanceNode in Chain::evaluate -> ClassMethodCall");}
+    //                 currentVal = elem.object->evaluate(methodScope, instanceNode);
+    //                 break;
+    //             }
+                
+    //         default:
+    //             currentVal = elem.object->evaluate(currentScope, instanceNode);
+    //             currentScope = elem.object->getScope();
+                
+    //             break;
+    //         }
+    //         if (!currentScope) {throw MerkError("Scope Invalid After Chain Iteration");}
+
+    //     } else {
+    //         if (elem.object->getAstType() == AstType::ClassMethodCall) { // For Handling ad-hoc/virtual methods that are not actually on the object i.e (clone, etc.)
+    //             DEBUG_LOG(LogLevel::PERMISSIVE, currentVal.toString(), currentVal.getFlags().toString());
+    //             currentScope->debugPrint();
+    //             currentScope->printChildScopes();
+    //             // throw MerkError("Hit it! : " + elem.object->toString());
+    //             // auto args = 
+    //             auto methodCall = static_cast<MethodCall*>(elem.object.get());
+    //             auto args = methodCall->cloneArgs();
+    //             auto evaluatedArgs = args->evaluateAll(currentScope->createChildScope(), instanceNode);
+    //             currentVal = handleVirtualMethod(currentVal, elem.name, evaluatedArgs.getPositional());                
+    //         } else {
+    //                 throw MerkError("Evaluating Some other structure, the current Value is: " + 
+    //                 currentVal.getTypeAsString() + " META: " + 
+    //                 currentVal.getFlags().toString() + " \n AST_INFO: " + elem.object->toString());            
+    //         }
+            
+    //         DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));            
+    //         currentScope = elem.object->getScope();
+            
+    //     }
+        
+    //     if (currentVal.isInstance()) {instanceNode = currentVal.toInstance()->getInstanceNode();}
+    //     setLastScope(currentScope);
+    // }
+    // setLastScope(currentScope);
+    // if (!getLastScope()) {throw MerkError("No Last Scope Before Completing Chain::evaluate");}
+    // DEBUG_FLOW_EXIT();
+    // return currentVal;
+
+
     SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
     
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
     int index = resolutionStartIndex;
     
     setLastScope(currentScope);
-    Node currentVal;
 
-    auto& baseElem = elements[index];
-    if (baseElem.object->getAstType() == AstType::Accessor){
-        currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
-        // if (!currentVal.isInstance()) {throw MerkError("Pulled Out A Non Instance Instace from currentVal");}
-    } else {
-        currentVal = baseElem.object->evaluate(currentScope, instanceNode);
-        // if (!currentVal.isInstance()) {throw MerkError("Pulled Out A Non Instance Instace from currentVal");}
-    }
-    index ++;
-
-    if (baseElem.object->getAstType() == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
-
-    for (size_t i = index; i < elements.size(); ++i) {
-        const auto& elem = elements[i];
-        AstType objType = elem.object->getAstType();
-
-        if (objType == AstType::Unknown) {throw MerkError("Unknown AST Type Found In Chain...see above");}
-        if (!currentVal.isValid()) {throw MerkError("Cannot Chain off of a null return value");}
-
-        if (currentVal.isInstance()) {
-            auto instance = currentVal.toInstance();
-            currentScope = instance->getInstanceScope();
-            if (!currentScope) {throw MerkError("Scope Invalid During Chain Iteration");}
-            // if (!instanceNode) {methodScope->debugPrint(); methodScope->printChildScopes(); throw MerkError("An InstanceNode was not passed to Chain::evaluate");}
-            instanceNode = instance->getInstanceNode();
-
-
-            switch (objType)
-            {
-            case AstType::VariableDeclaration:
-                {
-                    auto varDec = static_cast<VariableDeclaration*>(elem.object.get());
-                    auto varName = varDec->getName();
-                    
-                    // auto res = varDec->getExpression()->evaluate(methodScope, instanceNode);
-                    auto res = Evaluator::evaluateVariableDeclaration(varName, varDec->getExpression().get(), varDec->getVariableMeta(), currentScope, instanceNode);
-
-                    // instance->declareField(varName, res);
-                    currentScope->addMember(varName);  // ensures downstream logic will correctly resolve
-
-                    currentVal = res;
-
-                    break;
-                }
-            case AstType::VariableAssignment:
-                {
-                    auto varAss = static_cast<VariableAssignment*>(elem.object.get());
-                    auto varName = varAss->getName();
-                    
-                    // currentVal = varAss->getExpression()->evaluate(methodScope, instanceNode);
-                    // instance->updateField(varName, currentVal);
-                    currentVal = Evaluator::evaluateVariableAssignment(varName, varAss, methodScope, instanceNode);
-
-                    break;
-                }
-            case AstType::VariableReference:
-                {
-                    
-                    auto varRef = static_cast<VariableReference*>(elem.object.get());
-                    auto varName = varRef->getName();
-                    
-                    currentVal = instance->getField(varRef->getName());
-                    break;
-                }
-            
-            case AstType::ClassMethodCall:
-                {
-                    
-                    if (!instanceNode) {throw MerkError("No InstanceNode in Chain::evaluate -> ClassMethodCall");}
-                    currentVal = elem.object->evaluate(methodScope, instanceNode);
-                    break;
-                }
-                
-            default:
-                currentVal = elem.object->evaluate(currentScope, instanceNode);
-                currentScope = elem.object->getScope();
-                
-                break;
-            }
-            if (!currentScope) {throw MerkError("Scope Invalid After Chain Iteration");}
-
-        } else {
-            if (elem.object->getAstType() == AstType::ClassMethodCall) { // For Handling ad-hoc/virtual methods that are not actually on the object i.e (clone, etc.)
-                DEBUG_LOG(LogLevel::PERMISSIVE, currentVal.toString(), currentVal.getFlags().toString());
-                currentScope->debugPrint();
-                currentScope->printChildScopes();
-                // throw MerkError("Hit it! : " + elem.object->toString());
-                // auto args = 
-                auto methodCall = static_cast<MethodCall*>(elem.object.get());
-                auto args = methodCall->cloneArgs();
-                auto evaluatedArgs = args->evaluateAll(currentScope->createChildScope(), instanceNode);
-                currentVal = handleVirtualMethod(currentVal, elem.name, evaluatedArgs.getPositional());                
-            } else {
-                    throw MerkError("Evaluating Some other structure, the current Value is: " + 
-                    nodeTypeToString(DynamicNode::getTypeFromValue(currentVal.getValue())) + " META: " + 
-                    currentVal.getFlags().toString() + " \n AST_INFO: " + elem.object->toString());            
-            }
-            
-            DEBUG_LOG(LogLevel::DEBUG, highlight("Else OBJECTS AST TYPE: ", Colors::red), astTypeToString(elem.object->getAstType()));            
-            currentScope = elem.object->getScope();
-            
-        }
-        
-        if (currentVal.isInstance()) {instanceNode = currentVal.toInstance()->getInstanceNode();}
-        setLastScope(currentScope);
-    }
-    setLastScope(currentScope);
-    if (!getLastScope()) {throw MerkError("No Last Scope Before Completing Chain::evaluate");}
-    DEBUG_FLOW_EXIT();
-    return currentVal;
+    return Evaluator::evaluateChain(currentScope, methodScope, index, getElements(), instanceNode);
     
 }
 
@@ -480,82 +454,7 @@ Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr
             rightVal = getRightSide()->evaluate(currentScope, instanceNode);
         }
     }
-
-
-
-    // if (!leftVal.isValid()) {
-    //     // throw MerkError("Left Hand Side of ChainOperation is invalid");
-    //     DEBUG_LOG(LogLevel::TRACE, "Left Hand Side of ChainOperation is INVALID", leftVal);
-
-    // } else {
-    //     DEBUG_LOG(LogLevel::TRACE, "Left Hand Side of ChainOperation is Valid", leftVal);
-    // }
-    
-
-
-    
     DEBUG_FLOW_EXIT();
-    // throw MerkError("Unknown chain operation kind.");
     return leftVal;
 }
 
-
-// //                      For Perhaps More Advanced Maneuvers
-
-
-    // switch (opKind) {
-    //     case ChainOpKind::Reference:
-    //         if (leftVal.isClassInstance()) {
-    //             // auto instanceNode = static_cast<ClassInstanceNode>(leftVal);
-    //             auto instanceNode = ClassInstanceNode::from(leftVal);
-    //             auto instanceScope = instanceNode.getInstanceScope();
-
-    //             if (last.type == TokenType::Variable){
-    //                 int scopeLevel = instanceNode.isValid() ? instanceNode.getInstanceScope()->getScopeLevel() : 0;
-    //                 // instanceNode->getInternalScope();
-    //                 auto instance = instanceNode.getInstance();
-                    
-    //                 // return instance->getField(last.name, last.type);
-    //             } 
-    //         }
-
-    //         return leftVal;
-
-    //     case ChainOpKind::Assignment: 
-
-    //         // Node val = rhs->evaluate(currentScope, instanceNode);
-    //         if (leftVal.isClassInstance()) {
-    //             auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
-    //             instance->updateField(last.name, rightVal);
-    //         } else {
-    //             currentScope->updateVariable(last.name, rightVal);
-    //         }
-
-    //         DEBUG_FLOW_EXIT();
-    //         return rightVal;
-    //     // }
-
-    //     case ChainOpKind::Declaration: 
-    //         if (rhs){
-    //             throw MerkError("There Shouldn't Be An RHS for A DECLARATION");
-    //         }
-            
-    //         // Node val = rhs->evaluate(currentScope);
-    //         // VarNode var(val, isConst, isMutable);
-    //         // if (leftVal.isClassInstance()) {
-    //         //     auto instance = std::get<SharedPtr<ClassInstance>>(leftVal.getValue());
-    //         //     instance->declareField(last.name, var);
-    //         // } else {
-    //         //     currentScope->debugPrint();
-    //         //     currentScope->printChildScopes();
-    //         //     auto variable = makeUnique<VarNode>(val, isConst, isMutable, isStatic);
-    //         //     currentScope->declareVariable(last.name, std::move(variable));
-    //         // }
-
-
-    //         // DEBUG_FLOW_EXIT();
-    //         // return var;
-    //         // scope->debugPrint();
-    //         return leftVal;
-    //     // }
-    // }

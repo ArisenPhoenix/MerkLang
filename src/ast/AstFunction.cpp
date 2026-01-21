@@ -14,8 +14,8 @@
 #include "core/callables/functions/NativeFunction.hpp"
 #include "ast/ast_validate.h"
 
-#include "core/Evaluator.hpp"
-#include "core/FlowEvaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"
 #include "ast/AstCallable.hpp"
 #include "ast/AstFunction.hpp"
 // #include "core/callables/helpers.hpp"
@@ -162,83 +162,88 @@ Node FunctionDef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<Cl
 }
 
 Node FunctionCall::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
-    if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
-    if (name == "showScope") {scope->debugPrint(); return Node(Null);}
-    auto callArgs = arguments->evaluateAll(scope, instanceNode);
-    SharedPtr<CallableSignature> optSig;
-
-    auto sigOpt = scope->getFunction(name, callArgs);
-    BoundArgs evaluatedArgs;
-
-    if (sigOpt.has_value()) {
-        optSig = sigOpt.value();
-        evaluatedArgs = callArgs.bindToBound(optSig->getParameters(), /*allowDefaults=*/true);
-    } else {
-        scope->debugPrint();
-        
-        auto& var = scope->getVariable(name);
-        if (var.isFunctionNode()) {
-            auto funcNode = var.toFunctionNode();
-            auto opt = funcNode.getFunction(name, callArgs, scope);
-            if (opt.has_value()) {
-                optSig = opt.value();
-            } else {
-                throw MerkError("Could Not Determine Overload for function " + name);
-            }
-        }        
-        if (DynamicNode::getTypeFromValue(var.getValueNode().getValue()) == NodeValueType::Function) {
-            throw MerkError("IS A FUNCTION>>>>YAAAAAAY");
-        }
+    if (getName() == "DEBUG_LOG") {
+        printAST(std::cout, 0);
     }
 
+    return Evaluator::evaluateFunctionCall(getName(), scope, arguments.get(), instanceNode);
+    // DEBUG_FLOW(FlowLevel::PERMISSIVE); 
+    // if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
+    // if (name == "showScope") {scope->debugPrint(); return Node(Null);}
+    // auto callArgs = arguments->evaluateAll(scope, instanceNode);
+    // SharedPtr<CallableSignature> optSig;
 
-    SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
+    // auto sigOpt = scope->getFunction(name, callArgs);
+    // BoundArgs evaluatedArgs;
 
-    if (func->getSubType() == CallableType::NATIVE) {
-        // func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
-        auto m = scope->localTypes.matchCall(optSig->getTypeSignature(), callArgs);
-        if (!m.ok) {}
-        if (func->getName() == "DEBUG_LOG") {
-            printAST(std::cout, 0);
-        }
-        return func->execute(callArgs, scope, instanceNode);
-    }
-
-    
-    SharedPtr<Scope> callScope;
-    auto captured = func->getCapturedScope();
-    if (!captured) { throw MerkError("Function has No CapturedScope 1"); }
-
-    
-    if (captured->getContext().getVariables().size() == 0) {
-        callScope = captured;
-        scope->appendChildScope(callScope, false);
+    // if (sigOpt.has_value()) {
+    //     optSig = sigOpt.value();
+    //     evaluatedArgs = callArgs.bindToBound(optSig->getParameters(), /*allowDefaults=*/true);
+    // } else {
+    //     scope->debugPrint();
         
-    } else {
-        callScope = scope->buildFunctionCallScope(func, func->getName());
-    }
-    
-
-    // Node value;
-    // try {
-    //     value = func->execute(evaluatedArgs, callScope);
-    //     if (func->getRequiresReturn()) { throw MerkError("Function did not return a value."); }
-        
-    // } catch (const ReturnException& e) {
-    //     DEBUG_FLOW_EXIT();
-    //     value = e.getValue();  // Extract and return function's result
+    //     auto& var = scope->getVariable(name);
+    //     if (var.isFunctionNode()) {
+    //         auto funcNode = var.toFunctionNode();
+    //         auto opt = funcNode.getFunction(name, callArgs, scope);
+    //         if (opt.has_value()) {
+    //             optSig = opt.value();
+    //         } else {
+    //             throw MerkError("Could Not Determine Overload for function " + name);
+    //         }
+    //     }        
+    //     if (TypeEvaluator::getTypeFromValue(var.getValueNode().getValue()) == NodeValueType::Function) {
+    //         throw MerkError("IS A FUNCTION>>>>YAAAAAAY");
+    //     }
     // }
 
-    Node value = func->execute(callArgs, callScope);
-    scope->removeChildScope(callScope);
-    return value;
+
+    // SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
+
+    // if (func->getSubType() == CallableType::NATIVE) {
+    //     // func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
+    //     auto m = scope->localTypes.matchCall(optSig->getTypeSignature(), callArgs);
+    //     if (!m.ok) {}
+    //     if (func->getName() == "DEBUG_LOG") {
+    //         printAST(std::cout, 0);
+    //     }
+    //     return func->execute(callArgs, scope, instanceNode);
+    // }
 
     
+    // SharedPtr<Scope> callScope;
+    // auto captured = func->getCapturedScope();
+    // if (!captured) { throw MerkError("Function has No CapturedScope 1"); }
+
+    
+    // if (captured->getContext().getVariables().size() == 0) {
+    //     callScope = captured;
+    //     scope->appendChildScope(callScope, false);
+        
+    // } else {
+    //     callScope = scope->buildFunctionCallScope(func, func->getName());
+    // }
+    
+
+    // // Node value;
+    // // try {
+    // //     value = func->execute(evaluatedArgs, callScope);
+    // //     if (func->getRequiresReturn()) { throw MerkError("Function did not return a value."); }
+        
+    // // } catch (const ReturnException& e) {
+    // //     DEBUG_FLOW_EXIT();
+    // //     value = e.getValue();  // Extract and return function's result
+    // // }
+
+    // Node value = func->execute(callArgs, callScope);
     // scope->removeChildScope(callScope);
-    // // func->setCapturedScope(callScope);
-    // DEBUG_FLOW_EXIT();
     // return value;
+
+    
+    // // scope->removeChildScope(callScope);
+    // // // func->setCapturedScope(callScope);
+    // // DEBUG_FLOW_EXIT();
+    // // return value;
 }
 
 Node FunctionRef::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {    

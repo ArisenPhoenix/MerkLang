@@ -4,7 +4,8 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
 #include "algorithm"
-#include "core/Evaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
+#include "core/evaluators/TypeEvaluator.hpp"
 
 #include <curl/curl.h>
 #include <functional> 
@@ -19,7 +20,7 @@ static String getStringField(SharedPtr<ClassInstance> inst, const char* name) {
 static SharedPtr<DictNode> getDictField(SharedPtr<ClassInstance> inst, const char* name) {
     auto n = inst->getField(name);
     if (!n.isValid() || !n.isDict())
-        throw MerkError(String("Http: '") + name + "' must be a Dict, but is a " + nodeTypeToString(DynamicNode::getTypeFromValue(n.getValue())));
+        throw MerkError(String("Http: '") + name + "' must be a Dict, but is a " + nodeTypeToString(TypeEvaluator::getTypeFromValue(n.getValue())));
     return n.toDict(); 
 }
 
@@ -240,7 +241,7 @@ VariantType HttpNode::getValue() const {
     return "NOTHING TO PULL YET";
 };
 void HttpNode::setValue(const VariantType& v) {
-    throw MerkError("Tried to setValue on Http" + nodeTypeToString(DynamicNode::getTypeFromValue(v)));
+    throw MerkError("Tried to setValue on Http" + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)));
 }
 
 bool HttpNode::holdsValue() { return true; }

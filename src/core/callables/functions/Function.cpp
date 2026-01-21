@@ -12,12 +12,9 @@
 #include "ast/AstControl.hpp"
 
 #include "ast/AstFunction.hpp"
-
 #include "core/callables/Invocable.hpp"
-
 #include "ast/AstCallable.hpp"
-
-
+#include "core/evaluators/Executor.hpp"
 
 
 Function::Function(String name, ParamList params, [[maybe_unused]] CallableType funcType, bool requiresReturn, bool isStatic)
@@ -39,7 +36,7 @@ UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList 
 
 
 
-Node UserFunction::execute(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
+Node UserFunction::execute(ArgumentList args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     // (void)args;
     // DEBUG_FLOW(FlowLevel::NONE);
     // if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
@@ -48,20 +45,21 @@ Node UserFunction::execute(ArgumentList args, SharedPtr<Scope> scope, [[maybe_un
     // DEBUG_FLOW_EXIT();
     // return body->evaluate(scope, instanceNode);
 
-    DEBUG_FLOW(FlowLevel::NONE);
-    if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
-    placeArgsInCallScope(args, scope);
+    // DEBUG_FLOW(FlowLevel::NONE);
+    // if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
+    // placeArgsInCallScope(args, scope);
 
-    DEBUG_FLOW_EXIT();
-    EvalResult r = body->evaluateFlow(scope, instanceNode);
+    // DEBUG_FLOW_EXIT();
+    // EvalResult r = body->evaluateFlow(scope, instanceNode);
 
-    if (r.isReturn()) return r.value;
-    if (r.isThrow())  throw RunTimeError("Unhandled throw"); // or convert to your error model
-    if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
+    // if (r.isReturn()) return r.value;
+    // if (r.isThrow())  throw RunTimeError("Unhandled throw"); // or convert to your error model
+    // if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
 
-    // no explicit return
-    if (requiresReturn) throw MerkError("Function did not return a value.");
-    return Node();
+    // // no explicit return
+    // if (requiresReturn) throw MerkError("Function did not return a value.");
+    // return Node();
+    return Executor::Function(name, callScope, getCapturedScope(), requiresReturn, args, body.get(), parameters, instanceNode);
 }
 
 // Node UserFunction::executeFlow(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
@@ -141,7 +139,6 @@ String FunctionNode::toString() const {
     return "<FunctionRef " + std::to_string(std::get<Vector<SharedPtr<CallableSignature>>>(getValue()).size()) + " overload(s)>";
 }
 
-// FunctionNode::FunctionNode(SharedPtr<Callable> function) : CallableNode(function, "Function") {data.type = NodeValueType::Function;}
 
 SharedPtr<Callable> FunctionNode::getCallable() const {return std::get<SharedPtr<Callable>>(getValue());}
 
@@ -155,7 +152,7 @@ UniquePtr<CallableBody> UserFunction::getBody() {return static_unique_ptr_cast<C
 std::optional<SharedPtr<CallableSignature>> FunctionNode::getFunction(String name, const ArgumentList& args, SharedPtr<Scope> scope) {
     if (!scope) { throw MerkError("FunctionNode::getFunction called with null scope"); }
     if (!std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue())) {
-        throw MerkError("FunctionNode holds type " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+        throw MerkError("FunctionNode holds type " + getTypeAsString());
     }
     auto funcSigs = std::get<Vector<SharedPtr<CallableSignature>>>(getValue());
 

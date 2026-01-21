@@ -12,8 +12,12 @@
 #include "core/Scope.hpp"
 #include "ast/ast_validate.h"
 #include <cassert>
-#include "core/Evaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
 
+
+ClassNode::ClassNode(SharedPtr<ClassBase> callable) : CallableNode(callable, "Class") {
+    getFlags().type = NodeValueType::Class;
+}
 
 String ClassBase::getAccessor() {return accessor;}
 String& ClassBase::getQualifiedAccessor() {return accessor;}
@@ -167,14 +171,6 @@ void ClassInstance::setScope(SharedPtr<Scope> newScope) const {
     instanceScope = newScope;
 }
 
-// static String truncateField(const String& s) {
-//     const auto& cfg = debugStringifyConfig();
-//     auto maxLen = cfg.maxString;
-//     auto ellipses = cfg.alwaysEllipsis ? "..." : "";
-//     auto remainder = cfg.showRemainder ? "(+" + std::to_string(s.size() - maxLen) + " chars)" : "";
-//     if (s.size() < maxLen) return s;
-//     return s.substr(0, maxLen) + ellipses + remainder;
-// }
 
 String ClassInstance::toString() const {
     const auto& vars = getInstanceScope()->getContext().getVariables();
@@ -183,26 +179,13 @@ String ClassInstance::toString() const {
         return "<ClassInstance> ( )";
     }
 
-    // Tunables
-    // constexpr size_t kMaxFieldLen = 120;  // per field cap
-    // constexpr size_t kMaxTotalLen = 800;  // overall cap (optional)
     auto& cfg = debugStringifyConfig();
     String out = "( ";
     for (const auto& [varName, var] : vars) {
-        // var->varString() is where the body explosion happens
         String v = var ? var->varString() : "<null>";
-
-        // Per-field clamp
-        // v = truncateField(v);
         cfg.handle(v);
 
         out += varName + ": " + v + ", ";
-
-        // // Optional: early stop if total already too big
-        // if (out.size() > kMaxTotalLen) {
-        //     out += "...";
-        //     break;
-        // }
     }
 
     // Close nicely
@@ -244,6 +227,8 @@ SharedPtr<ClassInstanceNode> ClassInstance::getInstanceNode() {
     auto instance = std::static_pointer_cast<ClassInstance>(shared_from_this());
     return makeShared<ClassInstanceNode>(instance);
 }
+
+
 
 
 
@@ -372,7 +357,7 @@ Node ClassInstance::call(String name, ArgumentList args) {
 
 
 
-Node ClassInstance::getField(const String& fieldName, TokenType type) const {    // specific to what kind of member i.e var/method
+Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
 
@@ -395,7 +380,7 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {   
     throw MerkError("Field or method '" + fieldName + "' not found in class instance. If a call was made that should take place in the ChainOperation");
 }
 
-Node ClassInstance::getField(const String& fieldName) const {                    // assumes a variable
+Node ClassInstance::getField(const String& fieldName) const { 
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
 
@@ -412,7 +397,7 @@ void ClassInstance::declareField(const String& fieldName, DataTypeFlags varMeta,
 
 }
 
-void ClassInstance::declareField(const String& fieldName, const Node& var) {             // probably only used in dynamic construction of a class
+void ClassInstance::declareField(const String& fieldName, const Node& var) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (var.isValid()){  
         UniquePtr<VarNode> newVar = makeUnique<VarNode>(var);
@@ -434,7 +419,7 @@ void ClassInstance::declareField(const String& fieldName, const VarNode& var) {
 }
 
 
-void ClassInstance::updateField(const String& fieldName, Node val) const {                // most commonly used
+void ClassInstance::updateField(const String& fieldName, Node val) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (fieldName == "var") {throw MerkError("fieldName is Var: ClassInstance::getField");}
 
@@ -496,7 +481,7 @@ void ClassInstance::setValue(const VariantType& v) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         value = ds;
     }
-    throw MerkError("Cannot set type " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " as native class data");
+    throw MerkError("Cannot set 'some' type as native class data");
 }
 
 void ClassInstance::setValue(SharedPtr<NativeNode> v) {
@@ -509,7 +494,6 @@ SharedPtr<NativeNode> ClassInstance::getNativeData() {return value;}
 VariantType ClassInstance::getValue() const { return value; }
 NodeValueType ClassInstance::getType() const {return NodeValueType::ClassInstance; }
 std::size_t ClassInstance::hash() const {
-    // std::size_t h1 = std::hash<int>()(static_cast<int>(nativeData->getType()));
     std::size_t finalHash = 0;
     if (value) {
         finalHash += value->hash();
@@ -560,7 +544,7 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : Callab
     // // name = callable->getName();
 
     // DEBUG_FLOW_EXIT();
-    // // throw MerkError("HIT ClassInstanceNode::ClassInstanceNode(SharedPtr<Callable> WITH META: " + getFlags().toString() + " DETERMINED TYPE: " + nodeTypeToString(DynamicNode::getTypeFromValue(callable)));    
+    // // throw MerkError("HIT ClassInstanceNode::ClassInstanceNode(SharedPtr<Callable> WITH META: " + getFlags().toString() + " DETERMINED TYPE: " + nodeTypeToString(TypeEvaluator::getTypeFromValue(callable)));    
 }
 
 
@@ -616,64 +600,32 @@ SharedPtr<Scope> ClassInstanceNode::getInstanceScope() {
     return getScope();
 }
 
-
-// VariantType ClassInstanceNode::getValue() const { 
-//     return getInstance()->getValue();
-// }
-
 SharedPtr<ClassInstance> ClassInstanceNode::getInstance() const {
     DEBUG_FLOW(FlowLevel::NONE);
-    
-    // DEBUG_LOG(LogLevel::NONE, "Current Instance Type: ", this);
-    // auto val = std::get<SharedPtr<ClassInstance>>(data.value); 
-    // auto val = getValue();
-    // std::get<ClassInstance>(val);
-    // ClassInstance(val);
-    // auto instance = std::static_pointer_cast<ClassInstance>(val);
-    // ClassInstance(Node());
     auto call = getCallable();
     if (call->getType() == NodeValueType::Callable || call->getType() == NodeValueType::ClassInstance) {
         auto instance = std::static_pointer_cast<ClassInstance>(call);
         if (instance) {
-            // auto type = DynamicNode::getTypeFromValue(getValue());
+            // auto type = TypeEvaluator::getTypeFromValue(getValue());
             return instance;
         }
         else {
             throw MerkError("There Was No Instance");
         }
         
-    // if (std::holds_alternative<SharedPtr<Callable>>(getInner()) || (std::holds_alternative<int>(getValue()) && std::get<int>(getValue()) == 0)) {
-    //     DEBUG_LOG(LogLevel::TRACE, "ABOUT TO GET CLASS INSTANCE FROM DETERMINED TYPE: ", nodeTypeToString(type));
-    //     auto callable = std::get<SharedPtr<Callable>>(getValue());
-    //     // DEBUG_LOG(LogLevel::TRACE, "CALLABLE DATA: ", callable->toString());
-    //     auto instance = std::static_pointer_cast<ClassInstance>(callable);
-    //     return instance;
-    //     // throw MerkError("GOT CALLABLE");
-    //     // return std::get<SharedPtr<Callable>>(getValue());
-    // }
     }
     else {
         throw MerkError("The InstanceNode is holding " + call->toString() + call->flags.toString() + " With type of " + nodeTypeToString(call->getType()) + " And Full Type of " + call->flags.fullType.toString());
     }
-    
-
-    // else if (std::holds_alternative<SharedPtr<ClassInstance>>(getValue())) {
-    //     auto instance = std::get<SharedPtr<ClassInstance>>(getValue());
-    //     return instance;
-    // }
 
     if (std::holds_alternative<int>(getValue())) {
         int val = std::get<int>(getValue());
         throw MerkError("The Instance Holds " + std::to_string(val) + " as its value") ;
     }
-    
+
 
 
     throw MerkError("ClassInstanceNode does not hold a ClassInstance, but a " + nodeTypeToString(call->getType()));
-    
-    
-    // auto instance = makeShared<ClassInstance>();
-    // return instance;
 }
 
 ClassInstanceNode ClassInstanceNode::getInstanceNode() const {
@@ -685,11 +637,7 @@ ClassInstanceNode ClassInstanceNode::getInstanceNode() const {
     return val;
 }
 
-String ClassInstanceNode::toString() const {
-    return getInstance()->toString();
-    // return "<ClassInstanceNode>" + getFlags().name;
-    // return "<" + nodeType + ": " + getInstance()->toString() + ">";
-}
+String ClassInstanceNode::toString() const { return getInstance()->toString(); }
 
 
 void ClassInstanceNode::setValue(const VariantType& v) { getInstance()->setValue(v); }
@@ -702,70 +650,6 @@ void ClassInstanceNode::clear() { getInstance()->clear(); }
 
 SharedPtr<ClassInstanceNode> ClassInstanceNode::cloneInstance() const {
     auto copy = std::make_shared<ClassInstanceNode>(*this);
-    // or explicitly copy->instance = instance;
     copy->getFlags() = this->getFlags();
     return copy;
-    
-    // auto cloned = Node::clone();
-    // auto node = makeShared<ClassInstanceNode>(cloned.toInstance());
-    // return node;
-    // auto clonedInstance = getInstance()->clone();
-    // auto newInstanceNode = makeShared<ClassInstanceNode>(clonedInstance);
-    // if (std::holds_alternative<SharedPtr<DataStructure>>(getValue())) {
-    //     throw MerkError("ClassInstanceNode holds a data structure");
-    // }
-
-    // else if (std::holds_alternative<SharedPtr<ClassInstance>>(getValue())) {
-    //     throw MerkError("ClassInstanceNode holds a ClassInstance");
-    // }
-
-    // else if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
-    //     auto data = std::get<SharedPtr<Callable>>(getValue());
-    //     auto inst = std::static_pointer_cast<ClassInstance>(data);
-    //     if (inst->getNativeData()) {
-    //         if (inst->getNativeData() == newInstanceNode->getInstance()->getNativeData()) {
-    //             throw MerkError("The Native Data is the same");
-    //         }
-    //         if (!newInstanceNode->getInstance()->getNativeData()) {
-    //             throw MerkError("NativeData doesn't match between instanceNode and cloned InstanceNode");
-    //         }
-    //         else if (inst == newInstanceNode->getInstance()) {
-    //             throw MerkError("The Instances are the same");
-    //         }
-    //         // newInstanceNode->getInstance()->setNativeData(inst->getNativeData()->clone());
-    //         // getInstance()->getInstanceScope()->clear();
-            
-    //         // newInstanceNode->clear();
-    //         // clonedInstance.reset();
-    //         // throw MerkError("Set the NativeData");
-            
-    //         // return newInstanceNode;
-    //     } else {
-    //         throw MerkError("Has Not Meta Data");
-    //     }
-    // }
-
-    // else {
-    //     auto val = getValue();
-    //     DEBUG_LOG(LogLevel::TRACE, highlight("ClassInstanceNode holds: " + nodeTypeToString(DynamicNode::getTypeFromValue(val)), Colors::bg_red));
-    //     // newInstanceNode->setFlags(getFlags());
-    //     // throw MerkError();
-    // }
-    // // newInstanceNode->setValue(clonedInstance);
-    // // newInstanceNode->getValue() = clonedInstance;
-    
-    
-    // // newInstanceNode->setFlags(getFlags());
-    // auto curFlags = getFlags();
-    // newInstanceNode->setFlags(curFlags.merge({{"isInstance", "true"}, {"type", "ClassInstance"}, {"fullType", "ClassInstance"}}));
-
-    // auto var = VarNode(newInstanceNode->getInstanceNode(), curFlags);
-    // // node.setValue(newInstanceNode->getValue());
-
-    // auto oldHeldData = getInstance()->getNativeData();
-    // auto dataHeld = newInstanceNode->getInstance()->getNativeData();
-
-
-    // throw MerkError("Cloned Instance of " + newInstanceNode->toString() + " Node Holding " + var.toString() + " Held Data of: " + dataHeld->toString() + " Old Held Data: " + oldHeldData->toString());
-    // return newInstanceNode;
 }

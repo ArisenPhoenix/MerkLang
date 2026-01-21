@@ -7,7 +7,7 @@
 #include "core/callables/classes/NativeMethod.hpp"
 #include "core/callables/classes/NativeClass.hpp"
 #include "core/node/NodeStructures.hpp"
-#include "core/Evaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
 
 
 void validateSelf(SharedPtr<ClassInstanceNode> self, String className, String methodName) {
@@ -119,7 +119,7 @@ SharedPtr<DictNode> pullHttpDict(String varName, SharedPtr<ClassInstanceNode> se
         return dict;
         
     } else {
-        throw MerkError("headers node doesn't hold NativeNode, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(headersNode.getValue())));
+        throw MerkError("headers node doesn't hold NativeNode, but a " + headersNode.getTypeAsString());
     }
 }
 

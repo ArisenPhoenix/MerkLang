@@ -330,9 +330,24 @@ struct DebugStringifyConfig {
 DebugStringifyConfig& debugStringifyConfig();
 
 
-
 String nodeTypeToString(NodeValueType type, bool colored = true); 
 NodeValueType stringToNodeType(String);
 String astTypeToString(AstType type);
 String tokenTypeToString(TokenType type, bool colored = false);
 String getTokenDescription(TokenType type);
+
+
+// Forward declaration Ast types
+class ConditionalBlock;  
+class BaseAST;
+class ASTStatement;
+class ElifStatement;
+class ElseStatement;
+class CodeBlock;
+class IfStatement;
+class FunctionBlock;
+class ClassInstanceNode;
+class CallableBody;
+class MethodBody;
+class ChainElement;
+struct DataTypeFlags;

@@ -6,6 +6,7 @@
 #include "core/node/ArgumentNode.hpp"
 #include "utilities/debugger.h"
 #include "core/callables/Callable.hpp"
+#include "core/evaluators/TypeEvaluator.hpp"
 
 ParamNode::ParamNode(DataTypeFlags flgs, VariantType defaultVal) {
     flags = flgs;
@@ -67,7 +68,7 @@ String ParamNode::toString() const {
     return "ParamNode(name: " + getName() + 
            ", Expected Type: " + nodeTypeToString(flags.type) + 
            flags.toString() +
-           ", Default: " + (hasDefaultValue ? DynamicNode::forceToString(defaultValue) : "None") +  
+           ", Default: " + (hasDefaultValue ? TypeEvaluator::as<String>(defaultValue) : "None") +  
            ", Uninitialized: " + (std::holds_alternative<UninitializedType>(defaultValue) ? highlight("true", Colors::bold_blue) : highlight("false", Colors::bold_blue)) + ")";
 }
 

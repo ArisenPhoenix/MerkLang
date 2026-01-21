@@ -19,7 +19,7 @@
 #include "utilities/streaming.h"
 
 #include "core/errors.h"
-#include "core/FlowEvaluator.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"
 #include "core/Scope.hpp"
 #include "utilities/debugger.h"
 

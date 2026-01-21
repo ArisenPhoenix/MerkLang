@@ -1,7 +1,9 @@
 #pragma once
+
 #ifndef _WIN32
 #include <execinfo.h>
 #endif
+
 #include "core/TypesFWD.hpp"
 #include "core/registry/Context.hpp"
 #include "core/registry/FunctionRegistry.hpp"
@@ -9,7 +11,6 @@
 #include "core/registry/TypeSignatureRegistry.hpp"
 #include "core/registry/TypeSignatureRegistryManager.hpp"
 
-#
 using ScopeCache = std::unordered_map<String, Scope>; 
 
 

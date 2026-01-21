@@ -69,14 +69,7 @@ public:
     
 class ClassNode : public CallableNode {
 public:
-    ClassNode(SharedPtr<ClassBase> callable) : CallableNode(callable, "Class") {
-        getFlags().type = NodeValueType::Class;
-        // data.type = NodeValueType::Class;
-    }
-
-    // SharedPtr<Callable> getCallable() const override {
-    //     return std::static_pointer_cast<Callable>(std::get<SharedPtr<ClassBase>>(data.value));
-    // }
+    ClassNode(SharedPtr<ClassBase> callable);
 };
 
 

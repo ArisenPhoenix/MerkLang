@@ -20,7 +20,7 @@
 #include "utilities/debugging_functions.h"
 #include "utilities/helper_functions.h"
 
-#include "core/FlowEvaluator.hpp"
+#include "core/evaluators/FlowEvaluator.hpp"
 #include "core/Scope.hpp"
 
 

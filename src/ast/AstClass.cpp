@@ -9,7 +9,7 @@
 #include "utilities/helper_functions.h"
 #include "core/Scope.hpp"
 
-#include "core/Evaluator.hpp"
+#include "core/evaluators/Evaluator.hpp"
 #include "ast/Ast.hpp"
 
 #include "ast/AstCallable.hpp"
@@ -171,12 +171,12 @@ Node Accessor::evaluate(SharedPtr<Scope> evalScope, SharedPtr<ClassInstanceNode>
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) {throw MerkError("The passed instanceNode is null");}
     
-    if (!instanceNode->isInstance()) throw MerkError("No instance provided to Accessor, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(instanceNode->getCallable())));
+    if (!instanceNode->isInstance()) throw MerkError("No instance provided to Accessor, but a " + instanceNode->getTypeAsString());
 
 
     ClassInstanceNode instance = instanceNode->toInstance(); 
 
-    // throw MerkError("Evaluating Some other structure, the current Value of instanceNode is: " + nodeTypeToString(DynamicNode::getTypeFromValue(instanceNode)));
+    // throw MerkError("Evaluating Some other structure, the current Value of instanceNode is: " + nodeTypeToString(TypeEvaluator::getTypeFromValue(instanceNode)));
 
     
     DEBUG_FLOW_EXIT();

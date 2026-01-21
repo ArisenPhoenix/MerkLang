@@ -7,13 +7,12 @@
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/Callable.hpp"
-
+#include "core/evaluators/TypeEvaluator.hpp"
 #include <charconv>
 
 // virtual type checkers
 int NodeBase::toInt() const { throw MerkError("Not an Int"); }
 String NodeBase::toString() const { throw MerkError("Not a String"); }
-char* NodeBase::toChars() const { throw MerkError("Not a Char"); }
 bool NodeBase::toBool() const { return false; }
 bool NodeBase::isValid() const { return false; }
 bool NodeBase::isNumeric() const { throw MerkError("isNumeric Called On NodeBase"); }
@@ -25,7 +24,11 @@ SharedPtr<NodeBase> Node::getInner() const { return data; }
 
 
 bool NodeBase::isString() const { return false; }
+
 bool NodeBase::isChars() const {return false;}
+bool NodeBase::isChar() const { return false; }
+char* NodeBase::toChars() const { throw MerkError("Not a Char*"); }
+char NodeBase::toChar() const {throw MerkError("Not a Char");}
 
 bool NodeBase::isInt() const { return false; }
 bool NodeBase::isBool() const { return false; }
@@ -41,19 +44,9 @@ float NodeBase::toFloat() const { throw MerkError("Not A Float"); }
 bool NodeBase::isNative() const { return false; }
 SharedPtr<NativeNode> NodeBase::toNative() const {throw MerkError("Not A NativeNode");}
 void NodeBase::setFlags(DataTypeFlags newOnes) { 
-    // if (flags.type != NodeValueType::Any &&
-    //     newOnes.type != NodeValueType::Any &&
-    //     flags.type != newOnes.type) {
-    //     String out = flags.toString() + " -> " + newOnes.toString();
-    //     throw MerkError("Flags.type doesn't match in NodeBase::setFlags\n" + out);
-    // }
-    // flags = newOnes; 
 
-    // Runtime category must match the node's actual type (except Any for DynamicNode, if you allow that)
     auto actual = getType();
 
-    // If this node is not DynamicNode: force flags.type == actual
-    // (or at least forbid contradicting types)
     if (actual != NodeValueType::Any && // if you use Any for DynamicNode
         newOnes.type != NodeValueType::Any &&
         newOnes.type != actual) {
@@ -61,11 +54,9 @@ void NodeBase::setFlags(DataTypeFlags newOnes) {
             nodeTypeToString(actual) + " new=" + nodeTypeToString(newOnes.type));
     }
 
-    // Also forbid clobbering non-Any existing type with Any
-    if (flags.type != NodeValueType::Any && newOnes.type == NodeValueType::Any) {
-        // unless you explicitly want to allow it
-        // throw MerkError("setFlags would erase runtime type");
-    }
+    // if (flags.type != NodeValueType::Any && newOnes.type == NodeValueType::Any) {
+    //     // throw MerkError("setFlags would erase runtime type");
+    // }
 
     flags = newOnes;
 
@@ -76,22 +67,22 @@ void NodeBase::setFlags(DataTypeFlags newOnes) {
 
 bool NodeBase::isList() const {
         if (flags.fullType.getBaseType() == "List" ) { return true; }
-        if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::List) { return true; }
+        if (TypeEvaluator::getTypeFromValue(getValue()) == NodeValueType::List) { return true; }
         return false;       
     }
 bool NodeBase::isArray() const {
     if (flags.fullType.getBaseType() == "Array" ) { return true; }
-    if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::Array) { return true; }
+    if (TypeEvaluator::getTypeFromValue(getValue()) == NodeValueType::Array) { return true; }
     return false;    
 }
 bool NodeBase::isDict() const {
     if (flags.fullType.getBaseType() == "Dict" ) { return true; }
-    if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::Dict) { return true; }
+    if (TypeEvaluator::getTypeFromValue(getValue()) == NodeValueType::Dict) { return true; }
     return false;    
 }
 bool NodeBase::isSet() const {
     if (flags.fullType.getBaseType() == "Set" ) { return true; }
-    if (DynamicNode::getTypeFromValue(getValue()) == NodeValueType::Set) { return true; }
+    if (TypeEvaluator::getTypeFromValue(getValue()) == NodeValueType::Set) { return true; }
     return false;    
 }
 
@@ -155,8 +146,8 @@ NullNode::NullNode() {
 }
 
 NullNode::NullNode(NullType v) {
-    if (DynamicNode::getTypeFromValue(v) != NodeValueType::Null) {
-        throw MerkError("Tried Instantiating a NullNode from Null, but of type " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " Onto NullNode");
+    if (TypeEvaluator::getTypeFromValue(v) != NodeValueType::Null) {
+        throw MerkError("Tried Instantiating a NullNode from Null, but of type " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)) + " Onto NullNode");
     }
 
     flags.type = NodeValueType::Null;
@@ -169,7 +160,7 @@ NullNode::NullNode(VariantType v) {
     if (std::holds_alternative<NullType>(v)) {
         value = std::get<NullType>(v);
     }
-    throw MerkError("Tried Creating a NullNode from " + nodeTypeToString(DynamicNode::getTypeFromValue(v)));
+    throw MerkError("Tried Creating a NullNode from " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)));
 }
 
 VariantType NullNode::getValue() const {
@@ -181,10 +172,10 @@ void NullNode::setValue(const VariantType& v) {
     if (std::holds_alternative<NullType>(v)) {
         value = std::get<NullType>(v);
     }
-    throw MerkError("Tried Setting NullNode to " + nodeTypeToString(DynamicNode::getTypeFromValue(v)));
+    throw MerkError("Tried Setting NullNode to " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)));
 };
 
-NodeValueType NullNode::getType() const {return DynamicNode::getTypeFromValue(getValue());}
+NodeValueType NullNode::getType() const {return TypeEvaluator::getTypeFromValue(getValue());}
 SharedPtr<NodeBase> NullNode::clone() const { return makeShared<NullNode>(*this); }
 
 int NullNode::toInt() const { 
@@ -253,14 +244,14 @@ SharedPtr<Callable> Node::toCallable() {
     if (isCallable()) {
         return std::get<SharedPtr<Callable>>(getValue());
     }
-    throw MerkError("Current Value is not a Callable, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    throw MerkError("Current Value is not a Callable, but a " + nodeTypeToString(TypeEvaluator::getTypeFromValue(getValue())));
 }
 
 SharedPtr<Callable> Node::toCallable() const {
     if (isCallable()) {
         return std::get<SharedPtr<Callable>>(getValue());
     }
-    throw MerkError("Current Value is not a Callable, but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    throw MerkError("Current Value is not a Callable, but a " + nodeTypeToString(TypeEvaluator::getTypeFromValue(getValue())));
 }
 
 FunctionNode Node::toFunctionNode() {
@@ -283,12 +274,12 @@ void Node::setFlags(DataTypeFlags newOnes) { data->setFlags(newOnes); }
 VariantType Node::getValue() const { return data->getValue(); }
 void Node::setValue(const VariantType& v) {
     if (!data) {
-        data = makeShared<DynamicNode>(v);
+        data = makeShared<AnyNode>(v);
         return;
     }
     if (auto nullVar = dynamic_cast<NullNode*>(data.get())) {
         if (nullVar->instantiatedWithNull && !std::holds_alternative<NullType>(v)) {
-            data = makeShared<DynamicNode>(v);
+            data = makeShared<AnyNode>(v);
             return;
         }
     }
@@ -308,37 +299,6 @@ Node Node::clone() const {
     return Node(c);
 }
 
-// Node Node::clone() const {
-//     if (isInstance()) {
-//         return Node(toInstance()->clone());
-//     }
-//     if (std::holds_alternative<SharedPtr<NativeNode>>(getValue())) {
-//         throw MerkError("Currently Holding A NativeNode");
-//     }
-
-//     if (std::holds_alternative<std::unordered_map<Node, Node>>(getValue())) {
-//         throw MerkError("Currently Holding A Map");
-//     }
-
-//     if (std::holds_alternative<std::map<Node, Node>>(getValue())) {
-//         throw MerkError("Currently Holding A Map");
-//     }
-//     auto nodeType = DynamicNode::getTypeFromValue(getValue());
-//     if (std::holds_alternative<SharedPtr<Callable>>(getValue())) {
-        
-//         DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
-//         throw MerkError("Output ABOVE");
-//         return Node(data);
-//     }
-//     if (isNative()) {
-//         DEBUG_LOG(LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
-//         throw MerkError("Output ABOVE");
-//     }
-
-//     debugLog(true, LogLevel::PERMISSIVE, "Node::clone holds", nodeTypeToString(nodeType));
-//     return Node(data->clone()); 
-// }
-
 bool Node::isNumeric() const { return data->isNumeric(); }
 int Node::toInt() const { return data->toInt(); }
 
@@ -350,18 +310,6 @@ String Node::toString() const {
         return toInstance()->toString();
     } 
 
-    // The following are currently only possible if it is typed
-    // else if (isDict()) {
-    //     throw MerkError("Trying to represent a Dict");
-    // } else if (isList()) {
-    //     throw MerkError("Trying to represent a List");
-    // } else if (isSet()) {
-    //     return toSet()->toString();
-    //     // throw MerkError("Trying to represent a Set");
-    // } else if (isArray()) {
-    //     throw MerkError("Trying to represent a Array");
-    // }
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "DATA: ", getFlags().toString());
     return data->toString(); 
 }
 
@@ -400,7 +348,7 @@ SharedPtr<ListNode> Node::toList() const {
         auto inst = std::static_pointer_cast<ListNode>(v); 
         return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(TypeEvaluator::getTypeFromValue(getValue())));
 }
 
 SharedPtr<ArrayNode> Node::toArray() const {
@@ -409,7 +357,7 @@ SharedPtr<ArrayNode> Node::toArray() const {
         auto inst = std::static_pointer_cast<ArrayNode>(v); 
         return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(TypeEvaluator::getTypeFromValue(getValue())));
 }
 
 SharedPtr<DictNode> Node::toDict() const {
@@ -418,7 +366,7 @@ SharedPtr<DictNode> Node::toDict() const {
         auto inst = std::static_pointer_cast<DictNode>(v); 
         return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(TypeEvaluator::getTypeFromValue(getValue())));
 }
 
 SharedPtr<SetNode> Node::toSet() const {
@@ -427,7 +375,7 @@ SharedPtr<SetNode> Node::toSet() const {
         auto inst = std::static_pointer_cast<SetNode>(v); 
         return inst;
     }
-    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())));
+    throw MerkError("Node Is Not A NativeNode, so not a " + nodeTypeToString(getNodeType()) + ", but a " + nodeTypeToString(TypeEvaluator::getTypeFromValue(getValue())));
 }
 
 bool Node::isString() {return data->isString();}
@@ -499,7 +447,7 @@ bool StringNode::toBool() const { return !value.empty(); }
 
 CharNode::CharNode(VariantType v) {
     if (std::holds_alternative<char>(v)) {
-        value = std::get<char*>(v);
+        value = std::get<char>(v);
     }
     throw MerkError("CharNode::CharNode(VariantType v) -> v is not a char");
 }
@@ -512,18 +460,21 @@ VariantType CharNode::getValue() const {
     return value;
 }
 
-void CharNode::setValue(const VariantType& v)  { value = std::get<char*>(v); }
+void CharNode::setValue(const VariantType& v)  { value = std::get<char>(v); }
 
 NodeValueType CharNode::getType() const { return NodeValueType::Char; }
 SharedPtr<NodeBase> CharNode::clone() const {return makeShared<CharNode>(value);}
 
-int CharNode::toInt() const {return StringNode(value).toInt();}
+int CharNode::toInt() const {return TypeEvaluator::to<int>(value);}
 
 bool CharNode::isString() const { return false; }
 bool CharNode::isChars() const { return true; }
-char* CharNode::toChars() const { return value; }
-String CharNode::toString() const { return String(value); }
-bool CharNode::isBool() const {String tmp = String(value); return tmp == "true" || tmp == "0" || tmp == "1" || tmp == "false";}
+char* CharNode::toChars() const { throw MerkError("Not Implemented CharNode::toChars()"); }
+
+bool CharNode::isChar() const { return true; }
+char CharNode::toChar() const { return value; }
+String CharNode::toString() const { return TypeEvaluator::as<String>(value); }
+bool CharNode::isBool() const {String tmp = TypeEvaluator::as<String>(value); return tmp == "true" || tmp == "0" || tmp == "1" || tmp == "false";}
 
 bool CharNode::toBool() const { return false; }
 
@@ -566,7 +517,7 @@ void FloatNode::setValue(const VariantType& v) {
         return;
     }
 
-    throw MerkError("Cannot convert type: " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " to Float");
+    throw MerkError("Cannot convert type: " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)) + " to Float");
 }
 
 NodeValueType FloatNode::getType() const {return NodeValueType::Float; }
@@ -592,7 +543,7 @@ void DoubleNode::setValue(const VariantType& v) {
         value = std::get<double>(v);
         return;
     }
-    throw MerkError("Cannot Set Type " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " To Double");
+    throw MerkError("Cannot Set Type " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)) + " To Double");
 }
 
 NodeValueType DoubleNode::getType() const { return NodeValueType::Double; }
@@ -660,10 +611,10 @@ void VarNode::setValue(Node other) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (std::holds_alternative<NullType>(other.getValue()) || other.getType() == NodeValueType::Null) {
         if (other.getType() == NodeValueType::Null && !std::holds_alternative<NullType>(other.getValue())) {
-            throw MerkError("Tried Setting value typed as null, but actually isn't. It is type " + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
+            throw MerkError("Tried Setting value typed as null, but actually isn't. It is type " + nodeTypeToString(TypeEvaluator::getTypeFromValue(other.getValue())));
         }
 
-        throw MerkError("Tried Setting Var " + varFlags.name + " to Null, Value Is: " + DynamicNode::forceToString(other.getValue()) + " " + other.getFlags().toString() + " "  + other.getInner()->toString());
+        throw MerkError("Tried Setting Var " + varFlags.name + " to Null, Value Is: " + TypeEvaluator::to<String>(other.getValue()) + " " + other.getFlags().toString() + " "  + other.getInner()->toString());
     }
     if (!other.isValid()) { throw MerkError("Other is not valid"); }
 

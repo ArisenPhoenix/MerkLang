@@ -4,6 +4,8 @@
 
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
+#include "core/errors.h"
+#include "core/evaluators/TypeEvaluator.hpp"
 
 #include <cmath>
 
@@ -22,62 +24,62 @@ static inline Node evalNotEqual(const Node& a, const Node& b) {
 
 
 
-SharedPtr<NodeBase> DynamicNode::applyAdd(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyAdd(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs + rhs;
 }
 
-SharedPtr<NodeBase> DynamicNode::applySub(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applySub(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs - rhs;
 }
 
-SharedPtr<NodeBase> DynamicNode::applyMul(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyMul(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs * rhs;
 }
 
-SharedPtr<NodeBase> DynamicNode::applyDiv(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyDiv(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs / rhs;
 }
 
-SharedPtr<NodeBase> DynamicNode::applyMod(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyMod(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs % rhs;
 }
 
 
 
-void DynamicNode::applyAddMut(NodeBase& lhs, const NodeBase& rhs) {
+void AnyNode::applyAddMut(NodeBase& lhs, const NodeBase& rhs) {
     lhs.setValue((lhs + rhs)->getValue());
 }
 
-void DynamicNode::applySubMut(NodeBase& lhs, const NodeBase& rhs) {
+void AnyNode::applySubMut(NodeBase& lhs, const NodeBase& rhs) {
     lhs.setValue((lhs - rhs)->getValue());
 }
 
-void DynamicNode::applyMulMut(NodeBase& lhs, const NodeBase& rhs) {
+void AnyNode::applyMulMut(NodeBase& lhs, const NodeBase& rhs) {
     lhs.setValue((lhs * rhs)->getValue());
 }
 
-void DynamicNode::applyDivMut(NodeBase& lhs, const NodeBase& rhs) {
+void AnyNode::applyDivMut(NodeBase& lhs, const NodeBase& rhs) {
     lhs.setValue((lhs / rhs)->getValue());
 }
 
-SharedPtr<NodeBase> DynamicNode::applyEq(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyEq(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs == rhs;
 }
 
-SharedPtr<NodeBase> DynamicNode::applyNeq(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyNeq(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs != rhs;
 }
 
-SharedPtr<NodeBase> DynamicNode::applyLt(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyLt(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs < rhs;
 }
-SharedPtr<NodeBase> DynamicNode::applyGt(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyGt(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs > rhs;
 }
-SharedPtr<NodeBase> DynamicNode::applyLe(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyLe(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs <= rhs;
 }
-SharedPtr<NodeBase> DynamicNode::applyGe(const NodeBase& lhs, const NodeBase& rhs) {
+SharedPtr<NodeBase> AnyNode::applyGe(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs >= rhs;
 }
 
@@ -124,99 +126,99 @@ String operator+(const Node& node, const String& rhs) {
 
 
 // Calculation Operators
-SharedPtr<NodeBase> DynamicNode::operator+(const NodeBase& other) const {
+SharedPtr<NodeBase> AnyNode::operator+(const NodeBase& other) const {
     if (isNumeric() && other.isNumeric()) {
-        return makeShared<DynamicNode>(toInt() + other.toInt());
+        return makeShared<AnyNode>(toInt() + other.toInt());
     }
 
     if (isString() && other.isString()) {
-        return makeShared<DynamicNode>(toString() + other.toString());
+        return makeShared<AnyNode>(toString() + other.toString());
     } 
     throw MerkError("Cannot Add non String non Number types");     
 }
 
-SharedPtr<NodeBase> DynamicNode::operator-(const NodeBase& other) const {
+SharedPtr<NodeBase> AnyNode::operator-(const NodeBase& other) const {
     if (isNumeric() && other.isNumeric()) {
-        return makeShared<DynamicNode>(toInt() - other.toInt());
+        return makeShared<AnyNode>(toInt() - other.toInt());
     }
 
     if (isString() && other.isString()) {
-        return makeShared<DynamicNode>(Node(toString()) - Node(other.toString()));
+        return makeShared<AnyNode>(Node(toString()) - Node(other.toString()));
     } 
     throw MerkError("Cannot Add non String non Number types");
 }
-SharedPtr<NodeBase> DynamicNode::operator*(const NodeBase& other) const {
+SharedPtr<NodeBase> AnyNode::operator*(const NodeBase& other) const {
     if (isNumeric() && other.isNumeric()) {
-        return makeShared<DynamicNode>(toInt() * other.toInt());
+        return makeShared<AnyNode>(toInt() * other.toInt());
     }
 
     if (isString() && other.isString()) {
-        return makeShared<DynamicNode>(Node(toString()) * Node(other.toString()));
+        return makeShared<AnyNode>(Node(toString()) * Node(other.toString()));
     }
 
     if (isString() && other.isNumeric()) {
-        return makeShared<DynamicNode>(Node(toString()) * Node::fromVariant(other.getValue()));
+        return makeShared<AnyNode>(Node(toString()) * Node::fromVariant(other.getValue()));
     }
     throw MerkError("Cannot Add non String non Number types"); 
 }
-SharedPtr<NodeBase> DynamicNode::operator/(const NodeBase& other) const {
+SharedPtr<NodeBase> AnyNode::operator/(const NodeBase& other) const {
     if (!isNumeric()) {throw MerkError("Cannot Divide " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");}
-    return makeShared<DynamicNode>(toInt() / other.toInt());
+    return makeShared<AnyNode>(toInt() / other.toInt());
 }
 
 
-SharedPtr<NodeBase> DynamicNode::operator%(const NodeBase& other) const {
+SharedPtr<NodeBase> AnyNode::operator%(const NodeBase& other) const {
     if (!isNumeric() || !other.isNumeric()) {throw MerkError("Attempted Modulus With " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");}
-    return makeShared<DynamicNode>(toInt() % other.toInt());
+    return makeShared<AnyNode>(toInt() % other.toInt());
 }
 
 // Mutating Operations
-SharedPtr<NodeBase> DynamicNode::operator+=(const NodeBase& other) {
+SharedPtr<NodeBase> AnyNode::operator+=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node::fromVariant(value) + Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node::fromVariant(value) + Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Add " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
-SharedPtr<NodeBase> DynamicNode::operator-=(const NodeBase& other) {
+SharedPtr<NodeBase> AnyNode::operator-=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node::fromVariant(value) - Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node::fromVariant(value) - Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Subtract " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
-SharedPtr<NodeBase> DynamicNode::operator*=(const NodeBase& other) {
+SharedPtr<NodeBase> AnyNode::operator*=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node::fromVariant(value) * Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node::fromVariant(value) * Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Multiply " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
-SharedPtr<NodeBase> DynamicNode::operator/=(const NodeBase& other) {
+SharedPtr<NodeBase> AnyNode::operator/=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node::fromVariant(value) / Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node::fromVariant(value) / Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Subtract " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
 
 // Logic Operations
-SharedPtr<NodeBase> DynamicNode::operator==(const NodeBase& other) const {
-    // throw MerkError("Attempting Equality Check With DynamicNode Holding " + toString() + "OTHER HOLDING " + other.toString());
+SharedPtr<NodeBase> AnyNode::operator==(const NodeBase& other) const {
+    // throw MerkError("Attempting Equality Check With AnyNode Holding " + toString() + "OTHER HOLDING " + other.toString());
     return makeShared<BoolNode>(getValue() == other.getValue()); 
-    // throw MerkError("Attempted == on DynamicNode::operator== -> " + nodeTypeToString(DynamicNode::getTypeFromValue(value)) + " Other " + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
-    // return makeShared<DynamicNode>(toInt() == other.toInt());
+    // throw MerkError("Attempted == on AnyNode::operator== -> " + nodeTypeToString(TypeEvaluator::getTypeFromValue(value)) + " Other " + nodeTypeToString(TypeEvaluator::getTypeFromValue(other.getValue())));
+    // return makeShared<AnyNode>(toInt() == other.toInt());
 }
-SharedPtr<NodeBase> DynamicNode::operator!=(const NodeBase& other) const {
+SharedPtr<NodeBase> AnyNode::operator!=(const NodeBase& other) const {
     return makeShared<BoolNode>(getValue() != other.getValue()); 
 }
-SharedPtr<NodeBase> DynamicNode::operator<(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() < other.toInt());
+SharedPtr<NodeBase> AnyNode::operator<(const NodeBase& other) const {
+    return makeShared<AnyNode>(toInt() < other.toInt());
 }
-SharedPtr<NodeBase> DynamicNode::operator>(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() > other.toInt());
+SharedPtr<NodeBase> AnyNode::operator>(const NodeBase& other) const {
+    return makeShared<AnyNode>(toInt() > other.toInt());
 }
-SharedPtr<NodeBase> DynamicNode::operator<=(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() <= other.toInt());
+SharedPtr<NodeBase> AnyNode::operator<=(const NodeBase& other) const {
+    return makeShared<AnyNode>(toInt() <= other.toInt());
 }
-SharedPtr<NodeBase> DynamicNode::operator>=(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() >= other.toInt());
+SharedPtr<NodeBase> AnyNode::operator>=(const NodeBase& other) const {
+    return makeShared<AnyNode>(toInt() >= other.toInt());
 }
 
 
@@ -235,96 +237,96 @@ SharedPtr<NodeBase> DynamicNode::operator>=(const NodeBase& other) const {
 // Calculation Operators
 SharedPtr<NodeBase> NullNode::operator+(const NodeBase& other) const {
     if (isNumeric() && other.isNumeric()) {
-        return makeShared<DynamicNode>(toInt() + other.toInt());
+        return makeShared<AnyNode>(toInt() + other.toInt());
     }
 
     if (isString() && other.isString()) {
-        return makeShared<DynamicNode>(toString() + other.toString());
+        return makeShared<AnyNode>(toString() + other.toString());
     } 
     throw MerkError("Cannot Add non String non Number types");     
 }
 
 SharedPtr<NodeBase> NullNode::operator-(const NodeBase& other) const {
     if (isNumeric() && other.isNumeric()) {
-        return makeShared<DynamicNode>(toInt() - other.toInt());
+        return makeShared<AnyNode>(toInt() - other.toInt());
     }
 
     if (isString() && other.isString()) {
-        return makeShared<DynamicNode>(Node(toString()) - Node(other.toString()));
+        return makeShared<AnyNode>(Node(toString()) - Node(other.toString()));
     } 
     throw MerkError("Cannot Add non String non Number types");
 }
 SharedPtr<NodeBase> NullNode::operator*(const NodeBase& other) const {
     if (isNumeric() && other.isNumeric()) {
-        return makeShared<DynamicNode>(toInt() * other.toInt());
+        return makeShared<AnyNode>(toInt() * other.toInt());
     }
 
     if (isString() && other.isString()) {
-        return makeShared<DynamicNode>(Node(toString()) * Node(other.toString()));
+        return makeShared<AnyNode>(Node(toString()) * Node(other.toString()));
     }
 
     if (isString() && other.isNumeric()) {
-        return makeShared<DynamicNode>(Node(toString()) * Node::fromVariant(other.getValue()));
+        return makeShared<AnyNode>(Node(toString()) * Node::fromVariant(other.getValue()));
     }
     throw MerkError("Cannot Add non String non Number types"); 
 }
 SharedPtr<NodeBase> NullNode::operator/(const NodeBase& other) const {
     if (!isNumeric()) {throw MerkError("Cannot Divide " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");}
-    return makeShared<DynamicNode>(toInt() / other.toInt());
+    return makeShared<AnyNode>(toInt() / other.toInt());
 }
 
 
 SharedPtr<NodeBase> NullNode::operator%(const NodeBase& other) const {
     if (!isNumeric() || !other.isNumeric()) {throw MerkError("Attempted Modulus With " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");}
-    return makeShared<DynamicNode>(toInt() % other.toInt());
+    return makeShared<AnyNode>(toInt() % other.toInt());
 }
 
 // Mutating Operations
 SharedPtr<NodeBase> NullNode::operator+=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node(value) + Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node(value) + Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Add " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
 SharedPtr<NodeBase> NullNode::operator-=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node(value) - Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node(value) - Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Subtract " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
 SharedPtr<NodeBase> NullNode::operator*=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node(value) * Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node(value) * Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Multiply " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
 SharedPtr<NodeBase> NullNode::operator/=(const NodeBase& other) {
     if ((isNumeric() && other.isNumeric()) || (isString() && other.isString())) {
-        return makeShared<DynamicNode>(Node(value) / Node::fromVariant(other.getValue())); 
+        return makeShared<AnyNode>(Node(value) / Node::fromVariant(other.getValue())); 
     }
     throw MerkError("Cannot Subtract " + getNodeTypeAsString() + " And " + other.getNodeTypeAsString() + "Types");
 }
 
 // Logic Operations
 SharedPtr<NodeBase> NullNode::operator==(const NodeBase& other) const {
-    // throw MerkError("Attempting Equality Check With DynamicNode Holding " + toString() + "OTHER HOLDING " + other.toString());
-    throw MerkError("Attempted == on NullNode::operator== -> " + nodeTypeToString(DynamicNode::getTypeFromValue(value)) + " Other " + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
-    // return makeShared<DynamicNode>(toInt() == other.toInt());
+    // throw MerkError("Attempting Equality Check With AnyNode Holding " + toString() + "OTHER HOLDING " + other.toString());
+    throw MerkError("Attempted == on NullNode::operator== -> " + nodeTypeToString(TypeEvaluator::getTypeFromValue(value)) + " Other " + nodeTypeToString(TypeEvaluator::getTypeFromValue(other.getValue())));
+    // return makeShared<AnyNode>(toInt() == other.toInt());
 }
 SharedPtr<NodeBase> NullNode::operator!=(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() != other.toInt());
+    return makeShared<AnyNode>(toInt() != other.toInt());
 }
 SharedPtr<NodeBase> NullNode::operator<(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() < other.toInt());
+    return makeShared<AnyNode>(toInt() < other.toInt());
 }
 SharedPtr<NodeBase> NullNode::operator>(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() > other.toInt());
+    return makeShared<AnyNode>(toInt() > other.toInt());
 }
 SharedPtr<NodeBase> NullNode::operator<=(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() <= other.toInt());
+    return makeShared<AnyNode>(toInt() <= other.toInt());
 }
 SharedPtr<NodeBase> NullNode::operator>=(const NodeBase& other) const {
-    return makeShared<DynamicNode>(toInt() >= other.toInt());
+    return makeShared<AnyNode>(toInt() >= other.toInt());
 }
 
 
@@ -355,7 +357,7 @@ SharedPtr<NodeBase> NodeBase::operator%(const NodeBase& other) const {(void)othe
 SharedPtr<NodeBase> NodeBase::operator==(const NodeBase& other) const {
     (void)other;
     // (void)other; 
-    // throw MerkError("Invalid op == for Type " + flags.toString() + " DATA: " + toString() + " Determined as type: " + nodeTypeToString(DynamicNode::getTypeFromValue(getValue())) + " OTHER IS " + other.flags.toString() + " DATA: " + other.toString() + " Determined type as" + nodeTypeToString(DynamicNode::getTypeFromValue(other.getValue())));
+    // throw MerkError("Invalid op == for Type " + flags.toString() + " DATA: " + toString() + " Determined as type: " + nodeTypeToString(TypeEvaluator::getTypeFromValue(getValue())) + " OTHER IS " + other.flags.toString() + " DATA: " + other.toString() + " Determined type as" + nodeTypeToString(TypeEvaluator::getTypeFromValue(other.getValue())));
     // return makeShared<BoolNode>(true);
     // throw MerkError("NodeBase::operator==, See Above ");
     return makeShared<BoolNode>(other.toString() == toString());
@@ -433,20 +435,20 @@ SharedPtr<NodeBase> BoolNode::operator%(const NodeBase& other) const {
 
 // Mutating Operations
 SharedPtr<NodeBase> BoolNode::operator+=(const NodeBase& other) {
-    DynamicNode::applyAddMut(*this, other);
+    AnyNode::applyAddMut(*this, other);
     return shared_from_this();
 }
 
 SharedPtr<NodeBase> BoolNode::operator-=(const NodeBase& other) {
-    DynamicNode::applySubMut(*this, other);
+    AnyNode::applySubMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> BoolNode::operator*=(const NodeBase& other) {
-    DynamicNode::applyMulMut(*this, other);
+    AnyNode::applyMulMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> BoolNode::operator/=(const NodeBase& other) {
-    DynamicNode::applyDivMut(*this, other);
+    AnyNode::applyDivMut(*this, other);
     return shared_from_this();
 }
 
@@ -523,20 +525,20 @@ SharedPtr<NodeBase> StringNode::operator%(const NodeBase& other) const {
 
 // Mutating Operations
 SharedPtr<NodeBase> StringNode::operator+=(const NodeBase& other) {
-    DynamicNode::applyAddMut(*this, other);
+    AnyNode::applyAddMut(*this, other);
     return shared_from_this();
 }
 
 SharedPtr<NodeBase> StringNode::operator-=(const NodeBase& other) {
-    DynamicNode::applySubMut(*this, other);
+    AnyNode::applySubMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> StringNode::operator*=(const NodeBase& other) {
-    DynamicNode::applyMulMut(*this, other);
+    AnyNode::applyMulMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> StringNode::operator/=(const NodeBase& other) {
-    DynamicNode::applyDivMut(*this, other);
+    AnyNode::applyDivMut(*this, other);
     return shared_from_this();
 }
 
@@ -615,41 +617,41 @@ SharedPtr<NodeBase> CharNode::operator%(const NodeBase& other) const {
 
 // Mutating Operations
 SharedPtr<NodeBase> CharNode::operator+=(const NodeBase& other) {
-    DynamicNode::applyAddMut(*this, other);
+    AnyNode::applyAddMut(*this, other);
     return shared_from_this();
 }
 
 SharedPtr<NodeBase> CharNode::operator-=(const NodeBase& other) {
-    DynamicNode::applySubMut(*this, other);
+    AnyNode::applySubMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> CharNode::operator*=(const NodeBase& other) {
-    DynamicNode::applyMulMut(*this, other);
+    AnyNode::applyMulMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> CharNode::operator/=(const NodeBase& other) {
-    DynamicNode::applyDivMut(*this, other);
+    AnyNode::applyDivMut(*this, other);
     return shared_from_this();
 }
 
 // Logic Operations
 SharedPtr<NodeBase> CharNode::operator==(const NodeBase& other) const {
-    return makeShared<BoolNode>(value == other.toChars());
+    return makeShared<BoolNode>(value == other.toChar());
 }
 SharedPtr<NodeBase> CharNode::operator!=(const NodeBase& other) const {
-    return makeShared<BoolNode>(value != other.toChars());
+    return makeShared<BoolNode>(value != other.toChar());
 }
 SharedPtr<NodeBase> CharNode::operator<(const NodeBase& other) const {
-    return makeShared<BoolNode>(value < other.toChars());
+    return makeShared<BoolNode>(value < other.toChar());
 }
 SharedPtr<NodeBase> CharNode::operator>(const NodeBase& other) const {
-    return makeShared<BoolNode>(value > other.toChars());
+    return makeShared<BoolNode>(value > other.toChar());
 }
 SharedPtr<NodeBase> CharNode::operator<=(const NodeBase& other) const {
-    return makeShared<BoolNode>(value <= other.toChars());
+    return makeShared<BoolNode>(value <= other.toChar());
 }
 SharedPtr<NodeBase> CharNode::operator>=(const NodeBase& other) const {
-    return makeShared<BoolNode>(value >= other.toChars());
+    return makeShared<BoolNode>(value >= other.toChar());
 }
 
 
@@ -673,20 +675,20 @@ SharedPtr<NodeBase> IntNode::operator%(const NodeBase& other) const {
 
 // Mutating Operations
 SharedPtr<NodeBase> IntNode::operator+=(const NodeBase& other) {
-    DynamicNode::applyAddMut(*this, other);
+    AnyNode::applyAddMut(*this, other);
     return shared_from_this();
 }
 
 SharedPtr<NodeBase> IntNode::operator-=(const NodeBase& other) {
-    DynamicNode::applySubMut(*this, other);
+    AnyNode::applySubMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> IntNode::operator*=(const NodeBase& other) {
-    DynamicNode::applyMulMut(*this, other);
+    AnyNode::applyMulMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> IntNode::operator/=(const NodeBase& other) {
-    DynamicNode::applyDivMut(*this, other);
+    AnyNode::applyDivMut(*this, other);
     return shared_from_this();
 }
 
@@ -743,20 +745,20 @@ SharedPtr<NodeBase> FloatNode::operator%(const NodeBase& other) const {
 
 // Mutating Operations
 SharedPtr<NodeBase> FloatNode::operator+=(const NodeBase& other) {
-    DynamicNode::applyAddMut(*this, other);
+    AnyNode::applyAddMut(*this, other);
     return shared_from_this();
 }
 
 SharedPtr<NodeBase> FloatNode::operator-=(const NodeBase& other) {
-    DynamicNode::applySubMut(*this, other);
+    AnyNode::applySubMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> FloatNode::operator*=(const NodeBase& other) {
-    DynamicNode::applyMulMut(*this, other);
+    AnyNode::applyMulMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> FloatNode::operator/=(const NodeBase& other) {
-    DynamicNode::applyDivMut(*this, other);
+    AnyNode::applyDivMut(*this, other);
     return shared_from_this();
 }
 
@@ -800,20 +802,20 @@ SharedPtr<NodeBase> DoubleNode::operator%(const NodeBase& other) const {
 
 // Mutating Operations
 SharedPtr<NodeBase> DoubleNode::operator+=(const NodeBase& other) {
-    DynamicNode::applyAddMut(*this, other);
+    AnyNode::applyAddMut(*this, other);
     return shared_from_this();
 }
 
 SharedPtr<NodeBase> DoubleNode::operator-=(const NodeBase& other) {
-    DynamicNode::applySubMut(*this, other);
+    AnyNode::applySubMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> DoubleNode::operator*=(const NodeBase& other) {
-    DynamicNode::applyMulMut(*this, other);
+    AnyNode::applyMulMut(*this, other);
     return shared_from_this();
 }
 SharedPtr<NodeBase> DoubleNode::operator/=(const NodeBase& other) {
-    DynamicNode::applyDivMut(*this, other);
+    AnyNode::applyDivMut(*this, other);
     return shared_from_this();
 }
 

@@ -1,15 +1,12 @@
 #pragma once
 
 #include <string> 
-
-// #include "core/types.h"
 #include "core/TypesFWD.hpp"
 #include "core/node/Node.hpp"
 #include "core/errors.h"
 #include <ostream>
 #include <variant>
-#include "core/EvalResult.hpp"
-
+#include "core/evaluators/EvalResult.hpp"
 class Scope;
 class ClassInstanceNode;
 using FreeVars = std::unordered_set<String>;

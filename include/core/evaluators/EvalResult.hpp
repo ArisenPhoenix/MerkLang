@@ -1,14 +1,14 @@
 #pragma once
 #include <cstdint>
-#include "core/TypesFWD.hpp" // Node, String, etc.
-#include "core/node/Node.hpp"     // or wherever Node lives
+#include "core/TypesFWD.hpp"
+#include "core/node/Node.hpp"
 
 enum class ControlFlow : uint8_t {
     None = 0,
     Return,
     Break,
     Continue,
-    Throw,      // optional for later
+    Throw,
 };
 
 struct EvalResult {

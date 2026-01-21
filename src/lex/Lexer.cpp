@@ -194,8 +194,8 @@ TokenType Lexer::classifyIdentifier(const String& value, const Vector<Token>& ou
 
 
 
-Vector<Token> Lexer::lex(const Vector<RawToken>& raw) {
-    Vector<Token> out;
+Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
+    
     out.reserve(raw.size());
     String s = "SOF";
     String e = "EOF";

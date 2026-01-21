@@ -1,17 +1,16 @@
 #pragma once
 
-// #include "core/types.h"               // For String, Vector, UniquePtr, SharedPtr, NodeValueType, etc.
 #include "core/TypesFWD.hpp"
-#include "utilities/debugger.h"       // For DEBUG_LOG
+#include "utilities/debugger.h"
 
-#include "ast/AstBase.hpp"             // For ASTStatement, printIndent, etc.
+#include "ast/AstBase.hpp"
 #include "ast/Ast.hpp"
 
 #include "ast/AstClass.hpp"
 #include "ast/AstControl.hpp"
 #include "ast/AstFunction.hpp"
 
-#include "core/errors.h"              // For error types
+#include "core/errors.h" 
 
 class Chain;
 class FunctionDef;
@@ -25,9 +24,6 @@ public:
 
     Vector<UniquePtr<BaseAST>>& getChildren(){return children;};
     UniquePtr<BaseAST> clone() const override;
-
-    // virtual Node evaluate(SharedPtr<Scope> scope,  SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
-    // virtual UniquePtr<BaseAST> clone() const override;
     Node evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
 
     AstType getAstType() const override { return AstType::ClassMethodBlock;}
@@ -44,7 +40,6 @@ protected:
     SharedPtr<Scope> classScope;
     Vector<Chain*> nonStaticElements;
 public:
-    // Constructor: Force the FunctionType to METHOD.
     MethodDef(String name, ParamList parameters, UniquePtr<MethodBody> body, CallableType InvocableType, SharedPtr<Scope> scope);
     MethodDef(UniquePtr<FunctionDef> funcDef);
     ~MethodDef();

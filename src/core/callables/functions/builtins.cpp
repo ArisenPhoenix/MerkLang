@@ -9,7 +9,7 @@
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/functions/builtins.h"
 #include "core/Scope.hpp"
-
+#include "core/evaluators/TypeEvaluator.hpp"
 // Define native functions 
 
 Node print(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
@@ -58,7 +58,7 @@ Node debug_log(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[may
 
 Node intFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
-    return Node(DynamicNode::forceTo<int>(args[0]));
+    return Node(TypeEvaluator::to<int>(args[0].getValue(), CoerceMode::Strict));
 }
 
 Node stringFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {

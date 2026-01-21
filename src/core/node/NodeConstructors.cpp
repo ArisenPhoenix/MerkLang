@@ -6,44 +6,7 @@
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "core/Scope.hpp"
-
-
-// static void stampRuntimeType(Node& n) {
-//     auto& tr = TypeRegistry::global();
-//     auto& f  = n.getFlags();
-
-//     // Always keep these coherent:
-//     if (f.fullType.getBaseType().empty()) {
-//         f.fullType.setBaseType(nodeTypeToString(f.type));
-//     }
-
-//     // Only set inferredSig if it's not set yet (or invalid)
-//     if (f.inferredSig == kInvalidTypeSignatureId) {
-//         const auto base = f.fullType.getBaseType();
-
-//         // If you represent class instances by fullType name:
-//         if (f.isInstance && !base.empty() && base != "Any") {
-//             // If Dict/List are modeled as containers, use bindResolvedType or bindName lookup
-//             if (auto id = tr.lookupName(base)) {
-//                 f.inferredSig = *id;
-//             } else {
-//                 f.inferredSig = tr.classType(base);
-//             }
-//         } else {
-//             // primitives + null + any
-//             switch (f.type) {
-//                 case NodeValueType::Int:    f.inferredSig = tr.primitive(NodeValueType::Int); break;
-//                 case NodeValueType::Float:  f.inferredSig = tr.primitive(NodeValueType::Float); break;
-//                 case NodeValueType::Double: f.inferredSig = tr.primitive(NodeValueType::Double); break;
-//                 case NodeValueType::Bool:   f.inferredSig = tr.primitive(NodeValueType::Bool); break;
-//                 case NodeValueType::String: f.inferredSig = tr.primitive(NodeValueType::String); break;
-//                 case NodeValueType::Null:   f.inferredSig = tr.lookupName("Null").value_or(tr.any()); break; // if you have Null type
-//                 default:                    f.inferredSig = tr.any(); break;
-//             }
-//         }
-//     }
-// }
-
+#include "core/evaluators/TypeEvaluator.hpp"
 
 DataTypeFlags::DataTypeFlags() = default;
 
@@ -204,17 +167,17 @@ DataTypeFlags DataTypeFlags::merge(const std::unordered_map<String, String>& val
     return *this;
 }
 
-DynamicNode::DynamicNode() { value = Null; }
+AnyNode::AnyNode() { value = Null; }
 
-DynamicNode::DynamicNode(SharedPtr<NodeBase> val) { value = val->getValue(); }
+AnyNode::AnyNode(SharedPtr<NodeBase> val) { value = val->getValue(); }
 
-DynamicNode::DynamicNode(const VariantType val) { value = val; }
+AnyNode::AnyNode(const VariantType val) { value = val; }
 
-DynamicNode DynamicNode::fromVariant(VariantType v) {
-    DynamicNode node;
+AnyNode AnyNode::fromVariant(VariantType v) {
+    AnyNode node;
     node.value = v;
 
-    auto t = DynamicNode::getTypeFromValue(v);
+    auto t = TypeEvaluator::getTypeFromValue(v);
     node.flags.type = t;
     node.flags.fullType.setBaseType(nodeTypeToString(t));
     node.flags.isInstance = (t == NodeValueType::ClassInstance); // if that’s your rule
@@ -223,32 +186,32 @@ DynamicNode DynamicNode::fromVariant(VariantType v) {
     return node;
 }
 
-DynamicNode::DynamicNode(Node& node)
+AnyNode::AnyNode(Node& node)
   : value(node.getValue())
 {
     flags = node.getFlags();  // preserve runtime identity
 }
 
-DynamicNode::DynamicNode(const Node& node)
+AnyNode::AnyNode(const Node& node)
   : value(node.getValue())
 {
     flags = node.getFlags();
 }
 
-DynamicNode::DynamicNode(const NodeBase& dyn)
+AnyNode::AnyNode(const NodeBase& dyn)
   : value(dyn.getValue())
 {
     flags = dyn.flags;  // assuming NodeBase stores flags
 }
 
-DynamicNode::DynamicNode(NodeBase&& dyn)
+AnyNode::AnyNode(NodeBase&& dyn)
   : value(dyn.getValue())
 {
     flags = dyn.flags;
 }
 
 
-void DynamicNode::clear() {
+void AnyNode::clear() {
     if (std::holds_alternative<SharedPtr<Callable>>(getValue()) && flags.isInstance) {
         auto instance = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<Callable>>(getValue()));
         instance->getInstanceScope()->clear();
@@ -263,10 +226,10 @@ BoolNode::BoolNode(VariantType v) {
     throw MerkError("Tried To construct Bool From Variant");
     if (std::holds_alternative<bool>(v)) { value = std::get<bool>(v); } 
 
-    if (DynamicNode::getTypeFromValue(v) == NodeValueType::Null) {
+    if (TypeEvaluator::getTypeFromValue(v) == NodeValueType::Null) {
         value = false;
     } else {
-        throw MerkError("Attempted To Implicitly Cast " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " to Bool");
+        throw MerkError("Attempted To Implicitly Cast " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)) + " to Bool");
     }
     flags.type = NodeValueType::Bool;
     flags.fullType.setBaseType("Bool");
@@ -274,6 +237,7 @@ BoolNode::BoolNode(VariantType v) {
 }
 
 StringNode::StringNode(String v) : value(v) { flags.type = NodeValueType::String; flags.fullType.setBaseType("String");}
+// StringNode::StringNode(VariantType v) : value(v) { flags.type = NodeValueType::String; flags.fullType.setBaseType("String");}
 
 void StringNode::clear() {value = "";}
 
@@ -318,7 +282,7 @@ FloatNode::FloatNode(VariantType v) {
 
     flags.type = NodeValueType::Float;
     flags.fullType.setBaseType("Float");
-    throw MerkError("Cannot Set type: " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " to Float");
+    throw MerkError("Cannot Set type: " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)) + " to Float");
 }
 
 DoubleNode::DoubleNode(double v) {
@@ -336,7 +300,7 @@ DoubleNode::DoubleNode(VariantType v) {
         flags.fullType.setBaseType("Double");
         return;
     }
-    throw MerkError("Cannot Cast type " + nodeTypeToString(DynamicNode::getTypeFromValue(v)) + " To Double");
+    throw MerkError("Cannot Cast type " + nodeTypeToString(TypeEvaluator::getTypeFromValue(v)) + " To Double");
 }
 
 NodeWrapper::NodeWrapper() = default;
@@ -370,7 +334,7 @@ UniquePtr<VarNode> VarNode::uniqClone() {
 
     uniqCloned->valueNode = valueNode.clone();
     uniqCloned->varFlags = varFlags;
-    auto type = DynamicNode::getTypeFromValue(valueNode.getValue());
+    auto type = TypeEvaluator::getTypeFromValue(valueNode.getValue());
     auto isTarget = (type == NodeValueType::Dict || type == NodeValueType::Callable || type == NodeValueType::DataStructure || type == NodeValueType::List || type == NodeValueType::ClassInstance);
     (void) isTarget;
     // if (!oldValue.isNative() && !oldValue.isInstance() && isTarget && uniqCloned->valueNode == valueNode) {
@@ -391,7 +355,7 @@ UniquePtr<VarNode> VarNode::uniqClone() {
     // if ( isTarget ) { throw MerkError("Cloning a Target Type in VarNode " + nodeTypeToString(type)); }
     
     // if ((oldValue.getValue() == valueNode.getValue()) && isTarget) {
-    //     auto msg = "Value didn't change for type " + nodeTypeToString(DynamicNode::getTypeFromValue(valueNode.getValue()));
+    //     auto msg = "Value didn't change for type " + nodeTypeToString(TypeEvaluator::getTypeFromValue(valueNode.getValue()));
     //     String msg2 = " -> " + nodeTypeToString(oldValue.getType()) + " " + oldValue.getFlags().toString();
         
     //     if (oldValue.isInstance()) {
@@ -566,7 +530,7 @@ VarNode::VarNode(Node startingValue, DataTypeFlags declFlags) {
 VarNode::VarNode(VariantType value, bool isConst, bool isStatic, bool isMutable) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     throw MerkError("Entered: VarNode::VarNode(VariantType value, bool isConst, bool isStatic, bool isMutable)");
-    NodeValueType dataType = DynamicNode::getTypeFromValue(value);
+    NodeValueType dataType = TypeEvaluator::getTypeFromValue(value);
     setValue(Node::fromVariant(value));
     
     valueNode.setFlags(DataTypeFlags(isConst, isMutable, isStatic, dataType, ResolvedType(nodeTypeToString(dataType))));
@@ -630,12 +594,12 @@ LitNode::LitNode(const String& value, const String& typeStr) {
     if (typeStr == "Variable" && value == "null") { setValue(Node(Null)); /* indicates an actual value of null */ } 
     
     else {
-        auto [val, type] = DynamicNode::getCoercedStringAndType(value, typeOf);
+        auto [val, type] = TypeEvaluator::getCoercedStringAndType(value, typeOf);
         if (type == NodeValueType::DataStructure || type == NodeValueType::Dict) {
             throw MerkError("Found " + nodeTypeToString(type) + "Being Constructed By LitNode");
         }
         if (nodeTypeToString(type, false) == "Unknown") { throw MerkError("Cannot Cast Unknown"); }
-        auto node = DynamicNode::dispatchNode(val, nodeTypeToString(type, false), true);
+        auto node = AnyNode::dispatchNode(val, nodeTypeToString(type, false), true);
         setValue(node);
 
         if (!node.isValid()) { throw MerkError("LiteralNode is invalid at construction"); }
@@ -660,7 +624,7 @@ Node::Node(bool v) : data(makeShared<BoolNode>(v)) {
 }
 
 Node Node::fromVariant(VariantType v) {
-    auto type = DynamicNode::getTypeFromValue(v);
+    auto type = TypeEvaluator::getTypeFromValue(v);
     // if (type == NodeValueType::ClassInstance || type == NodeValueType::UserDefined || type == NodeValueType::Callable) {
     //     throw MerkError("Attempted To Create A Node of " + nodeTypeToString(type));
     // }
@@ -672,7 +636,7 @@ Node Node::fromVariant(VariantType v) {
     // data = makeShared<ClassInstanceNode>(v);
     auto node = Node();
     node.setValue(v);
-    node.setFlags(node.getFlags().merge({{"type", nodeTypeToString(DynamicNode::getTypeFromValue(v), false)}}));
+    node.setFlags(node.getFlags().merge({{"type", nodeTypeToString(TypeEvaluator::getTypeFromValue(v), false)}}));
     // setValue(v);
     if (!node.data) { throw MerkError("Data is Invalid in Node::Node(VariantType v)"); }
     return node;
@@ -753,7 +717,7 @@ Node::Node(SharedPtr<SetNode> v) {
 //     data = other.data;
 
 //     if (other.isInstance()) {
-//         // auto type = DynamicNode::getTypeFromValue(other.getValue());
+//         // auto type = TypeEvaluator::getTypeFromValue(other.getValue());
 //         // other.getFlags().merge({{"isInstance", "true"}});
 //         // DEBUG_LOG(LogLevel::PERMISSIVE, "Assigning Instance to Node, it holds a " + nodeTypeToString(type) + " and holds meta of " + other.getFlags().toString());
 //         data->flags.merge({{"isInstance", "true"}});
