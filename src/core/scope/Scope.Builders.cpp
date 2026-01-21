@@ -175,7 +175,9 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
     detached->globalTypes    = globalTypes;
     detached->globalTypeSigs = globalTypeSigs;
     detached->localTypes.attach(*detached->globalTypeSigs);
-
+    
+    detached->globalFunctions = globalFunctions;
+    detached->globalClasses = globalClasses;
     detached->isDetached = true;
     detached->owner = owner+"(detached)";
     includeMetaData(detached, true);

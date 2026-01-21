@@ -21,17 +21,20 @@ Node print(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_u
     return Node(Null); 
 }
 
-Node debug_log(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+Node debug_log(ArgumentList args, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     DEBUG_LOG(LogLevel::DEBUG, "ALL ARGS: ", args.toString());
     debugLog(true, highlight("\n====================================== DEBUG_LOG MERK INTERNALS BEGIN ======================================\n", Colors::bg_bright_red));
+
     for (size_t i = 0; i < args.size(); ++i) {
-            auto arg = args[i];
-            DEBUG_LOG(LogLevel::DEBUG, highlight("ARG: ", Colors::bg_bright_red), arg.toString(), highlight(" ARG META: ", Colors::bg_blue), arg.getFlags().toString());
-            std::cout << args[i].toString();
-            if (i < args.size() - 1) std::cout << " ";
-        }
+        const Node& arg = args[i];
+        DEBUG_LOG(LogLevel::DEBUG,
+                  highlight("ARG: ", Colors::bg_bright_red), arg.toString(),
+                  highlight(" ARG META: ", Colors::bg_blue), arg.getFlags().toString());
+        std::cout << arg.toString();
+        if (i + 1 < args.size()) std::cout << " ";
+    }
     std::cout << std::endl;
-    auto first = args[0];
+
     if (instanceNode) {
         auto instScope = instanceNode->getInstanceScope();
         debugLog(true, highlight("The instance scope internals", Colors::bg_green));
@@ -40,12 +43,21 @@ Node debug_log(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[may
         debugLog(true, highlight("The instance scope children", Colors::bg_green));
         instScope->printChildScopes();
     }
-    if (first.isBool() && first.toBool()) {
-        throw MerkError(highlight("DEBUG_LOG threw because first arg was a boolean of " + first.toString(), Colors::bg_magenta));
+    if (args.size() > 0) {
+        const Node& first = args[0];
+        if (first.isBool() && first.toBool()) {
+            throw MerkError(highlight(
+                "DEBUG_LOG threw because first arg was a boolean of " + first.toString(),
+                Colors::bg_magenta
+            ));
+        }
     }
+
     debugLog(true, highlight("\n====================================== DEBUG_LOG MERK INTERNALS END ======================================\n", Colors::bg_bright_red));
+    if (scope) scope->debugPrint();
     return Node(Null);
 }
+
 
 Node intFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}

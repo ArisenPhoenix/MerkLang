@@ -157,7 +157,6 @@ namespace Evaluator {
 
 
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
-        MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
         Node finalVal = value->evaluate(scope, instanceNode);

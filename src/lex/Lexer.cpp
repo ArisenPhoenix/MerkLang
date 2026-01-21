@@ -159,15 +159,17 @@ TokenType Lexer::classifyIdentifier(const String& value, const Vector<Token>& ou
     }
 
     // 12) Argument / Parameter modes (must run before generic call classification)
-    if (insideArgs && !out.empty() && out.back().type == TokenType::Punctuation && !nextIsCall)
+    if (insideArgs && !out.empty() && out.back().type == TokenType::Punctuation && !nextIsCall) {
         return TokenType::Argument;
-    if (insideParams && !nextIsCall)
+    }
+        
+    if (insideParams && !nextIsCall) {
         return TokenType::Parameter;
-
-
+    }
+        
     // 13) function ref / class ref if known
-    if (functions.count(value)) type = TokenType::FunctionRef;
-    if (classes.count(value))   type = TokenType::ClassRef;
+    if (functions.count(value)) { type = TokenType::FunctionRef; }
+    if (classes.count(value))   { type = TokenType::ClassRef; }
 
 
     if (type == TokenType::Variable && value == "null") {
@@ -321,6 +323,9 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
         // identifiers
         if (t.kind == RawKind::Identifier) {
             TokenType tt = classifyIdentifier(t.lexeme, out, raw, i);
+            if (tt == TokenType::FunctionCall && prevTokenWasDot(out)) {
+                tt = TokenType::ClassMethodCall;
+            }
             out.emplace_back(tt, t.lexeme, t.line, t.column);
             ++i;
             continue;

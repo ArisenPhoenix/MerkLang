@@ -322,7 +322,7 @@ void Scope::updateVariable(const String& name, const Node& value) {
         return;
     }
 
-    throw VariableNotFoundError(name);
+    throw VariableNotFoundError(name, "Scope::updateVariable");
 }
 
 VarNode& Scope::getVariable(const String& name) {
@@ -331,13 +331,13 @@ VarNode& Scope::getVariable(const String& name) {
     if (auto variable = context.getVariable(name)) {
         return variable.value();
     }
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::getVariable Missed variable ", name, "in The below scope: ");
-    // debugPrint();
 
     // Delegate to parent scope if it exists
     if (auto parent = parentScope.lock()) {
         return parent->getVariable(name);
     }
+    // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::getVariable Missed variable ", name, "in The below scope: ");
+    // debugPrint();
 
     if (hasVariable(name)) {throw MerkError("The Variable Lives Here, yet it is not getting pulled");}
 

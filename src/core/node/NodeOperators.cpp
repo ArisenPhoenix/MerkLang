@@ -371,22 +371,45 @@ Node Node::operator%(const Node& other) const {return Node((*data) % (*other.dat
 Node Node::operator+=(const Node& other) const {
     if (!data) {throw MerkError("Cannot perform += on null value");}
     *this->data += (*other.data);
+    auto val = this->data->getValue();
+    if (TypeEvaluator::getTypeFromValue(val) != getType()) {
+        throw MerkError("Cannot Convert from type " + nodeTypeToString(getType()) + " to " + data->getNodeTypeAsString());
+    }
     return *this;
 }
     // return Node((*data) += (*other.data)); }
-Node Node::operator-=(const Node& other) const {return Node((*data) -= (*other.data)); }
-Node Node::operator*=(const Node& other) const {return Node((*data) *= (*other.data)); }
-Node Node::operator/=(const Node& other) const {return Node((*data) /= (*other.data)); }
+Node Node::operator-=(const Node& other) const {
+    if (!data) {throw MerkError("Cannot perform += on null value");}
+    *this->data -= (*other.data);
+    auto val = this->data->getValue();
+    if (TypeEvaluator::getTypeFromValue(val) != getType()) {
+        throw MerkError("Cannot Convert from type " + nodeTypeToString(getType()) + " to " + data->getNodeTypeAsString());
+    }
+    return *this;
+}
+Node Node::operator*=(const Node& other) const {
+    if (!data) {throw MerkError("Cannot perform += on null value");}
+    *this->data *= (*other.data);
+    auto val = this->data->getValue();
+    if (TypeEvaluator::getTypeFromValue(val) != getType()) {
+        throw MerkError("Cannot Convert from type " + nodeTypeToString(getType()) + " to " + data->getNodeTypeAsString());
+    }
+    return *this;
+}
+Node Node::operator/=(const Node& other) const {
+    if (!data) {throw MerkError("Cannot perform += on null value");}
+    *this->data /= (*other.data);
+    auto val = this->data->getValue();
+    if (TypeEvaluator::getTypeFromValue(val) != getType()) {
+        throw MerkError("Cannot Convert from type " + nodeTypeToString(getType()) + " to " + data->getNodeTypeAsString());
+    }
+    return *this;
+}
 
 bool Node::operator==(const Node& other) const {
-    // if (toString() == "null") {
-    //     return false;
-    // }
-    // return Node((*data) == (*other.data)).toBool(); 
     return !evalNotEqual(*this, other).toBool(); 
-    
-    // throw MerkError("Attempting Equality Check With Node Holding " + toString()); 
 }
+
 bool Node::operator!=(const Node& other) const {return evalNotEqual(*this, other).toBool(); /*return Node((*data) != (*other.data)).toBool();*/ }
 bool Node::operator<(const Node& other) const {return Node((*data) < (*other.data)).toBool(); }
 bool Node::operator>(const Node& other) const {return Node((*data) > (*other.data)).toBool(); }
@@ -526,8 +549,6 @@ SharedPtr<NodeBase> StringNode::operator/=(const NodeBase& other) {
 
 // Logic Operations
 SharedPtr<NodeBase> StringNode::operator==(const NodeBase& other) const {
-    // throw MerkError("Attempting Equality Check With StringNode Holding " + toString() + "OTHER HOLDING " + other.toString());
-
     return makeShared<BoolNode>(value == other.toString());
 }
 SharedPtr<NodeBase> StringNode::operator!=(const NodeBase& other) const {
@@ -674,21 +695,12 @@ SharedPtr<NodeBase> IntNode::operator/=(const NodeBase& other) {
     return shared_from_this();
 }
 
-// SharedPtr<NodeBase> IntNode::operator/=(const NodeBase& other) {
-//     auto val = value;
-//     val /= other.toInt();
-//     return makeShared<IntNode>(val);
-// }
-
 // Logic Operations
 SharedPtr<NodeBase> IntNode::operator==(const NodeBase& other) const {
-    // throw MerkError("Attempting Equality Check With IntNode Holding " + toString() + "OTHER HOLDING " + other.toString());
     if (!other.isNumeric()) {
         return makeShared<BoolNode>(false);
     }
     return makeShared<BoolNode>(value == other.toInt());
-    // throw MerkError("Attempting Equality Check With IntNode Holding " + toString() + " OTHER HOLDING " + other.toString() + " Meta " + other.flags.toString());
-    // return makeShared<BoolNode>(value == other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator!=(const NodeBase& other) const {
     return makeShared<BoolNode>(value != other.toInt());

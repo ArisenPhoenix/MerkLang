@@ -547,12 +547,6 @@ SharedPtr<NativeClass> createNativeSetClass(SharedPtr<Scope> globalScope) {
     return setClass;
 }
 
-
-
-
-
-
-
 SharedPtr<NativeClass> createNativeHttpClass(SharedPtr<Scope> globalScope) {
     SharedPtr<Scope> classScope = generateScope(globalScope);
     auto [className, accessor] = getClassAccessorName("Http");

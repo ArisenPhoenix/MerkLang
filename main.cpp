@@ -125,6 +125,7 @@ int run_original(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
 
         auto tokens = tokenizer.tokenize(lCfg);
+        tokenizer.printTokens(true);
         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n"); 
 
         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");

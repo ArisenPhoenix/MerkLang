@@ -126,11 +126,6 @@ Node MethodCall::evaluate([[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unuse
 
         if (!methodSig) {
 
-
-            if (name == "append") {
-                scope->debugPrint();
-                throw MerkError("Didnt' Find append");
-            }
             scope->debugPrint();
             throw MerkError("Didn't find " + name);
             auto returnVal = handleVirtualMethod(instanceNode, name);

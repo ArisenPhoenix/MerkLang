@@ -335,6 +335,10 @@ NodeValueType getTypeFromValue(const VariantType& value) {
     return val;
 }
 
+NodeValueType getNodeTypeFromValue(VariantType value) {
+    return getTypeFromValue(value);
+}
+
 NodeValueType inferTypeFromString (String& valueStr, String& typeStr) {
     if (typeStr == "Variable" || typeStr == "Argument" || typeStr == "FunctionCall" || typeStr == "ClassMethodCall" || typeStr == "Parameter") {
         return NodeValueType::String;

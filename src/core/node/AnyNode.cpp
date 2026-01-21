@@ -121,24 +121,6 @@ void AnyNode::validateMutability(const Node& value) {
 }
 
 SharedPtr<NodeBase> AnyNode::clone() const {
-    // auto val = getValue();
-    // if (std::holds_alternative<SharedPtr<Callable>>(val)) {
-    //     auto callable = std::get<SharedPtr<Callable>>(val);
-    //     auto node = this->getValue();
-    //     switch (TypeEvaluator::getTypeFromValue(callable)) {
-    //         case NodeValueType::ClassInstance:
-    //             return std::static_pointer_cast<ClassInstance>(callable)->clone();
-    //         default:
-    //             return makeShared<DynamicNode>(*this);
-    //     }
-    // } else if (std::holds_alternative<SharedPtr<NativeNode>>(val)) {
-    //     throw MerkError("Cloning a DataStructure");
-    // } else {
-    //     auto node = makeShared<DynamicNode>(*this); 
-    //     node->flags = flags;
-    //     return node;
-    // }
-
     auto node = makeShared<AnyNode>(*this); 
     node->flags = flags;
     return node;
