@@ -447,16 +447,12 @@ EvalResult evaluateClassBody(SharedPtr<Scope> classCapturedScope,
                 applyAccessorScopeFix(methodDef, classScope, accessor);
                 stripImplicitAccessor(methodDef, accessor);
 
-                // Method defs are definition-time, no flow needed
                 methodDef->evaluate(classScope, instanceNode);
                 break;
             }
 
-            case AstType::ClassDefinition:
-                // handled elsewhere
-                break;
-
             default:
+                // TODO: handle nested class definitions
                 DEBUG_LOG(LogLevel::ERROR, "Unhandled AST type in ClassBody:", child->getAstTypeAsString());
                 throw MerkError("Unexpected AST statement in ClassBody: " + child->getAstTypeAsString());
         }
@@ -494,9 +490,9 @@ EvalResult evaluateClassCall(SharedPtr<Scope> callScope,
     DEBUG_FLOW_EXIT();
     Node inst = ClassInstanceNode(instance);
     inst.getFlags().isInstance = true;
-    inst.getFlags().isCallable = true;                  // if you store instances as Callable
-    inst.getFlags().type = NodeValueType::ClassInstance; // or Callable, but be consistent
-    inst.getFlags().fullType.setBaseType(className);     // "Types"
+    inst.getFlags().isCallable = true;                  
+    inst.getFlags().type = NodeValueType::ClassInstance;
+    inst.getFlags().fullType.setBaseType(className);
     inst.getFlags().inferredSig = callScope->localTypes.classType(className);
 
     return EvalResult::Normal(std::move(inst));
@@ -534,19 +530,19 @@ EvalResult evaluateMethodDef(SharedPtr<Scope> passedScope,
     }
 
     SharedPtr<Scope> defScope = passedScope->buildFunctionDefScope(freeVarNames, methodName);
-    if (!defScope) throw MerkError("Def scope is null for MethodDef: " + methodName);
+    if (!defScope) { throw MerkError("Def scope is null for MethodDef: " + methodName); }
 
     defScope->owner = generateScopeOwner("MethodDef", methodName);
 
     UniquePtr<BaseAST> clonedBodyBase = body->clone();
     auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
-    if (!clonedBody) throw MerkError("Cloned body is null for MethodDef: " + methodName);
+    if (!clonedBody) { throw MerkError("Cloned body is null for MethodDef: " + methodName); }
 
     SharedPtr<Method> method = makeShared<UserMethod>(methodName, parameters, std::move(clonedBody), ownScope, callType);
-    if (!method) throw MerkError("Method created is null: " + methodName);
+    if (!method) { throw MerkError("Method created is null: " + methodName); }
 
     method->setCapturedScope(defScope);
-    if (!method->getCapturedScope()) throw MerkError("No captured scope for method: " + methodName);
+    if (!method->getCapturedScope()) { throw MerkError("No captured scope for method: " + methodName); }
 
     auto methodSig = method->toCallableSignature();
     methodSig->setParameters(parameters.clone());

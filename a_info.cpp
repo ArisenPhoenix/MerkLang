@@ -1,3 +1,3 @@
-#define STRINGIFY_IMPL(x) #x
-#define STRINGIFY(x) STRINGIFY_IMPL(x)
-#pragma message ("ENABLE_DEBUG = " STRINGIFY(ENABLE_DEBUG))
+// #define STRINGIFY_IMPL(x) #x
+// #define STRINGIFY(x) STRINGIFY_IMPL(x)
+// #pragma message ("ENABLE_DEBUG = " STRINGIFY(ENABLE_DEBUG))

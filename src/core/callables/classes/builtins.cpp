@@ -11,7 +11,7 @@
 
 
 void validateSelf(SharedPtr<ClassInstanceNode> self, String className, String methodName) {
-    if (!self) {throw MerkError("instance was not provided to [" + className + "] -> " + methodName);}
+    if (!self) { throw MerkError("instance was not provided to [" + className + "] -> " + methodName); }
 }
  
 SharedPtr<NativeNode> pullNativeData(SharedPtr<ClassInstanceNode> self, String forWhat) {
@@ -54,9 +54,7 @@ SharedPtr<FileNode> pullFile(SharedPtr<ClassInstanceNode> self) {
 std::tuple<String, String> getClassAccessorName(String className) {
     String accessor;
 
-    for (char c : className) {
-        accessor = std::tolower(c);
-    }
+    for (char c : className) { accessor = std::tolower(c); }
     return std::tuple<String, String>(className, accessor);
 }
 std::tuple<SharedPtr<Scope>, SharedPtr<Scope>> getClassAndDefScope(SharedPtr<Scope> globalScope) {
@@ -72,9 +70,7 @@ template <typename T>
 SharedPtr<T> pullNative(SharedPtr<ClassInstanceNode> self,
                         std::string_view forWhat = typeid(T).name()) {
 
-    if (!self) {
-        throw MerkError(String(forWhat) + "::pullNative received null instance");
-    }
+    if (!self) { throw MerkError(String(forWhat) + "::pullNative received null instance"); }
 
     self->getValue();
 
@@ -118,31 +114,21 @@ SharedPtr<DictNode> pullHttpDict(String varName, SharedPtr<ClassInstanceNode> se
         auto dict = std::static_pointer_cast<DictNode>(nativeNode);
         return dict;
         
-    } else {
-        throw MerkError("headers node doesn't hold NativeNode, but a " + headersNode.getTypeAsString());
-    }
+    } else { throw MerkError("headers node doesn't hold NativeNode, but a " + headersNode.getTypeAsString()); }
 }
 
 static Node returnConstructedInstanceOf(SharedPtr<ClassInstanceNode> self, const String& className) {
-    if (!self) throw MerkError("returnConstructedInstanceOf: self is null");
-
-    Node out(*self);  // assuming this wraps the ClassInstanceNode
+    if (!self) { throw MerkError("returnConstructedInstanceOf: self is null"); }
+    Node out(*self); 
 
     auto& f = out.getFlags();
     f.isInstance = true;
-    f.isCallable  = false;                 // optional, but usually right for instances
-    f.type = NodeValueType::ClassInstance; // IMPORTANT
+    f.isCallable  = false;                 
+    f.type = NodeValueType::ClassInstance;
 
-    // IMPORTANT: stamp nominal type for inference
     f.fullType.setBaseType(className);
 
-    // optional debug cosmetics
     f.name = className;
-    // debugLog(true,
-    // "DBG Dict() rhs type=", out.getTypeAsString(),
-    // " isInstance=", out.isInstance(),
-    // " baseType=", out.getFlags().fullType.getBaseType()
-    // );
     return out;
 }
 
@@ -272,18 +258,12 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
 
     String varName = DictNode::getOriginalVarName();
     
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Got the Dict Class initialized");
-
     auto constructFunction = [className, varName](ArgumentList args, SharedPtr<Scope> callScope, SharedPtr<ClassInstanceNode> self) -> Node {
         MARK_UNUSED_MULTI(self, callScope);
         validateSelf(self, className, "constructFunction");
-        // DictNode(args);
         auto dict = makeShared<DictNode>(args);
-        // auto something = DictNode(args);
         if (!dict) {throw MerkError("Dict Doesn't Exist");}
-        // self->getInstance()->setNativeData(dict);
         self->getInstance()->setNativeData(dict);
-        // return Node();
         return returnConstructedInstanceOf(self, className);
     };
 
@@ -299,7 +279,6 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 2) {throw MerkError("Only two arguments accepted in the dict::set method");}
         
-        // auto vector = pullList(self, varName);
         auto dict = pullDict(self);
         dict->set(args[0], args[1]);
         DEBUG_FLOW_EXIT();
@@ -318,9 +297,7 @@ SharedPtr<NativeClass> createNativeDictClass(SharedPtr<Scope> globalScope) {
         MARK_UNUSED_MULTI(callScope);
         if (!self) {throw MerkError("Cannot run 'append' method without instance");}
         if (args.size() != 1 && args.size() != 2) {throw MerkError("Only Two Arguments are allowed in Dict.get, provided: " + args.toString());}
-        // throw MerkError("getFunction");
         DEBUG_LOG(LogLevel::PERMISSIVE, "ARGS: ", args.toString());
-        // throw MerkError("ERROR");
         auto dict = pullDict(self);
         Node result = dict->get(args[0], args.size() == 2 ? args[1] : Node(Null));
         return result;  // None

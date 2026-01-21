@@ -47,9 +47,7 @@ String nodeTypeToString(NodeValueType type, bool colored) {
         case NodeValueType::Text: return colored ? highlight("Text", Colors::green) : "Text";
         case NodeValueType::File: return colored ? highlight("File", Colors::bg_cyan) : "File";
         case NodeValueType::Http: return colored ? highlight("Http", Colors::cyan) : "Http";
-        // case NodeValueType::ClassInstance: 
         default: return "UNKNOWN";
-        // default: throw RunTimeError("Unknown NodeValueType encountered in nodeTypeToString. ");
     }
 }
 

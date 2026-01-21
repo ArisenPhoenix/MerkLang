@@ -10,17 +10,7 @@ void ArgumentList::addPositionalArg(const Node& arg) {
 }
 
 void ArgumentList::addNamedArg(const String& key, const Node& arg) {
-    // for (auto& [k, v] : namedArgs) {
-    //     DEBUG_LOG(LogLevel::PERMISSIVE, "K1: ", k, "V1: ", v);
-    // }
-
     namedArgs[key] = arg;
-
-    // for (auto& [k, v] : namedArgs) {
-    //     DEBUG_LOG(LogLevel::PERMISSIVE, "K2: ", k, "V2: ", v);
-    // }
-
-    // throw MerkError("Got Named Args Above");
 }
 
 std::unordered_map<String, Node> ArgumentList::getNamedArgs() {
@@ -141,16 +131,11 @@ Vector<Node> ArgumentList::bindTo(const ParamList& params, bool allowDefaults) c
     };
     // Bind fixed parameters
     for (size_t i = 0; i < fixedCount; ++i) {
-        // DEBUG_LOG(LogLevel::PERMISSIVE, "POSITIONAL ARG ", positionalArgs[i].toString(), "POSITIONAL ARG NAME: ", positionalArgs[i].getFlags().name);
         const auto& param = params[i];
         if (i < positionalArgs.size()) {
             auto arg = positionalArgs[i];
             if (param.flags.name.empty()) {throw MerkError("Positional Arg " + std::to_string(i) + " Is EMPTY");}
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "ARG META BEFORE: ", arg.getFlags().toString());
             setFlagsFunc(arg, param);
-            // DEBUG_LOG(LogLevel::PERMISSIVE, "ARG META AFTER: ", arg.getFlags().toString());
-
-            // throw MerkError("Set NodeBase Flags");
             // if (arg.getFlags().name.empty()) {throw MerkError("Arg Name Is Empty");}
             boundArgs.push_back(arg);
         } else if (hasNamedArg(param.getName())) {
@@ -167,12 +152,10 @@ Vector<Node> ArgumentList::bindTo(const ParamList& params, bool allowDefaults) c
         Vector<Node> varArgs;
         for (size_t i = fixedCount; i < positionalArgs.size(); ++i) {varArgs.push_back(positionalArgs[i]);}
 
-        // Named varargs not supported for now (complex edge case)
-        boundArgs.push_back(Node::fromVariant(varArgs));  // Wrap in Node later as a NativeList/etc
+        // Named varargs not supported for now
+        boundArgs.push_back(Node::fromVariant(varArgs));
     }
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "BOUND ARGS: ", joinVectorNodeStrings(boundArgs));
     DEBUG_FLOW_EXIT();
-    // if (boundArgs.size() == 0) {throw MerkError("BOUND ARGS SIZE IS 0");}
     return boundArgs;
 }
 
@@ -198,15 +181,6 @@ bool ArgumentList::hasNamedArgs() {
 size_t ArgumentList::positionalCount() {
     return positionalArgs.size();
 }
-
-// auto ArgumentList::begin() { return positionalArgs.begin(); }
-// auto ArgumentList::end() { return positionalArgs.end(); }
-// auto ArgumentList::begin() const { return positionalArgs.begin(); }
-// auto ArgumentList::end() const { return positionalArgs.end(); }
-
-// // Add cbegin() and cend() for const iteration, c++ can be a pain
-// auto ArgumentList::cbegin() const { return positionalArgs.cbegin(); }
-// auto ArgumentList::cend() const { return positionalArgs.cend(); }
 
 size_t ArgumentList::size() {
     return positionalArgs.size();
@@ -234,7 +208,6 @@ Node ArgumentList::back() const {
 bool ArgumentList::empty() {
     return positionalArgs.empty() && namedArgs.empty();
 }
-// Access parameters by index
 
 const Node& ArgumentList::operator[](size_t index) const {
     if (index >= positionalArgs.size()) {
@@ -242,8 +215,6 @@ const Node& ArgumentList::operator[](size_t index) const {
     }
     return positionalArgs[index];
 }
-
-
 
 std::size_t ArgumentList::hash() const {
     std::size_t h;

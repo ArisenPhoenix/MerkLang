@@ -88,32 +88,15 @@ void ListNode::setValue(const VariantType& v) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         auto list = static_cast<ListNode*>(ds.get());
         elements = list->getElements();
-        // elements = static_cast<ListNode*>(std::get<SharedPtr<DataStructure>>(v))->getElements();
     }
 }
 
 SharedPtr<NodeBase> ListNode::clone() const {
+    // keeps it shared
     auto copy = std::make_shared<ListNode>(*this);
     copy->flags = this->flags;
     return copy;
-    // NodeList clonedElements;
-    // for (auto& ele: elements) {
-    //     auto type = TypeEvaluator::getTypeFromValue(ele.getValue());
-    //     auto isTarget = (type == NodeValueType::Dict || type == NodeValueType::Callable || type == NodeValueType::DataStructure || type == NodeValueType::List || type == NodeValueType::ClassInstance);
-    //     auto valClone = ele.clone();
-    //     if ((ele == valClone || ele.getValue() == valClone.getValue()) && isTarget) {
-    //         throw MerkError("List Didn't Clone Something");
-    //     }
-    //     clonedElements.emplace_back(valClone);
-    // }
 
-    // if (clonedElements.size() != elements.size()) { throw MerkError("Elements do not match in number in ListNode::clone"); }
-    // // throw MerkError("Cloned ListNode");
-    
-    // auto clonedList = makeShared<ListNode>(clonedElements);
-
-    // // throw MerkError("Cloned ListNode: " + toString() + "  Into Another " + clonedList->toString());
-    // return clonedList;
 }
 
 void ListNode::clear() {elements.clear();}
@@ -222,17 +205,13 @@ DictNode::DictNode(ArgumentList init) {
     dataType = NodeValueType::Dict;
     flags.type = NodeValueType::Dict;
     setType(NodeValueType::Dict);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "ARGUMENT LIST: ", init.toString());
     if (init.hasNamedArgs()) {
         auto args = init.getNamedArgs();
         for (auto& [key, val] : args) {
             
             elements[Node(key)] = Node(val);
-            // elements[key] = Node(val.getValue());
         }
     }
-    // init.getNamedArgs().clear();
-    // init.getPositional().clear();
 }
 
 int DictNode::length() const {
@@ -247,12 +226,9 @@ DictNode::DictNode() {
 
 String DictNode::toString() const {
     String repr = "{";
-    // auto it = elements.end();
+
     for (auto& [key, val] : elements) {
         String valString = val.toString();
-        // if (valString.size() > 500) {
-        //     valString = valString.substr(0, 500);
-        // }
         repr += key.toString() + " : " + valString + ", ";
     }
     repr += "}";
@@ -282,7 +258,7 @@ void DictNode::set(const char* key, Node value) { set(Node(key), std::move(value
 Node DictNode::pop(const Node& key) {
     AnyNode::validateMutability(*this);
     auto val = elements.find(key);
-    // elements.erase(val);
+    elements.erase(key);
     return val->second;
 }
 
@@ -294,11 +270,8 @@ void DictNode::remove(const Node& key) {
 Node DictNode::get(const Node& key, const Node& defaultReturn) {
     auto val = elements.find(key);
     if (val != elements.end()) {
-        
         return val->second;
     }
-
-    // throw MerkError("key is not in dict: " + key.toString() + " DICT CONTENTS: " + toString());
     return defaultReturn;
 }
 
@@ -310,7 +283,6 @@ void DictNode::setValue(const VariantType& v) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         auto dict = static_cast<DictNode*>(ds.get());
         elements = dict->getElements();
-        // elements = static_cast<ListNode*>(std::get<SharedPtr<DataStructure>>(v))->getElements();
     } else {
         throw MerkError("Cannot Set Non DictNode to DictNode");
     }
@@ -349,9 +321,6 @@ void SetNode::clear() {elements.clear();}
 String SetNode::toString() const {
     String repr = getTypeAsString() + "{";
     if (getTypeAsString() == "UNKNOWN") {throw MerkError("getTypeAsString return UNKNOWN");}
-    // elements.end();
-    // elements.size();
-    // auto currentElem = elements.begin();
     for (auto & elem : elements) {
         repr += elem.toString();
         repr += ", ";
@@ -456,8 +425,6 @@ SetNode::SetNode(ArgumentList val) {
     }
     
     else {
-        // (void)val;
-
         throw MerkError("Haven't Handled Set from ArgumentList: val is " + val.toString());
     }
     setType(NodeValueType::Set);
@@ -492,9 +459,7 @@ SharedPtr<ClassInstance> InstanceBoundNative::getInstance() const {
 }
 
 InstanceBoundNative::~InstanceBoundNative() {
-    // if (getInstance()) {
-    //     getInstance()->clear();
-    // }
+    // decided not to let the InstanceBoundNative own the instance
 }
 
 
@@ -526,16 +491,3 @@ SharedPtr<NativeNode> HttpNode::toNative() const {
 SharedPtr<NativeNode> FileNode::toNative() const {
     throw MerkError("FileNode cannot return toNative()");
 }
-
-
-
-
-
-// SharedPtr<NodeBase> DataStructure::operator==(const NodeBase& other) const {
-//     MARK_UNUSED_MULTI(other);
-//     throw MerkError("Cannot Compare Base Type of DataStructure");
-// }
-
-// SharedPtr<NodeBase> DataStructure::operator==(const NodeBase& other) const {
-//     return makeShared<BoolNode>(other.toString() == toString());
-// }

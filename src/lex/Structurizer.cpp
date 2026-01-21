@@ -8,15 +8,14 @@
     indentStack_.push_back(0);
 
     bool atLineStart = true;
-    bool lineHasContent = false;      // non-whitespace, non-comment content
-    bool lineHasOnlyTrivia = true;    // for comment-only / blank
+    bool lineHasContent = false;
+    bool lineHasOnlyTrivia = true;
     int pendingIndent = 0;
 
-    int parenDepth = 0; // (), [], {} nesting for newline suppression
+    int parenDepth = 0;
 
     auto emit = [&](const RawToken& t) { out.push_back(t); };
     size_t i = 0;
-    // copy SOF
     if (!in.empty() && in[0].kind == RawKind::SOF) emit(in[0]);
 
     RawToken eofTok;
@@ -27,15 +26,13 @@
         if (t.kind == RawKind::EOF_) {
             eofTok = t;
             sawEOF = true;
-            break; // IMPORTANT
+            break;
         }
 
-        // Track nesting (optional but very useful)
-        if (t.kind == RawKind::Punctuation && (t.lexeme == "(" || t.lexeme == "[" || t.lexeme == "{")) parenDepth++;
+        if (t.kind == RawKind::Punctuation && (t.lexeme == "(" || t.lexeme == "[" || t.lexeme == "{")) {parenDepth++;}
         if (t.kind == RawKind::Punctuation && (t.lexeme == ")" || t.lexeme == "]" || t.lexeme == "}")) parenDepth = std::max(0, parenDepth - 1);
 
         if (atLineStart) {
-            // accumulate indentation from leading Space/Tab tokens
             if (t.kind == RawKind::Space) {
                 pendingIndent += (t.aux > 0 ? t.aux : 1);
                 if (cfg_.keepWhitespaceTokens) emit(t);
@@ -49,9 +46,7 @@
                 continue;
             }
 
-            // If we hit newline immediately -> blank line (do not change indentation)
             if (t.kind == RawKind::Newline) {
-                // emit a newline if you want to preserve blank lines; or compress
                 emit(t);
                 atLineStart = true;
                 pendingIndent = 0;
@@ -60,18 +55,16 @@
                 continue;
             }
 
-            // If line starts with comment (or comment delimiter), treat as “trivia-only”
             if (isCommentToken(t)) {
-                if (cfg_.keepComments) emit(t);
-                // keep consuming rest of line, but do NOT apply indent change
+                if (cfg_.keepComments) {emit(t);}
                 atLineStart = false;
                 lineHasContent = cfg_.commentsAreLineContent;
                 lineHasOnlyTrivia = !cfg_.commentsAreLineContent;
                 continue;
             }
 
-            // First real token of the line: apply indent change (unless in paren continuation)
-            if (parenDepth == 0) applyIndent(pendingIndent, t, out);
+            if (parenDepth == 0) {applyIndent(pendingIndent, t, out);}
+
             pendingIndent = 0;
             atLineStart = false;
             lineHasContent = true;
@@ -81,11 +74,8 @@
             continue;
         }
 
-        // Not at start of line
         if (t.kind == RawKind::Newline) {
-            // If inside parens/brackets/braces, ignore newline entirely (optional)
             if (cfg_.parenContinuation && parenDepth > 0) {
-                // drop newline + reset line start flags as if it didn't happen
                 atLineStart = true;
                 pendingIndent = 0;
                 lineHasContent = false;
@@ -101,7 +91,6 @@
             continue;
         }
 
-        // Filter whitespace tokens mid-line if desired
         if (!cfg_.keepWhitespaceTokens && (t.kind == RawKind::Space || t.kind == RawKind::Tab)) {
             continue;
         }
@@ -115,7 +104,6 @@
 
     int eofLine = sawEOF ? eofTok.line : (in.empty() ? 1 : in.back().line);
     int eofCol  = sawEOF ? eofTok.column : (in.empty() ? 1 : in.back().column);
-    // At EOF: close all indents
     while (indentStack_.size() > 1) {
         out.emplace_back(RawKind::Dedent, "", eofLine, eofCol, 0);
         indentStack_.pop_back();
@@ -133,7 +121,7 @@ bool Structurizer::isCommentToken(const RawToken& t) const {
     case RawKind::CommentLineStart:
     case RawKind::CommentBlockStart:
     case RawKind::CommentBlockEnd:
-        /* code */
+        /* When it comes time to make comments functional */
         return true;
     
     default:
@@ -151,7 +139,6 @@ void Structurizer::applyIndent(int indent, const RawToken& atToken, Vector<RawTo
         return;
     }
 
-    // indent < cur : pop until match
     while (indentStack_.size() > 1 && indentStack_.back() > indent) {
         indentStack_.pop_back();
         out.emplace_back(RawKind::Dedent, "", atToken.line, atToken.column, indent);

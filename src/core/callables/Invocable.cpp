@@ -16,8 +16,7 @@ void Invocable::setCapturedScope(SharedPtr<Scope> scope) {
     capturedScope = scope;
     if (!scope) {throw MerkError("Cannot set a null scope in UserFunction.");}
     getBody()->setScope(capturedScope);
-    if (!getBody()->getScope()) {throw MerkError("Invocable::setCapturedScope -> The Body Has No Scope After Being Set");}
-    // capturedScope->owner = generateScopeOwner(callableTypeAsString(callType), name);
+    if (!getBody()->getScope()) { throw MerkError("Invocable::setCapturedScope -> The Body Has No Scope After Being Set"); }
 }
 
 

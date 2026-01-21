@@ -88,16 +88,12 @@ Vector<Token> Tokenizer::lex(LexerConfig& lexCfg) {
     CommentConfig cfg       = handleScannerConfig();
     Scanner scanner(source, cfg);
     auto toks = scanner.scan();
-    // printRawTokens(toks, std::cout);
-
 
     LayoutConfig lcfg       = handleLayoutConfig();
     Structurizer structurizer(lcfg);
     auto structs = structurizer.structurize(toks);
     std::cout << std::endl;
-    // printRawTokens(structs, std::cout);
-    
-    // LexerConfig lxCfg      = handleLex(lexCfg);
+
     auto& v = handleLex(lexCfg);
     Lexer lexer(v);
     lexer.lex(structs, tokens);
@@ -105,17 +101,7 @@ Vector<Token> Tokenizer::lex(LexerConfig& lexCfg) {
 
     debugLog(true, "LEXER OUTPUT: ");
     bool colored = true;
-    for (const auto& token : tokens) {
-        String tok = colored ? highlight("Token", Colors::green) : "Token";
-        std::cout << tok + "(Type: " << tokenTypeToString(token.type, colored)
-                  << ", Value: " << token.value
-                  << ", Line: " << token.line
-                  << ", Column: " << token.column << ")" << std::endl;
-    }
 
-    
-    // auto tokenizer = Tokenizer(source);
-    // tokenizer.tokenize();
     debugLog(true, "TOKENIZER OUTPUT: ");
     if (tokens.size() < 1) {
         debugLog(true, "No Tokens: ");

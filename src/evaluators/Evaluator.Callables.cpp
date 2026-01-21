@@ -309,21 +309,17 @@ Node evaluateClassCall(SharedPtr<Scope> callScope, String className, ArgumentLis
 Node evaluateChain(SharedPtr<Scope> currentScope, SharedPtr<Scope> methodScope, int resolutionStartIndex, const Vector<ChainElement>& elements, SharedPtr<ClassInstanceNode> instanceNode) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     MARK_UNUSED_MULTI(methodScope);
-    // SharedPtr<Scope> currentScope = getElements().front().object->getAstType() == AstType::Accessor ? instanceNode->getInstanceScope() : methodScope;
     
     if (!currentScope) {throw MerkError("Chain::evaluate: no valid scope");}
     int index = resolutionStartIndex;
     
-    // setLastScope(currentScope);
     Node currentVal;
 
     auto& baseElem = elements[index];
     if (baseElem.object->getAstType() == AstType::Accessor){
         currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
-        // if (!currentVal.isInstance()) {throw MerkError("Pulled Out A Non Instance Instace from currentVal");}
     } else {
         currentVal = baseElem.object->evaluate(currentScope, instanceNode);
-        // if (!currentVal.isInstance()) {throw MerkError("Pulled Out A Non Instance Instace from currentVal");}
     }
     index ++;
 
@@ -374,7 +370,6 @@ Node evaluateChain(SharedPtr<Scope> currentScope, SharedPtr<Scope> methodScope, 
                     
                     auto varRef = static_cast<VariableReference*>(elem.object.get());
                     auto varName = varRef->getName();
-                    
                     currentVal = instance->getField(varRef->getName());
                     break;
                 }
@@ -400,8 +395,6 @@ Node evaluateChain(SharedPtr<Scope> currentScope, SharedPtr<Scope> methodScope, 
                 DEBUG_LOG(LogLevel::PERMISSIVE, currentVal.toString(), currentVal.getFlags().toString());
                 currentScope->debugPrint();
                 currentScope->printChildScopes();
-                // throw MerkError("Hit it! : " + elem.object->toString());
-                // auto args = 
                 auto methodCall = static_cast<MethodCall*>(elem.object.get());
                 auto args = methodCall->cloneArgs();
                 auto evaluatedArgs = args->evaluateAll(currentScope->createChildScope(), instanceNode);
@@ -418,10 +411,8 @@ Node evaluateChain(SharedPtr<Scope> currentScope, SharedPtr<Scope> methodScope, 
         }
         
         if (currentVal.isInstance()) {instanceNode = currentVal.toInstance()->getInstanceNode();}
-        // setLastScope(currentScope);
     }
-    // setLastScope(currentScope);
-    // if (!getLastScope()) {throw MerkError("No Last Scope Before Completing Chain::evaluate");}
+
     DEBUG_FLOW_EXIT();
     return currentVal;
 }

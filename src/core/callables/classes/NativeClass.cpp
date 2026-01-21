@@ -52,12 +52,3 @@ SharedPtr<Scope> NativeClass::getCapturedScope() const {
 void NativeClass::setScope(SharedPtr<Scope> newScope) const {
     MARK_UNUSED_MULTI(newScope);
 }
-
-
-
-// // SharedPtr<CallableSignature> NativeClass::toCallableSignature() const {
-// //     auto sig = makeShared<CallableSignature>(makeShared<NativeClass>(*this), CallableType::CLASS);
-// //     sig->setParameterTypes(parameters.getParameterTypes());
-// //     sig->setSubType(CallableType::NATIVE);
-// //     return sig;
-// // }

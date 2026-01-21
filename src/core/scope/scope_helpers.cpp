@@ -13,10 +13,6 @@
 #include "core/errors.h"
 #include "core/Scope.hpp"
 
-
-
-
-
 SharedPtr<Scope> Scope::getRoot() {
     SharedPtr<Scope> root = shared_from_this();
     std::unordered_set<void*> visited;

@@ -18,12 +18,7 @@
 
 
 Function::Function(String name, ParamList params, [[maybe_unused]] CallableType funcType, bool requiresReturn, bool isStatic)
-    : Invocable(name, params, CallableType::FUNCTION, requiresReturn, isStatic)
-{
-    DEBUG_FLOW(FlowLevel::NONE);
-    // DEBUG_LOG(LogLevel::TRACE, "FuncType: ", callableTypeAsString(funcType));
-    DEBUG_FLOW_EXIT();
-}
+    : Invocable(name, params, CallableType::FUNCTION, requiresReturn, isStatic) {}
 
 UserFunction::UserFunction(String name, UniquePtr<FunctionBody> body, ParamList parameters, CallableType funcType)
     : Function(name, parameters, CallableType::FUNCTION), body(std::move(body)) {
@@ -62,23 +57,6 @@ Node UserFunction::execute(ArgumentList args, SharedPtr<Scope> callScope, [[mayb
     return Executor::Function(name, callScope, getCapturedScope(), requiresReturn, args, body.get(), parameters, instanceNode);
 }
 
-// Node UserFunction::executeFlow(ArgumentList args, SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-//     DEBUG_FLOW(FlowLevel::NONE);
-//     if (!scope){throw MerkError("UserFunction::execute -> Starting Scope Null in: ");}
-//     placeArgsInCallScope(args, scope);
-
-//     DEBUG_FLOW_EXIT();
-//     EvalResult r = body->evaluateFlow(scope, instanceNode);
-
-//     if (r.isReturn()) return r.value;
-//     if (r.isThrow())  throw RunTimeError("Unhandled throw"); // or convert to your error model
-//     if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
-
-//     // no explicit return
-//     if (requiresReturn) throw MerkError("Function did not return a value.");
-//     return Node();
-// }
-
 FunctionBody::~FunctionBody(){if (getScope()) {DEBUG_LOG(LogLevel::TRACE, highlight("Destroying FunctionBody", Colors::orange)); getScope().reset();}} 
 
 SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
@@ -101,10 +79,6 @@ SharedPtr<CallableSignature> UserFunction::toCallableSignature() {
 void UserFunction::setScope(SharedPtr<Scope> newScope) const {
     MARK_UNUSED_MULTI(newScope);
     DEBUG_FLOW(FlowLevel::NONE);
-    // if (!newScope) {throw MerkError("No newScope in UserFunction::setScope");}
-    // newScope->owner = generateScopeOwner("UserFunction", name);
-    // auto children = body->getAllAst();
-    // body->setScope(newScope);
 
     DEBUG_FLOW_EXIT();
 }
@@ -159,7 +133,6 @@ std::optional<SharedPtr<CallableSignature>> FunctionNode::getFunction(String nam
     if (funcSigs.empty()) { throw MerkError("There were no function signatures to pull from"); }
 
     auto typeReg = scope->localTypes;
-    // if (!typeReg) { throw MerkError("No TypeRegistry available on scope"); }
 
     struct Cand { SharedPtr<CallableSignature> sig; TypeMatchResult m; };
     Vector<Cand> viable;
@@ -168,16 +141,12 @@ std::optional<SharedPtr<CallableSignature>> FunctionNode::getFunction(String nam
     for (auto& sig : funcSigs) {
         if (!sig) continue;
 
-        // DEF: keep as fallback
         if (sig->getSubType() == CallableType::DEF) {
             viable.push_back(Cand{sig, TypeMatchResult::Yes(0, 1000)});
             continue;
         }
 
         if (sig->getSubType() == CallableType::NATIVE) {
-            // if (funcSig->matches(argTypes)) {
-            //     return funcSig;
-            // }
             viable.push_back(Cand{sig, TypeMatchResult::Yes(0, 1000)});
         }
 
@@ -189,7 +158,6 @@ std::optional<SharedPtr<CallableSignature>> FunctionNode::getFunction(String nam
             continue;
         }
 
-        // Lazily build signature id
         if (sig->getTypeSignature() == kInvalidTypeSignatureId) {
             params.bindTypes(typeReg, *scope);
             InvocableSigType mt;

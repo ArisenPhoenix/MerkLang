@@ -148,39 +148,6 @@ TypeMatchResult UnionSig::matchValue(const Node& v, const ITypeSigContext& ctx, 
     return (best >= 0) ? TypeMatchResult::Yes(best) : TypeMatchResult::No();
 }
 
-// TypeMatchResult InvocableSig::matchCall(const ArgumentList& args, const ITypeSigContext& ctx, const TypeMatchOptions& opt) const {
-//     const size_t pcount = data.params.size();
-
-//     if (!data.variadic) {
-//         if (args.size() != pcount) return TypeMatchResult::No();
-//     } else {
-//         // Variadic: require at least pcount-1 args if last param is varargs bucket.
-//         if (pcount == 0) return TypeMatchResult::Yes(1); // weird but ok
-//         if (args.size() < pcount - 1) return TypeMatchResult::No();
-//     }
-
-//     int score = 0;
-
-//     for (size_t i = 0; i < args.size(); ++i) {
-//         size_t pi = i;
-
-//         if (data.variadic && pcount > 0 && i >= pcount) {
-//             pi = pcount - 1; // extra args match last param type
-//         } else if (pi >= pcount) {
-//             return TypeMatchResult::No();
-//         }
-
-//         if (pi >= data.enforced.size()) return TypeMatchResult::No(); // sanity
-//         if (!data.enforced[pi]) { score += 1; continue; }
-
-//         auto r = ctx.matchValue(data.params[pi], args[i], opt);
-//         if (!r.ok) return TypeMatchResult::No();
-//         score += r.score;
-//     }
-
-//     return TypeMatchResult::Yes(score);
-// }
-
 
 TypeMatchResult InvocableSig::matchCall(
     const ArgumentList& args,
@@ -190,8 +157,7 @@ TypeMatchResult InvocableSig::matchCall(
     const auto& P = data.params;
     const auto& E = data.enforced;
 
-    // You must be matching against the flattened/bound positional nodes
-    const auto nodes = args.getPositionalArgs(); // implement this accessor
+    const auto nodes = args.getPositionalArgs();
 
     // arity
     if (!data.variadic) {

@@ -106,21 +106,10 @@ namespace Evaluator {
         if (value.isInstance()) {
             throw MerkError("evaluateLiteral result isInstance");
         }
-        // if (value.isNull()) {
-        //     throw MerkError("Value is null");
-        // }
         return value;
     }
 
-
-
-    Node evaluateVariableDeclaration(
-    String& name,
-    const ASTStatement* valueNode,
-    DataTypeFlags varMeta,
-    SharedPtr<Scope> scope,
-    SharedPtr<ClassInstanceNode> instanceNode
-){
+    Node evaluateVariableDeclaration(String& name, const ASTStatement* valueNode, DataTypeFlags varMeta, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode ){
     MARK_UNUSED_MULTI(instanceNode);
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
@@ -129,37 +118,24 @@ namespace Evaluator {
 
     String varName = name;
 
-    // 1) Evaluate RHS
     Node rhs = valueNode->evaluate(scope, instanceNode);
 
     auto& tr = scope->localTypes;
 
-    // 2) Ensure declaredSig is always set (at least Any)
-    // Only bind the annotation if it’s not empty/Any.
     const auto anyId = tr.any();
 
     const auto base = varMeta.fullType.getBaseType();
     if (!base.empty() && base != "Any") {
         varMeta.declaredSig = tr.bindResolvedType(varMeta.fullType, *scope);
-        // scope->resolveTypeNameSig(base);
+        scope->resolveTypeNameSig(base);
     } else {
         varMeta.declaredSig = anyId;
     }
 
-    // 3) Stamp inferredSig on the RHS value (runtime)
-    // (Do this BEFORE VarNode ctor if your VarNode ctor wants to use it.)
     rhs.getFlags().inferredSig = tr.inferFromValue(rhs);
 
-    // 4) Enforce declared type against RHS (if annotation enforced)
-    // If declaredSig is Any, allow anything.
     if (varMeta.declaredSig != anyId) {
         auto m = tr.matchValue(varMeta.declaredSig, rhs, {/*opt*/});
-        // debugLog(true,
-        // "DBG Dict() rhs type=", rhs.getTypeAsString(),
-        // " isInstance=", rhs.isInstance(),
-        // " baseType=", rhs.getFlags().fullType.getBaseType()
-        // );
-
         if (!m.ok) {
             throw TypeMismatchError(
                 tr.toString(varMeta.declaredSig),
@@ -169,29 +145,13 @@ namespace Evaluator {
         }
     }
     
-    // 5) Construct VarNode (VarNode should NOT clobber inferredSig)
     auto finalVar = makeUnique<VarNode>(rhs, varMeta);
     auto returnVal = finalVar->getValueNode();
-    // 6) Store it
     auto targetScope = (usingInstanceScope ? instanceScope : scope);
 
-    
     targetScope->declareVariable(varName, std::move(finalVar));
 
-    // 7) Debug
-    // debugLog(true, "Var Declaration Results for var", name, ": ==========================================");
-    // valueNode->printAST(std::cout, 0);
-    // debugLog(true, "RETURN VAL: ", rhs.toString(),
-    //          " declaredSig=", tr.toString(varMeta.declaredSig),
-    //          " inferredSig=", tr.toString(rhs.getFlags().inferredSig));
-
     DEBUG_FLOW_EXIT();
-
-    // IMPORTANT:
-    // If var-decl is a statement in your language, returning Node() is fine.
-    // If callers rely on the RHS value, return rhs.
-    
-    // return rhs;
     return returnVal;
 }
 
@@ -261,7 +221,7 @@ namespace Evaluator {
         
         
         DEBUG_FLOW_EXIT();
-        return lastValue; // Return the last evaluated value
+        return lastValue;
     }
 
 
@@ -286,7 +246,7 @@ namespace Evaluator {
         }
 
         DEBUG_FLOW_EXIT();
-        return lastValue; // Return the last evaluated value
+        return lastValue;
     }
 
 
@@ -302,7 +262,6 @@ namespace Evaluator {
             return ifStatement.getBody()->evaluate(conditionScope, instanceNode);
         }
 
-        // Evaluate 'elif' conditions
         for (const auto& elif : ifStatement.getElifs()) {
             auto val = elif->evaluate(conditionScope, instanceNode);
             if (val.isTruthy()) {
@@ -310,7 +269,6 @@ namespace Evaluator {
             }
         }
 
-        // Execute 'else' block if all conditions fail
         if (ifStatement.getElse()) {
             DEBUG_FLOW_EXIT();
             return ifStatement.getElse()->evaluate(conditionScope, instanceNode);
@@ -318,7 +276,7 @@ namespace Evaluator {
 
         DEBUG_FLOW_EXIT();
         
-        return Node();  // Default return if no branch executes
+        return Node(); 
     };
 
 
@@ -334,14 +292,13 @@ namespace Evaluator {
         return Node(elifStatement.getCondition()->evaluate(scope, instanceNode).isTruthy());
 
         DEBUG_FLOW_EXIT();
-        return Node(); // If condition is false, return default node
+        return Node();
 }
 
     Node evaluateElse(const CodeBlock& body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         MARK_UNUSED_MULTI(instanceNode);
-        (void)instanceNode;
         DEBUG_FLOW(FlowLevel::LOW);
-        auto val = body.evaluate(scope->createChildScope(), instanceNode); // Default to empty node if no body
+        auto val = body.evaluate(scope->createChildScope(), instanceNode);
         DEBUG_FLOW_EXIT();
         return val;
 }
@@ -354,7 +311,6 @@ namespace Evaluator {
 
     Node evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::LOW);
-        auto instanceScope = scope;
 
         if (!body) {
             DEBUG_LOG(LogLevel::INFO, "Error: WhileLoop body is nullptr!");
@@ -365,17 +321,17 @@ namespace Evaluator {
         while (true) {
             DEBUG_LOG(LogLevel::TRACE, "About To Evaluate While Loop Condition Result");
  
-            Node conditionResult = condition.evaluate(instanceScope, instanceNode);
+            Node conditionResult = condition.evaluate(scope, instanceNode);
             DEBUG_LOG(LogLevel::INFO, "While Loop Condition Result: ", conditionResult);
             if (!conditionResult.toBool()) {
                 DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to false. Exiting loop.");
-                break;  // Exit the loop if condition is false
+                break;
             }
 
             DEBUG_LOG(LogLevel::TRACE, "Condition evaluated to true. Executing body.");
 
             try {
-                body->evaluate(instanceScope, instanceNode);
+                body->evaluate(scope, instanceNode);
             } catch (const ContinueException&){
                 DEBUG_LOG(LogLevel::TRACE, "Continue statement encountered. Skipping to next iteration.");
                 continue;
@@ -448,9 +404,7 @@ namespace Evaluator {
             return Node(!operand.isNull());
         } 
         
-        else if (op == "-"){
-            return operand.negate();
-        }
+        else if (op == "-") { return operand.negate(); }
 
         return Node();
         
@@ -473,9 +427,5 @@ namespace Evaluator {
         DEBUG_FLOW_EXIT();
         throw BreakException();
     }
-    
-
-
-
 
 } // namespace Evaluator

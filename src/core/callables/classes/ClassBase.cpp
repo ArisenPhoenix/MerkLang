@@ -513,54 +513,26 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<ClassInstance> callable) : Callab
 
     const String cls = callable ? callable->getName() : "<?>";
 
-    // IMPORTANT: concrete identity
+    // concrete identity
     setFlags(getFlags().merge({
-        {"isCallable", "true"},               // if you treat instances as callables
+        {"isCallable", "true"},               
         {"isInstance", "true"},
-        {"type", "ClassInstance"},            // storage kind is fine
-        {"fullType", cls},                    // <-- THIS is the big fix
+        {"type", "ClassInstance"},  
+        {"fullType", cls},       
         {"name", "ClassInstance(" + cls + ")"}
     }));
 
-    // If you have these in flags structurally, set them directly too:
     getFlags().inferredSig = getScope()->localTypes.classType(cls);
 
     DEBUG_FLOW_EXIT();
     
-    // DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // // (void)callable;
-    // // data.type = NodeValueType::ClassInstance;
-    // // auto val = std::static_pointer_cast<ClassInstance>(callable);
-    // // setValue(val);
-    // // getFlags().type = NodeValueType::ClassInstance;
-    // // getFlags().fullType.setBaseType("ClassInstance");
-    // // getFlags().isInstance = true;
 
-    // // getFlags().name = callableType + "(" + callable->name + ")";
-    // // setValue(callable);
-    // setFlags(getFlags().merge({{"isInstance", "true"}, {"type", "ClassInstance"}, {"fullType", "ClassInstance"}, {"name", callable->getName()}}));
-    
-    // // data.value = callable;
-    // // name = callable->getName();
-
-    // DEBUG_FLOW_EXIT();
-    // // throw MerkError("HIT ClassInstanceNode::ClassInstanceNode(SharedPtr<Callable> WITH META: " + getFlags().toString() + " DETERMINED TYPE: " + nodeTypeToString(TypeEvaluator::getTypeFromValue(callable)));    
 }
 
 
 ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     : CallableNode(callableNode) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    // // auto instance = std::get<SharedPtr<Callable>>(data.value);
-    // // auto instance = getInstance();
-    // // if (!instance) {throw MerkError("ClassInstanceNode: expected ClassInstance in CallableNode");}
-    // // setValue(instance);
-    // // data.value = instance; 
-    // // data.type = NodeValueType::ClassInstance;
-    // // name = callableNode->getCallable()->getName();
-    // setFlags(getFlags().merge({{"isInstance", "true"}, {"type", "ClassInstance"}, {"fullType", "ClassInstance"}}));
-    DEBUG_FLOW(FlowLevel::PERMISSIVE);
-
     auto call = getCallable();
     const String cls = call ? call->getName() : "<?>";
 
@@ -576,14 +548,12 @@ ClassInstanceNode::ClassInstanceNode(SharedPtr<CallableNode> callableNode)
     setFlags(f);
 
     DEBUG_FLOW_EXIT();
-    DEBUG_FLOW_EXIT();
 
 }
 
 
 SharedPtr<Callable> ClassInstanceNode::getCallable() const {
     DEBUG_FLOW(FlowLevel::NONE);
-    // auto val = std::static_pointer_cast<ClassInstance>(std::get<SharedPtr<ClassInstance>>(data.value));
     auto val = toCallable();
     DEBUG_FLOW_EXIT();
     return val;
@@ -606,7 +576,6 @@ SharedPtr<ClassInstance> ClassInstanceNode::getInstance() const {
     if (call->getType() == NodeValueType::Callable || call->getType() == NodeValueType::ClassInstance) {
         auto instance = std::static_pointer_cast<ClassInstance>(call);
         if (instance) {
-            // auto type = TypeEvaluator::getTypeFromValue(getValue());
             return instance;
         }
         else {

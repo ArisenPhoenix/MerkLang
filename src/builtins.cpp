@@ -1,7 +1,5 @@
-#include "core/types.h"
+#include "core/TypesFWD.hpp"
 #include "core/builtins.h"
-// #include "core/types/TypeBuiltins.hpp"
-// #include "core/Scope.hpp"
 
 
 std::unordered_map<String, SharedPtr<ClassBase>> getNativeClasses(SharedPtr<Scope> scope) {
@@ -12,7 +10,3 @@ std::unordered_map<String, SharedPtr<ClassBase>> getNativeClasses(SharedPtr<Scop
 std::unordered_map<String, SharedPtr<CallableSignature>> getNativeFunctions(SharedPtr<Scope> scope) {
     return getAllNativeFunctions(scope);
 }
-
-// void getNativeTypes(SharedPtr<Scope> scope) {
-//     return registerBuiltinTypes(scope);
-// }

@@ -29,9 +29,9 @@ void placeArgsInCallScope(ArgumentList evaluatedArgs, SharedPtr<Scope> callScope
         auto flags = args.getFlags();
         auto paramVar = VarNode(finalArgs[i]);
         paramVar.setFlags(arg.getFlags());
-        if (paramVar.getFlags().name.empty()) {throw MerkError("ParamVar Name is Empty WITH " + paramVar.getFlags().toString());}
+        if (paramVar.getFlags().name.empty()) { throw MerkError("ParamVar Name is Empty WITH " + paramVar.getFlags().toString()); }
         String varName = flags.name;
-        if (arg.getFlags().name.empty()) {throw MerkError("Arg Is Empty");}
+        if (arg.getFlags().name.empty()) { throw MerkError("Arg Is Empty"); }
         DEBUG_LOG(LogLevel::TRACE, "PARAMETER's NAME:  ------------------------ > ", arg.getFlags().toString());
 
         callScope->declareVariable(arg.getFlags().name, makeUnique<VarNode>(arg));
@@ -44,7 +44,7 @@ void placeArgsInCallScope(ArgumentList evaluatedArgs, SharedPtr<Scope> callScope
 Node static nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Scope> capturedScope, CodeBlock* body, SharedPtr<ClassInstanceNode> instanceNode) {   
     try {
         DEBUG_LOG(LogLevel::TRACE, "In try block");
-        if (!callScope) {throw MerkError("Method " + name +" Has No Call Scope:");}
+        if (!callScope) { throw MerkError("Method " + name +" Has No Call Scope:"); }
 
         String matches = callScope == capturedScope ? "true" : "false";
 
@@ -71,23 +71,22 @@ Node Function(String name, SharedPtr<Scope> callScope, SharedPtr<Scope> captured
     DEBUG_FLOW_EXIT();
     EvalResult r = body->evaluateFlow(callScope, instanceNode);
 
-    if (r.isReturn()) return r.value;
-    if (r.isThrow())  throw RunTimeError("Unhandled throw"); // or convert to your error model
-    if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
+    if (r.isReturn()) { return r.value; }
+    if (r.isThrow())  { throw MerkError("Unhandled throw"); }
+    if (r.isBreak() || r.isContinue()) { throw MerkError("break/continue used outside loop"); }
 
-    // no explicit return
-    if (requiresReturn) throw MerkError("Function did not return a value.");
+    if (requiresReturn) { throw MerkError("Function did not return a value."); }
     return Node();
 }
 
 Node Method(String name, SharedPtr<Scope> callScope, SharedPtr<Scope> capturedScope, bool requiresReturn, ArgumentList args, CodeBlock* body, ParamList& parameters,
     SharedPtr<ClassInstanceNode> instanceNode) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
-    if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
+    if (!instanceNode) { throw MerkError("An Instance In UserMethod::execute was not provided"); }
     DEBUG_LOG(LogLevel::TRACE, "Validated Instance Node");
     callScope->owner = generateScopeOwner("MethodExecutor", name);
     
-    if (callScope == instanceNode->getInstanceScope()) {throw MerkError("callScope cannot be the same as instanceScope");}
+    if (callScope == instanceNode->getInstanceScope()) { throw MerkError("callScope cannot be the same as instanceScope"); }
     DEBUG_LOG(LogLevel::TRACE, "Placing Args in Call Scope");
     placeArgsInCallScope(args, callScope, parameters);
 
@@ -95,11 +94,11 @@ Node Method(String name, SharedPtr<Scope> callScope, SharedPtr<Scope> capturedSc
     bool executeFlow = true;
     if (executeFlow) {
         EvalResult r = body->evaluateFlow(callScope, instanceNode);
-        if (r.isReturn()) {return r.value;}
-        if (r.isThrow())  {throw RunTimeError("Unhandled throw");}
+        if (r.isReturn()) { return r.value; }
+        if (r.isThrow())  { throw RunTimeError("Unhandled throw"); }
         if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
 
-        if (requiresReturn) throw MerkError("Method did not return a value.");
+        if (requiresReturn) { throw MerkError("Method did not return a value."); }
         return Node();
     }
 

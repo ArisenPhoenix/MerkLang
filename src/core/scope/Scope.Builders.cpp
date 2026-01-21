@@ -6,10 +6,6 @@
 #include "core/callables/classes/Method.hpp"
 #include "core/registry/TypeRegistry.hpp"
 
-
-
-
-
 Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
   : interpretMode(interpretMode)
 {
@@ -61,8 +57,8 @@ Scope::Scope(SharedPtr<Scope> parent, SharedPtr<FunctionRegistry> globalF, Share
     if (!parent) throw MerkError("Scope ctor: parent is null");
     globalTypeSigs = parent->globalTypeSigs;
 
-    if (!globalTypes)    throw MerkError("Scope ctor: globalTypes is null");
-    if (!globalTypeSigs) throw MerkError("Scope ctor: globalTypeSigs is null");
+    if (!globalTypes)    { throw MerkError("Scope ctor: globalTypes is null"); }
+    if (!globalTypeSigs) { throw MerkError("Scope ctor: globalTypeSigs is null"); }
 
     localTypes.attach(*globalTypeSigs);
 
@@ -171,7 +167,7 @@ SharedPtr<Scope> Scope::makeCallScope() {
 
 
 
-// creates a copy of the scope, as if no functions or classes were made previously
+// creates a copy of the scope
 SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::MED);
 
@@ -183,7 +179,6 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
     detached->isDetached = true;
     detached->owner = owner+"(detached)";
     includeMetaData(detached, true);
-    // For each free variable name, if it exists in this scope, or parent, get it and add to the vector
     for (const auto& name : freeVarNames) {
         if (this->hasVariable(name)) {
             VarNode original = getVariable(name);
@@ -225,7 +220,6 @@ SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNa
     return isolated;
 }
 
-// to be used on/in the scope calling the function
 SharedPtr<Scope> Scope::buildFunctionCallScope(SharedPtr<Function> func, String name) {    
     SharedPtr<Scope> capturedScope = func->getCapturedScope();
     if (!capturedScope) {throw MerkError("FunctionCall::evaluate -> Function " + name + " Does Not Have Valid capturedScope | SubType: " + callableTypeAsString(func->getSubType()) + " MainType: " + callableTypeAsString(func->getCallableType()));}

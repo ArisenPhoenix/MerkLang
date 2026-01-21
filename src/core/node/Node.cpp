@@ -440,7 +440,6 @@ SharedPtr<NodeBase> StringNode::clone() const { return makeShared<StringNode>(*t
 int StringNode::toInt() const { throw MerkError("Cannot Implicitly cast String to Int"); }
 String StringNode::toString() const { return String(value); }
 bool StringNode::toBool() const { return !value.empty(); }
-// StringNode
 
 
 // CharNode
@@ -567,14 +566,7 @@ Node& NodeWrapper::getValueNode() {return valueNode;}
 const Node& NodeWrapper::getValueNode() const {return valueNode;}
 const DataTypeFlags& NodeWrapper::getFlags() const {return valueNode.getFlags();}
 String NodeWrapper::toString() const {
-    // return valueNode.isInstance() ? valueNode.toInstance()->toString() : valueNode.toString();
-    String string;
-    if (valueNode.isInstance()) {
-        string = valueNode.toInstance()->toString();
-    } else {
-         string = valueNode.toString();
-    }
-    return string;
+    return valueNode.isInstance() ? valueNode.toInstance()->toString() : valueNode.toString();
 }
 
 int NodeWrapper::toInt() const {return valueNode.toInt();}
@@ -603,7 +595,6 @@ bool NodeWrapper::isValid() const {return valueNode.isValid();}
 bool NodeWrapper::isNumeric() const { return valueNode.isNumeric(); }
 bool NodeWrapper::isTruthy() const {return valueNode.isTruthy(); }
 void NodeWrapper::setFlags(DataTypeFlags newOnes) { valueNode.setFlags(newOnes); }
-// Node Wrapper
 
 String VarNode::varString() const { return NodeWrapper::toString() + (!varFlags.name.empty() ? ", Var: " + varFlags.name : "");}
 
@@ -619,9 +610,7 @@ void VarNode::setValue(Node other) {
     if (!other.isValid()) { throw MerkError("Other is not valid"); }
 
     if (varFlags.isConst) { throw MerkError("Assignment to const variable"); }
-    // if (varFlags.fullType.getBaseType() != "Any" && other.getType() != varFlags.type) {
-    //     throw MerkError("Type mismatch: expected " + varFlags.fullType.getBaseType() + " | " + nodeTypeToString(varFlags.type));
-    // }
+
     auto otherFlags = other.getFlags();
     if (varFlags.type != NodeValueType::Any) {
         if (otherFlags.type != varFlags.type) {
@@ -633,7 +622,7 @@ void VarNode::setValue(Node other) {
 
     if (other.getNodeType() == NodeValueType::Uninitialized) { throw MerkError("Parameter being set");  }
 
-    // Keep the variable's declaration flags intact
+    // Keeping the variable's declaration flags intact
     auto varName = varFlags.name;
     auto varType = varFlags.fullType.getBaseType();
 
@@ -669,9 +658,7 @@ Node& VarNode::pullValue() {return valueNode;}
 
 bool VarNode::isFunctionNode() const { return valueNode.isFunctionNode();}
 FunctionNode VarNode::toFunctionNode() const {return valueNode.toFunctionNode();}
-DataTypeFlags VarNode::getVarFlags() {
-    return varFlags;
-}
+DataTypeFlags VarNode::getVarFlags() { return varFlags; }
 
 
 

@@ -13,7 +13,6 @@ ParamNode::ParamNode(DataTypeFlags flgs, VariantType defaultVal) {
     defaultValue = defaultVal;
     updateDefaultFlags();
 
-    // If parser filled fullType, treat as annotation present.
     if (!flags.fullType.getBaseType().empty()) {
         hasAnnotation = true;
     }
@@ -24,7 +23,6 @@ ParamNode::ParamNode(String name, NodeValueType type, bool var) {
     flags.type = type;
     isVarArgs = var;
 
-    // legacy typing only
     hasAnnotation = false;
     typeSig = 0;
 
@@ -43,7 +41,7 @@ VariantType ParamNode::getDefaultValue() const {
 }
 
 void ParamNode::setAnnotation(const ResolvedType& rt) {
-    flags.fullType = rt;      // you already have this field
+    flags.fullType = rt;    
     hasAnnotation = true;
 }
 
@@ -53,11 +51,9 @@ void ParamNode::bindType(TypeSignatureRegistry& reg, Scope& scope) {
         return;
     }
     typeSig = reg.bindResolvedType(flags.fullType, scope);
-    // scope.resolveTypeNameSig(name);
 }
 
 String ParamNode::toShortString() const {
-    // Prefer annotation name if exists; else legacy type
     String t = hasAnnotation ? flags.fullType.getBaseType() : nodeTypeToString(flags.type);
     return flags.name + ":" + t;
 }
@@ -78,7 +74,7 @@ Vector<Node> ParamList::bindArguments(const Vector<Node>& args) const {
     size_t fixedCount = variadic ? parameters.size() - 1 : parameters.size();
 
     Vector<Node> out;
-    // out.reserve(parameters.size());
+    out.reserve(parameters.size());
 
     // Fixed params
     for (size_t i = 0; i < fixedCount; ++i) {
@@ -99,15 +95,14 @@ Vector<Node> ParamList::bindArguments(const Vector<Node>& args) const {
         // if (args.size() > fixedCount)
         //     rest.assign(args.begin() + fixedCount, args.end());
 
-        // TODO: decide your canonical varargs container:
-        // Option A: Node(ListNode)
+        // TODO: decide canonical varargs container:
+        // Perhaps: Node(ListNode)
         // out.push_back(Node(std::make_shared<ListNode>(rest)));
         //
-        // Option B: keep as list of Nodes in a ListNode builder you already have
+        // Or: keep as list of Nodes in a ListNode builder you already have
         //
-        // For now, simplest: empty list placeholder
-        // Node(std::make_shared<ListNode>(rest));
-        out.push_back(Node(makeShared<ListNode>(rest))); // if you have this ctor
+        // Just doing this for now until I decide what is best
+        out.push_back(Node(makeShared<ListNode>(rest)));
     }
 
     return out;
@@ -131,9 +126,7 @@ const ParamNode* ParamList::getByName(const String& name) const {
     return nullptr;
 }
 
-// ------------------------------------------------------------
-// Vector<String> getNames() const;
-// ------------------------------------------------------------
+
 Vector<String> ParamList::getNames() const {
     Vector<String> out;
     out.reserve(parameters.size());
@@ -143,9 +136,7 @@ Vector<String> ParamList::getNames() const {
     return out;
 }
 
-// ------------------------------------------------------------
-// const ParamNode& operator[](size_t index) const;
-// ------------------------------------------------------------
+
 const ParamNode& ParamList::operator[](size_t index) const {
     if (index >= parameters.size()) {
         throw MerkError("ParamList index out of range.");
@@ -203,33 +194,20 @@ std::size_t ParamNode::hash() const {
 
 
 ParamNode ParamNode::copy() const {
-    // return *this;
-    // return ParamNode(*this);
-    // auto param = ParamNode(getValueNode(), getFlags().type);
     return *this;
 }
 
-
-
-// ------------------------------------------------------------
-// void bindTypes(TypeSignatureRegistry& reg, Scope& scope);
-// ------------------------------------------------------------
 void ParamList::bindTypes(TypeSignatureRegistry& reg, Scope& scope) {
     for (auto& p : parameters) {
-        // bindType() should no-op if no annotation exists
         p.bindType(reg, scope);
     }
 }
 
-// ------------------------------------------------------------
-// ParamList clone();   (non-const)
-// ParamList clone() const;
-// ------------------------------------------------------------
 ParamList ParamList::clone() {
     ParamList out;
     out.parameters.reserve(parameters.size());
     for (const auto& p : parameters) {
-        out.parameters.push_back(p); // ParamNode is copyable
+        out.parameters.push_back(p); 
     }
     return out;
 }
@@ -243,11 +221,6 @@ ParamList ParamList::clone() const {
     return out;
 }
 
-
-// ------------------------------------------------------------
-// Vector<Node> bindArguments(ArgumentList& args) const;
-// (declaration-only ParamList: does NOT mutate parameters)
-// ------------------------------------------------------------
 Vector<Node> ParamList::bindArguments(ArgumentList& args) const {
     Vector<Node> boundArgs;
 
@@ -263,9 +236,6 @@ Vector<Node> ParamList::bindArguments(ArgumentList& args) const {
         Node arg;
         if (i < args.positionalCount()) {
             arg = args.getArg(i);
-
-            // Preserve your existing behavior: copy param flags onto the arg
-            // (If you want to stop mutating runtime Node flags later, remove this.)
             arg.setFlags(param.flags);
 
         } else if (args.hasNamedArg(param.getName())) {
@@ -287,24 +257,14 @@ Vector<Node> ParamList::bindArguments(ArgumentList& args) const {
         boundArgs.push_back(arg);
     }
 
-    // Bind variadic tail
     if (variadic) {
-        // Keep separation: do NOT create a ListNode here.
-        // We'll pack as raw NodeList (Vector<Node>) wrapped as VariantType,
-        // matching what your existing ArgumentList::bindTo does today.
         Vector<Node> rest = args.getRemainingArgs(fixedCount);
-
-        // If you want param flags on the varargs param itself, you can create
-        // a Node wrapper. For now, match your existing behavior:
         boundArgs.push_back(Node::fromVariant(rest));
     }
 
     return boundArgs;
 }
 
-// ------------------------------------------------------------
-// Vector<NodeValueType> getParameterTypes();
-// ------------------------------------------------------------
 Vector<NodeValueType> ParamList::getParameterTypes() {
     Vector<NodeValueType> out;
     out.reserve(parameters.size());
@@ -314,9 +274,6 @@ Vector<NodeValueType> ParamList::getParameterTypes() {
     return out;
 }
 
-// ------------------------------------------------------------
-// String toString() const;
-// ------------------------------------------------------------
 String ParamList::toString() const {
     String output = "ParamList(";
     for (size_t i = 0; i < parameters.size(); ++i) {
@@ -328,9 +285,6 @@ String ParamList::toString() const {
     return output;
 }
 
-// ------------------------------------------------------------
-// String toShortString() const;
-// ------------------------------------------------------------
 String ParamList::toShortString() const {
     String output = "ParamList(";
     for (size_t i = 0; i < parameters.size(); ++i) {

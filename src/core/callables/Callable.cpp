@@ -9,7 +9,7 @@ Callable::Callable(Method& method){
     parameters = method.parameters.clone();
     subType = method.subType;
     name = method.name;
-    if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable copy from method instantiation");}
+    if (callableTypeAsString(callType) == "Unknown") {throw MerkError("Failed to instantiate callType at Callable::Callable copy from method instantiation");}
 }
 
 Callable::Callable(Function& function){
@@ -18,10 +18,10 @@ Callable::Callable(Function& function){
     requiresReturn = function.requiresReturn;
     parameters = function.parameters.clone();
     name = function.name;
-    if (callableTypeAsString(callType) == "Unknown"){throw MerkError("Failed to instantiate callType at Callable::Callable copy from function instantiation");}
+    if (callableTypeAsString(callType) == "Unknown") {throw MerkError("Failed to instantiate callType at Callable::Callable copy from function instantiation");}
 }
 
-Callable::Callable(Callable& callable): // explicitly initialize the base
+Callable::Callable(Callable& callable):
       name(callable.name),
       parameters(callable.parameters.clone()),
       callType(callable.callType),
@@ -29,8 +29,6 @@ Callable::Callable(Callable& callable): // explicitly initialize the base
       requiresReturn(callable.requiresReturn)
       
 {   
-    // if (callable.getName().size()) { throw MerkError("Constructor for callable is NULL: " + callable.getName());}
-    // if (!callable.getName().size()) { throw MerkError("Constructor for callable is NULL: ");}
     if (callableTypeAsString(callType) == "Unknown") {throw MerkError("Failed to instantiate callType at Callable::Callable copy from callable instantiation");}
 }
 
@@ -98,7 +96,7 @@ CallableNode::CallableNode(Vector<SharedPtr<CallableSignature>> callableSigs, St
         {"fullType", "Callable"},
         {"type", callableTypeAsString(callableSigs[0]->getSubType())}
     };
-    auto& flags = getFlags();     // <-- reference
+    auto& flags = getFlags();
     flags.merge(instanceSpecificFlags);
 }
 
@@ -111,7 +109,7 @@ CallableNode::CallableNode(SharedPtr<Callable> callable, String callableType ) {
         {"fullType", "Callable"},
         {"type", callableTypeAsString(callable->getSubType())}
     };
-    auto& flags = getFlags();     // <-- reference
+    auto& flags = getFlags();
     flags.merge(instanceSpecificFlags);
     setValue(callable);
 }
@@ -121,21 +119,13 @@ VariantType CallableNode::getValue() const {return Node::getValue();}
 
 
 CallableNode::CallableNode(SharedPtr<CallableNode> callableNode) {
-    // auto instanceSpecificFlags = std::unordered_map<String, String>{
-    //     {"isCallable", "true"},
-    //     {"isInstance", "true"},
-    //     {"name", callableNode->getTypeAsString() + "(" + callableNode->getFlags().name + ")"},
-    //     {"fullType", "Callable"}
-    // };
-
     auto instanceSpecificFlags = std::unordered_map<String, String> {
         {"isCallable","true"},
         {"isInstance","false"},
         {"fullType","Callable"},
-        {"type", nodeTypeToString(NodeValueType::Callable)} // or NodeValueType::Callable
+        {"type", nodeTypeToString(NodeValueType::Callable)}
     };
-    // setFlags()
-    auto& flags = getFlags();     // <-- reference
+    auto& flags = getFlags();
     flags.merge(instanceSpecificFlags);
     setValue(callableNode->getCallable());
     if (getFlags().name.find("Method") != String::npos) {
@@ -145,10 +135,6 @@ CallableNode::CallableNode(SharedPtr<CallableNode> callableNode) {
 
 bool CallableNode::isInstance() { return getFlags().isInstance; }
 bool CallableNode::isInstance() const { return getFlags().isInstance; }
-
-
-// bool CallableNode::isInstance() { return true; }
-// bool CallableNode::isInstance() const { return true; }
 
 SharedPtr<ClassInstance> CallableNode::toInstance() {
     if (isInstance()) {
@@ -166,7 +152,6 @@ SharedPtr<ClassInstance> CallableNode::toInstance() const {
 
 
 std::size_t CallableNode::hash() const {
- 
     return hash(); 
 }
 
@@ -179,7 +164,6 @@ SharedPtr<Scope> CallableNode::getInternalScope() const { return internalScope; 
 
 String CallableNode::toString() const {
     throw MerkError("Tried to print out a Callable directly");
-    // return "<" + getFlags().fullType.getBaseType() + ": " + getCallable()->toString() + ">";
 }
 
 
@@ -213,8 +197,6 @@ void Callable::placeArgsInCallScope(ArgumentList evaluatedArgs, SharedPtr<Scope>
 
     DEBUG_FLOW_EXIT();
 }
-
-
 
 SharedPtr<Callable> asCallable(SharedPtr<NodeBase> callable) {
     return std::static_pointer_cast<Callable>(callable);

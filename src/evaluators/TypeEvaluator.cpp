@@ -46,8 +46,9 @@ std::optional<std::string_view> tryStringView(const VariantType& v) {
         const auto& s = std::get<String>(v);
         return std::string_view(s.data(), s.size());
     }
-    // If you have TextVariant nested, handle it here too.
-    // else if constexpr (...) { ... }
+
+    // TODO: add TextVariant parsing into here.
+
     return std::nullopt;
 }
 
@@ -75,7 +76,6 @@ int to<int>(const VariantType& v, CoerceMode mode) {
 
         case NodeValueType::String:
         case NodeValueType::Text: {
-            // normalize extraction in ONE place
             if (std::holds_alternative<String>(v)) {
                 const auto& s = std::get<String>(v);
                 return parseExact<int>(s, "int");
@@ -128,28 +128,27 @@ String as<String>(const VariantType& v) {
 
 template <>
 bool to<bool>(const VariantType& v, CoerceMode mode) {
-    if (std::holds_alternative<bool>(v)) {return std::get<bool>(v);}
+    if (std::holds_alternative<bool>(v)) { return std::get<bool>(v); }
 
     NodeValueType t = getTypeFromValue(v);
 
     switch (t) {
-        case NodeValueType::Char:   {return (bool)std::get<char>(v);}
+        case NodeValueType::Char: { return (bool)std::get<char>(v); }
 
         case NodeValueType::Float:
-            if (mode == CoerceMode::Strict) fail(t, "float->int not allowed");
+            if (mode == CoerceMode::Strict) { fail(t, "float->int not allowed"); }
             return (bool)std::get<float>(v);
 
         case NodeValueType::Double:
-            if (mode == CoerceMode::Strict) fail(t, "double->int not allowed");
+            if (mode == CoerceMode::Strict) { fail(t, "double->int not allowed"); }
             return (bool)std::get<double>(v);
 
         case NodeValueType::Long:
-            if (mode == CoerceMode::Strict) fail(t, "long->int not allowed");
+            if (mode == CoerceMode::Strict) { fail(t, "long->int not allowed"); }
             return (bool)std::get<long>(v);
 
         case NodeValueType::String:
         case NodeValueType::Text: {
-            // normalize extraction in ONE place
             if (std::holds_alternative<String>(v)) {
                 const auto& s = std::get<String>(v);
                 return s.size() > 0;
@@ -161,8 +160,6 @@ bool to<bool>(const VariantType& v, CoerceMode mode) {
             fail(t);
     }
 }
-
-
 
 template <>
 bool as<bool>(const VariantType& v) {
@@ -178,20 +175,19 @@ long to<long>(const VariantType& v, CoerceMode mode) {
     if (std::holds_alternative<float>(v))  return (long)std::get<float>(v);
 
     switch (t) {
-        case NodeValueType::Bool: return std::get<bool>(v) ? 1L : 0L;
-        case NodeValueType::Char: return (long)std::get<char>(v);
+        case NodeValueType::Bool: { return std::get<bool>(v) ? 1L : 0L; }
+        case NodeValueType::Char: { return (long)std::get<char>(v); }
 
         case NodeValueType::Double:
         case NodeValueType::Float:
-            if (mode == CoerceMode::Strict) fail(t, "float/double->long not allowed");
-            // You may also want range checks here.
-            if (t == NodeValueType::Double) return (long)std::get<double>(v);
+            if (mode == CoerceMode::Strict) { fail(t, "float/double->long not allowed"); }
+            if (t == NodeValueType::Double) { return (long)std::get<double>(v); }
             return (long)std::get<float>(v);
 
         case NodeValueType::String:
         case NodeValueType::Text: {
             auto sv = tryStringView(v);
-            if (!sv) fail(t, "text storage not accessible");
+            if (!sv) { fail(t, "text storage not accessible"); }
             return parseExact<long>(*sv, "long");
         }
 
@@ -207,7 +203,7 @@ long as<long>(const VariantType& v) {
 
 template<>
 double to<double>(const VariantType& v, CoerceMode mode) {
-    (void)mode; // usually numeric->double is always OK; you can still use mode if you want to ban string parsing in Strict
+    (void)mode;
 
     NodeValueType t = getTypeFromValue(v);
 
@@ -223,10 +219,11 @@ double to<double>(const VariantType& v, CoerceMode mode) {
         case NodeValueType::String:
         case NodeValueType::Text: {
             auto sv = tryStringView(v);
-            if (!sv) fail(t, "text storage not accessible");
-            // optional: in Strict mode you could refuse string parsing:
-            // if (mode == CoerceMode::Strict) fail("string->double not allowed");
-            return parseExact<double>(*sv, "double");
+            if (!sv) { fail(t, "text storage not accessible"); }
+            if (mode == CoerceMode::Permissive) {
+                return parseExact<double>(*sv, "double");
+            }
+            fail(t, "Coercion is strict");
         }
 
         default:
@@ -250,9 +247,10 @@ float to<float>(const VariantType& v, CoerceMode mode) {
         case NodeValueType::Double: {
             double d = std::get<double>(v);
             if (mode == CoerceMode::Strict) fail(t, "double->float not allowed");
-            // optional range check
-            if (d < -std::numeric_limits<float>::max() || d > std::numeric_limits<float>::max())
+            if (d < -std::numeric_limits<float>::max() || d > std::numeric_limits<float>::max()) {
                 fail(t, "out of float range");
+            }
+                
             return (float)d;
         }
 
@@ -264,7 +262,8 @@ float to<float>(const VariantType& v, CoerceMode mode) {
         case NodeValueType::String:
         case NodeValueType::Text: {
             auto sv = tryStringView(v);
-            if (!sv) fail(t, "text storage not accessible");
+            if (!sv) { fail(t, "text storage not accessible"); }
+
             return parseExact<float>(*sv, "float");
         }
 
@@ -276,9 +275,7 @@ float to<float>(const VariantType& v, CoerceMode mode) {
 template<>
 char to<char>(const VariantType& v, CoerceMode mode) {
     NodeValueType t = getTypeFromValue(v);
-
-
-    if (std::holds_alternative<char>(v)) return std::get<char>(v);
+    if (std::holds_alternative<char>(v)) { return std::get<char>(v); }
 
     switch (t) {
         case NodeValueType::Int:
@@ -290,8 +287,7 @@ char to<char>(const VariantType& v, CoerceMode mode) {
             auto sv = tryStringView(v);
             if (!sv) fail(t, "text storage not accessible");
             if (sv->size() == 1) {return (*sv)[0];}
-            // optionally support quoted char literals:  '\''x'\''
-            if (sv->size() == 3 && (*sv)[0]=='\'' && (*sv)[2]=='\'') return (*sv)[1];
+            if (sv->size() == 3 && (*sv)[0]=='\'' && (*sv)[2]=='\'') { return (*sv)[1]; }
             fail(t, "string is not a single char");
         }
 
@@ -329,13 +325,13 @@ NodeValueType getTypeFromValue(const VariantType& value) {
     }, value);
 
     DEBUG_LOG(LogLevel::TRACE, "GOT TYPE " + nodeTypeToString(val) + " In TypeEvaluator::getTypeFromValue");
-    // if (val == NodeValueType::Null) {throw MerkError(" TypeEvaluator::getTypeFromValue returned NULL");}
     if (val == NodeValueType::DataStructure || val == NodeValueType::Dict) {
         throw MerkError("Got " + nodeTypeToString(val) + " In TypeEvaluator::getTypeFromValue");
     }
     DEBUG_FLOW_EXIT();
-    if (val == NodeValueType::DataStructure || val == NodeValueType::Dict || val == NodeValueType::List) {throw MerkError("TypeEvaluator::getTypeFromValue -> DataStructure Found");}
-    // if (val == NodeValueType::Callable) { throw MerkError("TypeEvaluator::getTypeFromValue -> Callable"); }
+    if (val == NodeValueType::DataStructure || val == NodeValueType::Dict || val == NodeValueType::List) { 
+        throw MerkError("TypeEvaluator::getTypeFromValue -> DataStructure Found");
+    }
     return val;
 }
 
@@ -351,10 +347,8 @@ NodeValueType inferTypeFromString (String& valueStr, String& typeStr) {
         valueStr.find('E') != String::npos;
 
         if (looksFloat) {
-            // exact parse as double first
             double d = parseExact<double>(std::string_view(valueStr), "double");
 
-            // decide Float vs Double
             if (d >= -std::numeric_limits<float>::max() &&
                 d <=  std::numeric_limits<float>::max()) {
                 return NodeValueType::Float;
@@ -362,7 +356,6 @@ NodeValueType inferTypeFromString (String& valueStr, String& typeStr) {
             return NodeValueType::Double;
         }
 
-        // integer syntax
         long l = parseExact<long>(std::string_view(valueStr), "long");
 
         if (l >= std::numeric_limits<int>::min() &&
@@ -382,7 +375,6 @@ NodeValueType inferTypeFromString (String& valueStr, String& typeStr) {
 
     throw MerkError("Unknown type string: " + typeStr);
 
-        // DEBUG_LOG(LogLevel::DEBUGC, "Set initial value with String. Type: ", static_cast<int>(data.type), ", Value: ", data.value);
 }
 
 NodeValueType getNodeTypeFromString(String& type) {
@@ -406,8 +398,6 @@ std::pair<VariantType, NodeValueType> getCoercedStringAndType(const String& valu
     if (value == "null" && typeStr == "String") {
         return {value, NodeValueType::Null};
     }
-
-    
 
     NodeValueType type = getNodeTypeFromString(typeStr);
 

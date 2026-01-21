@@ -1,7 +1,5 @@
 #include "core/node/ArgumentNode.hpp"
-
 #include "core/types.h"
-
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/classes/NativeMethod.hpp"
 
@@ -60,23 +58,6 @@ SharedPtr<Scope> NativeMethod::getCapturedScope() const {
 void NativeMethod::setScope(SharedPtr<Scope> newScope) const {
     MARK_UNUSED_MULTI(newScope);
 };
-
-
-
-
-
-
-
-
-
-
-
-
-// virtual MethodBody* getThisBody() = 0;
-// virtual UniquePtr<CallableBody> getBody() override = 0;
-// virtual CallableBody* getBody() const override = 0;
-// virtual CallableBody* getInvocableBody() override = 0;
-
 
 MethodBody* NativeMethod::getThisBody() {return nullptr;}
 UniquePtr<CallableBody> NativeMethod::getBody() {return nullptr;}

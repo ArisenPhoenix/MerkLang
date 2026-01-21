@@ -337,39 +337,7 @@ UniquePtr<VarNode> VarNode::uniqClone() {
     auto type = TypeEvaluator::getTypeFromValue(valueNode.getValue());
     auto isTarget = (type == NodeValueType::Dict || type == NodeValueType::Callable || type == NodeValueType::DataStructure || type == NodeValueType::List || type == NodeValueType::ClassInstance);
     (void) isTarget;
-    // if (!oldValue.isNative() && !oldValue.isInstance() && isTarget && uniqCloned->valueNode == valueNode) {
-    //     String isDynamic = " isn't dynamic";
-    //     if (dynamic_cast<DynamicNode*>(oldValue.getInner().get())) {
-    //         isDynamic = " is certainly dynamic";
-    //     }
-    //     throw MerkError("the uniqueCloned value is still the same as the original -> " + isDynamic);
-    // } 
 
-    // if (isTarget) {
-    //     throw MerkError("HAHA " + nodeTypeToString(type));
-    // } 
-    // else {
-    //     throw MerkError("HAHA " + nodeTypeToString(type));
-    // }
-
-    // if ( isTarget ) { throw MerkError("Cloning a Target Type in VarNode " + nodeTypeToString(type)); }
-    
-    // if ((oldValue.getValue() == valueNode.getValue()) && isTarget) {
-    //     auto msg = "Value didn't change for type " + nodeTypeToString(TypeEvaluator::getTypeFromValue(valueNode.getValue()));
-    //     String msg2 = " -> " + nodeTypeToString(oldValue.getType()) + " " + oldValue.getFlags().toString();
-        
-    //     if (oldValue.isInstance()) {
-    //         auto instance = oldValue.toInstance()->clone();
-    //         if (instance == valueNode.toInstance()) {
-    //             throw MerkError("The Instances haven't Changed");
-    //         }
-    //         msg2 += " \n Has A ClassInstance " + instance->toString();
-    //     }
-
-    //     throw MerkError(msg + msg2);
-    // }
-
-    // throw MerkError("Cloned Variable");
     DEBUG_FLOW_EXIT();
     return uniqCloned;
 }
@@ -381,10 +349,6 @@ VarNode::VarNode(Node defaultValue, bool isConst, bool isStatic, bool isMutable)
     valueNode = defaultValue;
     valueNode.setFlags(DataTypeFlags(isConst, isMutable, isStatic, defaultValue.getType(), ResolvedType(nodeTypeToString(defaultValue.getType()))));
     varFlags = valueNode.getFlags();
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "GOT DEFAULT VALUE OF " + defaultValue.toString());
-    // if (varFlags.type != NodeValueType::Any && valueNode.getType() != varFlags.type) {
-    //     throw TypeMismatchError(t.getBaseType(), nodeTypeToString(valueNode.getType()));
-    // }
     DEBUG_FLOW_EXIT();
 }
 
@@ -464,17 +428,14 @@ void stringBasedValidation(Node& valueNode, DataTypeFlags& varFlags) {
 
 void typeIdBasedValidation(Node& startingValue, DataTypeFlags& varFlags) {
     if (varFlags.declaredSig != kInvalidTypeSignatureId) {
-    // Enforce only if not Any (you need a way to compare to Any without registry;
-    // easiest is: if fullType.base != "Any" as your signal)
+    // Could Enforce with check of fullType.base != "Any"
     }
 
     if (!varFlags.fullType.getBaseType().empty() && varFlags.fullType.getBaseType() != "Any") {
-        // Here we assume evaluateVariableDeclaration already set startingValue.flags.inferredSig
         if (startingValue.getFlags().inferredSig == kInvalidTypeSignatureId) {
             throw MerkError("VarNode: inferredSig missing on startingValue -> typeIdBasedValidation 1");
         }
 
-        // Strict equality of sig ids is ok for nominal types in your current system
         if (startingValue.getFlags().inferredSig != varFlags.declaredSig) {
             throw TypeMismatchError(
                 varFlags.fullType.getBaseType(),
@@ -484,17 +445,6 @@ void typeIdBasedValidation(Node& startingValue, DataTypeFlags& varFlags) {
         }
     }
 }
-
-// static void displaySigInfo(Node startingValue, DataTypeFlags& declFlags) {
-//     DEBUG_LOG(LogLevel::DEBUG,
-//         "VarNode ctor: decl.fullBase=", declFlags.fullType.getBaseType(),
-//         " declSig=", declFlags.declaredSig,
-//         " start.base=", startingValue.getFlags().fullType.getBaseType(),
-//         " start.isInst=", startingValue.isInstance(),
-//         " start.type=", startingValue.getTypeAsString(),
-//         " start.inferredSig=", startingValue.getFlags().inferredSig
-//     );
-// }
 
 
 VarNode::VarNode(Node startingValue, DataTypeFlags declFlags) {
@@ -591,7 +541,7 @@ LitNode::LitNode() = default;
 LitNode::LitNode(const String& value, const String& typeStr) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     String typeOf = typeStr;
-    if (typeStr == "Variable" && value == "null") { setValue(Node(Null)); /* indicates an actual value of null */ } 
+    if (typeStr == "Variable" && value == "null") { setValue(Node(Null));} 
     
     else {
         auto [val, type] = TypeEvaluator::getCoercedStringAndType(value, typeOf);
@@ -625,19 +575,14 @@ Node::Node(bool v) : data(makeShared<BoolNode>(v)) {
 
 Node Node::fromVariant(VariantType v) {
     auto type = TypeEvaluator::getTypeFromValue(v);
-    // if (type == NodeValueType::ClassInstance || type == NodeValueType::UserDefined || type == NodeValueType::Callable) {
-    //     throw MerkError("Attempted To Create A Node of " + nodeTypeToString(type));
-    // }
 
     if (type == NodeValueType::Dict || type == NodeValueType::DataStructure || type == NodeValueType::List) {
         throw MerkError("Attempted To create a Node from VariantType " + nodeTypeToString(type));
     }
 
-    // data = makeShared<ClassInstanceNode>(v);
     auto node = Node();
     node.setValue(v);
     node.setFlags(node.getFlags().merge({{"type", nodeTypeToString(TypeEvaluator::getTypeFromValue(v), false)}}));
-    // setValue(v);
     if (!node.data) { throw MerkError("Data is Invalid in Node::Node(VariantType v)"); }
     return node;
 }
@@ -649,8 +594,6 @@ Node::Node(double v): data (makeShared<DoubleNode>(v)) {}
 Node::Node(NullType v): data(makeShared<NullNode>(v)) {}
 
 Node::Node(SharedPtr<ListNode> v) {
-    // throw MerkError("Attempted ListNode construction");
-    // setValue(v);
     data = v;
     getFlags().type = NodeValueType::List;
     getFlags().fullType.setBaseType("List");
@@ -659,9 +602,6 @@ Node::Node(SharedPtr<ListNode> v) {
 }
 
 Node::Node(SharedPtr<ArrayNode> v) {
-    // throw MerkError("Attempted ListNode construction");
-    // setValue(v);
-    // throw MerkError("Node Constructing DictNode");
     data = v;
     getFlags().type = NodeValueType::Array;
     getFlags().fullType.setBaseType("Array");
@@ -669,27 +609,12 @@ Node::Node(SharedPtr<ArrayNode> v) {
     // throw MerkError("No Instance Associated With DictNode");
 }
 
-// Node::Node(SharedPtr<DictNode> v) {
-//     // throw MerkError("Attempted ListNode construction");
-//     // setValue(v);
-//     // throw MerkError("Node Constructing DictNode");
-//     data = v;
-//     getFlags().type = NodeValueType::Dict;
-//     getFlags().fullType.setBaseType("Dict");
-//     if (!data) { throw MerkError("Data is Invalid in Node::Node(VariantType v)"); }
-//     // throw MerkError("No Instance Associated With DictNode");
-// }
 
 Node::Node(SharedPtr<DictNode> v) {
-    // throw MerkError("Attempted ListNode construction");
-    // setValue(v);
-    // throw MerkError("Node Constructing DictNode");
     data = v;
     setFlags(data->flags);
-    // getFlags().type = NodeValueType::Dict;
-    // getFlags().fullType.setBaseType("Dict");
+
     if (!data) { throw MerkError("Data is Invalid in Node::Node(VariantType v)"); }
-    // throw MerkError("No Instance Associated With DictNode");
 }
 
 Node::Node(SharedPtr<SetNode> v) {
@@ -701,33 +626,13 @@ Node::Node(SharedPtr<SetNode> v) {
 
         throw MerkError(out);
     }
-    // throw MerkError("Attempted ListNode construction");
-    // setValue(v);
+
     data = v;
 
     getFlags().type = NodeValueType::Set;
     getFlags().fullType.setBaseType("Set");
     if (!data) { throw MerkError("Data is Invalid in Node::Node(VariantType v)"); }
-    // throw MerkError("No Instance Associated With SetNode");
 }
-
-// Node& Node::operator=(const Node& other) {
-    
-
-//     data = other.data;
-
-//     if (other.isInstance()) {
-//         // auto type = TypeEvaluator::getTypeFromValue(other.getValue());
-//         // other.getFlags().merge({{"isInstance", "true"}});
-//         // DEBUG_LOG(LogLevel::PERMISSIVE, "Assigning Instance to Node, it holds a " + nodeTypeToString(type) + " and holds meta of " + other.getFlags().toString());
-//         data->flags.merge({{"isInstance", "true"}});
-//         // *this = ClassInstanceNode(std::get<SharedPtr<Callable>>(other.getValue()));
-//     } else {
-//         data->flags = other.getFlags();
-//     }
-    
-//     return *this;
-// }
 
 Node& Node::operator=(const Node& other) {
     if (this == &other) return *this;
@@ -741,7 +646,6 @@ Node& Node::operator=(const Node& other) {
 Node& Node::operator=(Node&& other) noexcept {
     if (this != &other) {
         data = std::move(other.data);
-        // setFlags(data->flags.merge({{"isInstance", (other.isInstance() ? "true" : "false")}}));
     }
     return *this;
 }
@@ -752,11 +656,6 @@ Node::Node(SharedPtr<NodeBase> base) : data(std::move(base)) {
     if (data->getType() == NodeValueType::Dict || data->getType() == NodeValueType::DataStructure) {
         throw MerkError("Constructed Node from " + nodeTypeToString(data->getType()));
     }
-    
-    // if (data->getType() != NodeValueType::String) {
-    //     throw MerkError("Constructed Node from " + nodeTypeToString(data->getType()));
-    // }
-    
 }
 
 Node::Node(Vector<SharedPtr<CallableSignature>> sigRefs) { setValue(sigRefs); }

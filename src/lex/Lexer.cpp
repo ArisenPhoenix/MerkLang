@@ -229,47 +229,14 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
             continue;
         }
 
-
-        // structure tokens
-        // if (t.kind == RawKind::Indent) {
-        //     out.emplace_back(TokenType::Indent, "->", t.line, t.column);
-        //     currentIndent = (int)t.aux;
-
-        //     if (pendingClass) {
-        //         insideClass = true;
-        //         classBodyIndent = currentIndent; // typically 4
-        //         pendingClass = false;
-        //     }
-
-        //     ++i;
-        //     continue;
-        // }
-
-        // if (t.kind == RawKind::Dedent) {
-        //     out.emplace_back(TokenType::Dedent, "<-", t.line, t.column);
-        //     currentIndent = (int)t.aux;
-
-        //     // Exit class only if we dedent below class body indent
-        //     if (insideClass && currentIndent < classBodyIndent) {
-        //         insideClass = false;
-        //         classBodyIndent = 0;
-        //     }
-
-        //     ++i;
-        //     continue;
-        // }
-
-
         if (t.kind == RawKind::Indent) {
             out.emplace_back(TokenType::Indent, "->", t.line, t.column);
 
             const int newIndent = (int)t.aux;
 
-            // AUX is the truth:
             currentIndent = newIndent;
 
             // Validate that aux represents an increase
-            // (Structurizer should only emit Indent when indent increases)
             if (!indentStack.empty() && newIndent <= indentStack.back()) {
                 throw RunTimeError(
                     "Lexer: Indent aux not increasing. aux=" + std::to_string(newIndent) +
@@ -280,7 +247,6 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
 
             indentStack.push_back(newIndent);
 
-            // If we just parsed "Class Name" earlier, the first indent begins the class body.
             if (pendingClass) {
                 insideClass = true;
                 classBodyIndent = newIndent;
@@ -295,8 +261,6 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
             out.emplace_back(TokenType::Dedent, "<-", t.line, t.column);
 
             const int newIndent = (int)t.aux;
-
-            // AUX is the truth:
             currentIndent = newIndent;
 
             // Validate: aux must not be greater than current stack top
@@ -308,7 +272,6 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
                 );
             }
 
-            // Pop until stack matches aux (or we reach base)
             while (indentStack.size() > 1 && indentStack.back() > newIndent) {
                 indentStack.pop_back();
             }
@@ -322,7 +285,6 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
                 );
             }
 
-            // Exit class only if we dedent BELOW the class body indent
             if (insideClass && newIndent < classBodyIndent) {
                 insideClass = false;
                 classBodyIndent = 0;
@@ -332,9 +294,7 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
             continue;
         }
 
-
-        // try compound op merge
-        if (tryEmitCompoundOp(raw, i, out)) continue;
+        if (tryEmitCompoundOp(raw, i, out)) {continue;}
 
         // numbers/strings
         if (t.kind == RawKind::Number) {
@@ -366,7 +326,7 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
             continue;
         }
 
-        // single '=' becomes VarAssignment (ported)
+        // single '=' is VarAssignment
         if (t.kind == RawKind::Operator && t.lexeme == "=") {
             out.emplace_back(TokenType::VarAssignment, "=", t.line, t.column);
             ++i;
@@ -382,20 +342,16 @@ Vector<Token> Lexer::lex(const Vector<RawToken>& raw, Vector<Token>& out) {
 
         if (t.kind == RawKind::Punctuation) {
             // preserve your special bracket tokens if you still want them:
-            if (t.lexeme == "[") out.emplace_back(TokenType::LeftBracket, "[", t.line, t.column);
-            else if (t.lexeme == "]") out.emplace_back(TokenType::RightBracket, "]", t.line, t.column);
-            else out.emplace_back(TokenType::Punctuation, t.lexeme, t.line, t.column);
+            if (t.lexeme == "[") { out.emplace_back(TokenType::LeftBracket, "[", t.line, t.column); }
+            else if (t.lexeme == "]") { out.emplace_back(TokenType::RightBracket, "]", t.line, t.column); }
+            else { out.emplace_back(TokenType::Punctuation, t.lexeme, t.line, t.column); }
 
-            // close paren resets args/params like your old tokenizer
             if (t.lexeme == ")") { insideArgs = false; insideParams = false; }
             ++i;
             continue;
         }
 
-        
-
-        // raw EOF
-        if (t.kind == RawKind::EOF_) break;
+        if (t.kind == RawKind::EOF_) { break; }
 
         // unknown
         out.emplace_back(TokenType::Unknown, t.lexeme, t.line, t.column);

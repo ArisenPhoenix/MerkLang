@@ -1,7 +1,5 @@
 #include "lex/Scanner.hpp"
 
-
-
 Vector<RawToken> Scanner::scan() {
     rawTokens.emplace_back(RawToken(RawKind::SOF));
     while (position < sourceLength) {
@@ -63,7 +61,6 @@ Scanner::Scanner(const char* src, const CommentConfig& cfg) : Scanner(String(src
 char Scanner::next() {
     column++;
     if (position + 1 >= sourceLength) {
-        // move to EOF sentinel state
         position = sourceLength;
         current = '\0';
         return current;
@@ -83,7 +80,6 @@ bool Scanner::isWhiteSpace(char c) {
 bool Scanner::isDigit(char c) {
     return std::isdigit(static_cast<unsigned char>(c));
 }
-
 
 void Scanner::handleWhiteSpace() {
     while (isWhiteSpace(current) && hasNext()) {
@@ -109,7 +105,6 @@ void Scanner::handleWhiteSpace() {
 
     }
 }
-
 
 bool Scanner::isSpecialChar(char c) {
     switch (c) {
@@ -192,9 +187,7 @@ RawToken Scanner::readPunctuation() {
 }
 
 RawToken Scanner::readText() {
-    if (!isTextBegin(current)) {
-        throw ScannerError("Not Text in readText -> " + std::to_string(current), line, column);
-    }
+    if (!isTextBegin(current)) { throw ScannerError("Not Text in readText -> " + std::to_string(current), line, column); }
 
     char startChar = current;
     int startColumn = column;
@@ -204,7 +197,7 @@ RawToken Scanner::readText() {
     next();
 
     while (hasNext() && current != startChar) {
-        if (current == '\\') { // Handle escape sequences
+        if (current == '\\') {
             next();
             const char escaped = current;
             if (isSpecialChar(escaped)) {
@@ -308,24 +301,22 @@ int Scanner::matchBlockStartIndex() const {
 }
 
 bool Scanner::tryScanCommentDelimiter() {
-    // Prefer starts over ends so "/*" is treated as start, not '/' then '*'
-    if (tryScanCommentStart()) return true;
-    if (tryScanCommentEnd())   return true;
+    // Prefer starts over ends,
+    if (tryScanCommentStart()) { return true; }
+    if (tryScanCommentEnd())   { return true; }
     return false;
 }
  
 bool Scanner::inBounds(size_t pos) const { return pos < sourceLength; }
 
 bool Scanner::matchAt(size_t pos, const String& s) const {
-    if (s.empty()) return false;
-    if (pos + s.size() > sourceLength) return false;
-    // std::string::compare avoids allocations
+    if (s.empty()) {return false;}
+    if (pos + s.size() > sourceLength) {return false;}
     return source.compare(pos, s.size(), s) == 0;
 }
 
 void Scanner::advanceN(size_t n) {
-    // Advance n characters, updating column (and line if you ever advance across '\n')
-    // For comment delimiters, n is small and usually has no '\n'.
+    // Advance n characters, updating column (and line if '\n' is seen
     for (size_t i = 0; i < n && position < sourceLength; ++i) {
         ++position;
         ++column;
@@ -333,7 +324,6 @@ void Scanner::advanceN(size_t n) {
     current = (position < sourceLength) ? source[position] : '\0';
 }
 
-// ---- comment delimiter scanning ----
 
 bool Scanner::tryScanCommentStart() {
     if (!inBounds(position)) return false;
@@ -367,7 +357,7 @@ bool Scanner::tryScanCommentStart() {
         }
     }
 
-    if (bestKind == StartKind::None) return false;
+    if (bestKind == StartKind::None) {return false;}
 
     const int startLine = line;
     const int startCol  = column;
@@ -378,7 +368,6 @@ bool Scanner::tryScanCommentStart() {
         return true;
     }
 
-    // Block start
     rawTokens.emplace_back(RawKind::CommentBlockStart, bestLexeme, startLine, startCol, bestBlockIndex);
     advanceN(bestLen);
     return true;
@@ -386,8 +375,6 @@ bool Scanner::tryScanCommentStart() {
 
 bool Scanner::tryScanCommentEnd() {
     if (!inBounds(position)) return false;
-
-    // Find the best (longest) matching block END delimiter at this position.
     size_t bestLen = 0;
     int bestBlockIndex = -1;
     String bestLexeme;
@@ -451,8 +438,6 @@ RawToken Scanner::scanBlockComment(int pairIndex) {
     const int startCol  = column;
 
     const auto& pair = commentCfg.blockPairs[pairIndex];
-
-    // consume start delimiter (e.g. "/*")
     advanceN(pair.start.size());
 
     String text;
@@ -491,24 +476,21 @@ RawToken Scanner::scanLineComment(const String& startLexeme) {
     const int startLine = line;
     const int startCol  = column;
 
-    // consume delimiter (e.g. "#", "//")
     advanceN(startLexeme.size());
 
     String text;
     while (position < sourceLength && current != '\n') {
         text += current;
-        next(); // IMPORTANT: use next() so line/col stays correct
+        next();
     }
     if (!text.empty() && text[0] == ' ') text.erase(0, 1);
 
-    // Don't consume '\n' here — let handleWhiteSpace() emit Newline token
     return RawToken(RawKind::Comment, text, startLine, startCol, -1);
 }
 
 bool Scanner::tryScanComment() {
     if (!inBounds(position)) return false;
 
-    // Find best start match (longest) across line + block starts
     enum class StartKind { None, Line, Block };
     StartKind bestKind = StartKind::None;
     size_t bestLen = 0;
@@ -539,24 +521,17 @@ bool Scanner::tryScanComment() {
     const int startCol  = column;
 
     if (bestKind == StartKind::Line) {
-        // emit delimiter token
         rawTokens.emplace_back(RawKind::CommentLineStart, bestLexeme, startLine, startCol, -1);
 
-        // emit body token (scanLineComment consumes the delimiter itself right now)
-        // so: either change scanLineComment to assume delimiter already consumed,
-        // OR keep it consuming and remove the advanceN here.
-        // I recommend: delimiter already emitted -> consume it here.
         advanceN(bestLexeme.size());
-        rawTokens.emplace_back(scanLineCommentBody()); // new helper below
+        rawTokens.emplace_back(scanLineCommentBody());
         return true;
     }
 
     // Block comment
     rawTokens.emplace_back(RawKind::CommentBlockStart, bestLexeme, startLine, startCol, bestBlockIndex);
     advanceN(bestLexeme.size());
-    rawTokens.emplace_back(scanBlockCommentBody(bestBlockIndex)); // new helper below
-    // scanBlockCommentBody should consume the end delimiter and stop right after it.
-    // then emit the end token:
+    rawTokens.emplace_back(scanBlockCommentBody(bestBlockIndex)); 
     rawTokens.emplace_back(RawKind::CommentBlockEnd, commentCfg.blockPairs[bestBlockIndex].end, line, column, bestBlockIndex);
     return true;
 }
@@ -641,7 +616,6 @@ void printRawTokens(const Vector<RawToken>& toks, std::ostream& os) {
            << std::setw(18) << rawKindToString(t.kind)
            << "  (" << t.line << ":" << t.column << ")";
 
-        // aux is optional; print only if you use it
         if (t.aux != -1) {
             os << "  aux=" << t.aux;
         }

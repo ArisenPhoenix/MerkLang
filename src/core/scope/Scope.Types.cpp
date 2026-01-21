@@ -4,36 +4,27 @@
 #include "core/types/Typer.hpp"
 
 void Scope::initRootTypes() {
-    if (!isRoot) throw MerkError("initRootTypes called on non-root scope");
+    if (!isRoot) { throw MerkError("initRootTypes called on non-root scope"); }
 
-    if (!globalTypes) throw MerkError("initRootTypes: globalTypes is null");
+    if (!globalTypes) { throw MerkError("initRootTypes: globalTypes is null"); }
 
     if (!globalTypeSigs) {
         globalTypeSigs = makeShared<TypeSignatureRegistryManager>(*globalTypes);
     }
 
     localTypes.attach(*globalTypeSigs);
-
-    // for (TypeId id = 1; id < globalTypes-> size(); ++id) {
-    //     const String& n = globalTypes->nameOf(id);
-    //     if (!n.empty() && n != "<invalid>") {
-    //         localTypes.bindName(n, localTypes.nominal(id));
-    //     }
-    // }
 }
 
 
 TypeSignatureId Scope::resolveTypeNameSig(const String& name) {
     if (!localTypes.isAttached()) localTypes.attach(*globalTypeSigs);
 
-    // 1) local alias / shadowed name
     if (auto a = localTypes.lookupName(name)) return *a;
 
-    // 2) nominal global
     TypeId tid = globalTypes->lookupOrInvalid(name);
     if (tid != kInvalidTypeId) return globalTypeSigs->nominal(tid);
 
-    // 3) optional: treat unknown as new nominal (forward declare)
+    // treating unknown as new nominal (forward declare)
     tid = globalTypes->getOrCreate(name);
     return globalTypeSigs->nominal(tid);
 }
@@ -140,7 +131,7 @@ std::optional<SharedPtr<CallableSignature>> Scope::resolveFunctionOverload(
     for (auto& sig : overloadOpt.value()) {
         if (!sig) continue;
 
-        // DEF: keep as a fallback if nothing else matches.
+        // only one def can be stored at a time
         if (sig->getSubType() == CallableType::DEF) {
             Candidate c;
             c.sig = sig;
@@ -149,7 +140,7 @@ std::optional<SharedPtr<CallableSignature>> Scope::resolveFunctionOverload(
             continue;
         } 
 
-        // First: bind args to params (named/default/varargs). If it fails, this overload isn't viable.
+
         ParamList params = sig->getParameters();
         BoundArgs bound;
         try {
@@ -160,8 +151,6 @@ std::optional<SharedPtr<CallableSignature>> Scope::resolveFunctionOverload(
 
         // Ensure callable has a type signature id (lazily built).
         if (sig->getTypeSignature() == kInvalidTypeSignatureId) {
-            // throw MerkError("No Signature Is Present");
-            // Bind param annotations to TypeSignatureIds
             params.bindTypes(reg, *this);
 
             InvocableSigType m;
@@ -185,7 +174,7 @@ std::optional<SharedPtr<CallableSignature>> Scope::resolveFunctionOverload(
 
             sig->setTypeSignature(reg.invocableType(m));
         }
-        // Match types against the bound/flattened args.
+
         ArgumentList flat;
         auto flatNodes = bound.flatten();
         for (auto& n : flatNodes) flat.addPositionalArg(n);
@@ -200,19 +189,17 @@ std::optional<SharedPtr<CallableSignature>> Scope::resolveFunctionOverload(
         return std::nullopt;
     }
 
-    // Pick best by score, then lowest cost.
     auto bestIt = viable.begin();
     for (auto it = viable.begin(); it != viable.end(); ++it) {
         if (it->match.score > bestIt->match.score) bestIt = it;
         else if (it->match.score == bestIt->match.score && it->match.cost < bestIt->match.cost) bestIt = it;
     }
 
-    // Ambiguity check: same score+cost but different signatures.
     int bestScore = bestIt->match.score;
     int bestCost = bestIt->match.cost;
     int ties = 0;
     for (auto& c : viable) {
-        if (c.match.score == bestScore && c.match.cost == bestCost) ties++;
+        if (c.match.score == bestScore && c.match.cost == bestCost) { ties++; }
     }
     if (ties > 1) {
         throw MerkError("Ambiguous overload for '" + name + "' (" + std::to_string(ties) + " candidates match equally)");

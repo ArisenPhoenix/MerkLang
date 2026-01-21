@@ -15,7 +15,7 @@ String ScopeCounts::toString() {
 String formatPointer(const Scope* ptr) {
     std::ostringstream oss;
     if (ptr) {
-        oss << ptr;  // Stream the memory address
+        oss << ptr; 
     } else {
         oss << "None (Root Scope)";
     }

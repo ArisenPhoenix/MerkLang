@@ -13,16 +13,12 @@
 // Define native functions 
 
 Node print(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
-    // throw MerkError("Showed Print Node to String");
     for (size_t i = 0; i < args.size(); ++i) {
-        // DEBUG_LOG(LogLevel::PERMISSIVE, args[i].toString(), "  META", args[i].getFlags().toString());
-        
-        // DEBUG_LOG(LogLevel::PERMISSIVE, args[i].getTypeAsString());
         std::cout << args[i].toString();
         if (i < args.size() - 1) std::cout << " ";
     }
     std::cout << std::endl;
-    return Node(Null); // null
+    return Node(Null); 
 }
 
 Node debug_log(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
@@ -48,13 +44,8 @@ Node debug_log(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[may
         throw MerkError(highlight("DEBUG_LOG threw because first arg was a boolean of " + first.toString(), Colors::bg_magenta));
     }
     debugLog(true, highlight("\n====================================== DEBUG_LOG MERK INTERNALS END ======================================\n", Colors::bg_bright_red));
-    return Node(Null); // none
+    return Node(Null);
 }
-
-// Node floatFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
-//     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
-//     return Node(args[0].toFloat());
-// }
 
 Node intFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
@@ -81,6 +72,10 @@ Node isInstanceFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, 
     return Node(nodeTypeToString(var.getType(), false) == instance.toString());
 }
 
+Node floatFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
+    if (args.size() != 1) { throw MerkError("Only One Argument may be passed to Function 'Float;"); }
+    return Node(TypeEvaluator::to<float>(args[0].getValue(), CoerceMode::Strict));  
+}
 
 SharedPtr<NativeFunction> createPrintFunction([[maybe_unused]] SharedPtr<Scope> scope) {
     ParamList params;
@@ -108,20 +103,20 @@ SharedPtr<NativeFunction> createDebugLogFunction([[maybe_unused]] SharedPtr<Scop
     );
 }
 
-// SharedPtr<NativeFunction> createFloatFunction([[maybe_unused]] SharedPtr<Scope> scope) {
-//     ParamList params;
-//     auto param = ParamNode("value", NodeValueType::Any);
-//     params.addParameter(param);
-
-//     return makeShared<NativeFunction>("Float", std::move(params), floatFunc);
-// }
-
 SharedPtr<NativeFunction> createIntFunction([[maybe_unused]] SharedPtr<Scope> scope) {
     ParamList params;
     auto param = ParamNode("value", NodeValueType::Any);
     params.addParameter(param);
 
     return makeShared<NativeFunction>("Int", std::move(params), intFunc);
+}
+
+
+SharedPtr<NativeFunction> createFloatFunction([[maybe_unused]] SharedPtr<Scope> scope) {
+    ParamList params;
+    auto param = ParamNode("value", NodeValueType::Any);
+    params.addParameter(param);
+    return makeShared<NativeFunction>("Float", std::move(params), floatFunc);
 }
 
 
@@ -146,7 +141,7 @@ SharedPtr<NativeFunction> createIsInstanceFunction([[maybe_unused]] SharedPtr<Sc
 
 std::unordered_map<String, NativeFuncFactory> nativeFunctionFactories = {
     {"print", createPrintFunction},
-    // {"Float", createFloatFunction},
+    {"Float", createFloatFunction},
     {"Int", createIntFunction},
     {"String", createStringFunction},
     {"isInstance", createIsInstanceFunction},

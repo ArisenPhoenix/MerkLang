@@ -33,7 +33,6 @@ size_t writeToString(void* contents, size_t size, size_t nmemb, void* userp) {
 }
 
 
-// Convert your DictNode -> curl_slist* (remember to free)
 static curl_slist* dictToCurlHeaders(const DictNode& dict) {
     curl_slist* list = nullptr;
     for (auto& [k,v] : dict.getElements()) {
@@ -86,12 +85,9 @@ Node HttpNode::send() {
 
     auto headersDict = getDictField(inst, "headers");
     auto bodyDict    = getDictField(inst, "body");
+    // for now body is just a dict, instead of string
 
-    // If you want to support raw string body too, consider letting body be String or Dict.
-    // For now, serialize Dict to JSON-ish or x-www-form-urlencoded.
     String bodyStr;
-    // TODO: pick a content-type policy; example below is naive JSON-ish:
-    // bodyStr = dictToJson(*bodyDict); // implement or plug your existing Dict->String
 
     CURL* curl = curl_easy_init();
     if (!curl) throw MerkError("curl_easy_init failed");
@@ -130,7 +126,6 @@ Node HttpNode::send() {
             curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, m.c_str());
         }
 
-        // perform
         auto rc = curl_easy_perform(curl);
         if (rc != CURLE_OK) {
             throw MerkError(String("HTTP error: ") + curl_easy_strerror(rc));
@@ -145,29 +140,20 @@ Node HttpNode::send() {
     if (hdrList) curl_slist_free_all(hdrList);
     curl_easy_cleanup(curl);
 
-    // Build response Dict Node
-    auto scope = inst->getInstanceScope(); // for constructing nodes
+    auto scope = inst->getInstanceScope();
 
-    // headers out: libcurl doesn’t give easy header map via easy API. If you need response headers:
-    // use CURLOPT_HEADERFUNCTION to capture them into a temporary map<str,str> and build a DictNode here.
+    // still need to build out headers
 
     auto respDictArgs = ArgumentList();
     auto respNode = Evaluator::evaluateClassCall(scope, "Dict", respDictArgs, nullptr);
     auto resp = respNode.toInstance();
-    // auto resp = std::static_pointer_cast<DictNode>(respNode.toInstance()->getNativeData());
 
     inst->updateField("status", Node(static_cast<int>(status)));
     inst->updateField("ok", Node(status >= 200 && status < 300));
     inst->updateField("body", Node(response));
     
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "RESP: " + resp->toString());
-    // throw MerkError("GOt Response");
-    // return Node(resp); 
-    // return inst->getInstanceNode()->getInstanceNode();
     auto respDict = std::static_pointer_cast<DictNode>(resp->getNativeData());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "RESP: " + resp->toString());
-    // auto stat = ;
-    // if (stat.isBool()) {throw MerkError("Status is a bool");}
+
     respDict->set("status", Node(static_cast<int>(status)));
     respDict->set("ok",     Node(status >= 200 && status < 300));
     respDict->set("body",   Node(response));
@@ -175,59 +161,11 @@ Node HttpNode::send() {
     resInstance->declareField("body", respDict->get("body"));
     resInstance->declareField("ok", respDict->get("ok"));
     resInstance->declareField("status", respDict->get("status"));
-    // resp->set(Node("headers"), headersDictFromResponse);
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "RESP 2: " + resp->toString());
-    // DEBUG_LOG(LogLevel::PERMISSIVE, "Dict Data: " + respDict->toString());
-    // throw MerkError("Got Response");
+
     if (!respNode.isInstance()) {throw MerkError("The response is not an instance");}
     return respNode;
 
-    
-    
-    // return Node();
-
 } // performs the HTTP request and returns a response Node
-
-// Node HttpNode::send() {
-//     auto inst = getInstance();
-//     if (!inst) throw MerkError("HttpNode has no bound instance");
-
-//     const auto url    = getStringField(inst, "url");
-//     const auto method = getStringField(inst, "method");
-
-//     auto headersDict = getDictField(inst, "headers");
-//     auto bodyDict    = getDictField(inst, "body");
-
-//     // ... do curl request ...
-//     String response;
-//     long status = 0;
-//     // fill response/status...
-
-//     // ✅ Update the Http instance itself (THIS is what makes io print “good”)
-//     inst->updateField("status", Node((int)status));
-//     inst->updateField("ok",     Node(status >= 200 && status < 300));
-//     inst->updateField("body",   Node(response));
-//     // (Optional) inst->updateField("headers", ...);
-
-//     // Build response object (what you're already doing)
-//     auto scope = inst->getInstanceScope();
-
-//     auto respNode = Evaluator::evaluateClassCall(scope, "Dict", ArgumentList(), nullptr);
-//     auto respInst = respNode.toInstance();
-//     auto respDict = std::static_pointer_cast<DictNode>(respInst->getNativeData());
-
-//     respDict->set("status", Node((int)status));
-//     respDict->set("ok",     Node(status >= 200 && status < 300));
-//     respDict->set("body",   Node(response));
-
-//     // if Dict class uses native DictNode only, you may not need declareField at all.
-//     // But if your Dict instance mirrors fields, keep these:
-//     respInst->declareField("status", respDict->get("status"));
-//     respInst->declareField("ok",     respDict->get("ok"));
-//     respInst->declareField("body",   respDict->get("body"));
-
-//     return respNode;
-// }
 
 
 String HttpNode::toString() const {
@@ -259,19 +197,10 @@ void HttpNode::clear() {
 }
 
 
-
-
-
-
-
-
-
-
-
 void FileNode::loadConfigFromInstance() {
     auto inst = getInstance(); // ClassInstance
     const auto path = inst->getField("path").toString();
-    const auto modeStr = inst->getField("mode").toString(); // e.g. "r","wb"
+    const auto modeStr = inst->getField("mode").toString();
 
     std::ios::openmode m{};
     binary = modeStr.find('b') != String::npos;

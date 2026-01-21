@@ -11,14 +11,9 @@
 
 static inline Node evalNotEqual(const Node& a, const Node& b) {
     // Null handling
-    if (a.isNull() && b.isNull()) return Node(false);
-    if (a.isNull() != b.isNull()) return Node(true);
-
-    // If both are non-null:
-    // - compare by type then value
-    if (a.getType() != b.getType()) return Node(true);
-
-    // then compare underlying variant / or specialized compare
+    if (a.isNull() && b.isNull())  { return Node(false); }
+    if (a.isNull() != b.isNull())  { return Node(true); }
+    if (a.getType() != b.getType()) { return Node(true); }
     return Node(a.getValue() != b.getValue());
 }
 
@@ -83,14 +78,6 @@ SharedPtr<NodeBase> AnyNode::applyGe(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs >= rhs;
 }
 
-
-
-// ... same pattern for others
-
-
-
-
-// Overload operator<< for Node to display detailed information
 std::ostream& operator<<(std::ostream& os, const Node& node) {
     os << "(";
     // Display the value
@@ -200,10 +187,7 @@ SharedPtr<NodeBase> AnyNode::operator/=(const NodeBase& other) {
 
 // Logic Operations
 SharedPtr<NodeBase> AnyNode::operator==(const NodeBase& other) const {
-    // throw MerkError("Attempting Equality Check With AnyNode Holding " + toString() + "OTHER HOLDING " + other.toString());
     return makeShared<BoolNode>(getValue() == other.getValue()); 
-    // throw MerkError("Attempted == on AnyNode::operator== -> " + nodeTypeToString(TypeEvaluator::getTypeFromValue(value)) + " Other " + nodeTypeToString(TypeEvaluator::getTypeFromValue(other.getValue())));
-    // return makeShared<AnyNode>(toInt() == other.toInt());
 }
 SharedPtr<NodeBase> AnyNode::operator!=(const NodeBase& other) const {
     return makeShared<BoolNode>(getValue() != other.getValue()); 
@@ -309,9 +293,7 @@ SharedPtr<NodeBase> NullNode::operator/=(const NodeBase& other) {
 
 // Logic Operations
 SharedPtr<NodeBase> NullNode::operator==(const NodeBase& other) const {
-    // throw MerkError("Attempting Equality Check With AnyNode Holding " + toString() + "OTHER HOLDING " + other.toString());
     throw MerkError("Attempted == on NullNode::operator== -> " + nodeTypeToString(TypeEvaluator::getTypeFromValue(value)) + " Other " + nodeTypeToString(TypeEvaluator::getTypeFromValue(other.getValue())));
-    // return makeShared<AnyNode>(toInt() == other.toInt());
 }
 SharedPtr<NodeBase> NullNode::operator!=(const NodeBase& other) const {
     return makeShared<AnyNode>(toInt() != other.toInt());
