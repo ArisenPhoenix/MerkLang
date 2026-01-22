@@ -58,7 +58,6 @@ Node debug_log(ArgumentList args, SharedPtr<Scope> scope, SharedPtr<ClassInstanc
     return Node(Null);
 }
 
-
 Node intFunc(ArgumentList args, [[maybe_unused]] SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode = nullptr) {
     if (args.size() != 1) {throw MerkError("Only One Argument may be passed to Function 'Float;");}
     return Node(TypeEvaluator::to<int>(args[0].getValue(), CoerceMode::Strict));
@@ -123,14 +122,12 @@ SharedPtr<NativeFunction> createIntFunction([[maybe_unused]] SharedPtr<Scope> sc
     return makeShared<NativeFunction>("Int", std::move(params), intFunc);
 }
 
-
 SharedPtr<NativeFunction> createFloatFunction([[maybe_unused]] SharedPtr<Scope> scope) {
     ParamList params;
     auto param = ParamNode("value", NodeValueType::Any);
     params.addParameter(param);
     return makeShared<NativeFunction>("Float", std::move(params), floatFunc);
 }
-
 
 SharedPtr<NativeFunction> createStringFunction([[maybe_unused]] SharedPtr<Scope> scope) {
     ParamList params;
@@ -150,7 +147,6 @@ SharedPtr<NativeFunction> createIsInstanceFunction([[maybe_unused]] SharedPtr<Sc
     return makeShared<NativeFunction>("String", std::move(params), isInstanceFunc);
 }
 
-
 std::unordered_map<String, NativeFuncFactory> nativeFunctionFactories = {
     {"print", createPrintFunction},
     {"Float", createFloatFunction},
@@ -159,9 +155,6 @@ std::unordered_map<String, NativeFuncFactory> nativeFunctionFactories = {
     {"isInstance", createIsInstanceFunction},
     {"DEBUG_LOG", createDebugLogFunction}
 };
-
-
-
 
 std::unordered_map<String, SharedPtr<CallableSignature>> getAllNativeFunctions(SharedPtr<Scope> scope) {
     std::unordered_map<String, SharedPtr<CallableSignature>> builtins;
