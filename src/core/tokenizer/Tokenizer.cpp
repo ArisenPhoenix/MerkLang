@@ -88,7 +88,7 @@ Vector<Token> Tokenizer::lex(LexerConfig& lexCfg) {
     CommentConfig cfg       = handleScannerConfig();
     Scanner scanner(source, cfg);
     auto toks = scanner.scan();
-
+    printRawTokens(toks);
     LayoutConfig lcfg       = handleLayoutConfig();
     Structurizer structurizer(lcfg);
     auto structs = structurizer.structurize(toks);
