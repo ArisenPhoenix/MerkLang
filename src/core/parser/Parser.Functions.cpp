@@ -37,13 +37,42 @@ ParamList Parser::handleParameters(TokenType type){
             if (currentToken().type == TokenType::Punctuation && currentToken().value == ")"){
                 return params;
             }
-            if (currentToken().type != TokenType::Parameter) {
+            // Parameter modifiers are independent:
+            // - const: cannot rebind parameter variable
+            // - mut:   value itself can be mutated
+            bool paramIsConst = false;
+            bool paramIsMutable = false;
+            bool sawConst = false;
+            bool sawMut = false;
+            while (currentToken().value == "const" || currentToken().value == "mut") {
+                if (currentToken().value == "const") {
+                    if (sawConst) {
+                        throw UnexpectedTokenError(currentToken(), "single 'const' modifier", "Parser::handleParameters");
+                    }
+                    sawConst = true;
+                    paramIsConst = true;
+                } else {
+                    if (sawMut) {
+                        throw UnexpectedTokenError(currentToken(), "single 'mut' modifier", "Parser::handleParameters");
+                    }
+                    sawMut = true;
+                    paramIsMutable = true;
+                }
+                advance();
+            }
+
+            if (!(currentToken().type == TokenType::Parameter || currentToken().type == TokenType::Identifier)) {
                 throw UnexpectedTokenError(currentToken(), "parameter name", "Parser::handleParameters");
             }
 
             String paramName = currentToken().value;
             advance(); // Consume parameter name
-            auto flags = DataTypeFlags(paramName, false, true, false, ResolvedType("Any"));
+            ResolvedType paramType("Any");
+            if (consumeIf(TokenType::Punctuation, ":")) {
+                paramType = parseResolvedType();
+            }
+            auto flags = DataTypeFlags(paramName, paramIsConst, paramIsMutable, false, paramType);
+            flags.type = stringToNodeType(paramType.getBaseType());
 
             if (expect(TokenType::VarAssignment)){
                 advance(); // consume '='
@@ -62,7 +91,8 @@ ParamList Parser::handleParameters(TokenType type){
                 
             } else {
                 // Create parameter node
-                auto flags = DataTypeFlags(paramName, false, true, false, ResolvedType("Any"));
+                auto flags = DataTypeFlags(paramName, paramIsConst, paramIsMutable, false, paramType);
+                flags.type = stringToNodeType(paramType.getBaseType());
                 ParamNode paramNode = ParamNode(flags);
                 params.addParameter(paramNode);
                 DEBUG_LOG(LogLevel::DEBUG, "Parameter: ", paramName, "Added");
@@ -203,16 +233,16 @@ UniquePtr<Arguments> Parser::parseAnyArgument() {
 
 UniquePtr<FunctionCall> Parser::parseFunctionCall() {
     DEBUG_FLOW(FlowLevel::MED);
-    Token controllingToken = currentToken();
+    const Token& controllingToken = currentToken();
     if (controllingToken.type != TokenType::FunctionCall && controllingToken.type != TokenType::ClassMethodCall) {
         throw UnexpectedTokenError(controllingToken, "FunctionCall, ClassMethodCall", "Parser::parseFunctionCall");
     }
 
     String functionName = controllingToken.value;
-    controllingToken = advance();  // Consume function name
+    advance();  // Consume function name
 
-    if (!expect(TokenType::Punctuation) || controllingToken.value != "(") {
-        throw UnexpectedTokenError(controllingToken, "'(' after function name", "Parser::parseFunctionCall");
+    if (!check(TokenType::Punctuation, "(")) {
+        throw UnexpectedTokenError(currentToken(), "'(' after function name", "Parser::parseFunctionCall");
     }
 
     auto arguments = parseAnyArgument();

@@ -157,7 +157,10 @@ public:
     const ASTStatement* getCondition() const { return condition->getCondition(); }
     void addElifNode(UniquePtr<ElifStatement> elifNode);
 
-    void setElseNode(UniquePtr<ElseStatement> elseNode) {this->elseNode = std::move(elseNode);}
+    void setElseNode(UniquePtr<ElseStatement> elseNode) {
+        this->elseNode = std::move(elseNode);
+        markFreeVarsDirty();
+    }
 
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
@@ -237,4 +240,37 @@ public:
     void setScope(SharedPtr<Scope> newScope) override;
     EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
 
+};
+
+class ForLoop : public ASTStatement {
+    String loopVariable;
+    UniquePtr<ASTStatement> startExpr;
+    UniquePtr<ASTStatement> endExpr;
+    UniquePtr<ASTStatement> stepExpr;
+    UniquePtr<CodeBlock> body;
+public:
+    ForLoop(String loopVariable,
+            UniquePtr<ASTStatement> startExpr,
+            UniquePtr<ASTStatement> endExpr,
+            UniquePtr<ASTStatement> stepExpr,
+            UniquePtr<CodeBlock> body,
+            SharedPtr<Scope> scope);
+
+    const String& getLoopVariable() const { return loopVariable; }
+    const ASTStatement* getStartExpr() const { return startExpr.get(); }
+    const ASTStatement* getEndExpr() const { return endExpr.get(); }
+    const ASTStatement* getStepExpr() const { return stepExpr.get(); }
+    const CodeBlock* getBody() const { return body.get(); }
+
+    AstType getAstType() const override { return AstType::ForLoop; }
+    String toString() const override;
+    void printAST(std::ostream& os, int indent = 0) const override;
+
+    Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+    EvalResult evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instance = nullptr) const override;
+
+    UniquePtr<BaseAST> clone() const override;
+    FreeVars collectFreeVariables() const override;
+    Vector<const BaseAST*> getAllAst(bool includeSelf = true) const override;
+    void setScope(SharedPtr<Scope> newScope) override;
 };

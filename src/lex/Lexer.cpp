@@ -141,7 +141,13 @@ TokenType Lexer::classifyIdentifier(const String& value, const Vector<Token>& ou
     }
 
     // 9) Type token for annotations: x: String
-    // Only classify as Type when NOT immediately being called.
+    // If a known type is followed by '.' or '::', treat it as a chain start
+    // (e.g. File.writeAll(...)) so parser can resolve static class methods.
+    if (knownTypes.count(value) && nextNonTriviaIsDotOrColonColon(raw, rawIndex)) {
+        return TokenType::ChainEntryPoint;
+    }
+
+    // Otherwise classify as Type when NOT immediately being called.
     if (knownTypes.count(value) && !nextIsCall) {
         return TokenType::Type;
     }

@@ -50,7 +50,7 @@ TypeSignatureId Scope::bindResolvedType(const ResolvedType& rt, const String& al
 
 
 void Scope::linkTypes() {
-    if (auto parent = this->parentScope.lock()) {
+    if (auto parent = this->getParent()) {
         scopeLevel = parent->scopeLevel + 1;
         globalFunctions = parent->globalFunctions;
         globalClasses   = parent->globalClasses;
@@ -266,7 +266,7 @@ std::optional<TypeSignatureId> Scope::lookupTypeSigName(const String& name) {
     }
 
     // 3) Parent chain
-    if (auto parent = parentScope.lock()) {
+    if (auto parent = getParent()) {
         return parent->lookupTypeSigName(name);
     }
 

@@ -38,10 +38,10 @@ Node debug_log(ArgumentList args, SharedPtr<Scope> scope, SharedPtr<ClassInstanc
     if (instanceNode) {
         auto instScope = instanceNode->getInstanceScope();
         debugLog(true, highlight("The instance scope internals", Colors::bg_green));
-        instScope->debugPrint();
+        // instScope->debugPrint();
 
         debugLog(true, highlight("The instance scope children", Colors::bg_green));
-        instScope->printChildScopes();
+        // instScope->printChildScopes();
     }
     if (args.size() > 0) {
         const Node& first = args[0];

@@ -90,6 +90,70 @@
 
 namespace FlowEvaluator {
 
+namespace {
+constexpr bool kEnableFastIntExprAssign = false;
+
+bool tryApplyIntBinary(const String& op, int lhs, int rhs, int& out) {
+    if (op == "+") { out = lhs + rhs; return true; }
+    if (op == "-") { out = lhs - rhs; return true; }
+    if (op == "*") { out = lhs * rhs; return true; }
+    if (op == "/") {
+        if (rhs == 0) throw MerkError("Division by zero");
+        out = lhs / rhs;
+        return true;
+    }
+    if (op == "%") {
+        if (rhs == 0) throw MerkError("Modulo by zero");
+        out = lhs % rhs;
+        return true;
+    }
+    return false;
+}
+
+bool tryEvalIntExprFast(const ASTStatement* expr,
+                        SharedPtr<Scope> scope,
+                        SharedPtr<ClassInstanceNode> instanceNode,
+                        int& out) {
+    if (!expr || !scope) return false;
+
+    switch (expr->getAstType()) {
+        case AstType::VariableReference: {
+            const auto* ref = static_cast<const VariableReference*>(expr);
+            const Node& n = scope->getVariable(ref->getName()).getValueNode();
+            if (!n.isInt()) return false;
+            out = n.toInt();
+            return true;
+        }
+        case AstType::Literal: {
+            Node n = expr->evaluate(scope, instanceNode);
+            if (!n.isInt()) return false;
+            out = n.toInt();
+            return true;
+        }
+        case AstType::UnaryOperation: {
+            const auto* u = static_cast<const UnaryOperation*>(expr);
+            int v = 0;
+            if (!tryEvalIntExprFast(u->getOperand(), scope, instanceNode, v)) return false;
+            if (u->getOperator() == "-") {
+                out = -v;
+                return true;
+            }
+            return false;
+        }
+        case AstType::BinaryOperation: {
+            const auto* b = static_cast<const BinaryOperation*>(expr);
+            int lhs = 0;
+            int rhs = 0;
+            if (!tryEvalIntExprFast(b->getLeftSide(), scope, instanceNode, lhs)) return false;
+            if (!tryEvalIntExprFast(b->getRightSide(), scope, instanceNode, rhs)) return false;
+            return tryApplyIntBinary(b->getOperator(), lhs, rhs, out);
+        }
+        default:
+            return false;
+    }
+}
+} // namespace
+
 EvalResult evaluateLiteral(Node value) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!value.isValid()) throw MerkError("Literal Value is Not Valid");
@@ -127,7 +191,7 @@ EvalResult evaluateVariableDeclaration(String& name,
     }
 
     DEBUG_FLOW_EXIT();
-    return EvalResult::Normal(returnVal);
+    return EvalResult::Normal(std::move(returnVal));
 }
 
 EvalResult evaluateVariableAssignment(String name,
@@ -140,8 +204,18 @@ EvalResult evaluateVariableAssignment(String name,
     if (!scope) throw MerkError("evaluateVariableAssignment: scope is null");
     if (!value) throw MerkError("evaluateVariableAssignment: value node is null");
 
+    int fastInt = 0;
+    if (kEnableFastIntExprAssign && tryEvalIntExprFast(value, scope, instanceNode, fastInt)) {
+        Node finalVal(fastInt);
+        scope->updateVariable(name, finalVal);
+        DEBUG_FLOW_EXIT();
+        return EvalResult::Normal(std::move(finalVal));
+    }
+
     Node finalVal = value->evaluate(scope, instanceNode);
-    if (finalVal.toString() == "var") throw MerkError("finalVal is var in evaluateVariableAssignment");
+    if (finalVal.getType() == NodeValueType::Uninitialized) {
+        throw MerkError("finalVal is uninitialized in evaluateVariableAssignment");
+    }
 
     DEBUG_LOG(LogLevel::TRACE, "========================");
     DEBUG_LOG(LogLevel::TRACE, "Assigning: ", finalVal.toString() + " META: " + finalVal.getFlags().toString());
@@ -181,6 +255,29 @@ EvalResult evaluateBinaryOperation(const String& op,
 
     // evaluatingFor(leftValue, "evaluateBinaryOperation", scope->getScopeLevel());
     // evaluatingFor(rightValue, "evaluateBinaryOperation", scope->getScopeLevel());
+
+    // Hot-path for integer arithmetic/comparison in tight loops.
+    if (leftValue.isInt() && rightValue.isInt()) {
+        const int li = leftValue.toInt();
+        const int ri = rightValue.toInt();
+        if (op == "+") return EvalResult::Normal(Node(li + ri));
+        if (op == "-") return EvalResult::Normal(Node(li - ri));
+        if (op == "*") return EvalResult::Normal(Node(li * ri));
+        if (op == "/") {
+            if (ri == 0) throw MerkError("Division by zero");
+            return EvalResult::Normal(Node(li / ri));
+        }
+        if (op == "%") {
+            if (ri == 0) throw MerkError("Modulo by zero");
+            return EvalResult::Normal(Node(li % ri));
+        }
+        if (op == "==") return EvalResult::Normal(Node(li == ri));
+        if (op == "!=") return EvalResult::Normal(Node(li != ri));
+        if (op == "<") return EvalResult::Normal(Node(li < ri));
+        if (op == "<=") return EvalResult::Normal(Node(li <= ri));
+        if (op == ">") return EvalResult::Normal(Node(li > ri));
+        if (op == ">=") return EvalResult::Normal(Node(li >= ri));
+    }
 
     Node val;
 
@@ -260,15 +357,33 @@ EvalResult evaluateBlock(const Vector<UniquePtr<BaseAST>>& statements,
     for (const auto& child : statements) {
         if (!child) throw MerkError("Null child node in evaluateBlock");
 
-        EvalResult r = child->evaluateFlow(scope, instanceNode);
+        const AstType t = child->getAstType();
+        const bool needsFlowDispatch =
+            (t == AstType::IfStatement)   ||
+            (t == AstType::ElseStatement) ||
+            (t == AstType::ElifStatement) ||
+            (t == AstType::WhileLoop)     ||
+            (t == AstType::ForLoop)       ||
+            (t == AstType::Break)         ||
+            (t == AstType::Return)        ||
+            (t == AstType::Continue)      ||
+            (t == AstType::ThrowStatement)||
+            (t == AstType::CodeBlock);
 
-        // bubble Return/Break/Continue/Throw
-        if (r.isControl()) {
-            DEBUG_FLOW_EXIT();
-            return r;
+        if (needsFlowDispatch) {
+            EvalResult r = child->evaluateFlow(scope, instanceNode);
+
+            // bubble Return/Break/Continue/Throw
+            if (r.flow != ControlFlow::None) {
+                DEBUG_FLOW_EXIT();
+                return r;
+            }
+
+            lastValue = std::move(r.value);
+            continue;
         }
 
-        lastValue = std::move(r.value);
+        lastValue = child->evaluate(scope, instanceNode);
     }
 
     DEBUG_FLOW_EXIT();
@@ -292,8 +407,7 @@ EvalResult evaluateIf(const IfStatement& ifStatement,
 
     for (const auto& elif : ifStatement.getElifs()) {
         // Your ElifStatement::evaluate() returns truthy Node currently.
-        Node cond = elif->evaluate(scope, instanceNode);
-        if (cond.isTruthy()) {
+        if (elif->getCondition()->evaluate(scope, instanceNode).isTruthy()) {
             EvalResult r = elif->getBody()->evaluateFlow(scope, instanceNode);
             DEBUG_FLOW_EXIT();
             return r;
@@ -333,9 +447,8 @@ EvalResult evaluateElse(const CodeBlock& body, SharedPtr<Scope> scope, SharedPtr
     DEBUG_FLOW(FlowLevel::LOW);
     if (!scope) throw MerkError("evaluateElse: scope is null");
 
-    // You previously created child scope here. Keep if you want else-is-block scoping.
-    auto child = scope->createChildScope();
-    EvalResult r = body.evaluateFlow(child, instanceNode);
+    // Keep else behavior consistent with if/elif branches and avoid per-hit scope churn.
+    EvalResult r = body.evaluateFlow(scope, instanceNode);
 
     DEBUG_FLOW_EXIT();
     return r;
@@ -353,12 +466,78 @@ EvalResult evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* b
 
         EvalResult r = body->evaluateFlow(scope, instanceNode);
 
-        if (r.isContinue()) continue;
-        if (r.isBreak())    break;
+        switch (r.flow) {
+            case ControlFlow::None:
+                break;
+            case ControlFlow::Continue:
+                continue;
+            case ControlFlow::Break:
+                break;
+            case ControlFlow::Return:
+            case ControlFlow::Throw:
+                DEBUG_FLOW_EXIT();
+                return r;
+        }
 
-        if (r.isControl()) { // Return or Throw bubble
+        if (r.flow == ControlFlow::Break) break;
+    }
+
+    DEBUG_FLOW_EXIT();
+    return EvalResult::Normal(Node());
+}
+
+EvalResult evaluateForLoop(const ForLoop& forLoop, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
+    DEBUG_FLOW(FlowLevel::LOW);
+    if (!scope) throw MerkError("evaluateForLoop: scope is null");
+
+    const ASTStatement* startExpr = forLoop.getStartExpr();
+    const ASTStatement* endExpr = forLoop.getEndExpr();
+    const ASTStatement* stepExpr = forLoop.getStepExpr();
+    const CodeBlock* body = forLoop.getBody();
+    if (!startExpr || !endExpr || !stepExpr || !body) {
+        throw MerkError("evaluateForLoop: for-loop AST is incomplete");
+    }
+
+    const Node startNode = startExpr->evaluate(scope, instanceNode);
+    const Node endNode = endExpr->evaluate(scope, instanceNode);
+    const Node stepNode = stepExpr->evaluate(scope, instanceNode);
+
+    const int start = startNode.toInt();
+    const int end = endNode.toInt();
+    const int step = stepNode.toInt();
+    if (step == 0) {
+        throw MerkError("for-loop step cannot be 0");
+    }
+
+    const String& loopVar = forLoop.getLoopVariable();
+    if (!scope->hasVariable(loopVar)) {
+        DataTypeFlags loopFlags;
+        loopFlags.isConst = false;
+        loopFlags.isMutable = true;
+        loopFlags.isStatic = false;
+        loopFlags.type = NodeValueType::Int;
+        scope->declareVariable(loopVar, makeUnique<VarNode>(Node(start), loopFlags));
+    } else {
+        scope->updateVariable(loopVar, Node(start));
+    }
+
+    int i = start;
+    const auto inRange = [&]() { return step > 0 ? (i < end) : (i > end); };
+    while (inRange()) {
+        scope->updateVariable(loopVar, Node(i));
+        EvalResult r = body->evaluateFlow(scope, instanceNode);
+
+        if (r.flow == ControlFlow::Return || r.flow == ControlFlow::Throw) {
             DEBUG_FLOW_EXIT();
             return r;
+        }
+        if (r.flow == ControlFlow::Break) {
+            break;
+        }
+
+        i += step;
+        if (r.flow == ControlFlow::Continue || r.flow == ControlFlow::None) {
+            continue;
         }
     }
 
@@ -441,6 +620,7 @@ EvalResult evaluateClassBody(SharedPtr<Scope> classCapturedScope,
                 auto* methodDef = static_cast<MethodDef*>(child.get());
                 auto methodScope = classScope->createChildScope();
                 if (!methodScope) throw MerkError("generated methodScope is null in ClassDef::evaluate");
+                methodScope->owner = generateScopeOwner("ClassMethodBody", methodDef->getName());
 
                 methodDef->setClassScope(classScope);
 

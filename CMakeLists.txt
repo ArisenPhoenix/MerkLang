@@ -20,6 +20,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include_directories(${MERK_INCLUDE_DIR})
 
 file(GLOB_RECURSE MERK_SOURCES "${MERK_SRC_DIR}/*.cpp")
+list(REMOVE_ITEM MERK_SOURCES "${MERK_SRC_DIR}/core/scope/Scope.Debug.cpp")
 list(APPEND MERK_SOURCES "${CMAKE_SOURCE_DIR}/debugger_config.cpp")
 list(APPEND MERK_SOURCES "${CMAKE_SOURCE_DIR}/a_info.cpp")
 
@@ -64,6 +65,15 @@ else()
 endif()
 
 message(STATUS "Debug logging: ${ENABLE_DEBUG}")
+
+# Scope diagnostics macro toggle (separate from DEBUG logging).
+option(ENABLE_SCOPE_DIAGNOSTICS "Enable scope attach/cycle diagnostics" ON)
+if(ENABLE_SCOPE_DIAGNOSTICS)
+    target_compile_definitions(merk PRIVATE MERK_SCOPE_DIAGNOSTICS=1)
+else()
+    target_compile_definitions(merk PRIVATE MERK_SCOPE_DIAGNOSTICS=0)
+endif()
+message(STATUS "Scope diagnostics: ${ENABLE_SCOPE_DIAGNOSTICS}")
 
 # === Custom run target ===
 add_custom_target(run

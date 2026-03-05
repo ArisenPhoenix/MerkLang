@@ -27,7 +27,11 @@ void Context::setVariable(const String& name, UniquePtr<VarNode> value) {
         }
     }
 
-    variables[name] = std::move(value);
+    if (it != variables.end()) {
+        it->second = std::move(value);
+    } else {
+        variables.emplace(name, std::move(value));
+    }
     DEBUG_FLOW_EXIT();
 
 }
@@ -74,6 +78,22 @@ std::optional<std::reference_wrapper<VarNode>> Context::getVariable(const String
     return std::nullopt; 
 }
 
+VarNode* Context::findVariable(const String& name) {
+    auto it = variables.find(name);
+    if (it == variables.end() || !it->second) {
+        return nullptr;
+    }
+    return it->second.get();
+}
+
+const VarNode* Context::findVariable(const String& name) const {
+    auto it = variables.find(name);
+    if (it == variables.end() || !it->second) {
+        return nullptr;
+    }
+    return it->second.get();
+}
+
 Context Context::clone() const {
     Context newContext;
     newContext.variables = deepCopyVariables();
@@ -106,7 +126,7 @@ const std::unordered_map<String, UniquePtr<VarNode>>& Context::getVariables() co
 
 bool Context::hasVariable(const String& name) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    auto hasVariable = variables.find(name) != variables.end();
+    auto hasVariable = variables.contains(name);
     DEBUG_FLOW_EXIT();
     return hasVariable;
     

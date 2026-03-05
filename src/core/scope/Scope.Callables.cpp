@@ -48,7 +48,7 @@ bool Scope::hasFunction(const String& name) const {
 std::optional<Vector<SharedPtr<CallableSignature>>> Scope::lookupFunction(const String& name) const {
     // Prefer local overload sets (shadowing). If not found, walk up parents, then fall back to globals.
     if (auto funcs = localFunctions.getFunction(name)) { return funcs; }
-    if (auto parent = parentScope.lock()) { return parent->lookupFunction(name); }
+    if (auto parent = getParent()) { return parent->lookupFunction(name); }
     if (globalFunctions && globalFunctions->hasFunction(name)) {
         auto sig = globalFunctions->getFunction(name);
         if (sig.has_value()) return sig;
@@ -70,7 +70,7 @@ std::optional<SharedPtr<CallableSignature>> Scope::getFunction(const String& nam
 // For Function Reference
 std::optional<Vector<SharedPtr<CallableSignature>>> Scope::getFunction(const String& name) {
     if (auto funcs = lookupFunction(name)) { return funcs.value(); }
-    if (auto parent = parentScope.lock()) { return parent->getFunction(name); }
+    if (auto parent = getParent()) { return parent->getFunction(name); }
     if (globalFunctions) {
         auto globals = globalFunctions->getFunction(name);
         if (globals) { return globals.value(); }
@@ -88,7 +88,7 @@ std::optional<SharedPtr<ClassSignature>> Scope::lookupClass(const String& name) 
         return local;
     }
 
-    if (auto parent = parentScope.lock()) {
+    if (auto parent = getParent()) {
         return parent->lookupClass(name);
     }
 
@@ -108,7 +108,7 @@ std::optional<SharedPtr<ClassSignature>> Scope::getClass(const String& name) {
         return local;
     }
 
-    if (auto parent = parentScope.lock()) {
+    if (auto parent = getParent()) {
         return parent->getClass(name);
     }
 
@@ -125,7 +125,7 @@ bool Scope::hasClass(const String& name) const {
         return true;
     }
 
-    if (auto parent = parentScope.lock()) {
+    if (auto parent = getParent()) {
         return parent->hasClass(name);
     }
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <unordered_set>
+#include <vector>
 #include "core/Scope.hpp"
 
 #include <cassert>
@@ -8,12 +9,12 @@
 
 #include "core/node/Node.hpp"
 #include "core/node/ParamNode.hpp"
-#include "core/node/ArgumentNode.hpp"
+
 
 #include "core/types.h"
 #include "core/errors.h"
 #include "utilities/helper_functions.h"
-#include "utilities/debugging_functions.h"
+
 #include "utilities/debugger.h"
 
 // #include "ast/AstChain.hpp"
@@ -21,19 +22,26 @@
 
 
 #include "core/registry/Context.hpp"
-#include "core/registry/ClassRegistry.hpp"
 #include "core/registry/FunctionRegistry.hpp"
 #include "core/errors.h"
 #include "core/callables/functions/Function.hpp"
 
 
 
-int totalWith = 0;
-int totalWithout = 0;
-
-
 ScopeCounts Scope::getCounts() {
     return counts;
+}
+
+void Scope::refreshVariableLookupCache() const {
+    const uint64_t epoch = variableLookupEpoch.load(std::memory_order_relaxed);
+    if (variableLookupCacheEpoch != epoch) {
+        variableLookupCache.clear();
+        variableLookupCacheEpoch = epoch;
+    }
+}
+
+void Scope::bumpVariableLookupEpoch() {
+    variableLookupEpoch.fetch_add(1, std::memory_order_relaxed);
 }
 
 
@@ -46,7 +54,7 @@ const Context& Scope::getAllVariables(Context& callingContext) const {
     }
 
 
-    if (auto parent = parentScope.lock()){
+    if (auto parent = getParent()){
         if (parent && !parent->getContext().getVariables().empty()){
             parent->getAllVariables(callingContext);
         }
@@ -82,7 +90,7 @@ const FunctionRegistry& Scope::getAllFunctions(FunctionRegistry& callingRegister
     
     DEBUG_LOG(LogLevel::INFO, "Added Own Functions");
 
-    if (auto parent = parentScope.lock()){
+    if (auto parent = getParent()){
         if (parent && !parent->getContext().getVariables().empty()){
             parent->getAllFunctions(callingRegister);
         }
@@ -122,24 +130,53 @@ bool Scope::has(const SharedPtr<Scope>& checkScope) {
     if (!checkScope) {
         throw MerkError("ChildScope for checking is null");
     }
-    if (this == checkScope.get()) {
-        return true;
-    }
-    for (auto& child : getChildren()) {
-        if (child->has(checkScope)) {
+    std::unordered_set<const Scope*> visited;
+    std::vector<const Scope*> stack;
+    stack.push_back(this);
+
+    while (!stack.empty()) {
+        const Scope* node = stack.back();
+        stack.pop_back();
+
+        if (!visited.insert(node).second) {
+            continue;
+        }
+        if (node == checkScope.get()) {
             return true;
+        }
+
+        for (const auto& child : node->childScopes) {
+            if (child) {
+                stack.push_back(child.get());
+            }
         }
     }
     return false;
 }
 
 bool Scope::isAncestorOf(const Scope* maybeDesc) const {
-    for (auto p = maybeDesc; p; ) {
-        if (p == this) {return true;}
-        if (p->getParent()) {
-            p = p->getParent().get();
+    std::unordered_set<const Scope*> visited;
+    for (auto p = maybeDesc; p != nullptr; ) {
+        if (p == this) {
+            return true;
         }
-           // or however you store parent
+        if (!visited.insert(p).second) {
+#if MERK_SCOPE_DIAGNOSTICS
+            ancestorParentChainCycleBailouts.fetch_add(1, std::memory_order_relaxed);
+            DEBUG_LOG(
+                LogLevel::WARNING,
+                "[ScopeDiag] isAncestorOf bailed due to parent-chain cycle | target=",
+                this,
+                " | probe=",
+                maybeDesc,
+                " | repeated=",
+                p
+            );
+#endif
+            return false; // Existing cycle in parent chain.
+        }
+        auto parent = p->parentScope.lock();
+        p = parent.get();
     }
     return false;
 }
@@ -150,18 +187,25 @@ void Scope::validateNoCycles(SharedPtr<Scope> childScope){
     if (childScope.get() == this) throw MerkError("appendChildScope: cannot parent self");
 
     // If it already has a parent, that's a bug unless you have a real detach/reattach protocol.
-    if (auto existingParent = childScope->parentScope.lock()) {
+    if (auto existingParent = childScope->getParent()) {
         if (existingParent.get() == this) {
             // already attached here: avoid duplicates
             if (!hasImmediateChild(childScope)) childScopes.push_back(childScope);
             return;
         }
+        std::cout << "appendChildScope conflict: dumping scope trees before throw." << std::endl;
+        std::cout << "[current scope]" << std::endl;
+        printScopeTree();
+        std::cout << "[existing parent scope]" << std::endl;
+        existingParent->printScopeTree();
+        std::cout << "[child scope]" << std::endl;
+        childScope->printScopeTree();
         throw MerkError("appendChildScope: child already has a parent: " +
                         existingParent->metaString() + " -> " + childScope->metaString());
     }
 
     // Prevent parent-cycles: child cannot be one of my ancestors.
-    for (auto p = shared_from_this(); p; p = p->parentScope.lock()) {
+    for (auto p = shared_from_this(); p; p = p->getParent()) {
         if (p.get() == childScope.get()) {
             throw MerkError("appendChildScope: would create cycle (child is ancestor)");
         }
@@ -171,18 +215,42 @@ void Scope::validateNoCycles(SharedPtr<Scope> childScope){
 void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
     if (!childScope) throw MerkError("appendChildScope: childScope null");
     if (childScope.get() == this) throw MerkError("appendChildScope: cannot parent self");
-    auto hasChild = this->has(childScope);
-    if (!hasChild) {
-        childScope->parentScope = shared_from_this();
-        childScope->scopeLevel = getScopeLevel() + 1;
-        childScopes.push_back(childScope);
-        totalWithout += 1;
-    } else {
+
+    // Always block true cycle creation on attach.
+    if (childScope->isAncestorOf(this)) {
+        throw MerkError("appendChildScope: would create cycle (child is ancestor)");
+    }
+#if MERK_SCOPE_DIAGNOSTICS
+    diagnosticAppend(childScope);
+#endif
+
+    // Fast-path in normal runtime: only check immediate children.
+    if (hasImmediateChild(childScope)) {
         totalWith += 1;
+        return;
     }
 
+#if MERK_SCOPE_DIAGNOSTICS
+    // Deeper graph reachability check is diagnostic-only.
+    if (this->has(childScope)) {
+        DEBUG_LOG(
+            LogLevel::WARNING,
+            "[ScopeDiag] append target already reachable in subtree (non-immediate) | parent=",
+            this,
+            " | child=",
+            childScope.get()
+        );
+        totalWith += 1;
+        return;
+    }
+#endif
+
+    childScope->parentScope = shared_from_this();
+    childScope->scopeLevel = getScopeLevel() + 1;
+    childScopes.push_back(childScope);
+    totalWithout += 1;
+
     childScope->isDetached = false;
-    childScope->owner = owner;
     includeMetaData(childScope, false);
 
     if (update) childScope->updateChildLevelsRecursively();
@@ -190,10 +258,6 @@ void Scope::appendChildScope(SharedPtr<Scope> childScope, bool update) {
 
 SharedPtr<Scope> Scope::getParent() const {
     DEBUG_FLOW(FlowLevel::LOW);
-    if (parentScope.expired()) {
-        DEBUG_FLOW_EXIT();
-        return nullptr; // Explicitly return null for root scope
-    }
     if (auto parent = parentScope.lock()) {
         // DEBUG_LOG(LogLevel::TRACE, "DEBUG Scope::getParent: Accessing Parent Scope at level: ", parent->getScopeLevel(), 
         //          " | Memory Loc: ", parent.get(), 
@@ -202,7 +266,11 @@ SharedPtr<Scope> Scope::getParent() const {
         return parent;
     }
 
-    throw ParentScopeNotFoundError();
+    DEBUG_FLOW_EXIT();
+    if (kind != ScopeKind::Root) {
+        throw ParentScopeNotFoundError();
+    }
+    return nullptr; // Explicitly return null for root scope
 }
 
 void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDeclaration) {
@@ -216,7 +284,7 @@ void Scope::setVariable(const String& name, UniquePtr<VarNode> value, bool isDec
     } else {
         if (context.hasVariable(name)) {
             context.setVariable(name, std::move(value));  // Update in the current scope
-        } else if (auto parent = parentScope.lock()) {
+        } else if (auto parent = getParent()) {
             parent->setVariable(name, std::move(value), isDeclaration);  // Delegate to parent scope
         } else {
             
@@ -249,7 +317,7 @@ void Scope::declareVariable(const String& name, UniquePtr<VarNode> value) {
     //       "DECLARE name=", name,
     //       " this=", (void*)this,
     //       " level=", scopeLevel,
-    //       " parent=", (void*)parentScope.lock().get(),
+    //       " parent=", (void*)getParent().get(),
     //       " owner=", owner,
     //       " kind=", scopeKindToString(kind));
     // context.debugPrint();
@@ -274,14 +342,8 @@ Context& Scope::getContextWith(const String& varName) {
 
 void Scope::updateVariable(const String& name, const Node& value) {
     // If variable is in this context, validate and update here
-    if (context.hasVariable(name)) {
-        auto varRef = context.getVariable(name);
-        if (!varRef.has_value()) {
-            throw VariableNotFoundError(name, "Scope::updateVariable -> context.getVariable failed");
-        }
-
-        VarNode& var = varRef.value().get();
-        DataTypeFlags vf = var.getVarFlags();   // add accessor if you don't have it
+    if (VarNode* var = context.findVariable(name)) {
+        DataTypeFlags& vf = var->getVarFlags();
 
         // 1) const blocks reassignment (binding-level)
         if (vf.isConst) {
@@ -302,22 +364,25 @@ void Scope::updateVariable(const String& name, const Node& value) {
                 );
             }
         } else {
-            vf.inferredSig = tsr.inferFromValue(value);
+            // Keep a best-effort inferred signature without paying inference every assignment.
+            if (vf.inferredSig == kInvalidTypeSignatureId) {
+                vf.inferredSig = tsr.inferFromValue(value);
+            }
         }
 
-        // 3) apply value mutability semantics (:= freezes value)
-        Node stored = value;
-        // stored.getFlags().isMutable = vf.isMutable;
-        if (stored.getFlags().isMutable != vf.isMutable) {
-            stored.getFlags().isMutable = vf.isMutable;
+        // 3) apply value mutability semantics (:= freezes value) only when needed.
+        if (value.getFlags().isMutable == vf.isMutable) {
+            context.updateVariable(name, value);
+            return;
         }
-        // 4) store using existing mechanism (calls VarNode::setValue once)
+        Node stored = value;
+        stored.getFlags().isMutable = vf.isMutable;
         context.updateVariable(name, stored);
         return;
     }
 
     // Not in this scope -> delegate to parent
-    if (auto parent = parentScope.lock()) {
+    if (auto parent = getParent()) {
         parent->updateVariable(name, value);
         return;
     }
@@ -327,14 +392,12 @@ void Scope::updateVariable(const String& name, const Node& value) {
 
 VarNode& Scope::getVariable(const String& name) {
     DEBUG_FLOW(FlowLevel::VERY_HIGH);
-
-    if (auto variable = context.getVariable(name)) {
-        return variable.value();
-    }
-
-    // Delegate to parent scope if it exists
-    if (auto parent = parentScope.lock()) {
-        return parent->getVariable(name);
+    for (Scope* s = this; s != nullptr; ) {
+        if (VarNode* variable = s->context.findVariable(name)) {
+            return *variable;
+        }
+        auto parent = s->getParent();
+        s = parent.get();
     }
     // DEBUG_LOG(LogLevel::PERMISSIVE, "Scope::getVariable Missed variable ", name, "in The below scope: ");
     // debugPrint();
@@ -348,15 +411,13 @@ VarNode& Scope::getVariable(const String& name) {
 // Check if a variable exists in the current scope or parent scopes
 bool Scope::hasVariable(const String& name) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
-    if (context.hasVariable(name)) {
-        DEBUG_FLOW_EXIT();
-        return true;
-    }
-
-    // Check the parent scope
-    if (auto parent = parentScope.lock()) {
-        DEBUG_FLOW_EXIT();
-        return parent->hasVariable(name);
+    for (const Scope* s = this; s != nullptr; ) {
+        if (s->context.hasVariable(name)) {
+            DEBUG_FLOW_EXIT();
+            return true;
+        }
+        auto parent = s->getParent();
+        s = parent.get();
     }
 
     DEBUG_FLOW_EXIT();

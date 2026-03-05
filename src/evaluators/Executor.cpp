@@ -9,7 +9,7 @@
 #include "core/Scope.hpp"
 #include "ast/Exceptions.hpp"
 
-void placeArgsInCallScope(ArgumentList evaluatedArgs, SharedPtr<Scope> callScope, ParamList& parameters) {
+void placeArgsInCallScope(const ArgumentList& evaluatedArgs, SharedPtr<Scope> callScope, ParamList& parameters) {
     DEBUG_FLOW(FlowLevel::MED);
     parameters.verifyArguments(evaluatedArgs);
     ArgumentList args;
@@ -23,25 +23,18 @@ void placeArgsInCallScope(ArgumentList evaluatedArgs, SharedPtr<Scope> callScope
 
     auto finalArgs = args.bindTo(parameters);
 
-    DEBUG_LOG(LogLevel::TRACE, "FINAL ARGS: ", joinVectorNodeStrings(finalArgs));
     for (size_t i = 0; i < parameters.size(); ++i) {
         auto arg = finalArgs[i];
-        auto flags = args.getFlags();
-        auto paramVar = VarNode(finalArgs[i]);
-        paramVar.setFlags(arg.getFlags());
-        if (paramVar.getFlags().name.empty()) { throw MerkError("ParamVar Name is Empty WITH " + paramVar.getFlags().toString()); }
-        String varName = flags.name;
-        if (arg.getFlags().name.empty()) { throw MerkError("Arg Is Empty"); }
-        DEBUG_LOG(LogLevel::TRACE, "PARAMETER's NAME:  ------------------------ > ", arg.getFlags().toString());
-
-        callScope->declareVariable(arg.getFlags().name, makeUnique<VarNode>(arg));
+        const auto& param = parameters[i];
+        const String paramName = param.getName();
+        if (paramName.empty()) { throw MerkError("Parameter name is empty"); }
+        callScope->declareVariable(paramName, makeUnique<VarNode>(arg, param.flags));
     }
 
     DEBUG_FLOW_EXIT();
 }
 
-
-Node static nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Scope> capturedScope, CodeBlock* body, SharedPtr<ClassInstanceNode> instanceNode) {   
+Node static nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Scope> capturedScope, CodeBlock* body, SharedPtr<ClassInstanceNode> instanceNode) {
     try {
         DEBUG_LOG(LogLevel::TRACE, "In try block");
         if (!callScope) { throw MerkError("Method " + name +" Has No Call Scope:"); }
@@ -49,19 +42,20 @@ Node static nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Sc
         String matches = callScope == capturedScope ? "true" : "false";
 
         Node val = body->evaluate(callScope, instanceNode);
-        
+
         DEBUG_FLOW_EXIT();
         return val;
     } catch (const ReturnException& e) {
         auto val = e.getValue();
         DEBUG_LOG(LogLevel::TRACE, "METHOD " + name + " RETURNED: " + val.getFlags().toString());
-        DEBUG_FLOW_EXIT();      
+        DEBUG_FLOW_EXIT();
         return val;
     }
 }
 
+
 namespace Executor {
-Node Function(String name, SharedPtr<Scope> callScope, SharedPtr<Scope> capturedScope, bool requiresReturn, ArgumentList args, CodeBlock* body, ParamList& parameters,
+Node Function(const String& name, SharedPtr<Scope> callScope, SharedPtr<Scope> capturedScope, bool requiresReturn, const ArgumentList& args, CodeBlock* body, ParamList& parameters,
     SharedPtr<ClassInstanceNode> instanceNode) {
     MARK_UNUSED_MULTI(name, capturedScope);
     DEBUG_FLOW(FlowLevel::NONE);
@@ -70,7 +64,6 @@ Node Function(String name, SharedPtr<Scope> callScope, SharedPtr<Scope> captured
 
     DEBUG_FLOW_EXIT();
     EvalResult r = body->evaluateFlow(callScope, instanceNode);
-
     if (r.isReturn()) { return r.value; }
     if (r.isThrow())  { throw MerkError("Unhandled throw"); }
     if (r.isBreak() || r.isContinue()) { throw MerkError("break/continue used outside loop"); }
@@ -79,7 +72,7 @@ Node Function(String name, SharedPtr<Scope> callScope, SharedPtr<Scope> captured
     return Node();
 }
 
-Node Method(String name, SharedPtr<Scope> callScope, SharedPtr<Scope> capturedScope, bool requiresReturn, ArgumentList args, CodeBlock* body, ParamList& parameters,
+Node Method(const String& name, SharedPtr<Scope> callScope, SharedPtr<Scope> capturedScope, bool requiresReturn, const ArgumentList& args, CodeBlock* body, ParamList& parameters,
     SharedPtr<ClassInstanceNode> instanceNode) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!instanceNode) { throw MerkError("An Instance In UserMethod::execute was not provided"); }

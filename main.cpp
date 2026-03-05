@@ -2,6 +2,8 @@
 #include <fstream>
 #include <unordered_map>
 #include <cassert>
+#include <chrono>
+#include <iomanip>
 
 #include "core/TypesFWD.hpp"
 #include "utilities/streaming.h"
@@ -125,11 +127,15 @@ int run_original(int argc, char* argv[]) {
         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
 
         auto tokens = tokenizer.tokenize(lCfg);
-        tokenizer.printTokens(true);
-        DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n"); 
-
-        DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
+        DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
         
+        #ifdef ENABLE_DEBUG
+        if (logLevel == LogLevel::INFO) {
+            tokenizer.printTokens(true);
+        }
+        #endif
+        // tokenizer.printTokens(true);
+        DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
         Parser parser(tokens, globalScope, interpretMode, byBlock);
         DEBUG_LOG(LogLevel::DEBUG, "\nStarting parser...");
         Timer timer = Timer();
@@ -140,7 +146,9 @@ int run_original(int argc, char* argv[]) {
         }
 
         timer.printElapsed(filePath);
-
+        if (filePath.find("fib.merk")!=String::npos) {
+            testFunc();
+        }
              
 
         DEBUG_LOG(LogLevel::DEBUG, "Terminating Program...");
@@ -148,7 +156,7 @@ int run_original(int argc, char* argv[]) {
             DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
             globalScope->debugPrint();   
         }
-        
+        // globalScope->printScopeTree();
 
         ast->clear();
         
@@ -162,6 +170,7 @@ int run_original(int argc, char* argv[]) {
         std::cerr << "Error during execution: " << ex.what() << std::endl;
         return 1;
     } 
+    globalScope->printVariables();
 
     // Print the final state of the Global Scope right before exiting
     DEBUG_LOG(LogLevel::DEBUG, "");
@@ -176,14 +185,486 @@ int run_original(int argc, char* argv[]) {
 
 
 
+struct CliOptions {
+    bool benchmark = false;
+    bool nodeBenchmark = false;
+    bool manualComputeBenchmark = false;
+    int benchmarkIters = 10;
+    int benchmarkWarmup = 1;
+    String fileName = "test1.merk";
+    bool showHelp = false;
+};
+
+struct RunMetrics {
+    bool ok = false;
+    size_t tokenCount = 0;
+    double tokenizeMs = 0.0;
+    double parseMs = 0.0;
+    double evalMs = 0.0;
+    double totalMs = 0.0;
+};
+
+class ScopedSilenceCout {
+public:
+    explicit ScopedSilenceCout(bool enabled) : enabled(enabled) {
+        if (this->enabled) {
+            oldBuf = std::cout.rdbuf(sink.rdbuf());
+        }
+    }
+    ~ScopedSilenceCout() {
+        if (enabled && oldBuf) {
+            std::cout.rdbuf(oldBuf);
+        }
+    }
+private:
+    bool enabled = false;
+    std::streambuf* oldBuf = nullptr;
+    std::ostringstream sink;
+};
+
+static String resolveFilePath(const String& fileName) {
+    const String codeDir = "code/";
+    const String baseDir = "../";
+    return baseDir + joinPaths(codeDir, fileName);
+}
+
+static int parsePositiveInt(const String& value, const String& optName) {
+    try {
+        int parsed = std::stoi(value);
+        if (parsed < 1) {
+            throw std::runtime_error(optName + " must be >= 1");
+        }
+        return parsed;
+    } catch (...) {
+        throw std::runtime_error("Invalid value for " + optName + ": " + value);
+    }
+}
+
+static CliOptions parseCliOptions(int argc, char* argv[]) {
+    CliOptions options;
+    for (int i = 1; i < argc; ++i) {
+        const String arg = argv[i];
+        if (arg == "--help" || arg == "-h") {
+            options.showHelp = true;
+            continue;
+        }
+        if (arg == "--bench") {
+            options.benchmark = true;
+            continue;
+        }
+        if (arg == "--bench-node") {
+            options.nodeBenchmark = true;
+            continue;
+        }
+        if (arg == "--bench-manual") {
+            options.manualComputeBenchmark = true;
+            continue;
+        }
+        if (arg == "--bench-iters" && i + 1 < argc) {
+            options.benchmarkIters = parsePositiveInt(argv[++i], "--bench-iters");
+            continue;
+        }
+        if (arg.rfind("--bench-iters=", 0) == 0) {
+            options.benchmarkIters = parsePositiveInt(arg.substr(String("--bench-iters=").size()), "--bench-iters");
+            continue;
+        }
+        if (arg == "--bench-warmup" && i + 1 < argc) {
+            options.benchmarkWarmup = parsePositiveInt(argv[++i], "--bench-warmup");
+            continue;
+        }
+        if (arg.rfind("--bench-warmup=", 0) == 0) {
+            options.benchmarkWarmup = parsePositiveInt(arg.substr(String("--bench-warmup=").size()), "--bench-warmup");
+            continue;
+        }
+        if (!arg.empty() && arg[0] == '-') {
+            throw std::runtime_error("Unknown option: " + arg);
+        }
+        options.fileName = arg;
+    }
+    return options;
+}
+
+static void printUsage() {
+    std::cout
+        << "Usage:\n"
+        << "  ./merk [file.merk]\n"
+        << "  ./merk --bench [file.merk] [--bench-iters N] [--bench-warmup N]\n"
+        << "  ./merk --bench-node [--bench-iters N] [--bench-warmup N]\n"
+        << "  ./merk --bench-manual [--bench-iters N] [--bench-warmup N]\n";
+}
+
+struct NodeBenchMetrics {
+    double isNullMs = 0.0;
+    double isCallableMs = 0.0;
+    double toStringMs = 0.0;
+    double copyAssignMs = 0.0;
+    double arithmeticMs = 0.0;
+    double hashMs = 0.0;
+    double totalMs = 0.0;
+};
+
+static NodeBenchMetrics runNodeMicroBenchOnce() {
+    using Clock = std::chrono::steady_clock;
+    NodeBenchMetrics m;
+
+    constexpr int inner = 50000;
+    volatile int sinkInt = 0;
+    volatile bool sinkBool = false;
+    volatile std::size_t sinkHash = 0;
+    volatile std::size_t sinkLen = 0;
+
+    Node nNull(Null);
+    Node nInt(123);
+    Node nBool(true);
+    Node nStr(String("merk"));
+    Node nOne(1);
+    Node nTwo(2);
+
+    auto tTotal0 = Clock::now();
+
+    auto t0 = Clock::now();
+    for (int i = 0; i < inner; ++i) {
+        sinkBool ^= nNull.isNull();
+        sinkBool ^= nInt.isNull();
+    }
+    auto t1 = Clock::now();
+    m.isNullMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+    t0 = Clock::now();
+    for (int i = 0; i < inner; ++i) {
+        sinkBool ^= nInt.isCallable();
+        sinkBool ^= nNull.isCallable();
+    }
+    t1 = Clock::now();
+    m.isCallableMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+    t0 = Clock::now();
+    for (int i = 0; i < inner; ++i) {
+        sinkLen += nInt.toString().size();
+        sinkLen += nBool.toString().size();
+        sinkLen += nStr.toString().size();
+    }
+    t1 = Clock::now();
+    m.toStringMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+    t0 = Clock::now();
+    Node a(1), b(2), c(3);
+    for (int i = 0; i < inner; ++i) {
+        a = b;
+        b = c;
+        c = a;
+        sinkInt += a.toInt();
+    }
+    t1 = Clock::now();
+    m.copyAssignMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+    t0 = Clock::now();
+    for (int i = 0; i < inner; ++i) {
+        Node sum = nOne + nTwo;
+        sinkInt += sum.toInt();
+    }
+    t1 = Clock::now();
+    m.arithmeticMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+    t0 = Clock::now();
+    for (int i = 0; i < inner; ++i) {
+        sinkHash ^= nInt.hash();
+        sinkHash ^= nStr.hash();
+    }
+    t1 = Clock::now();
+    m.hashMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+    auto tTotal1 = Clock::now();
+    m.totalMs = std::chrono::duration<double, std::milli>(tTotal1 - tTotal0).count();
+
+    if (sinkInt == -1 && sinkBool && sinkHash == 0 && sinkLen == 0) {
+        std::cerr << "Impossible sink state\n";
+    }
+
+    return m;
+}
+
+static int runNodeBenchmark(const CliOptions& options) {
+    double isNullTotal = 0.0;
+    double isCallableTotal = 0.0;
+    double toStringTotal = 0.0;
+    double copyAssignTotal = 0.0;
+    double arithmeticTotal = 0.0;
+    double hashTotal = 0.0;
+    double overallTotal = 0.0;
+
+    for (int i = 0; i < options.benchmarkWarmup; ++i) {
+        (void)runNodeMicroBenchOnce();
+    }
+
+    for (int i = 0; i < options.benchmarkIters; ++i) {
+        auto r = runNodeMicroBenchOnce();
+        isNullTotal += r.isNullMs;
+        isCallableTotal += r.isCallableMs;
+        toStringTotal += r.toStringMs;
+        copyAssignTotal += r.copyAssignMs;
+        arithmeticTotal += r.arithmeticMs;
+        hashTotal += r.hashMs;
+        overallTotal += r.totalMs;
+    }
+
+    const double denom = static_cast<double>(options.benchmarkIters);
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << "\nNode Benchmark Results\n";
+    std::cout << "Iterations: " << options.benchmarkIters
+              << " (warmup: " << options.benchmarkWarmup << ")\n";
+    std::cout << "Avg isNull:      " << (isNullTotal / denom) << " ms\n";
+    std::cout << "Avg isCallable:  " << (isCallableTotal / denom) << " ms\n";
+    std::cout << "Avg toString:    " << (toStringTotal / denom) << " ms\n";
+    std::cout << "Avg copyAssign:  " << (copyAssignTotal / denom) << " ms\n";
+    std::cout << "Avg arithmetic:  " << (arithmeticTotal / denom) << " ms\n";
+    std::cout << "Avg hash:        " << (hashTotal / denom) << " ms\n";
+    std::cout << "Avg total:       " << (overallTotal / denom) << " ms\n";
+    return 0;
+}
+
+struct ManualComputeMetrics {
+    double rawIntMs = 0.0;
+    double nodeOpMs = 0.0;
+    int rawChecksum = 0;
+    int nodeChecksum = 0;
+};
+
+static ManualComputeMetrics runManualComputeOnce() {
+    using Clock = std::chrono::steady_clock;
+    ManualComputeMetrics m;
+
+    constexpr int n = 300000;
+    constexpr int mod = 1000003;
+
+    {
+        auto t0 = Clock::now();
+        int i = 0;
+        int a = 1;
+        int b = 2;
+        int c = 0;
+
+        while (i < n) {
+            a = (a * 13 + 17) % mod;
+            b = (b + a + i) % mod;
+
+            if ((i % 7) == 0) {
+                c = c + (a % 97);
+            } else {
+                c = c + (b % 89);
+            }
+            i = i + 1;
+        }
+
+        m.rawChecksum = (a + b + c + i) % mod;
+        auto t1 = Clock::now();
+        m.rawIntMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    }
+
+    {
+        const Node nNode(n);
+        const Node modNode(mod);
+        const Node mulNode(13);
+        const Node addNode(17);
+        const Node sevenNode(7);
+        const Node ninetySevenNode(97);
+        const Node eightyNineNode(89);
+        const Node oneNode(1);
+        const Node zeroNode(0);
+
+        Node iNode(0);
+        Node aNode(1);
+        Node bNode(2);
+        Node cNode(0);
+
+        auto t0 = Clock::now();
+        while (iNode < nNode) {
+            aNode = ((aNode * mulNode) + addNode) % modNode;
+            bNode = ((bNode + aNode) + iNode) % modNode;
+
+            if ((iNode % sevenNode) == zeroNode) {
+                cNode = cNode + (aNode % ninetySevenNode);
+            } else {
+                cNode = cNode + (bNode % eightyNineNode);
+            }
+
+            iNode = iNode + oneNode;
+        }
+
+        Node checksum = (((aNode + bNode) + cNode) + iNode) % modNode;
+        m.nodeChecksum = checksum.toInt();
+        auto t1 = Clock::now();
+        m.nodeOpMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    }
+
+    return m;
+}
+
+static int runManualComputeBenchmark(const CliOptions& options) {
+    double rawTotal = 0.0;
+    double nodeTotal = 0.0;
+    int rawChecksum = 0;
+    int nodeChecksum = 0;
+
+    for (int i = 0; i < options.benchmarkWarmup; ++i) {
+        (void)runManualComputeOnce();
+    }
+
+    for (int i = 0; i < options.benchmarkIters; ++i) {
+        auto r = runManualComputeOnce();
+        rawTotal += r.rawIntMs;
+        nodeTotal += r.nodeOpMs;
+        rawChecksum = r.rawChecksum;
+        nodeChecksum = r.nodeChecksum;
+    }
+
+    const double denom = static_cast<double>(options.benchmarkIters);
+    const double rawAvg = rawTotal / denom;
+    const double nodeAvg = nodeTotal / denom;
+    const double ratio = (rawAvg > 0.0) ? (nodeAvg / rawAvg) : 0.0;
+
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << "\nManual Compute Benchmark Results\n";
+    std::cout << "Kernel: compute_loop equivalent (while-only arithmetic)\n";
+    std::cout << "Iterations: " << options.benchmarkIters
+              << " (warmup: " << options.benchmarkWarmup << ")\n";
+    std::cout << "Avg raw-int:    " << rawAvg << " ms\n";
+    std::cout << "Avg node-op:    " << nodeAvg << " ms\n";
+    std::cout << "Node/raw ratio: " << ratio << "x\n";
+    std::cout << "Checksums: raw=" << rawChecksum << ", node=" << nodeChecksum << "\n";
+
+    return 0;
+}
+
+static RunMetrics runPipelineOnce(const String& filePath, bool printScopeReport) {
+    using Clock = std::chrono::steady_clock;
+    RunMetrics metrics;
+    const bool interpretMode = false;
+    const bool byBlock = false;
+    LexerConfig lCfg;
+    SharedPtr<Scope> globalScope = generateGlobalScope(interpretMode, lCfg);
+    auto logLevel = Debugger::getInstance().getLogLevel();
+
+    auto tTotalStart = Clock::now();
+
+    try {
+        Tokenizer tokenizer(filePath, true);
+
+        auto t0 = Clock::now();
+        auto tokens = tokenizer.tokenize(lCfg);
+        auto t1 = Clock::now();
+        metrics.tokenizeMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+        metrics.tokenCount = tokens.size();
+
+#ifdef ENABLE_DEBUG
+        if (logLevel == LogLevel::DEBUG) {
+            tokenizer.printTokens(true);
+        }
+#endif
+
+        t0 = Clock::now();
+        Parser parser(tokens, globalScope, interpretMode, byBlock);
+        auto ast = parser.parse();
+        t1 = Clock::now();
+        metrics.parseMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+        t0 = Clock::now();
+        if (!interpretMode) {
+            ast->evaluateFlow(globalScope);
+        }
+        t1 = Clock::now();
+        metrics.evalMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+        ast->clear();
+        metrics.ok = true;
+    } catch (MerkError& e) {
+        std::cerr << e.errorString() << std::endl;
+    } catch (const std::exception& ex) {
+        std::cerr << "Error during execution: " << ex.what() << std::endl;
+    }
+
+    globalScope->clear();
+    globalScope.reset();
+    if (printScopeReport) {
+        Scope::printScopeReport();
+    }
+
+    auto tTotalEnd = Clock::now();
+    metrics.totalMs = std::chrono::duration<double, std::milli>(tTotalEnd - tTotalStart).count();
+    return metrics;
+}
+
+static int runBenchmark(const CliOptions& options) {
+    const String filePath = resolveFilePath(options.fileName);
+
+    double totalTok = 0.0;
+    double totalParse = 0.0;
+    double totalEval = 0.0;
+    double totalTotal = 0.0;
+    size_t tokens = 0;
+
+    {
+        ScopedSilenceCout silence(true);
+
+        for (int i = 0; i < options.benchmarkWarmup; ++i) {
+            auto warmup = runPipelineOnce(filePath, false);
+            if (!warmup.ok) {
+                return 1;
+            }
+        }
+
+        for (int i = 0; i < options.benchmarkIters; ++i) {
+            auto run = runPipelineOnce(filePath, false);
+            if (!run.ok) {
+                return 1;
+            }
+            totalTok += run.tokenizeMs;
+            totalParse += run.parseMs;
+            totalEval += run.evalMs;
+            totalTotal += run.totalMs;
+            tokens = run.tokenCount;
+        }
+    }
+
+    const double denom = static_cast<double>(options.benchmarkIters);
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << "\nBenchmark Results\n";
+    std::cout << "File: " << filePath << "\n";
+    std::cout << "Iterations: " << options.benchmarkIters
+              << " (warmup: " << options.benchmarkWarmup << ")\n";
+    std::cout << "Tokens: " << tokens << "\n";
+    std::cout << "Avg tokenize: " << (totalTok / denom) << " ms\n";
+    std::cout << "Avg parse:    " << (totalParse / denom) << " ms\n";
+    std::cout << "Avg eval:     " << (totalEval / denom) << " ms\n";
+    std::cout << "Avg total:    " << (totalTotal / denom) << " ms\n";
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
-    auto code = run_original(argc, argv);
-//    Timer timer = Timer();
-//    testFunc();
- //   timer.printElapsed("C++ fib_memoized");
-    return code;
-}   
+    Debug::configureDebugger();
 
+    try {
+        const CliOptions options = parseCliOptions(argc, argv);
+        if (options.showHelp) {
+            printUsage();
+            return 0;
+        }
+        if (options.benchmark) {
+            return runBenchmark(options);
+        }
+        if (options.nodeBenchmark) {
+            return runNodeBenchmark(options);
+        }
+        if (options.manualComputeBenchmark) {
+            return runManualComputeBenchmark(options);
+        }
+        return run_original(argc, argv);
+    } catch (const std::exception& ex) {
+        std::cerr << ex.what() << std::endl;
+        printUsage();
+        return 1;
+    }
+}
 
 
 
@@ -192,526 +673,3 @@ int main(int argc, char* argv[]) {
 
 
 
-// #include <chrono>
-// #include <iostream>
-// #include <fstream>
-// #include "core/Tokenizer.hpp"
-
-
-// String generatedCode;
-
-// String generateTestTokenSource(int argc, char* argv[], size_t repeatCount) {
-//     const String codeDir = "code/";
-//     const String defaultFile = "test1.merk";
-
-//     // Step 1: Determine the file path
-//     String filePath = getFilePath(argc, argv, codeDir, defaultFile);
-   
-//     // Step 2: Read file content
-//     String sourceCode = readFile(filePath);
-//     String result;
-
-//     for (size_t i = 0; i < repeatCount; ++i) {
-//         result += sourceCode;
-//     }
-
-//     generatedCode = sourceCode;
-
-//     return result;
-// }
-
-// String generateSafeMerkBlocks(size_t repeatCount) {
-//     String block;
-//     for (size_t i = 0; i < repeatCount; ++i) {
-//         String idx = std::to_string(i);
-//         block += "def func" + idx + "():\n";
-//         block += "    var x" + idx + " = 0\n";
-//         block += "    var y" + idx + " = 3\n";
-//         block += "    var z" + idx + " = x" + idx + " + y" + idx + "\n";
-//         block += "    if z" + idx + " == 13:\n";
-//         block += "        z" + idx + " = 10\n";
-//         block += "    else:\n";
-//         block += "        z" + idx + " = 4\n";
-//         block += "    var count" + idx + " = 0\n";
-//         block += "    while x" + idx + " < 10:\n";
-//         block += "        x" + idx + " = x" + idx + " + 1\n";
-//         block += "        if x" + idx + " == 5:\n";
-//         block += "            count" + idx + " = count" + idx + " + 1\n";
-//         block += "        elif x" + idx + " == 8:\n";
-//         block += "            break\n";
-//         block += "        else:\n";
-//         block += "            x" + idx + " = x" + idx + " + 1\n";
-//         block += "\n";
-//         block += "func" + idx + "()\n";  // <== include the call
-//     }
-//     return block;
-// }
-
-
-// String generateTestTokenSource(size_t repeatCount) {
-//     return generateSafeMerkBlocks(repeatCount);
-// }
-
-
-
-// Vector<Token> profileTokenizer(int argc, char* argv[]){
-//     for (size_t repeat : {10, 100, 1000, 5000}) {
-//         auto code = generateTestTokenSource(argc, argv, repeat);
-//         Tokenizer tokenizer(code);
-//         auto start = std::chrono::high_resolution_clock::now();
-//         auto tokens = tokenizer.tokenize();
-//         auto end = std::chrono::high_resolution_clock::now();
-//         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-//         std::cout << repeat << " blocks: " << duration << "ms for " << tokens.size() << " tokens\n";
-//     }
-//     auto parserCode = generateTestTokenSource(argc, argv, 0);
-//     outputFileContents(generatedCode, 500);
-
-//     Tokenizer tokenizer(parserCode);
-//     auto tokens = tokenizer.tokenize();
-//     return tokens;
-// }
-
-// Vector<Token> profileTokenizer(size_t repeatCount) {
-//     auto code = generateSafeMerkBlocks(repeatCount);
-//     Tokenizer tokenizer(code);
-
-//     auto start = std::chrono::high_resolution_clock::now();
-//     auto tokens = tokenizer.tokenize();
-//     auto end = std::chrono::high_resolution_clock::now();
-//     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-//     std::cout << repeatCount << " blocks: " << duration << "ms for " << tokens.size() << " tokens\n";
-//     return tokens;
-// }
-
-// Vector<Token> profileTokenizer() {
-//     Vector<Token> allTokens;
-
-//     for (size_t repeat : {10, 100, 1000, 5000}) {
-//         String fileContent = generateTestTokenSource(repeat); // <-- Generate new content per block size
-
-//         Tokenizer tokenizer(fileContent);
-//         auto start = std::chrono::high_resolution_clock::now();
-//         auto tokens = tokenizer.tokenize();
-//         auto end = std::chrono::high_resolution_clock::now();
-
-//         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-//         std::cout << repeat << " blocks: " << duration << "ms for " << tokens.size() << " tokens\n";
-
-//         allTokens.insert(allTokens.end(), tokens.begin(), tokens.end());
-//     }
-
-//     return allTokens;
-// }
-
-
-
-
-// void profileParser(Vector<Token>& tokens, bool byBlock) {
-//     const bool interpretMode = true;
-//     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode);
-
-//     std::cout << "byBlock: " << (byBlock ? "true" : "false") << "\n";
-
-//     auto start = std::chrono::high_resolution_clock::now();
-//     Parser parser(tokens, globalScope, interpretMode, byBlock);
-//     parser.parse();
-//     auto end = std::chrono::high_resolution_clock::now();
-
-//     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-//     std::cout << "Parse time: " << duration << " microseconds\n\n";
-// }
-
-// void profileEvaluation(size_t repeatCount, bool byBlock = true) {
-//     String code = generateSafeMerkBlocks(repeatCount);
-
-//     Tokenizer tokenizer(code);
-//     auto tokens = tokenizer.tokenize();
-
-//     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, true);
-
-//     Parser parser(tokens, globalScope, true, byBlock);
-//     auto ast = parser.parse();  // This should return a CallableBody or CodeBlockNode
-
-//     auto start = std::chrono::high_resolution_clock::now();
-//     ast->evaluate(globalScope);  // Evaluate all parsed AST nodes
-//     auto end = std::chrono::high_resolution_clock::now();
-
-//     auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-
-//     std::cout << "=== Evaluation Test ===\n";
-//     std::cout << "Blocks: " << repeatCount << "\n";
-//     std::cout << "Evaluation Time: " << microseconds << " μs\n\n";
-// }
-
-
-// void profileBlockParsing() {
-//     std::vector<size_t> blockCounts = {10, 100, 1000, 5000};
-
-//     for (bool byBlock : {true, false}) {
-//         std::cout << "===== Testing Parser (byBlock = " << (byBlock ? "true" : "false") << ") =====\n";
-
-//         for (size_t blocks : blockCounts) {
-//             Vector<Token> tokens = profileTokenizer(blocks);
-//             profileParser(tokens, byBlock);
-//         }
-
-//         std::cout << "\n";
-//     }
-// }
-
-
-// void profileASTEval() {
-//     for (size_t count : {10, 100, 1000, 5000}) {
-//         profileEvaluation(count);
-//     }
-
-// }
-
-
-
-// int evaluateAndCallFunctions(const SharedPtr<Scope>& globalScope, size_t repeatCount) {
-//     auto start = std::chrono::high_resolution_clock::now();
-
-//     for (size_t i = 0; i < repeatCount; ++i) {
-//         String funcName = "func" + std::to_string(i);
-
-//         auto funcNode = globalScope->getFunction(funcName);
-//         if (funcNode) {
-//             auto func = funcNode->get();
-//             func.call({}, globalScope);
-//             // funcNode->call({}, globalScope);  // No args, reuses global scope
-//         } else {
-//             std::cerr << "Function not found: " << funcName << std::endl;
-//         }
-//     }
-
-//     auto end = std::chrono::high_resolution_clock::now();
-//     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-//     std::cout << "Function execution time: " << duration << " μs" << std::endl;
-
-//     return 0;
-// }
-
-
-// #include <chrono>
-// #include <iostream>
-// // #include "core/Tokenizer.hpp"
-// // #include "core/parser/parser_main.h"
-// // #include "core/scope/scope_main.h"
-// // "core/Evaluator.hpp"
-
-// using Clock = std::chrono::high_resolution_clock;
-
-
-// void benchmark(size_t blockCount) {
-//     std::cout << "\n=== Benchmark: " << blockCount << " blocks ===\n";
-
-//     String code = generateSafeMerkBlocks(blockCount);
-
-//     // --- Tokenizer ---
-//     auto t0 = Clock::now();
-//     Tokenizer tokenizer(code);
-//     Vector<Token> tokens = tokenizer.tokenize();
-//     auto t1 = Clock::now();
-//     auto tokenizeTime = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-
-//     // --- Parser ---
-//     const bool interpretMode = false;
-//     const bool byBlock = false;
-//     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode);
-
-//     t0 = Clock::now();
-//     Parser parser(tokens, globalScope, interpretMode, byBlock);
-//     auto ast = parser.parse();
-//     // parser.parse();
-//     auto t2 = Clock::now();
-//     auto parseTime = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t0).count();
-
-//     // --- Evaluation ---
-//     t0 = Clock::now();
-//     ast->evaluate();  // Evaluate full AST
-//     auto t3 = Clock::now();
-//     auto evalTime = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t0).count();
-
-//     // --- Print Results ---
-//     std::cout << "Tokens: " << tokens.size() << "\n";
-//     std::cout << "Tokenizer: " << tokenizeTime << " μs\n";
-//     std::cout << "Parser:    " << parseTime << " μs\n";
-//     std::cout << "Evaluator: " << evalTime << " μs\n";
-// }
-
-// int main() {
-//     for (size_t blockCount : {10, 100, 1000, 5000}) {
-//         benchmark(blockCount);
-//     }
-//     return 0;
-// }
-
-
-
-
-// int main() {
-//     profileASTEval();
-
-//     return 0;
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// int profileEvaluation(const String& sourceCode, size_t repeatCount) {
-//     Tokenizer tokenizer(sourceCode);
-//     auto tokens = tokenizer.tokenize();
-
-//     const bool interpretMode = true;
-//     const bool byBlock = true;
-//     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode);
-
-//     // Parsing and registering all functions
-//     Parser parser(tokens, globalScope, interpretMode, byBlock);
-//     parser.parse();
-
-//     // Evaluate full AST
-//     auto evalStart = std::chrono::high_resolution_clock::now();
-//     parser.evaluate(); // If this is your main entrypoint to run AST
-//     auto evalEnd = std::chrono::high_resolution_clock::now();
-//     std::cout << "Initial Evaluation Time: "
-//               << std::chrono::duration_cast<std::chrono::microseconds>(evalEnd - evalStart).count()
-//               << " μs\n";
-
-//     // Call all the defined functions
-//     evaluateAndCallFunctions(globalScope, repeatCount);
-
-//     return 0;
-// }
-
-
-
-
-
-// int run_test(int argc, char* argv[]) {
-    
-
-//     const String codeDir = "code/";
-//     const String defaultFile = "time_test.merk";
-
-//     // Step 1: Determine the file path
-//     String filePath = getFilePath(argc, argv, codeDir, defaultFile);
-//     DEBUG_LOG(LogLevel::DEBUG, "Using File: ", filePath);
-   
-//     // Step 2: Read file content
-//     String content = readFile(filePath, 500);
-//     // Step 3: Initialize Global Scope
-//     const bool interpretMode = true;
-
-        
-//     SharedPtr<Scope> globalScope = std::make_shared<Scope>(0, interpretMode);
-    
-    
-//     try {
-//         const bool byBlock = true;
-//         // Step 4: Initialize Tokenizer
-
-//         DEBUG_LOG(LogLevel::DEBUG, "Initializing tokenizer...");
-//         Tokenizer tokenizer(content);
-//         DEBUG_LOG(LogLevel::DEBUG, "Starting tokenization...");
-//         auto tokens = tokenizer.tokenize();
-//         tokenizer.printTokens();
-//         DEBUG_LOG(LogLevel::DEBUG, "Tokenization complete.\n");
-
-//         // tokenizer.printTokens((Debugger::getInstance().getLevel() >= LogLevel::ERROR));
-
-//         // Step 5: Parse tokens into an AST
-//         DEBUG_LOG(LogLevel::DEBUG, "\nInitializing parser...");
-//         Parser parser(tokens, globalScope, interpretMode, byBlock);
-//         DEBUG_LOG(LogLevel::DEBUG, "\nStarting parser...");
-//         auto ast = parser.parse();
-//         debugLog("Parsing complete. \n");
-
-//         DEBUG_LOG(LogLevel::DEBUG, "Terminating Program...");
-//         DEBUG_LOG(LogLevel::DEBUG, "==================== PRINTING GLOBAL SCOPE ====================");
-        
-//         if (!interpretMode) {
-//             ast->evaluate(globalScope); // Explicitly evaluate the AST in deferred mode
-//         }
-
-//         debugLog(true, highlight("============================== FINAL OUTPUT ==============================", Colors::green));
-//         ast->printAST(std::cout);
-//         // globalScope->debugPrint();
-//         // globalScope->printChildScopes();
-
-//         DEBUG_LOG(LogLevel::DEBUG, "");
-//         DEBUG_LOG(LogLevel::DEBUG, "==================== TRY TERMINATION ====================");
-
-//     } catch (MerkError& e){
-//         std::cerr << e.errorString() << std::endl;
-//     } catch (const std::exception& ex) {
-//         std::cerr << "Error during execution: " << ex.what() << std::endl;
-//         return 1;
-//     } 
-
-//     // Print the final state of the Global Scope right before exiting
-//     // DEBUG_LOG(LogLevel::DEBUG, "");
-//     // globalScope->debugPrint();
-//     globalScope->getContext().debugPrint();
-//     globalScope.reset();
-    
-//     return 0;
-// }
-
-
-// int main(int argc, char* argv[]) {
-//     #include <chrono>
-//     using namespace std::chrono;
-//     Debug::configureDebugger();
-//     auto start = high_resolution_clock::now();
-
-//     const String codeDir = "code/";
-//     const String defaultFile = "time_test.merk";
-
-//     run_test(argc, argv);
-
-//     auto end = high_resolution_clock::now();
-//     auto duration = duration_cast<microseconds>(end - start);
-//     std::cout << "Execution time: " << duration.count() << " microseconds\n";
-// }
-
-
-
-// #include "tests/test_params.h"
-// int main() {
-//     runAllParamNodeTests();
-//     return 0;
-// }
-
-
-// #include "tests/test_node.h"
-// int main() {
-//     testNode();
-//     testLitNode();
-//     testVarNode();
-//     std::cout << "All tests completed successfully.\n";
-//     return 0;
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// int main() {
-//     // Create root scope
-//     std::shared_ptr<Scope> rootScope = std::make_shared<Scope>(0, true);
-//     debugLog(true, "Created root scope at address: ", rootScope.get());
-
-//     // Create BlockNode with root scope
-//     auto block = std::make_unique<BlockNode>(rootScope);
-//     debugLog(true, "Created BlockNode at address: ", block.get(), 
-//              ", with scope: ", rootScope.get());
-
-//     // Create child BlockNode with a body
-//     auto childBody = std::make_unique<BlockNode>(rootScope);
-//     auto childNode = std::make_unique<BlockNode>(rootScope, std::move(childBody));
-//     debugLog(true, "Created child BlockNode with body at address: ", childNode.get());
-
-//     // Add child to parent BlockNode
-//     block->addChild(std::move(childNode));
-//     debugLog(true, "Added child BlockNode. Children count: ", block->getChildren().size());
-
-//     debugLog(true, "Test complete. Scope use_count: ", rootScope.use_count());
-
-//     return 0;
-// }
-
-
-
-// int main(){
-//     auto globalScope = std::make_shared<Scope>(0, true); // Root scope
-//     auto childScope1 = globalScope->createChildScope(); // Level 1
-//     auto childScope2 = childScope1->createChildScope(); // Level 2
-
-//     // Print debug information
-//     globalScope->printChildScopes();
-
-// }
-
-
-// int main(){
-//     try {
-//         Node node(42, false, true, false, "Number"); // Static int Node
-//         node.setValue(42.0);
-//         debugLog(true, node);
-//     } catch (const std::exception& e) {
-//         std::cerr << "Error: " << e.what() << "\n";
-//     }
-// }

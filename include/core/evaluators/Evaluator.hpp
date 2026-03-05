@@ -4,6 +4,8 @@
 #include <vector>
 #include <optional>
 
+class ForLoop;
+
 // This acts as a separate module for evaluation logic - as its name implies
 // This is for future considerations when implementing compilation. 
 // Also, it keeps other files smaller and more easily sifted...
@@ -23,6 +25,7 @@ namespace Evaluator {
     Node evaluateBasicLoop();
 
     Node evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    Node evaluateForLoop(const ForLoop& forLoop, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 
     Node evaluateBlock(const Vector<UniquePtr<BaseAST>>& statements, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 

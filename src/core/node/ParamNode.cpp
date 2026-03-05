@@ -112,7 +112,7 @@ void ParamList::verifyArguments(Vector<Node> args) {
     (void)bindArguments(args);
 }
 
-void ParamList::verifyArguments(ArgumentList& args) {
+void ParamList::verifyArguments(const ArgumentList& args) {
     (void)bindArguments(args);
 }
 
@@ -221,7 +221,7 @@ ParamList ParamList::clone() const {
     return out;
 }
 
-Vector<Node> ParamList::bindArguments(ArgumentList& args) const {
+Vector<Node> ParamList::bindArguments(const ArgumentList& args) const {
     Vector<Node> boundArgs;
 
     const bool variadic = !parameters.empty() && parameters.back().isVarArgsParameter();
@@ -236,19 +236,21 @@ Vector<Node> ParamList::bindArguments(ArgumentList& args) const {
         Node arg;
         if (i < args.positionalCount()) {
             arg = args.getArg(i);
-            arg.setFlags(param.flags);
+            if (!param.flags.name.empty()) {
+                arg.getFlags().applyDeclName(param.flags.name, param.flags.key);
+            }
 
         } else if (args.hasNamedArg(param.getName())) {
             arg = args.getNamedArg(param.getName());
-
-            // Optional: also stamp flags
-            arg.setFlags(param.flags);
+            if (!param.flags.name.empty()) {
+                arg.getFlags().applyDeclName(param.flags.name, param.flags.key);
+            }
 
         } else if (param.hasDefault()) {
             arg = Node::fromVariant(param.getDefaultValue());
-
-            // Optional: stamp flags
-            arg.setFlags(param.flags);
+            if (!param.flags.name.empty()) {
+                arg.getFlags().applyDeclName(param.flags.name, param.flags.key);
+            }
 
         } else {
             throw MerkError("Missing argument for parameter: " + param.getName());

@@ -60,6 +60,7 @@ void Arguments::clear() {
         arg.clear();
         
     }
+    markFreeVarsDirty();
 
 }
 
@@ -169,6 +170,7 @@ Node Arguments::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> in
 void Arguments::add(Argument arg) {
     // throw MerkError("Not Ready");
     arguments.emplace_back(std::move(arg));
+    markFreeVarsDirty();
 }
 
 
@@ -177,10 +179,12 @@ void Arguments::addPositional(UniquePtr<ASTStatement> val) {
     // makeUnique<NoOpNode>(nullptr)
     // auto arg = ;
     arguments.push_back(Argument(std::move(val)));
+    markFreeVarsDirty();
 }
 
 void Arguments::addKeyword(UniquePtr<ASTStatement> key, UniquePtr<ASTStatement> val) {
     arguments.push_back(Argument(std::move(key), std::move(val)));
+    markFreeVarsDirty();
 }
 
 const Vector<Argument>& Arguments::getArgs() const { return arguments; }

@@ -198,11 +198,26 @@ RawToken Scanner::readText() {
 
     while (hasNext() && current != startChar) {
         if (current == '\\') {
+            if (!hasNext()) {
+                throw ScannerError("Unfinished escape sequence in string literal", line, column);
+            }
             next();
             const char escaped = current;
-            if (isSpecialChar(escaped)) {
-                if (escaped == startChar) result += startChar;
-                    else throw ScannerError("Unknown escape in string literal", line, column);
+            switch (escaped) {
+                case 'n':  result += '\n'; break;
+                case 't':  result += '\t'; break;
+                case 'r':  result += '\r'; break;
+                case '\\': result += '\\'; break;
+                case '\'': result += '\''; break;
+                case '"':  result += '"'; break;
+                case '`':  result += '`'; break;
+                default:
+                    if (escaped == startChar) {
+                        result += startChar;
+                    } else {
+                        throw ScannerError("Unknown escape in string literal", line, column);
+                    }
+                    break;
             }
             next();
             continue;

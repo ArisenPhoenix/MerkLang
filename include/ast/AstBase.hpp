@@ -38,7 +38,12 @@ class FreeVarCollection {
 public:
     mutable FreeVars freeVars;
     mutable FreeVars localAssign;
+    mutable bool freeVarsCacheValid = false;
     virtual FreeVars collectFreeVariables() const = 0;
+protected:
+    void markFreeVarsDirty() const { freeVarsCacheValid = false; }
+    void markFreeVarsClean() const { freeVarsCacheValid = true; }
+    bool isFreeVarsCacheValid() const { return freeVarsCacheValid; }
     ~FreeVarCollection();
 };
 

@@ -427,26 +427,14 @@ void stringBasedValidation(Node& valueNode, DataTypeFlags& varFlags) {
 }
 
 void typeIdBasedValidation(Node& startingValue, DataTypeFlags& varFlags) {
-    if (varFlags.declaredSig != kInvalidTypeSignatureId) {
-    // Could Enforce with check of fullType.base != "Any"
-    }
+    if (varFlags.declaredSig == kInvalidTypeSignatureId) { return; }
+    if (startingValue.getFlags().inferredSig == kInvalidTypeSignatureId) { return; }
 
-    if (!varFlags.fullType.getBaseType().empty() && varFlags.fullType.getBaseType() != "Any") {
-        if (startingValue.getFlags().inferredSig == kInvalidTypeSignatureId) {
-            throw MerkError("VarNode: inferredSig missing on startingValue -> typeIdBasedValidation 1");
-        }
-
-        if (startingValue.getFlags().inferredSig != varFlags.declaredSig) {
-            DEBUG_LOG(LogLevel::WARNING, 
-                "Type is Being Promoted: ", varFlags.fullType.getBaseType(),
-                "<sig " + std::to_string(startingValue.getFlags().inferredSig) + ">",
-                "VarNode::VarNode -> typeIdBasedValidation 2");
-            // throw TypeMismatchError(
-            //     varFlags.fullType.getBaseType(),
-            //     "<sig " + std::to_string(startingValue.getFlags().inferredSig) + ">",
-            //     "VarNode::VarNode -> typeIdBasedValidation 2"
-            // );
-        }
+    if (startingValue.getFlags().inferredSig != varFlags.declaredSig) {
+        DEBUG_LOG(LogLevel::WARNING, 
+            "Type signature mismatch for bound value: ", varFlags.fullType.getBaseType(),
+            "<sig " + std::to_string(startingValue.getFlags().inferredSig) + ">",
+            "VarNode::VarNode -> typeIdBasedValidation");
     }
 }
 
@@ -454,12 +442,19 @@ void typeIdBasedValidation(Node& startingValue, DataTypeFlags& varFlags) {
 VarNode::VarNode(Node startingValue, DataTypeFlags declFlags) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     
+    const bool argMutable = startingValue.getFlags().isMutable;
+    const bool paramMutable = declFlags.isMutable;
+    const bool mutabilityMismatch = (argMutable != paramMutable);
+    const bool shareByMutability = (argMutable && paramMutable) || (!argMutable && !paramMutable);
 
-    if (!startingValue.getFlags().isMutable) {
+    if (mutabilityMismatch) {
         valueNode = startingValue.clone();
         valueNode.getFlags().applyRuntimeIdentityFromValue(startingValue.getFlags());
-    } else {
+    } else if (shareByMutability) {
         valueNode = startingValue;
+    } else {
+        valueNode = startingValue.clone();
+        valueNode.getFlags().applyRuntimeIdentityFromValue(startingValue.getFlags());
     }
 
     if (valueNode.isNull() && !valueNode.isValid()) {
@@ -475,8 +470,15 @@ VarNode::VarNode(Node startingValue, DataTypeFlags declFlags) {
         varFlags.applyDeclName(declFlags.name, declFlags.key);
         valueNode.getFlags().applyDeclName(declFlags.name, declFlags.key);
     }
+
+    // Keep runtime value mutability/constness aligned with declared variable policy.
+    // This is required so mutating operations (+=, native container mutators, etc.)
+    // can reliably enforce parameter-level mutability.
+    valueNode.getFlags().isMutable = varFlags.isMutable;
+    valueNode.getFlags().isConst = varFlags.isConst;
+
     typeIdBasedValidation(startingValue, varFlags);
-    // stringBasedValidation(valueNode, varFlags);
+    stringBasedValidation(valueNode, varFlags);
     DEBUG_FLOW_EXIT();
 }
 

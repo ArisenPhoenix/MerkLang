@@ -32,18 +32,19 @@ private:
 
     Token eofToken = Token(TokenType::EOF_Token, "EOF", 0, 0); // Singleton EOF token
     Token noOpToken = Token(TokenType::NoOp, "NoOp", 0, 0);
-    Token currentToken() const;
-    Token advance();
+    Vector<Token> reinjectedTokens;
+    const Token& currentToken() const;
+    const Token& advance();
 
-    bool consume(TokenType type, String value, String fromWhere = "Parser::consume");
-    bool consume(TokenType type, String fromWhere = "Parser::consume");
-    bool consume(String value, String fromWhere = "Parser::consume");
-    bool consume(TokenType type, Vector<String> values = {}, String fromWhere = "Parser::consume");
-    Token peek(int number = 1);
-    Token lookBack(int number = 1);
+    bool consume(TokenType type, const String& value, const String& fromWhere = "Parser::consume");
+    bool consume(TokenType type, const String& fromWhere = "Parser::consume");
+    bool consume(const String& value, const String& fromWhere = "Parser::consume");
+    bool consume(TokenType type, const Vector<String>& values = {}, const String& fromWhere = "Parser::consume");
+    const Token& peek(int number = 1) const;
+    const Token& lookBack(int number = 1) const;
     Token find(TokenType type, int limit);
     bool existing(TokenType type, int limit);
-    Token previousToken() const;
+    const Token& previousToken() const;
     bool check(TokenType type, const String& value = "") const;
     bool consumeIf(TokenType type, const String& value = "");
     
@@ -63,11 +64,12 @@ private:
 
     UniquePtr<IfStatement> parseIfStatement();
     UniquePtr<WhileLoop> parseWhileLoop();
+    UniquePtr<ForLoop> parseForLoop();
 
     UniquePtr<CodeBlock> parseBlock(SharedPtr<Scope> = nullptr);
     UniquePtr<BaseAST> parseStatement();
     
-    std::optional<NodeValueType> getTypeFromString(String typeStr);
+    std::optional<NodeValueType> getTypeFromString(const String& typeStr);
     void interpretFlow(BaseAST* CodeBlockForEvaluation) const;
     void interpretFlow(CodeBlock* CodeBlockForEvaluation) const;
     void interpret(BaseAST* ASTStatementForEvaluation) const;
@@ -92,10 +94,10 @@ private:
 
     // UniquePtr<Chain> parseChain(bool isDeclaration = false, bool isConst = false);
 
-    UniquePtr<ChainOperation> parseChainOp(UniquePtr<ASTStatement> stmnt = nullptr);
+    UniquePtr<ASTStatement> parseChainOp(UniquePtr<ASTStatement> stmnt = nullptr);
     String getCurrentClassAccessor();
 
-    void addAccessor(String accessorName);
+    void addAccessor(const String& accessorName);
     void popAccessor();
     
     UniquePtr<ASTStatement> parseReturnStatement();
@@ -106,17 +108,17 @@ private:
     bool processNewLines();
     void processBlankSpaces();
 
-    bool expect(TokenType tokenType, bool strict = false, String fromWhere = "Parser::expect");
+    bool expect(TokenType tokenType, bool strict = false, const String& fromWhere = "Parser::expect");
 
     ParamList handleParameters(TokenType type = TokenType::FunctionDef);
     Vector<UniquePtr<ASTStatement>> parseArguments();
     UniquePtr<Arguments> parseAnyArgument();
     void reinjectControlToken(const Token& token); // for use with Chain to implement the controlling structure and allow parsing without modifications to architecture
-    void displayPreviousTokens(String baseTokenName, size_t number = 4, String location = "Parser");
-    void displayNextTokens(String baseTokenName, size_t number = 4, String location = "Parser");
+    void displayPreviousTokens(const String& baseTokenName, size_t number = 4, const String& location = "Parser");
+    void displayNextTokens(const String& baseTokenName, size_t number = 4, const String& location = "Parser");
     ResolvedType parseResolvedType();
-    bool validate(Token, Vector<TokenType> types = {}, Vector<String> values = {}, bool requiresBoth = false);
-    bool validate(Vector<TokenType>, Vector<String>, bool requiresBoth = false);
+    bool validate(const Token&, const Vector<TokenType>& types = {}, const Vector<String>& values = {}, bool requiresBoth = false);
+    bool validate(const Vector<TokenType>&, const Vector<String>&, bool requiresBoth = false);
 
     UniquePtr<ASTStatement> parseThrowStatement();
     UniquePtr<ASTStatement> parseKeyWord();

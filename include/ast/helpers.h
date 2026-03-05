@@ -12,7 +12,7 @@ class MethodDef;
 
 
 Node handleVirtualMethod(SharedPtr<ClassInstanceNode> instanceNode, const String& methodName);
-Node handleVirtualMethod(Node currentVal, const String& methodName, NodeList args);
+Node handleVirtualMethod(Node currentVal, const String& methodName, const NodeList& args);
 
 bool handleChain(Chain* chain, ParamList params, String accessor, String name, SharedPtr<Scope> classScope);
 Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> classScope, const String& accessor);

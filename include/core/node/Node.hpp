@@ -310,6 +310,7 @@ public:
     int toInt() const override;
 
     String toString() const override;
+    std::size_t hash() const override;
 
     bool toBool() const override;
 
@@ -361,6 +362,7 @@ public:
     float toFloat() const override;
 
     String toString() const override;
+    std::size_t hash() const override;
 
     bool isBool() const override;
     bool toBool() const override;
@@ -391,6 +393,7 @@ public:
     SharedPtr<NodeBase> operator>=(const NodeBase& other) const override;
 
     void clear() override;
+    int rawValue() const { return value; }
 };
 
 
@@ -412,6 +415,7 @@ public:
     bool isFloat() const override;
 
     String toString() const override;
+    std::size_t hash() const override;
     bool toBool() const override;
     bool isTruthy() const override;
     bool isValid() const override;
@@ -438,6 +442,7 @@ public:
     SharedPtr<NodeBase> operator>=(const NodeBase& other) const override;
 
     void clear() override;
+    float rawValue() const { return value; }
 };
 
 
@@ -459,6 +464,7 @@ public:
     bool isDouble() const override;
 
     String toString() const override;
+    std::size_t hash() const override;
     bool toBool() const override;
     bool isTruthy() const override;
     bool isValid() const override;
@@ -485,6 +491,7 @@ public:
     SharedPtr<NodeBase> operator>=(const NodeBase& other) const override;
 
     void clear() override;
+    double rawValue() const { return value; }
 };
 
 class StringNode : public NodeBase {
@@ -502,6 +509,7 @@ public:
 
     bool isString() const override;
     String toString() const override;
+    std::size_t hash() const override;
 
     bool isBool() const override;
     bool toBool() const override;
@@ -531,6 +539,7 @@ public:
     SharedPtr<NodeBase> operator<=(const NodeBase& other) const override;
     SharedPtr<NodeBase> operator>=(const NodeBase& other) const override;
     void clear() override;
+    const String& rawValue() const { return value; }
 };
 
 class CharNode : public NodeBase {
@@ -548,6 +557,7 @@ public:
 
     bool isString() const override;
     String toString() const override;
+    std::size_t hash() const override;
     bool isChars() const override;
     char* toChars() const override;
     bool isChar() const override;
@@ -581,6 +591,7 @@ public:
     SharedPtr<NodeBase> operator<=(const NodeBase& other) const override;
     SharedPtr<NodeBase> operator>=(const NodeBase& other) const override;
     void clear() override;
+    char rawValue() const { return value; }
 };
 
 
@@ -598,6 +609,7 @@ public:
     int toInt() const override;
 
     String toString() const override;
+    std::size_t hash() const override;
 
     bool isInt() const override;
     bool isBool() const override;
@@ -630,6 +642,7 @@ public:
     SharedPtr<NodeBase> operator>=(const NodeBase& other) const override;
 
     void clear() override;
+    bool rawValue() const { return value; }
 };
 
 
@@ -774,7 +787,8 @@ public:
 
     void setValue(Node other) override;
 
-    DataTypeFlags getVarFlags();
+    DataTypeFlags& getVarFlags();
+    const DataTypeFlags& getVarFlags() const;
 
     bool getIsMutable() override;
     bool getIsStatic() override;

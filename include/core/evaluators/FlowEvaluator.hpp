@@ -7,6 +7,7 @@
 #include <optional>
 #include "core/evaluators/Evaluator.hpp"
 
+class ForLoop;
 
 class ConditionalBlock;
 class BaseAST;
@@ -33,6 +34,7 @@ namespace FlowEvaluator {
     EvalResult evaluateBasicLoop();
 
     EvalResult evaluateWhileLoop(const ConditionalBlock& condition, const BaseAST* body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
+    EvalResult evaluateForLoop(const ForLoop& forLoop, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 
     EvalResult evaluateBlock(const Vector<UniquePtr<BaseAST>>& statements, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr);
 

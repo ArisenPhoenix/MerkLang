@@ -96,6 +96,7 @@ void CodeBlock::clear() {
         scope.reset();
         setScope(nullptr);
     }
+    markFreeVarsDirty();
     DEBUG_FLOW_EXIT();
 }
 
@@ -119,6 +120,7 @@ void CodeBlock::addChild(UniquePtr<BaseAST> child) {
     }
 
     children.push_back(std::move(child));
+    markFreeVarsDirty();
     DEBUG_LOG(LogLevel::INFO, childType, "added. Children count: ", children.size());
 }
 
@@ -218,6 +220,30 @@ WhileLoop::~WhileLoop(){
 
 }
 
+ForLoop::ForLoop(String loopVariable,
+                 UniquePtr<ASTStatement> startExpr,
+                 UniquePtr<ASTStatement> endExpr,
+                 UniquePtr<ASTStatement> stepExpr,
+                 UniquePtr<CodeBlock> body,
+                 SharedPtr<Scope> scope)
+    : ASTStatement(scope),
+      loopVariable(std::move(loopVariable)),
+      startExpr(std::move(startExpr)),
+      endExpr(std::move(endExpr)),
+      stepExpr(std::move(stepExpr)),
+      body(std::move(body)) {
+    if (this->loopVariable.empty()) {
+        throw MerkError("ForLoop: loop variable cannot be empty.");
+    }
+    if (!this->startExpr || !this->endExpr || !this->stepExpr) {
+        throw MerkError("ForLoop: start/end/step expressions must be present.");
+    }
+    if (!this->body) {
+        throw MerkError("ForLoop: body is null.");
+    }
+    branch = "HoldsBody";
+}
+
 
 Node ConditionalBlock::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     return condition.get()->evaluate(scope, instanceNode);
@@ -252,6 +278,20 @@ EvalResult WhileLoop::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstan
     DEBUG_LOG(LogLevel::INFO, "Evaluating WhileLoop with scope level: ", scope->getScopeLevel());
     auto val = FlowEvaluator::evaluateWhileLoop(*condition, body.get(), scope, instanceNode);
 
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
+Node ForLoop::evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+    Node val = Evaluator::evaluateForLoop(*this, scope, instanceNode);
+    DEBUG_FLOW_EXIT();
+    return val;
+}
+
+EvalResult ForLoop::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
+    DEBUG_FLOW(FlowLevel::LOW);
+    auto val = FlowEvaluator::evaluateForLoop(*this, scope, instanceNode);
     DEBUG_FLOW_EXIT();
     return val;
 }
@@ -306,6 +346,7 @@ void IfStatement::addElifNode(UniquePtr<ElifStatement> elifNode) {
         throw RunTimeError("Cannot add a null elif node to IfStatement.");
     }
         elifNodes.push_back(std::move(elifNode));
+        markFreeVarsDirty();
     }
 
 Node ElifStatement::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
@@ -388,6 +429,14 @@ void WhileLoop::setScope(SharedPtr<Scope> newScope) {
     scope = newScope;
     condition->setScope(newScope);
     body->setScope(newScope);
+}
+
+void ForLoop::setScope(SharedPtr<Scope> newScope) {
+    scope = newScope;
+    if (startExpr) startExpr->setScope(newScope);
+    if (endExpr) endExpr->setScope(newScope);
+    if (stepExpr) stepExpr->setScope(newScope);
+    if (body) body->setScope(newScope);
 }
 
 void LoopBlock::setScope(SharedPtr<Scope> newScope) {

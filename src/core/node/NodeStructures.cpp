@@ -39,12 +39,10 @@ ListNode::ListNode(ArgumentList init) : elements(std::move(init.getPositional())
 
 ListNode::ListNode(NodeList init) : elements(std::move(init)) {setType(NodeValueType::List);}
 
-bool ListNode::holdsValue() { return elements.size() > 0; }
+bool ListNode::holdsValue() { return !elements.empty(); }
 
 void ListNode::append(const Node& node) {
     AnyNode::validateMutability(*this);
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Appending to List: ", this, " New state: ", this->toString());
-
     elements.push_back(node);
 }
 
@@ -60,25 +58,27 @@ bool ListNode::remove(const Node& value) {
 
 void ListNode::insert(const Node& index, const Node& value) {
     AnyNode::validateMutability(*this);
-    elements.insert(elements.begin() + index.toInt(), value);
+    const int idxRaw = index.toInt();
+    if (idxRaw < 0 || static_cast<std::size_t>(idxRaw) > elements.size()) {
+        throw MerkError("List.insert index out of range");
+    }
+    const auto idx = static_cast<std::size_t>(idxRaw);
+    elements.insert(elements.begin() + static_cast<std::ptrdiff_t>(idx), value);
 }
 
 Node ListNode::pop(const Node& index) {
     AnyNode::validateMutability(*this);
-    auto valToGet = !index.isValid() ? elements.size() - 1 : index.toInt();
-
-    auto position = std::find(elements.begin(), elements.end(), elements[valToGet]);
-    if (position != elements.end()) {
-        // int pos = position->getValue();
-        auto val = Node::fromVariant(position->getValue());
-        if (!val.isValid()) {throw MerkError("pop result is not valid");}
-        DEBUG_LOG(LogLevel::PERMISSIVE, val.toString());
-        elements.erase(position);
-        return val;
+    if (elements.empty()) {
+        throw MerkError("Cannot pop from empty list");
     }
-
-    throw MerkError("Returning Nothing");
-    return Node();
+    const int idxRaw = index.isValid() ? index.toInt() : static_cast<int>(elements.size()) - 1;
+    if (idxRaw < 0 || static_cast<std::size_t>(idxRaw) >= elements.size()) {
+        throw MerkError("List.pop index out of range");
+    }
+    const std::size_t idx = static_cast<std::size_t>(idxRaw);
+    Node value = elements[idx];
+    elements.erase(elements.begin() + static_cast<std::ptrdiff_t>(idx));
+    return value;
 }
 
 VariantType ListNode::getValue() const {return elements;}
@@ -156,7 +156,12 @@ void ArrayNode::setValue(const VariantType& v) {
 void ArrayNode::insert(const Node& index, const Node& value) {
     AnyNode::validateMutability(*this);
     if (contains == NodeValueType::Any || value.getType() == contains) {
-        elements.insert(elements.begin() + index.toInt(), value);
+        const int idxRaw = index.toInt();
+        if (idxRaw < 0 || static_cast<std::size_t>(idxRaw) > elements.size()) {
+            throw MerkError("Array.insert index out of range");
+        }
+        const auto idx = static_cast<std::size_t>(idxRaw);
+        elements.insert(elements.begin() + static_cast<std::ptrdiff_t>(idx), value);
         return;
     }
     
@@ -197,8 +202,10 @@ const std::unordered_map<Node, Node>& DictNode::getElements() const {
     return elements;
 }
 
-DictNode::DictNode(NodeMapU init) {
-    elements = init;
+DictNode::DictNode(NodeMapU init) : elements(std::move(init)) {
+    dataType = NodeValueType::Dict;
+    flags.type = NodeValueType::Dict;
+    setType(NodeValueType::Dict);
 }
 
 DictNode::DictNode(ArgumentList init) {
@@ -207,9 +214,9 @@ DictNode::DictNode(ArgumentList init) {
     setType(NodeValueType::Dict);
     if (init.hasNamedArgs()) {
         auto args = init.getNamedArgs();
+        elements.reserve(args.size());
         for (auto& [key, val] : args) {
-            
-            elements[Node(key)] = Node(val);
+            elements.emplace(Node(key), val);
         }
     }
 }
@@ -227,39 +234,46 @@ DictNode::DictNode() {
 String DictNode::toString() const {
     String repr = "{";
 
-    for (auto& [key, val] : elements) {
-        String valString = val.toString();
-        repr += key.toString() + " : " + valString + ", ";
+    bool first = true;
+    for (const auto& [key, val] : elements) {
+        if (!first) {
+            repr += ", ";
+        }
+        first = false;
+        repr += key.toString();
+        repr += " : ";
+        repr += val.toString();
     }
     repr += "}";
-    if (repr.size() > 2) {
-        repr.replace(repr.size() - 3, repr.size(), "}");
-    }
     
     return repr;
 }
 
 bool DictNode::holdsValue() {
-    return elements.size() > 0;
+    return !elements.empty();
 }
 
 void DictNode::set(const Node& key, const Node& value) {
     AnyNode::validateMutability(*this);
     if (value.isNull()) {throw MerkError("Setting A null Value");}
-    elements[key] = value;
+    elements.insert_or_assign(key, value);
 }
 
-void DictNode::set(const String& key, const Node value) {
+void DictNode::set(const String& key, const Node& value) {
     set(Node(key), value);
 }
 
-void DictNode::set(const char* key, Node value) { set(Node(key), std::move(value)); }
+void DictNode::set(const char* key, const Node& value) { set(Node(key), value); }
 
 Node DictNode::pop(const Node& key) {
     AnyNode::validateMutability(*this);
-    auto val = elements.find(key);
-    elements.erase(key);
-    return val->second;
+    auto it = elements.find(key);
+    if (it == elements.end()) {
+        return Node(Null);
+    }
+    Node value = it->second;
+    elements.erase(it);
+    return value;
 }
 
 void DictNode::remove(const Node& key) {
@@ -319,9 +333,10 @@ SetNode::~SetNode() {clear();};
 void SetNode::clear() {elements.clear();}
 
 String SetNode::toString() const {
-    String repr = getTypeAsString() + "{";
-    if (getTypeAsString() == "UNKNOWN") {throw MerkError("getTypeAsString return UNKNOWN");}
-    for (auto & elem : elements) {
+    const String typeStr = getTypeAsString();
+    String repr = typeStr + "{";
+    if (typeStr == "UNKNOWN") {throw MerkError("getTypeAsString return UNKNOWN");}
+    for (const auto& elem : elements) {
         repr += elem.toString();
         repr += ", ";
     }
@@ -339,7 +354,7 @@ SharedPtr<NodeBase> SetNode::clone() const {
 }
 
 bool SetNode::holdsValue() {
-    return elements.size() > 0;
+    return !elements.empty();
 }
 
 int SetNode::length() const {
@@ -352,10 +367,9 @@ void SetNode::add(const Node& value) {
 }
 
 Node SetNode::get(const Node& value) {
-    for (auto val : elements) {
-        if (val.toString() == value.toString()) {
-            return val;
-        }
+    auto it = elements.find(value);
+    if (it != elements.end()) {
+        return *it;
     }
     return Node(Null);
 }
@@ -386,6 +400,7 @@ void SetNode::setValue(const VariantType& v) {
         auto ds = std::get<SharedPtr<NativeNode>>(v);
         auto set = static_cast<SetNode*>(ds.get());
         elements = set->getElements();
+        return;
     }
     throw MerkError("Trying to Set variant to Set, but is not Native");
 }
@@ -432,6 +447,8 @@ SetNode::SetNode(ArgumentList val) {
 }
 
 SetNode::SetNode(std::unordered_set<Node> init) : elements(init) {
+    dataType = NodeValueType::Set;
+    flags.type = NodeValueType::Set;
     setType(NodeValueType::Set);
 }
 

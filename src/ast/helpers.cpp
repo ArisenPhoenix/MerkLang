@@ -40,7 +40,7 @@ Node handleVirtualMethod(SharedPtr<ClassInstanceNode> instanceNode, const String
 }
 
 
-Node handleVirtualMethod(Node currentVal, const String& methodName, NodeList args = {}) {
+Node handleVirtualMethod(Node currentVal, const String& methodName, const NodeList& args) {
     if (methodName == "clone") {
         auto clonedVal = currentVal.clone();
         return clonedVal;
@@ -102,7 +102,7 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
     auto chains = ASTUtils::collectMatching(
         allAst,
         [](const BaseAST* node) {
-            return node->getAstType() == AstType::Chain || node->getAstType() == AstType::ChainOperation;
+            return node->getAstType() == AstType::Chain;
         },
         false, false  // no recursion needed here — we've already done it via getAllAst(true)
     );
@@ -121,37 +121,6 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
                 }
             }
 
-        } else if (raw->getAstType() == AstType::ChainOperation) {
-            auto* chainOp = const_cast<ChainOperation*>(static_cast<const ChainOperation*>(raw));
-
-            // Left side
-            Chain* lhs = chainOp->getLeftSide();
-            if (lhs && !lhs->getElements().empty() && lhs->getElements()[0].name == accessor) {
-                if (!isAccessorDeclared) {
-                    throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
-                                    "' via a chain but does not declare it as a parameter.");
-                }
-
-                if (handleChain(lhs, params, accessor, methodDef->getName(), classScope)) {
-                    nonStaticElements.emplace_back(lhs);
-                }
-            }
-
-            // Right side (if exists)
-            auto* rhs = chainOp->getRightSide();
-            if (rhs && rhs->getAstType() == AstType::Chain) {
-                auto* chainR = static_cast<Chain*>(rhs);
-                if (!chainR->getElements().empty() && chainR->getElements()[0].name == accessor) {
-                    if (!isAccessorDeclared) {
-                        throw MerkError("Method '" + methodDef->getName() + "' references '" + accessor +
-                                        "' via a chain but does not declare it as a parameter.");
-                    }
-
-                    if (handleChain(chainR, params, accessor, methodDef->getName(), classScope)) {
-                        nonStaticElements.emplace_back(chainR);
-                    }
-                }
-            }
         }
     }
     auto allAst2 = methodDef->getBody()->getAllAst(true);
@@ -193,6 +162,7 @@ Vector<Chain*> applyAccessorScopeFix(MethodDef* methodDef, SharedPtr<Scope> clas
 }
 
 void fixupClassChains(SharedPtr<Scope> classScope, String accessor) {
+    MARK_UNUSED_MULTI(accessor);
     for (const auto& [name, signatures] : classScope->getFunctionRegistry()->getFunctions()) {
         for (const auto& sigPtr : signatures) {
             auto callable = sigPtr->getCallable();
@@ -205,10 +175,12 @@ void fixupClassChains(SharedPtr<Scope> classScope, String accessor) {
             if (!body) continue;
 
             ASTUtils::traverse(body->getChildren(), [&](BaseAST* node) {
-                if (node->getAstType() == AstType::ChainOperation) {
-                    auto* chainOp = static_cast<ChainOperation*>(node);
-                    if (chainOp->getResolutionMode() == ResolutionMode::Normal) {
-                        chainOp->setResolutionMethod(0, ResolutionMode::ClassInstance, nullptr, accessor);
+                if (node->getAstType() == AstType::Chain) {
+                    auto* chain = static_cast<Chain*>(node);
+                    if (chain->getResolutionMode() == ResolutionMode::Normal) {
+                        chain->setResolutionStartIndex(0);
+                        chain->setResolutionMode(ResolutionMode::ClassInstance);
+                        chain->setSecondaryScope(nullptr);
                     }
                 }
             }, true, false);

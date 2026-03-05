@@ -165,6 +165,35 @@ Vector<const BaseAST*> WhileLoop::getAllAst(bool includeSelf) const {
     return all;
 }
 
+Vector<const BaseAST*> ForLoop::getAllAst(bool includeSelf) const {
+    Vector<const BaseAST*> all = {};
+    if (includeSelf) {
+        all.push_back(this);
+    }
+
+    if (startExpr) {
+        auto startNodes = startExpr->getAllAst(includeSelf);
+        mergeVectors(all, startNodes);
+    }
+
+    if (endExpr) {
+        auto endNodes = endExpr->getAllAst(includeSelf);
+        mergeVectors(all, endNodes);
+    }
+
+    if (stepExpr) {
+        auto stepNodes = stepExpr->getAllAst(includeSelf);
+        mergeVectors(all, stepNodes);
+    }
+
+    if (body) {
+        auto bodyNodes = body->getAllAst(includeSelf);
+        mergeVectors(all, bodyNodes);
+    }
+
+    return all;
+}
+
 Vector<const BaseAST*> UnaryOperation::getAllAst(bool includeSelf) const {
     Vector<const BaseAST*> all = {};
 
@@ -284,25 +313,6 @@ Vector<const BaseAST*> Chain::getAllAst(bool includeSelf) const {
     return all;
 }
 
-
-
-Vector<const BaseAST*> ChainOperation::getAllAst(bool includeSelf) const {
-    Vector<const BaseAST*> all;
-    
-    if (includeSelf)
-        all.push_back(this);
-
-    auto lhsNodes = lhs->getAllAst(includeSelf);
-    mergeVectors(all, lhsNodes);
-
-    if (rhs) {
-        auto rhsNodes = rhs->getAllAst(includeSelf);
-        mergeVectors(all, rhsNodes);
-
-    }
-
-    return all;
-}
 
 
 Vector<const BaseAST*> Arguments::getAllAst(bool includeSelf) const {

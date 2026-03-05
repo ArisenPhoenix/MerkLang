@@ -3,6 +3,11 @@
 #ifndef _WIN32
 #include <execinfo.h>
 #endif
+#include <atomic>
+
+#ifndef MERK_SCOPE_DIAGNOSTICS
+#define MERK_SCOPE_DIAGNOSTICS 0
+#endif
 
 #include "core/TypesFWD.hpp"
 #include "core/registry/Context.hpp"
@@ -17,6 +22,7 @@ using ScopeCache = std::unordered_map<String, Scope>;
 enum class ScopeKind { Root, Block, FunctionDef, FunctionCall, ClassDef, ClassScope, Instance, Captured, Detached, Isolated, MethodDef, MethodCall };
 
 String scopeKindToString(ScopeKind kind);
+
 
 class ScopeMeta {
 public:
@@ -46,15 +52,42 @@ struct ScopeCounts {
 };
 
 
+enum class ParentAppendAttempt {
+    None,
+    Parent,
+    Ancestor,
+    Reparent
+};
 
 
 class Scope : public ScopeMeta, public std::enable_shared_from_this<Scope> {
 private:
+    void refreshVariableLookupCache() const;
+    static void bumpVariableLookupEpoch();
+
     WeakPtr<Scope> parentScope;          // Weak pointer to the parent scope - weak to avoid undue circular references
     static inline size_t liveScopeCount = 0;
     static inline size_t totalScopeCreated = 0;
     ClassMembers classMembers;   //map for future uses
     static inline ScopeCounts counts{};
+    static inline std::atomic<uint64_t> variableLookupEpoch{1};
+
+    inline static int totalWith = 0;
+    inline static int totalWithout = 0;
+#if MERK_SCOPE_DIAGNOSTICS
+    static inline std::atomic<uint64_t> parentAppendAttempts{0};
+    static inline std::atomic<uint64_t> ancestorAppendAttempts{0};
+    static inline std::atomic<uint64_t> reparentAttempts{0};
+    static inline std::atomic<uint64_t> ancestorParentChainCycleBailouts{0};
+    static inline std::atomic<uint64_t> classScopeAttachSamples{0};
+    static inline std::atomic<uint64_t> classScopeAttachUnexpectedDelta{0};
+    static inline std::atomic<uint64_t> capturedScopeAttachSamples{0};
+    static inline std::atomic<uint64_t> capturedScopeAttachUnexpectedDelta{0};
+
+    
+#endif
+    mutable uint64_t variableLookupCacheEpoch = 0;
+    mutable std::unordered_map<String, int> variableLookupCache;
 
 public:
     static void printScopeReport() {
@@ -69,6 +102,17 @@ public:
 
         std::cout << "SCOPE COUNTS: " << std::endl;
         std::cout << Scope::counts.toString() << std::endl;
+#if MERK_SCOPE_DIAGNOSTICS
+        std::cout << "Cycle/Attach Diagnostics:" << std::endl;
+        std::cout << "  parentAppendAttempts: " << parentAppendAttempts.load() << std::endl;
+        std::cout << "  ancestorAppendAttempts: " << ancestorAppendAttempts.load() << std::endl;
+        std::cout << "  reparentAttempts: " << reparentAttempts.load() << std::endl;
+        std::cout << "  ancestorParentChainCycleBailouts: " << ancestorParentChainCycleBailouts.load() << std::endl;
+        std::cout << "  classScopeAttachSamples: " << classScopeAttachSamples.load() << std::endl;
+        std::cout << "  classScopeAttachUnexpectedDelta: " << classScopeAttachUnexpectedDelta.load() << std::endl;
+        std::cout << "  capturedScopeAttachSamples: " << capturedScopeAttachSamples.load() << std::endl;
+        std::cout << "  capturedScopeAttachUnexpectedDelta: " << capturedScopeAttachUnexpectedDelta.load() << std::endl;
+#endif
         std::cout << "----------------------------" << std::endl;
     }
 
@@ -80,6 +124,9 @@ public:
     // // DESTRUCTOR
     ~Scope();
     void clear(bool internalCall = true);
+
+    void appendDiagnostics(ParentAppendAttempt attempt);
+    void diagnosticAppend(const SharedPtr<Scope>& childScope);
     // // Attributes
     String formattedScope();
     SharedPtr<FunctionRegistry>  globalFunctions;
@@ -129,6 +176,7 @@ public:
     bool hasVariable(const String& name) const;
     VarNode& getVariable(const String& name);
     void printContext(int depth = 0) const;
+    void printVariables(int depth = 0) const;
 
     void linkTypes();
 
@@ -192,6 +240,7 @@ public:
 
     // // DEBUGGING
     void printChildScopes(int indentLevel = 0) const;
+    void printScopeTree() const;
     
     SharedPtr<Scope> isolateScope(const std::unordered_set<String>& freeVarNames);
 

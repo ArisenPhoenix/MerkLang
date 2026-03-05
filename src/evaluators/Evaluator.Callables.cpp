@@ -13,7 +13,6 @@
 #include "core/callables/Callable.hpp"
 #include "core/callables/classes/Method.hpp"
 #include "core/callables/functions/Function.hpp"
-#include "core/node/BoundArgs.hpp"
 #include "core/node/ArgumentNode.hpp"
 
 namespace Evaluator {
@@ -22,19 +21,6 @@ Node evaluateMethodBody(Vector<UniquePtr<BaseAST>>& children, SharedPtr<Scope> m
     if (!instanceNode){throw MerkError("Evaluator::evaluateMethod has no instanceNode");}
     Node lastValue;
     for (const auto& child : children) {
-        
-        if (child->getAstType() == AstType::ChainOperation) {
-            auto chain = static_unique_ptr_cast<ChainOperation>(child->clone());
-            for (auto& elem: chain->getLeft()->getElements()) {
-                if (elem.object->getAstType() == AstType::ClassMethodCall) {
-                    DEBUG_LOG(LogLevel::TRACE, highlight("Evaluating a nested method call ========================================================================================", Colors::bg_bright_red));
-
-                    auto current = static_unique_ptr_cast<MethodCall>(elem.object->clone());                        
-                }
-            }
-
-        }
-
         lastValue = child->evaluate(methodScope, instanceNode);
         
     }
@@ -69,6 +55,7 @@ Node evaluateClassBody(SharedPtr<Scope> classCapturedScope, SharedPtr<Scope> cla
                     auto methodScope = classScope->createChildScope();
                     DEBUG_LOG(LogLevel::TRACE, "CREATED METHOD CALL SCOPE");
                     if (!methodScope){throw MerkError("generated methodscope is null for method in ClassDef::evaluate");} 
+                    methodScope->owner = generateScopeOwner("ClassMethodBody", methodDef->getName());
 
                     methodDef->setClassScope(classScope);
                     if (methodDef->getClassScope().get() != classScope.get()) {throw MerkError("method class Scope is not the same as cls->classScope");}
@@ -204,13 +191,11 @@ Node evaluateFunctionCall(String name, SharedPtr<Scope> scope, Arguments* argume
     SharedPtr<CallableSignature> optSig;
 
     auto sigOpt = scope->getFunction(name, callArgs);
-    BoundArgs evaluatedArgs;
 
     if (sigOpt.has_value()) {
         optSig = sigOpt.value();
-        evaluatedArgs = callArgs.bindToBound(optSig->getParameters(), /*allowDefaults=*/true);
     } else {
-        scope->debugPrint();
+        // scope->debugPrint();
         
         auto& var = scope->getVariable(name);
         if (var.isFunctionNode()) {
@@ -231,10 +216,6 @@ Node evaluateFunctionCall(String name, SharedPtr<Scope> scope, Arguments* argume
     SharedPtr<Function> func = std::static_pointer_cast<Function>(optSig->getCallable());
 
     if (func->getSubType() == CallableType::NATIVE) {
-        // func->parameters.verifyArguments(evaluatedArgs); // as opposed to placing them within the callScope
-        auto m = scope->localTypes.matchCall(optSig->getTypeSignature(), callArgs);
-        if (!m.ok) {}
-        
         return func->execute(callArgs, scope, instanceNode);
     }
 
@@ -318,6 +299,15 @@ Node evaluateChain(SharedPtr<Scope> currentScope, SharedPtr<Scope> methodScope, 
     auto& baseElem = elements[index];
     if (baseElem.object->getAstType() == AstType::Accessor){
         currentVal = baseElem.object->evaluate(currentScope, instanceNode); // should evaluate to a ClassInstanceNode
+    } else if (baseElem.type == TokenType::ChainEntryPoint && !currentScope->hasVariable(baseElem.name)) {
+        // Static class chain roots (e.g. File.writeAll(...)) are not variables.
+        // Resolve class symbol first before attempting variable evaluation.
+        auto classSig = currentScope->getClass(baseElem.name);
+        if (classSig.has_value()) {
+            currentVal = ClassNode(classSig.value()->getClassDef());
+        } else {
+            currentVal = baseElem.object->evaluate(currentScope, instanceNode);
+        }
     } else {
         currentVal = baseElem.object->evaluate(currentScope, instanceNode);
     }
@@ -392,9 +382,46 @@ Node evaluateChain(SharedPtr<Scope> currentScope, SharedPtr<Scope> methodScope, 
 
         } else {
             if (elem.object->getAstType() == AstType::ClassMethodCall) { // For Handling ad-hoc/virtual methods that are not actually on the object i.e (clone, etc.)
+                // Static class method call path (ClassName.method(...))
+                if (currentVal.getFlags().type == NodeValueType::Class) {
+                    auto classCallable = std::dynamic_pointer_cast<ClassBase>(currentVal.toCallable());
+                    if (!classCallable) {
+                        throw MerkError("Chain static call base is not a class callable: " + currentVal.getFlags().toString());
+                    }
+
+                    auto methodCall = static_cast<MethodCall*>(elem.object.get());
+                    auto args = methodCall->cloneArgs();
+                    auto evaluatedArgs = args->evaluateAll(currentScope->createChildScope(), nullptr);
+
+                    auto classScope = classCallable->getClassScope();
+                    if (!classScope) { throw MerkError("Class scope missing for static call: " + classCallable->getName()); }
+                    auto methodSigOpt = classScope->getFunction(elem.name, evaluatedArgs);
+                    if (!methodSigOpt.has_value()) {
+                        throw FunctionNotFoundError("Static method not found: " + classCallable->getName() + "." + elem.name);
+                    }
+
+                    auto method = std::dynamic_pointer_cast<Method>(methodSigOpt.value()->getCallable());
+                    if (!method) { throw MerkError("Resolved callable is not a Method for static call: " + elem.name); }
+                    if (!method->getIsStatic()) {
+                        throw MerkError("Method '" + elem.name + "' is not static on class '" + classCallable->getName() + "'");
+                    }
+
+                    if (method->getSubType() == CallableType::NATIVE) {
+                        currentVal = method->execute(evaluatedArgs, currentScope, nullptr);
+                    } else {
+                        auto callScope = currentScope->buildMethodCallScope(method, elem.name);
+                        currentVal = method->execute(evaluatedArgs, callScope, nullptr);
+                        currentScope->removeChildScope(callScope);
+                        callScope->clear();
+                    }
+                    continue;
+                }
+
                 DEBUG_LOG(LogLevel::PERMISSIVE, currentVal.toString(), currentVal.getFlags().toString());
-                currentScope->debugPrint();
-                currentScope->printChildScopes();
+                if (Debugger::getInstance().getLogLevel() == LogLevel::INFO) {
+                    currentScope->debugPrint();
+                    currentScope->printChildScopes();
+                }
                 auto methodCall = static_cast<MethodCall*>(elem.object.get());
                 auto args = methodCall->cloneArgs();
                 auto evaluatedArgs = args->evaluateAll(currentScope->createChildScope(), instanceNode);

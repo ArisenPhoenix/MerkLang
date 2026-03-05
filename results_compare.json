@@ -1,0 +1,250 @@
+{
+  "timestamp": "2026-03-05T10:17:33.677797+00:00",
+  "source": "compare_merk_python.py",
+  "config": {
+    "outer_runs": 6,
+    "process_warmup": 1,
+    "mode": "process",
+    "bench_iters": 200,
+    "bench_warmup": 20,
+    "merk_bin": "/mnt/Internal_SSD/Programming/C++/MerkLang/build-release/merk",
+    "python_bin": "python3"
+  },
+  "entries": [
+    {
+      "mode": "process",
+      "cases": [
+        {
+          "case": "test1",
+          "merk": {
+            "command": [
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/build-release/merk",
+              "test1.merk"
+            ],
+            "samples_ms": [
+              8.310292847454548,
+              7.73493992164731,
+              9.319833014160395,
+              7.887337356805801,
+              7.664838805794716,
+              8.91587184742093
+            ],
+            "summary_ms": {
+              "median": 8.098815102130175,
+              "mean": 8.305518965547284,
+              "std": 0.6207916706246749,
+              "min": 7.664838805794716,
+              "max": 9.319833014160395
+            }
+          },
+          "python": {
+            "command": [
+              "python3",
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/bench_py/test1.py"
+            ],
+            "samples_ms": [
+              9.053261019289494,
+              8.896184619516134,
+              8.526970632374287,
+              9.758517146110535,
+              9.433255065232515,
+              9.42783523350954
+            ],
+            "summary_ms": {
+              "median": 9.240548126399517,
+              "mean": 9.18267061933875,
+              "std": 0.40481704109078614,
+              "min": 8.526970632374287,
+              "max": 9.758517146110535
+            }
+          },
+          "python_over_merk_median_ratio": 1.1409753167434382
+        },
+        {
+          "case": "class",
+          "merk": {
+            "command": [
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/build-release/merk",
+              "class.merk"
+            ],
+            "samples_ms": [
+              8.175790309906006,
+              7.712367922067642,
+              7.170738652348518,
+              8.391757030040026,
+              8.293922059237957,
+              7.998797111213207
+            ],
+            "summary_ms": {
+              "median": 8.087293710559607,
+              "mean": 7.957228847468893,
+              "std": 0.4143665433570757,
+              "min": 7.170738652348518,
+              "max": 8.391757030040026
+            }
+          },
+          "python": {
+            "command": [
+              "python3",
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/bench_py/class_case.py"
+            ],
+            "samples_ms": [
+              9.249560069292784,
+              11.327899992465973,
+              9.709956124424934,
+              9.09060100093484,
+              9.523345157504082,
+              8.862672373652458
+            ],
+            "summary_ms": {
+              "median": 9.386452613398433,
+              "mean": 9.627339119712511,
+              "std": 0.8088126737383396,
+              "min": 8.862672373652458,
+              "max": 11.327899992465973
+            }
+          },
+          "python_over_merk_median_ratio": 1.160641983503395
+        },
+        {
+          "case": "fib",
+          "merk": {
+            "command": [
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/build-release/merk",
+              "fib.merk"
+            ],
+            "samples_ms": [
+              8.712759707123041,
+              7.748877163976431,
+              9.442392736673355,
+              9.439227171242237,
+              8.445688057690859,
+              8.574729785323143
+            ],
+            "summary_ms": {
+              "median": 8.643744746223092,
+              "mean": 8.727279103671512,
+              "std": 0.5885439008268689,
+              "min": 7.748877163976431,
+              "max": 9.442392736673355
+            }
+          },
+          "python": {
+            "command": [
+              "python3",
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/bench_py/fib.py"
+            ],
+            "samples_ms": [
+              9.153740014880896,
+              8.969753049314022,
+              8.307768031954765,
+              8.419828955084085,
+              8.984611835330725,
+              8.794194087386131
+            ],
+            "summary_ms": {
+              "median": 8.881973568350077,
+              "mean": 8.77164932899177,
+              "std": 0.308237761239395,
+              "min": 8.307768031954765,
+              "max": 9.153740014880896
+            }
+          },
+          "python_over_merk_median_ratio": 1.0275608349299161
+        },
+        {
+          "case": "file_static",
+          "merk": {
+            "command": [
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/build-release/merk",
+              "file_static.merk"
+            ],
+            "samples_ms": [
+              8.040997199714184,
+              7.860457058995962,
+              7.709132973104715,
+              8.141926024109125,
+              7.748797070235014,
+              8.332204073667526
+            ],
+            "summary_ms": {
+              "median": 7.950727129355073,
+              "mean": 7.9722523999710875,
+              "std": 0.22163878611470963,
+              "min": 7.709132973104715,
+              "max": 8.332204073667526
+            }
+          },
+          "python": {
+            "command": [
+              "python3",
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/bench_py/file_static.py"
+            ],
+            "samples_ms": [
+              32.018463127315044,
+              31.726923771202564,
+              31.243985053151846,
+              34.38357124105096,
+              30.221662018448114,
+              21.995747927576303
+            ],
+            "summary_ms": {
+              "median": 31.485454412177205,
+              "mean": 30.265058856457472,
+              "std": 3.9054513791773893,
+              "min": 21.995747927576303,
+              "max": 34.38357124105096
+            }
+          },
+          "python_over_merk_median_ratio": 3.9600723179052384
+        },
+        {
+          "case": "compute_loop",
+          "merk": {
+            "command": [
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/build-release/merk",
+              "compute_loop.merk"
+            ],
+            "samples_ms": [
+              720.0132240541279,
+              759.0107950381935,
+              711.9983667507768,
+              709.1396688483655,
+              726.5393296256661,
+              709.3461360782385
+            ],
+            "summary_ms": {
+              "median": 716.0057954024523,
+              "mean": 722.6745867325614,
+              "std": 17.402884794588655,
+              "min": 709.1396688483655,
+              "max": 759.0107950381935
+            }
+          },
+          "python": {
+            "command": [
+              "python3",
+              "/mnt/Internal_SSD/Programming/C++/MerkLang/bench_py/compute_loop.py"
+            ],
+            "samples_ms": [
+              64.69850894063711,
+              64.54748567193747,
+              63.75224934890866,
+              66.94052694365382,
+              68.83053155615926,
+              65.93806063756347
+            ],
+            "summary_ms": {
+              "median": 65.31828478910029,
+              "mean": 65.78456051647663,
+              "std": 1.7067469603857663,
+              "min": 63.75224934890866,
+              "max": 68.83053155615926
+            }
+          },
+          "python_over_merk_median_ratio": 0.09122591633826958
+        }
+      ]
+    }
+  ]
+}

@@ -245,10 +245,41 @@ String FileNode::read(size_t n = 0) {
     return s;
 }
 
+Node FileNode::readLineNode() {
+    if (!isOpen()) open();
+    String line;
+    if (!std::getline(stream, line)) {
+        if (stream.eof()) {
+            stream.clear();
+            return Node(Null);
+        }
+        throw MerkError("File.readLine failed");
+    }
+    return Node(line);
+}
+
 void FileNode::write(String s) {
     if (!isOpen()) open();
     stream.write(s.data(), static_cast<std::streamsize>(s.size()));
     if (!stream) throw MerkError("File.write failed");
+}
+
+void FileNode::writeLine(const String& s) {
+    if (!isOpen()) open();
+    stream.write(s.data(), static_cast<std::streamsize>(s.size()));
+    stream.put('\n');
+    if (!stream) throw MerkError("File.writeLine failed");
+}
+
+void FileNode::flush() {
+    if (!isOpen()) open();
+    stream.flush();
+    if (!stream) throw MerkError("File.flush failed");
+}
+
+bool FileNode::eof() {
+    if (!isOpen()) open();
+    return stream.eof();
 }
 
 void FileNode::writeBytes(const std::vector<uint8_t>& b) {

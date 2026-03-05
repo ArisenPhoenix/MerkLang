@@ -27,6 +27,8 @@ public:
     void updateVariable(const String& name, const Node& newValue);
 
     std::optional<std::reference_wrapper<VarNode>> getVariable(const String& name);
+    VarNode* findVariable(const String& name);
+    const VarNode* findVariable(const String& name) const;
 
     // VarNode& getVariable(const String& name);
     bool hasVariable(const String& name) const;

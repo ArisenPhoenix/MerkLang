@@ -165,6 +165,14 @@ String WhileLoop::toString() const {
 
 }
 
+String ForLoop::toString() const {
+    return "ForLoop(var=" + loopVariable +
+           ", start=" + (startExpr ? startExpr->toString() : "null") +
+           ", end=" + (endExpr ? endExpr->toString() : "null") +
+           ", step=" + (stepExpr ? stepExpr->toString() : "null") +
+           ", body=" + (body ? body->toString() : "null") + ")";
+}
+
 void ConditionalBlock::printAST(std::ostream& os, int indent) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
 
@@ -263,6 +271,38 @@ void WhileLoop::printAST(std::ostream& os, int indent) const {
 
     DEBUG_FLOW_EXIT();
 
+}
+
+void ForLoop::printAST(std::ostream& os, int indent) const {
+    DEBUG_FLOW(FlowLevel::VERY_LOW);
+    indent = printIndent(os, indent);
+    debugLog(true, getAstTypeAsString(), "(var=", loopVariable, ")");
+
+    if (startExpr) {
+        indent = printIndent(os, indent);
+        debugLog(true, "start:");
+        startExpr->printAST(os, indent);
+    }
+
+    if (endExpr) {
+        indent = printIndent(os, indent);
+        debugLog(true, "end:");
+        endExpr->printAST(os, indent);
+    }
+
+    if (stepExpr) {
+        indent = printIndent(os, indent);
+        debugLog(true, "step:");
+        stepExpr->printAST(os, indent);
+    }
+
+    if (body) {
+        indent = printIndent(os, indent);
+        debugLog(true, "body:");
+        body->printAST(os, indent);
+    }
+
+    DEBUG_FLOW_EXIT();
 }
 
 void NoOpNode::printAST(std::ostream& os, int indent) const {
@@ -473,25 +513,6 @@ void Accessor::printAST(std::ostream& os, int indent) const {
 }
 
 
-
-String ChainOperation::toString() const {
-    String kind = opKindAsString(opKind);
-    auto lhs = getLeftSide();
-    String scoping = lhs->getSecondaryScope() ? lhs->getSecondaryScope()->formattedScope() : "null";
-    return getAstTypeAsString() + "(kind: " + kind + ", lhs: " + lhs->toString() + scopeLevelAsString(getScope(), getAstTypeAsString()) + ")";
-}
-
-void ChainOperation::printAST(std::ostream& os, int indent) const {
-    indent = printIndent(os, indent);
-    os << getAstTypeAsString() << ")\n";
-    // printIndent(os, indent);
-    lhs->printAST(os, indent);
-
-    if (rhs) {
-        // printIndent(os, indent);
-        rhs->printAST(os, indent);
-    }
-}
 
 void ChainElement::printAST(std::ostream& os, int indent) const {
     

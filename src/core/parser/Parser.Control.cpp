@@ -115,6 +115,62 @@ UniquePtr<WhileLoop> Parser::parseWhileLoop() {
     return makeUnique<WhileLoop>(std::move(conditionalBlock), std::move(body), currentScope);
 }
 
+UniquePtr<ForLoop> Parser::parseForLoop() {
+    DEBUG_FLOW(FlowLevel::MED);
+
+    consume(TokenType::Keyword, "for", "Parser::parseForLoop");
+
+    const Token& variableToken = currentToken();
+    if (variableToken.type != TokenType::Variable && variableToken.type != TokenType::Identifier) {
+        throw UnexpectedTokenError(variableToken, "loop variable", "Parser::parseForLoop");
+    }
+    const String loopVariable = variableToken.value;
+    advance(); // consume loop variable
+
+    consume("in", "Parser::parseForLoop");
+    consume("range", "Parser::parseForLoop");
+    consume(TokenType::Punctuation, "(", "Parser::parseForLoop");
+
+    auto startExpr = parseExpression();
+    if (!startExpr) {
+        throw MerkError("Parser::parseForLoop: missing range start expression.");
+    }
+
+    consume(TokenType::Punctuation, ",", "Parser::parseForLoop");
+
+    auto endExpr = parseExpression();
+    if (!endExpr) {
+        throw MerkError("Parser::parseForLoop: missing range end expression.");
+    }
+
+    UniquePtr<ASTStatement> stepExpr;
+    if (consumeIf(TokenType::Punctuation, ",")) {
+        stepExpr = parseExpression();
+        if (!stepExpr) {
+            throw MerkError("Parser::parseForLoop: missing range step expression.");
+        }
+    } else {
+        stepExpr = makeUnique<LiteralValue>(LitNode("1", "Int"), currentScope);
+    }
+
+    consume(TokenType::Punctuation, ")", "Parser::parseForLoop");
+    consume(TokenType::Punctuation, ":", "Parser::parseForLoop");
+
+    enterLoop();
+    auto body = parseBlock();
+    exitLoop();
+
+    DEBUG_FLOW_EXIT();
+    return makeUnique<ForLoop>(
+        loopVariable,
+        std::move(startExpr),
+        std::move(endExpr),
+        std::move(stepExpr),
+        std::move(body),
+        currentScope
+    );
+}
+
 UniquePtr<CodeBlock> Parser::parseBlock(SharedPtr<Scope> controlScope) {
     DEBUG_FLOW(FlowLevel::MED);
     

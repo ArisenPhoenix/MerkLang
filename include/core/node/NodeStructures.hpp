@@ -120,8 +120,8 @@ public:
     explicit DictNode(ArgumentList init);
     explicit DictNode(NodeMapU elements);
     void set(const Node& key, const Node& value);
-    void set(const String& key, const Node value);
-    void set(const char* key, Node value);
+    void set(const String& key, const Node& value);
+    void set(const char* key, const Node& value);
 
     Node get(const Node& key, const Node& defaultReturn = Node());
     Node pop(const Node& value);
@@ -257,7 +257,11 @@ public:
     bool isOpen() const { return stream.is_open(); }
     String readAll();
     String read(size_t n);
+    Node readLineNode();
     void write(String s);
+    void writeLine(const String& s);
+    void flush();
+    bool eof();
     void writeBytes(const std::vector<uint8_t>& b);
     void seek(std::streamoff pos, std::ios_base::seekdir dir);
     std::streamoff tell();

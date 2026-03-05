@@ -181,18 +181,12 @@ void Callable::placeArgsInCallScope(ArgumentList evaluatedArgs, SharedPtr<Scope>
 
     auto finalArgs = args.bindTo(parameters);
 
-    DEBUG_LOG(LogLevel::TRACE, "FINAL ARGS: ", joinVectorNodeStrings(finalArgs));
     for (size_t i = 0; i < parameters.size(); ++i) {
         auto arg = finalArgs[i];
-        auto flags = args.getFlags();
-        auto paramVar = VarNode(finalArgs[i]);
-        paramVar.setFlags(arg.getFlags());
-        if (paramVar.getFlags().name.empty()) {throw MerkError("ParamVar Name is Empty WITH " + paramVar.getFlags().toString());}
-        String varName = flags.name;
-        if (arg.getFlags().name.empty()) {throw MerkError("Arg Is Empty");}
-        DEBUG_LOG(LogLevel::TRACE, "PARAMETER's NAME:  ------------------------ > ", arg.getFlags().toString());
-
-        callScope->declareVariable(arg.getFlags().name, makeUnique<VarNode>(arg));
+        const auto& param = parameters[i];
+        const String paramName = param.getName();
+        if (paramName.empty()) {throw MerkError("Parameter name is empty");}
+        callScope->declareVariable(paramName, makeUnique<VarNode>(arg, param.flags));
     }
 
     DEBUG_FLOW_EXIT();

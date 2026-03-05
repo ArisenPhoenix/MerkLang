@@ -196,7 +196,6 @@ Node VariableReference::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] Shared
     // if (name == "var") { throw MerkError("Tried to Reference Variable named 'var'"); }
 
     VarNode& varRef = Evaluator::evaluateVariableReference(name, scope, instanceNode); 
-    varRef.getValueNode().getValue().valueless_by_exception();
     DEBUG_FLOW_EXIT();
     return varRef.getValueNode();
 };
@@ -220,6 +219,24 @@ Node BinaryOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPt
         
     // }
     auto leftValue = left->evaluate(scope, instanceNode);
+    if (op == "and" || op == "&&") {
+        if (!leftValue.isTruthy()) {
+            DEBUG_FLOW_EXIT();
+            return Node(false);
+        }
+        auto rightValue = right->evaluate(scope, instanceNode);
+        DEBUG_FLOW_EXIT();
+        return Node(rightValue.isTruthy());
+    }
+    if (op == "or" || op == "||") {
+        if (leftValue.isTruthy()) {
+            DEBUG_FLOW_EXIT();
+            return Node(true);
+        }
+        auto rightValue = right->evaluate(scope, instanceNode);
+        DEBUG_FLOW_EXIT();
+        return Node(rightValue.isTruthy());
+    }
 
     auto rightValue = right->evaluate(scope, instanceNode);
 

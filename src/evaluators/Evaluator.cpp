@@ -100,6 +100,70 @@ void evaluatingFor(const Node& value, const String& methodName, int scopeLevel =
 
 namespace Evaluator {
 
+namespace {
+constexpr bool kEnableFastIntExprAssign = false;
+
+bool tryApplyIntBinary(const String& op, int lhs, int rhs, int& out) {
+    if (op == "+") { out = lhs + rhs; return true; }
+    if (op == "-") { out = lhs - rhs; return true; }
+    if (op == "*") { out = lhs * rhs; return true; }
+    if (op == "/") {
+        if (rhs == 0) throw MerkError("Division by zero");
+        out = lhs / rhs;
+        return true;
+    }
+    if (op == "%") {
+        if (rhs == 0) throw MerkError("Modulo by zero");
+        out = lhs % rhs;
+        return true;
+    }
+    return false;
+}
+
+bool tryEvalIntExprFast(const ASTStatement* expr,
+                        SharedPtr<Scope> scope,
+                        SharedPtr<ClassInstanceNode> instanceNode,
+                        int& out) {
+    if (!expr || !scope) return false;
+
+    switch (expr->getAstType()) {
+        case AstType::VariableReference: {
+            const auto* ref = static_cast<const VariableReference*>(expr);
+            const Node& n = scope->getVariable(ref->getName()).getValueNode();
+            if (!n.isInt()) return false;
+            out = n.toInt();
+            return true;
+        }
+        case AstType::Literal: {
+            Node n = expr->evaluate(scope, instanceNode);
+            if (!n.isInt()) return false;
+            out = n.toInt();
+            return true;
+        }
+        case AstType::UnaryOperation: {
+            const auto* u = static_cast<const UnaryOperation*>(expr);
+            int v = 0;
+            if (!tryEvalIntExprFast(u->getOperand(), scope, instanceNode, v)) return false;
+            if (u->getOperator() == "-") {
+                out = -v;
+                return true;
+            }
+            return false;
+        }
+        case AstType::BinaryOperation: {
+            const auto* b = static_cast<const BinaryOperation*>(expr);
+            int lhs = 0;
+            int rhs = 0;
+            if (!tryEvalIntExprFast(b->getLeftSide(), scope, instanceNode, lhs)) return false;
+            if (!tryEvalIntExprFast(b->getRightSide(), scope, instanceNode, rhs)) return false;
+            return tryApplyIntBinary(b->getOperator(), lhs, rhs, out);
+        }
+        default:
+            return false;
+    }
+}
+} // namespace
+
     Node evaluateLiteral(Node value){
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
         if (!value.isValid()) {throw MerkError("Literal Value is Not Valid");}
@@ -127,7 +191,6 @@ namespace Evaluator {
     const auto base = varMeta.fullType.getBaseType();
     if (!base.empty() && base != "Any") {
         varMeta.declaredSig = tr.bindResolvedType(varMeta.fullType, *scope);
-        scope->resolveTypeNameSig(base);
     } else {
         varMeta.declaredSig = anyId;
     }
@@ -159,8 +222,20 @@ namespace Evaluator {
     Node evaluateVariableAssignment(String name, ASTStatement* value, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
 
+        int fastInt = 0;
+        if (kEnableFastIntExprAssign && tryEvalIntExprFast(value, scope, instanceNode, fastInt)) {
+            Node finalVal(fastInt);
+            if (instanceNode) {
+                instanceNode->getInstanceScope()->updateVariable(name, finalVal);
+            } else {
+                scope->updateVariable(name, finalVal);
+            }
+            DEBUG_FLOW_EXIT();
+            return finalVal;
+        }
+
         Node finalVal = value->evaluate(scope, instanceNode);
-        if (finalVal.toString() == "var") {throw MerkError("finalVal is var in evaluateVariableAssignment" );};
+        if (!finalVal.isValid()) {throw MerkError("finalVal is invalid in evaluateVariableAssignment");}
         DEBUG_LOG(LogLevel::TRACE, "========================");
         DEBUG_LOG(LogLevel::TRACE, "Assigning: ", finalVal.toString() + " META: " + finalVal.getFlags().toString());
         DEBUG_LOG(LogLevel::TRACE, "========================");        
@@ -178,16 +253,7 @@ namespace Evaluator {
     VarNode& evaluateVariableReference(String name, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::PERMISSIVE);
-        auto instanceScope = instanceNode ? instanceNode->getInstanceScope() : nullptr;
-        auto workingScope = scope;
-        auto parent = scope->getParent();
-        auto& variable = workingScope->getVariable(name);
-
-        if (instanceScope) {
-            scope->removeChildScope(workingScope);
-        }
-        scope->setParent(parent);
-
+        auto& variable = scope->getVariable(name);
         DEBUG_FLOW_EXIT();
         return variable;
     }
@@ -267,7 +333,8 @@ namespace Evaluator {
                 return elif->getBody()->evaluate(conditionScope, instanceNode);
             }
         }
-
+        
+        // auto else_ = ifStatement.getElse();
         if (ifStatement.getElse()) {
             DEBUG_FLOW_EXIT();
             return ifStatement.getElse()->evaluate(conditionScope, instanceNode);
@@ -297,7 +364,8 @@ namespace Evaluator {
     Node evaluateElse(const CodeBlock& body, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode){
         MARK_UNUSED_MULTI(instanceNode);
         DEBUG_FLOW(FlowLevel::LOW);
-        auto val = body.evaluate(scope->createChildScope(), instanceNode);
+        // Keep else behavior consistent with if/elif branches and avoid per-hit scope churn.
+        auto val = body.evaluate(scope, instanceNode);
         DEBUG_FLOW_EXIT();
         return val;
 }
@@ -343,6 +411,61 @@ namespace Evaluator {
         return Node();
     }
 
+    Node evaluateForLoop(const ForLoop& forLoop, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
+        DEBUG_FLOW(FlowLevel::LOW);
+        if (!scope) throw MerkError("evaluateForLoop: scope is null");
+
+        const ASTStatement* startExpr = forLoop.getStartExpr();
+        const ASTStatement* endExpr = forLoop.getEndExpr();
+        const ASTStatement* stepExpr = forLoop.getStepExpr();
+        const CodeBlock* body = forLoop.getBody();
+        if (!startExpr || !endExpr || !stepExpr || !body) {
+            throw MerkError("evaluateForLoop: for-loop AST is incomplete");
+        }
+
+        const Node startNode = startExpr->evaluate(scope, instanceNode);
+        const Node endNode = endExpr->evaluate(scope, instanceNode);
+        const Node stepNode = stepExpr->evaluate(scope, instanceNode);
+
+        const int start = startNode.toInt();
+        const int end = endNode.toInt();
+        const int step = stepNode.toInt();
+        if (step == 0) {
+            throw MerkError("for-loop step cannot be 0");
+        }
+
+        const String& loopVar = forLoop.getLoopVariable();
+        if (!scope->hasVariable(loopVar)) {
+            DataTypeFlags loopFlags;
+            loopFlags.isConst = false;
+            loopFlags.isMutable = true;
+            loopFlags.isStatic = false;
+            loopFlags.type = NodeValueType::Int;
+            scope->declareVariable(loopVar, makeUnique<VarNode>(Node(start), loopFlags));
+        } else {
+            scope->updateVariable(loopVar, Node(start));
+        }
+
+        int i = start;
+        const auto inRange = [&]() { return step > 0 ? (i < end) : (i > end); };
+
+        while (inRange()) {
+            scope->updateVariable(loopVar, Node(i));
+            try {
+                body->evaluate(scope, instanceNode);
+            } catch (const ContinueException&) {
+                i += step;
+                continue;
+            } catch (const BreakException&) {
+                break;
+            }
+            i += step;
+        }
+
+        DEBUG_FLOW_EXIT();
+        return Node();
+    }
+
 
     Node evaluateBinaryOperation(const String& op, const Node& leftValue, const Node& rightValue, SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) {
         MARK_UNUSED_MULTI(instanceNode);
@@ -351,29 +474,53 @@ namespace Evaluator {
         evaluatingFor(rightValue, "evaluateBinaryOperation", scope->getScopeLevel());
 
         DEBUG_LOG(LogLevel::TRACE, "Evaluating BinaryOperation: ", leftValue, " ", op, " ", rightValue);
+
+        // Hot-path for integer arithmetic/comparison in tight loops.
+        if (leftValue.isInt() && rightValue.isInt()) {
+            const int li = leftValue.toInt();
+            const int ri = rightValue.toInt();
+            if (op == "+") return Node(li + ri);
+            if (op == "-") return Node(li - ri);
+            if (op == "*") return Node(li * ri);
+            if (op == "/") {
+                if (ri == 0) throw MerkError("Division by zero");
+                return Node(li / ri);
+            }
+            if (op == "%") {
+                if (ri == 0) throw MerkError("Modulo by zero");
+                return Node(li % ri);
+            }
+            if (op == "==") return Node(li == ri);
+            if (op == "!=") return Node(li != ri);
+            if (op == "<") return Node(li < ri);
+            if (op == "<=") return Node(li <= ri);
+            if (op == ">") return Node(li > ri);
+            if (op == ">=") return Node(li >= ri);
+        }
+
         Node val;
         if (op == "+") val = leftValue + rightValue;
-        if (op == "-") val = leftValue - rightValue;
-        if (op == "*") val = leftValue * rightValue;
-        if (op == "/") val = leftValue / rightValue;
-        if (op == "%") val = leftValue % rightValue;
+        else if (op == "-") val = leftValue - rightValue;
+        else if (op == "*") val = leftValue * rightValue;
+        else if (op == "/") val = leftValue / rightValue;
+        else if (op == "%") val = leftValue % rightValue;
         
-        if (op == "and" || op == "&&") val = Node(leftValue.isTruthy() && rightValue.isTruthy());
-        if (op == "or" || op == "||") val == Node(leftValue.isTruthy() || rightValue.isTruthy());
+        else if (op == "and" || op == "&&") val = Node(leftValue.isTruthy() && rightValue.isTruthy());
+        else if (op == "or" || op == "||") val = Node(leftValue.isTruthy() || rightValue.isTruthy());
 
-        if (op == "+=") val = leftValue += rightValue;
-        if (op == "-=") val = leftValue -= rightValue;
-        if (op == "*=") val = leftValue *= rightValue;
-        if (op == "/=") val = leftValue /= rightValue;
-        if (op == "++") val = leftValue += Node(1);
+        else if (op == "+=") val = leftValue += rightValue;
+        else if (op == "-=") val = leftValue -= rightValue;
+        else if (op == "*=") val = leftValue *= rightValue;
+        else if (op == "/=") val = leftValue /= rightValue;
+        else if (op == "++") val = leftValue += Node(1);
 
         // Relational operations
-        if (op == "==") {val = Node(leftValue == rightValue);}
-        if (op == "!=") val = Node(leftValue != rightValue);
-        if (op == "<") val = Node(leftValue < rightValue);
-        if (op == "<=") val = Node(leftValue <= rightValue);
-        if (op == ">") val = Node(leftValue > rightValue);
-        if (op == ">=") val = Node(leftValue >= rightValue);
+        else if (op == "==") {val = Node(leftValue == rightValue);}
+        else if (op == "!=") val = Node(leftValue != rightValue);
+        else if (op == "<") val = Node(leftValue < rightValue);
+        else if (op == "<=") val = Node(leftValue <= rightValue);
+        else if (op == ">") val = Node(leftValue > rightValue);
+        else if (op == ">=") val = Node(leftValue >= rightValue);
 
 
 

@@ -10,7 +10,7 @@ namespace Debug
         Debugger& debugger = Debugger::getInstance();
         debugger.setEnabled(true);
 
-        auto globalLevel = FlowLevel::VERY_LOW;
+        // auto globalLevel = FlowLevel::VERY_LOW;
         
         debugger.setGlobalLogLevel(LogLevel::NONE);
         debugger.setGlobalFlowLevel(FlowLevel::LOW);

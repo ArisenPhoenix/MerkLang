@@ -23,16 +23,6 @@
 #include "core/evaluators/FlowEvaluator.hpp"
 #include "core/evaluators/Evaluator.hpp"
 
-String opKindAsString(ChainOpKind opKind){
-    switch (opKind) {
-        case ChainOpKind::Reference: return "Reference";
-        case ChainOpKind::Assignment: return "Assignment";
-        case ChainOpKind::Declaration: return "Declaration";
-        default: throw MerkError("Unknown OpKind");
-    }
-}
-
-
 ChainElement::ChainElement() {
     name = "";
     type = TokenType::Unknown;
@@ -71,6 +61,7 @@ void ChainElement::clear() {
 Chain::Chain(SharedPtr<Scope> scope) : ASTStatement(scope) { branch = "Chain"; }
 void Chain::addElement(ChainElement&& elem) {
     elements.push_back(std::move(elem));
+    markFreeVarsDirty();
 
 }
 
@@ -85,6 +76,7 @@ void Chain::clear() {
         setScope(nullptr);
         setSecondaryScope(nullptr);
     }
+    markFreeVarsDirty();
 }
 Chain::~Chain() { clear(); }
 void Chain::setResolutionStartIndex(int index) {resolutionStartIndex = index;}
@@ -126,9 +118,11 @@ void Chain::setFirstElement(UniquePtr<ASTStatement> probablyScope, String name) 
 
     elements[0].object = std::move(probablyScope);
     elements[0].name = name;
+    markFreeVarsDirty();
 }
 
 Vector<ChainElement>& Chain::getMutableElements() {
+    markFreeVarsDirty();
     return elements;
 }
 
@@ -193,105 +187,9 @@ void Chain::replaceLastElementWith(ChainElement&& elem) {
     else {
         elements.back() = std::move(elem);
     }
+    markFreeVarsDirty();
     
 }
-
-
-ChainOperation::ChainOperation(UniquePtr<Chain> lhs,
-                               UniquePtr<ASTStatement> rhs,
-                               ChainOpKind opKind,
-                               SharedPtr<Scope> scope,
-                               bool isConst,
-                               bool isMutable,
-                               bool isStatic
-                            )
-: ASTStatement(scope), lhs(std::move(lhs)), rhs(std::move(rhs)), opKind(opKind), isConst(isConst), isMutable(isMutable), isStatic(isStatic) {}
-
-UniquePtr<BaseAST> ChainOperation::clone() const {
-    return makeUnique<ChainOperation>(
-        static_unique_ptr_cast<Chain>(lhs->clone()),
-        rhs ? static_unique_ptr_cast<ASTStatement>(rhs->clone()) : nullptr,
-        opKind, getScope(), isConst, isMutable);
-}
-
-UniquePtr<Chain>& ChainOperation::getLeft() {
-    return lhs;
-};
-UniquePtr<ASTStatement>& ChainOperation::getRight() {
-    return rhs;
-}
-Chain* ChainOperation::getLeftSide() const {
-    return lhs.get();
-}
-ASTStatement* ChainOperation::getRightSide() const {
-    return rhs.get();
-}
-
-
-
-SharedPtr<Scope> ChainOperation::getSecondaryScope() {
-    if (auto scope = classScope.lock()) {
-        return scope;
-    }
-    return nullptr;
-}
-void ChainOperation::setSecondaryScope(SharedPtr<Scope> scope) {
-    classScope = scope;
-}
-
-void ChainOperation::setResolutionMode(ResolutionMode newMode, String accessor) {
-    if (lhs->getElement(0).name == accessor) {
-        lhs->setResolutionMode(newMode);
-    }
-    if (rhs && rhs->getAstType() == AstType::Chain) {
-        Chain* chainR = static_cast<Chain*>(getRightSide());
-        if (chainR->getElement(0).name == accessor) {
-            chainR->setResolutionMode(newMode);
-        }
-    } 
-}
-void ChainOperation::setResolutionStartIndex(int index, String accessor) {
-    if (lhs->getElement(0).name == accessor) {
-        lhs->setResolutionStartIndex(index);
-    }
-    if (rhs && rhs->getAstType() == AstType::Chain) {
-        Chain* chainR = static_cast<Chain*>(getRightSide());
-        if (chainR->getElement(0).name == accessor) {
-            chainR->setResolutionStartIndex(index);
-        }
-    }    
-}
-
-ResolutionMode ChainOperation::getResolutionMode() { return resolutionMode; }
-
-void ChainOperation::setResolutionMethod(int index, ResolutionMode newMode, SharedPtr<Scope> secondaryScope, String accessor) {
-
-    if (!lhs->getElements().empty() && lhs->getElement(0).name == accessor) {
-        lhs->setResolutionStartIndex(index);
-        lhs->setResolutionMode(newMode);
-        lhs->setSecondaryScope(secondaryScope);
-
-        setResolutionStartIndex(index, accessor);
-        setResolutionMode(newMode, accessor);
-        setSecondaryScope(secondaryScope);
-    }
-
-    if (rhs && rhs->getAstType() == AstType::Chain) {
-        Chain* chainR = static_cast<Chain*>(getRightSide());
-        if (!chainR->getElements().empty() && chainR->getElement(0).name == accessor) {
-            chainR->setResolutionStartIndex(index);
-            chainR->setResolutionMode(newMode);
-            chainR->setSecondaryScope(secondaryScope);
-        }
-    }
-}
-
-
-
-void ChainOperation::setScope(SharedPtr<Scope> newScope) {
-    MARK_UNUSED_MULTI(newScope);
-}
-
 
 
 Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
@@ -427,34 +325,4 @@ Node Chain::evaluate(SharedPtr<Scope> methodScope, [[maybe_unused]] SharedPtr<Cl
     
 }
 
-Node ChainOperation::evaluate(SharedPtr<Scope> scope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
-    DEBUG_FLOW(FlowLevel::VERY_HIGH);
-    String hasLeft = getLeftSide() ? "true" : "false";
-    String hasRight = getRightSide() ? "true" : "false";
-    String hasInstanceNode = instanceNode ? "true" : "false";
-
-    DEBUG_LOG(LogLevel::TRACE, "OP KIND: ", opKindAsString(opKind));
-
-
-    auto leftVal = lhs->evaluate(scope, instanceNode);
-    auto currentScope = lhs->getLastScope();
-
-    if (!currentScope) throw MerkError("There Is No Current Scope in ChainOperation::evaluate");
-
-    SharedPtr<Scope> leftScope = lhs->getLastScope();
-    SharedPtr<Scope> rightScope;
-    Node rightVal;
-
-    if (getRightSide()){
-        if (getRightSide()->getAstType() == AstType::Chain){
-            auto r = static_cast<Chain*>(getRightSide());
-            rightVal = r->evaluate(currentScope, instanceNode);
-            rightScope = r->getLastScope();
-        } else {
-            rightVal = getRightSide()->evaluate(currentScope, instanceNode);
-        }
-    }
-    DEBUG_FLOW_EXIT();
-    return leftVal;
-}
 

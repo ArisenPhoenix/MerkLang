@@ -41,6 +41,7 @@ struct UninitializedType {
     std::size_t hash() const {
         return 0xBAADF00D;
     }
+    ~UninitializedType() = default;
 };
  
 

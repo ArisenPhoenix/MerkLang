@@ -9,15 +9,21 @@
 
 #include <cmath>
 
-static inline Node evalNotEqual(const Node& a, const Node& b) {
-    // Null handling
-    if (a.isNull() && b.isNull())  { return Node(false); }
-    if (a.isNull() != b.isNull())  { return Node(true); }
-    if (a.getType() != b.getType()) { return Node(true); }
-    return Node(a.getValue() != b.getValue());
+namespace {
+constexpr bool kEnableNodeIntFastPath = true;
+
+inline bool tryGetIntPair(const NodeBase* lhsData, const NodeBase* rhsData, int& lhs, int& rhs) {
+    if (!kEnableNodeIntFastPath || !lhsData || !rhsData) {
+        return false;
+    }
+    if (lhsData->getType() != NodeValueType::Int || rhsData->getType() != NodeValueType::Int) {
+        return false;
+    }
+    lhs = static_cast<const IntNode*>(lhsData)->rawValue();
+    rhs = static_cast<const IntNode*>(rhsData)->rawValue();
+    return true;
 }
-
-
+} // namespace
 
 SharedPtr<NodeBase> AnyNode::applyAdd(const NodeBase& lhs, const NodeBase& rhs) {
     return lhs + rhs;
@@ -362,14 +368,50 @@ SharedPtr<NodeBase> NodeBase::operator/=(const NodeBase& other) {(void)other; th
 
 
 
-Node Node::operator+(const Node& other) const { return Node((*data) + (*other.data)); }
-Node Node::operator-(const Node& other) const { return Node((*data) - (*other.data)); }
-Node Node::operator*(const Node& other) const {return Node((*data) * (*other.data)); }
-Node Node::operator/(const Node& other) const {return Node((*data) / (*other.data)); }
-Node Node::operator%(const Node& other) const {return Node((*data) % (*other.data));}
+Node Node::operator+(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return Node(lhs + rhs);
+    }
+    return Node((*data) + (*other.data));
+}
+Node Node::operator-(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return Node(lhs - rhs);
+    }
+    return Node((*data) - (*other.data));
+}
+Node Node::operator*(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return Node(lhs * rhs);
+    }
+    return Node((*data) * (*other.data));
+}
+Node Node::operator/(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return Node(lhs / rhs);
+    }
+    return Node((*data) / (*other.data));
+}
+Node Node::operator%(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return Node(lhs % rhs);
+    }
+    return Node((*data) % (*other.data));
+}
 
 Node Node::operator+=(const Node& other) const {
     if (!data) {throw MerkError("Cannot perform += on null value");}
+    if (!getFlags().isMutable) {throw MerkError("Cannot mutate immutable value with '+='");}
     *this->data += (*other.data);
     auto val = this->data->getValue();
     if (TypeEvaluator::getTypeFromValue(val) != getType()) {
@@ -380,6 +422,7 @@ Node Node::operator+=(const Node& other) const {
     // return Node((*data) += (*other.data)); }
 Node Node::operator-=(const Node& other) const {
     if (!data) {throw MerkError("Cannot perform += on null value");}
+    if (!getFlags().isMutable) {throw MerkError("Cannot mutate immutable value with '-='");}
     *this->data -= (*other.data);
     auto val = this->data->getValue();
     if (TypeEvaluator::getTypeFromValue(val) != getType()) {
@@ -389,6 +432,7 @@ Node Node::operator-=(const Node& other) const {
 }
 Node Node::operator*=(const Node& other) const {
     if (!data) {throw MerkError("Cannot perform += on null value");}
+    if (!getFlags().isMutable) {throw MerkError("Cannot mutate immutable value with '*='");}
     *this->data *= (*other.data);
     auto val = this->data->getValue();
     if (TypeEvaluator::getTypeFromValue(val) != getType()) {
@@ -398,6 +442,7 @@ Node Node::operator*=(const Node& other) const {
 }
 Node Node::operator/=(const Node& other) const {
     if (!data) {throw MerkError("Cannot perform += on null value");}
+    if (!getFlags().isMutable) {throw MerkError("Cannot mutate immutable value with '/='");}
     *this->data /= (*other.data);
     auto val = this->data->getValue();
     if (TypeEvaluator::getTypeFromValue(val) != getType()) {
@@ -407,14 +452,82 @@ Node Node::operator/=(const Node& other) const {
 }
 
 bool Node::operator==(const Node& other) const {
-    return !evalNotEqual(*this, other).toBool(); 
+    if (data.get() == other.data.get()) {
+        return true;
+    }
+    if (!data || !other.data) {
+        return false;
+    }
+
+    const auto lhsType = data->getType();
+    const auto rhsType = other.data->getType();
+    if (lhsType != rhsType) {
+        return false;
+    }
+
+    switch (lhsType) {
+        case NodeValueType::Null:
+            return true;
+        case NodeValueType::Int:
+            return static_cast<const IntNode*>(data.get())->rawValue() ==
+                   static_cast<const IntNode*>(other.data.get())->rawValue();
+        case NodeValueType::Bool:
+            return static_cast<const BoolNode*>(data.get())->rawValue() ==
+                   static_cast<const BoolNode*>(other.data.get())->rawValue();
+        case NodeValueType::Char:
+            return static_cast<const CharNode*>(data.get())->rawValue() ==
+                   static_cast<const CharNode*>(other.data.get())->rawValue();
+        case NodeValueType::Float:
+            return static_cast<const FloatNode*>(data.get())->rawValue() ==
+                   static_cast<const FloatNode*>(other.data.get())->rawValue();
+        case NodeValueType::Double:
+            return static_cast<const DoubleNode*>(data.get())->rawValue() ==
+                   static_cast<const DoubleNode*>(other.data.get())->rawValue();
+        case NodeValueType::String:
+            return static_cast<const StringNode*>(data.get())->rawValue() ==
+                   static_cast<const StringNode*>(other.data.get())->rawValue();
+        default:
+            return data->getValue() == other.data->getValue();
+    }
 }
 
-bool Node::operator!=(const Node& other) const {return evalNotEqual(*this, other).toBool(); /*return Node((*data) != (*other.data)).toBool();*/ }
-bool Node::operator<(const Node& other) const {return Node((*data) < (*other.data)).toBool(); }
-bool Node::operator>(const Node& other) const {return Node((*data) > (*other.data)).toBool(); }
-bool Node::operator<=(const Node& other) const {return Node((*data) <= (*other.data)).toBool(); }
-bool Node::operator>=(const Node& other) const {return Node((*data) >= (*other.data)).toBool(); }
+bool Node::operator!=(const Node& other) const { return !(*this == other); }
+bool Node::operator<(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return lhs < rhs;
+    }
+    auto cmp = (*data) < (*other.data);
+    return cmp ? cmp->toBool() : false;
+}
+bool Node::operator>(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return lhs > rhs;
+    }
+    auto cmp = (*data) > (*other.data);
+    return cmp ? cmp->toBool() : false;
+}
+bool Node::operator<=(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return lhs <= rhs;
+    }
+    auto cmp = (*data) <= (*other.data);
+    return cmp ? cmp->toBool() : false;
+}
+bool Node::operator>=(const Node& other) const {
+    int lhs = 0;
+    int rhs = 0;
+    if (tryGetIntPair(data.get(), other.data.get(), lhs, rhs)) {
+        return lhs >= rhs;
+    }
+    auto cmp = (*data) >= (*other.data);
+    return cmp ? cmp->toBool() : false;
+}
 
 
 
@@ -661,18 +774,33 @@ SharedPtr<NodeBase> CharNode::operator>=(const NodeBase& other) const {
 
 // Calculation Operators
 SharedPtr<NodeBase> IntNode::operator+(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<IntNode>(value + static_cast<const IntNode&>(other).value);
+    }
     return makeShared<IntNode>(value + other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator-(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<IntNode>(value - static_cast<const IntNode&>(other).value);
+    }
     return makeShared<IntNode>(value - other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator*(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<IntNode>(value * static_cast<const IntNode&>(other).value);
+    }
     return makeShared<IntNode>(value * other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator/(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<IntNode>(value / static_cast<const IntNode&>(other).value);
+    }
     return makeShared<IntNode>(value / other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator%(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<IntNode>(value % static_cast<const IntNode&>(other).value);
+    }
     return makeShared<IntNode>(value % other.toInt());
 }
 
@@ -700,21 +828,39 @@ SharedPtr<NodeBase> IntNode::operator==(const NodeBase& other) const {
     if (!other.isNumeric()) {
         return makeShared<BoolNode>(false);
     }
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<BoolNode>(value == static_cast<const IntNode&>(other).value);
+    }
     return makeShared<BoolNode>(value == other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator!=(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<BoolNode>(value != static_cast<const IntNode&>(other).value);
+    }
     return makeShared<BoolNode>(value != other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator<(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<BoolNode>(value < static_cast<const IntNode&>(other).value);
+    }
     return makeShared<BoolNode>(value < other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator>(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<BoolNode>(value > static_cast<const IntNode&>(other).value);
+    }
     return makeShared<BoolNode>(value > other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator<=(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<BoolNode>(value <= static_cast<const IntNode&>(other).value);
+    }
     return makeShared<BoolNode>(value <= other.toInt());
 }
 SharedPtr<NodeBase> IntNode::operator>=(const NodeBase& other) const {
+    if (other.getType() == NodeValueType::Int) {
+        return makeShared<BoolNode>(value >= static_cast<const IntNode&>(other).value);
+    }
     return makeShared<BoolNode>(value >= other.toInt());
 }
 

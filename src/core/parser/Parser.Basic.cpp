@@ -25,7 +25,7 @@
 UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     DEBUG_FLOW(FlowLevel::MED);    
     // Determine reassignability
-    Token startToken = currentToken(); // should be var / const
+    const Token& startToken = currentToken(); // should be var / const
     
     if (peek().type == TokenType::ChainEntryPoint) {
         return parseChainOp();  // this should end up as a variable declaration chain
@@ -35,7 +35,7 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     Vector<String> values = {"var", "const"};
     consume(TokenType::VarDeclaration, values, "Parser::parseVariableDeclaration");
 
-    Token variableToken = currentToken();
+    const Token& variableToken = currentToken();
     DEBUG_LOG(LogLevel::NONE, "Var Token: ", variableToken.toColoredString());
     if (variableToken.value.empty()) {throw MerkError("VarName is empty in parseVariableDeclaration");}
     
@@ -64,7 +64,8 @@ UniquePtr<ASTStatement> Parser::parseVariableDeclaration() {
     
     if (!valueExpression) {throw MerkError("Failed to parse value for variable declaration: " + variableToken.value);}
 
-    auto varNodeMeta = DataTypeFlags(variableToken.value, isConst, isMutable, type.getBaseType() != "Any", type);
+    String variableName = variableToken.value;
+    auto varNodeMeta = DataTypeFlags(variableName, isConst, isMutable, type.getBaseType() != "Any", type);
 
     if (variableToken.value.empty()) {throw MerkError("varName is empty in parseVariableDeclaration");}
     auto varDec = makeUnique<VariableDeclaration>(
@@ -85,7 +86,7 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
         return parseChainOp();  // handles chain assignments like `a.b.c = 5`
     }
 
-    Token variableToken = currentToken();
+    const Token& variableToken = currentToken();
 
     if (!consumeIf(TokenType::Variable)) {
         throw MerkError("Not a Variable in parseVariableAssignment: " + variableToken.toColoredString());
@@ -110,7 +111,6 @@ UniquePtr<ASTStatement> Parser::parseVariableAssignment() {
 
 UniquePtr<ASTStatement> Parser::parseExpression() {
     DEBUG_FLOW(FlowLevel::MED);
-    Token token = currentToken();
     DEBUG_FLOW_EXIT();
     return parseBinaryExpression(0);
 }
@@ -119,14 +119,14 @@ UniquePtr<ASTStatement> Parser::parseExpression() {
 UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
     DEBUG_FLOW(FlowLevel::MED);
     auto left = parsePrimaryExpression();
-    auto current = currentToken();
+    const Token& current = currentToken();
     if (current.value == "." || current.value == "::") { left = parseChainOp(std::move(left)); }
     if (!left) { throw SyntaxError("Expected a valid left-hand side expression.", currentToken()); }
 
     DEBUG_LOG(LogLevel::INFO, "Left operand detected: ", left->toString());
 
     while (true) {
-        Token op = currentToken();
+        const Token& op = currentToken();
         DEBUG_LOG(LogLevel::INFO, "Checking for operator, got: ", op.toString());
 
         if (op.type != TokenType::Operator) {
@@ -168,7 +168,7 @@ UniquePtr<ASTStatement> Parser::parseBinaryExpression(int precedence) {
 
 UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
     DEBUG_FLOW(FlowLevel::MED);
-    Token token = currentToken();
+    const Token& token = currentToken();
 
     if (peek().value != "=" && (check(TokenType::LeftBracket, "[") || check(TokenType::Operator, "<") || check(TokenType::Operator, "{"))){
         return parseClassLiteralCall(); 
@@ -267,7 +267,7 @@ UniquePtr<ASTStatement> Parser::parsePrimaryExpression() {
 UniquePtr<BaseAST> Parser::parseStatement() {
     DEBUG_FLOW(FlowLevel::MED);
 
-    Token token = currentToken();
+    const Token& token = currentToken();
     if (token.value == "else" || token.value == "elif"){
         throw MerkError("if Statement must come before elif or else");
     }
@@ -363,11 +363,12 @@ UniquePtr<BaseAST> Parser::parseStatement() {
 
 UniquePtr<ASTStatement> Parser::parseKeyWord() {
     DEBUG_FLOW(FlowLevel::MED);
-    Token token = currentToken();
+    const Token& token = currentToken();
     UniquePtr<ASTStatement> statement;
     if (token.value == "if") { statement = parseIfStatement(); } 
 
     else if (token.value == "while") { statement = parseWhileLoop(); }
+    else if (token.value == "for") { statement = parseForLoop(); }
     else if (token.value == "return") { statement = parseReturnStatement(); } 
 
     else if (token.value == "continue") { 

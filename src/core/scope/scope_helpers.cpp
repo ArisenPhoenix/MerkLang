@@ -1,4 +1,5 @@
 #include <iostream>
+#include <functional>
 #include <unordered_set>
 
 #include "core/node/Node.hpp"
@@ -35,7 +36,7 @@ SharedPtr<Scope> Scope::getRoot() {
 // In Scope class
 SharedPtr<Scope> Scope::clone(bool strict) const {
     SharedPtr<Scope> newScope;
-    if (auto parent = parentScope.lock()) {
+    if (auto parent = getParent()) {
         newScope = makeShared<Scope>(parent, globalFunctions, globalClasses, globalTypes, interpretMode);
     } else {
         if (strict) { throw ParentScopeNotFoundError(); }
@@ -63,7 +64,7 @@ Vector<SharedPtr<Scope>>& Scope::getChildren() { return childScopes; }
 bool Scope::hasChildren() { return childScopes.size() > 0; }
 
 bool Scope::parentIsValid() {
-    auto parent = parentScope.lock();
+    auto parent = getParent();
     if (parent){
         return true;
     }
@@ -104,7 +105,7 @@ void Scope::debugPrint() const {
 void Scope::printChildScopes(int indentLevel) const {
     DEBUG_FLOW(FlowLevel::VERY_LOW);
     if (scopeLevel == 0) { debugLog(true, highlight("\n\n======================== Start Scope::printChildScopes ========================", Colors::cyan)); }
-    auto parent = parentScope.lock();
+    auto parent = getParent();
     auto indent = String(indentLevel+2, ' ');
     int numInstances = 0;
 
@@ -112,7 +113,7 @@ void Scope::printChildScopes(int indentLevel) const {
     debugLog(true, indent,
         "Scope Level:", scopeLevel, 
         "| Memory Loc:", this, 
-        "| Parent Loc:", parentScope.lock() ? parentScope.lock() : nullptr,
+        "| Parent Loc:", getParent() ? getParent() : nullptr,
         "| Number of Variables:", context.getVariables().size() - numInstances,
         "| Number of Children:", childScopes.size(),
         // "| Num Functions:", localFunctions.size(),
@@ -128,21 +129,7 @@ void Scope::printChildScopes(int indentLevel) const {
     DEBUG_FLOW_EXIT();
 }
 
-void Scope::printContext(int depth) const {
-    DEBUG_FLOW(FlowLevel::VERY_LOW);
-    String indent(depth * 2, ' '); // Indentation based on depth
-    std::cout << indent << "Scope Level: " << scopeLevel
-              << " | Memory Loc: " << this
-              << " | Parent Loc: " << (parentScope.lock() ? parentScope.lock().get() : nullptr)
-              << " | Number of Variables: " << context.getVariables().size()
-              << " | Number of Children: " << childScopes.size() << std::endl;
 
-    // Recursively print the parent scope, if any
-    if (auto parent = parentScope.lock()) {
-        parent->printContext(depth + 1);
-    }
-    DEBUG_FLOW_EXIT();
-}
 
 void Scope::addMember(String& varName) {
     classMembers.emplace(varName, varName);
@@ -156,12 +143,7 @@ ClassMembers Scope::getClassMembers() const {
 }
 
 bool Scope::hasMember(String& varName) {
-    for (auto& [var, data] : classMembers) {
-        if (var == varName) {
-            return true;
-        }
-    }
-    return false;
+    return classMembers.find(varName) != classMembers.end();
 }
 
 void Scope::setClassMembers(ClassMembers members) {
@@ -185,6 +167,7 @@ bool Scope::removeChildScope(const SharedPtr<Scope>& target) {
     auto it = std::find(childScopes.begin(), childScopes.end(), target);
     if (it != childScopes.end()) {
         childScopes.erase(it);
+        bumpVariableLookupEpoch();
         DEBUG_LOG(LogLevel::DEBUG, "Removed child scope at memory location: ", target.get());
         return true;
     }
@@ -200,6 +183,7 @@ void Scope::setParent(SharedPtr<Scope> scope) {
         scopeLevel = scope->getScopeLevel() + 1;
     }
     parentScope = scope;
+    bumpVariableLookupEpoch();
     
 }
 

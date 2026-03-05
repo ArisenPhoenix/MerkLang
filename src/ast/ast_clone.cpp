@@ -146,6 +146,22 @@ UniquePtr<BaseAST> WhileLoop::clone() const {
     return makeUnique<WhileLoop>(std::move(clonedCond), std::move(clonedBody), getScope());
 }
 
+UniquePtr<BaseAST> ForLoop::clone() const {
+    auto clonedStart = static_unique_ptr_cast<ASTStatement>(startExpr->clone());
+    auto clonedEnd = static_unique_ptr_cast<ASTStatement>(endExpr->clone());
+    auto clonedStep = static_unique_ptr_cast<ASTStatement>(stepExpr->clone());
+    auto clonedBody = dynamic_unique_ptr_cast<CodeBlock>(body->clone());
+
+    return makeUnique<ForLoop>(
+        loopVariable,
+        std::move(clonedStart),
+        std::move(clonedEnd),
+        std::move(clonedStep),
+        std::move(clonedBody),
+        getScope()
+    );
+}
+
 
 // AST FUNCTIONS
 UniquePtr<BaseAST> FunctionBody::clone() const {

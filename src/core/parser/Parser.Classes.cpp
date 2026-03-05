@@ -39,7 +39,7 @@ bool Parser::isTypeStart(TokenType tt) {
         || tt == TokenType::Variable;
 }
 
-UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
+UniquePtr<ASTStatement> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     
     bool isDeclaration = currentToken().type == TokenType::VarDeclaration;
@@ -126,14 +126,12 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
     }
 
     ResolvedType declaredType("Any");
-    bool hasAnnotation = false;
 
     // If tokenizer emits ":" then a TokenType::Type (or ClassRef), consume it here
     if (check(TokenType::Punctuation, ":") && isTypeStart(peek().type)) {
         advance(); // ':'
         Token t = currentToken();
         declaredType = ResolvedType(t.value);
-        hasAnnotation = true;
         advance(); // type name
     }
 
@@ -157,14 +155,9 @@ UniquePtr<ChainOperation> Parser::parseChainOp(UniquePtr<ASTStatement> stmnt) {
 
     if (chain->getElements().size() == 1) {throw MerkError("Chain Was not Built");}
 
-    DEBUG_LOG(LogLevel::PERMISSIVE, "Got ChainOp");
+    DEBUG_LOG(LogLevel::PERMISSIVE, "Got Chain");
     DEBUG_FLOW_EXIT();
-    return makeUnique<ChainOperation>(
-        std::move(chain),
-        nullptr,
-        ChainOpKind::Reference,
-        currentScope
-    );
+    return chain;
 }
 
 
@@ -239,9 +232,11 @@ UniquePtr<ASTStatement> Parser::parseClassCall() {
     if (!expect(TokenType::ClassCall)) { throw UnexpectedTokenError(currentToken(), "ClassCall", "Parser::parseClassCall"); }
 
     String className = currentToken().value;
-    Token controllingToken = advance();  // consume class name
+    advance();  // consume class name
 
-    if (!expect(TokenType::Punctuation) || controllingToken.value != "(") { throw UnexpectedTokenError(controllingToken, "Expected '(' after class name in instantiation", "Parser::parseClassCall"); }
+    if (!check(TokenType::Punctuation, "(")) {
+        throw UnexpectedTokenError(currentToken(), "Expected '(' after class name in instantiation", "Parser::parseClassCall");
+    }
 
     auto arguments = parseAnyArgument();
 

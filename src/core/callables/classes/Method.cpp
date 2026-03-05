@@ -135,25 +135,6 @@ Node nonFlowHandler(SharedPtr<Scope> callScope, String name, SharedPtr<Scope> ca
 Node UserMethod::execute(ArgumentList args, SharedPtr<Scope> callScope, [[maybe_unused]] SharedPtr<ClassInstanceNode> instanceNode) const {
     DEBUG_FLOW(FlowLevel::PERMISSIVE);
     return Executor::Method(name, callScope, getCapturedScope(), requiresReturn, args, body.get(), parameters, instanceNode);
-    // if (!instanceNode) {throw MerkError("An Instance In UserMethod::execute was not provided");}
-    // DEBUG_LOG(LogLevel::TRACE, "Validated Instance Node");
-    // callScope->owner = generateScopeOwner("MethodExecutor", name);
-    
-    // if (callScope == instanceNode->getInstanceScope()) {throw MerkError("callScope cannot be the same as instanceScope");}
-    // DEBUG_LOG(LogLevel::TRACE, "Placing Args in Call Scope");
-    // placeArgsInCallScope(args, callScope);
-
-    
-    // bool executeFlow = true;
-    // if (executeFlow) {
-    //     EvalResult r = body->evaluateFlow(callScope, instanceNode);
-    //     if (r.isReturn()) {return r.value;}
-    //     if (r.isThrow())  {throw RunTimeError("Unhandled throw");}
-    //     if (r.isBreak() || r.isContinue()) throw MerkError("break/continue used outside loop");
-
-    //     if (requiresReturn) throw MerkError("Method did not return a value.");
-    //     return Node();
-    // }
     // return nonFlowHandler(callScope, getName(), getCapturedScope(), body.get(), instanceNode);
     
 }

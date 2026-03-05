@@ -184,6 +184,9 @@ int NullNode::toInt() const {
 }
 
 String NullNode::toString() const {return "null"; };
+std::size_t NullNode::hash() const {
+    return static_cast<std::size_t>(NodeValueType::Null) * 0x9e3779b97f4a7c15ULL;
+}
 
 bool NullNode::toBool() const { return false; };
 
@@ -226,19 +229,48 @@ SharedPtr<ClassInstance> Node::toInstance() const {
 }
 
 bool Node::isFunctionNode() {
+    const auto type = getInner()->getType();
+    if (type == NodeValueType::CallableSignature) {
+        return true;
+    }
+    if (type != NodeValueType::Any) {
+        return false;
+    }
     return std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue());
 }
 
 bool Node::isFunctionNode() const {
+    const auto type = getInner()->getType();
+    if (type == NodeValueType::CallableSignature) {
+        return true;
+    }
+    if (type != NodeValueType::Any) {
+        return false;
+    }
     return std::holds_alternative<Vector<SharedPtr<CallableSignature>>>(getValue());
 }
 
 bool Node::isCallable() {
-    return getInner()->getType() == NodeValueType::Callable || (std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance);
-    // return std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance;
+    const auto type = getInner()->getType();
+    if (type == NodeValueType::Callable) {
+        return true;
+    }
+    if (type == NodeValueType::ClassInstance || type != NodeValueType::Any) {
+        return false;
+    }
+    return std::holds_alternative<SharedPtr<Callable>>(getValue());
 }
 
-bool Node::isCallable() const {return getInner()->getType() == NodeValueType::Callable || (std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance); return std::holds_alternative<SharedPtr<Callable>>(getValue()) && getType() != NodeValueType::ClassInstance; }
+bool Node::isCallable() const {
+    const auto type = getInner()->getType();
+    if (type == NodeValueType::Callable) {
+        return true;
+    }
+    if (type == NodeValueType::ClassInstance || type != NodeValueType::Any) {
+        return false;
+    }
+    return std::holds_alternative<SharedPtr<Callable>>(getValue());
+}
 
 SharedPtr<Callable> Node::toCallable() {
     if (isCallable()) {
@@ -290,12 +322,10 @@ NodeValueType Node::getType() const { return data->getType(); }
 Node Node::clone() const {
     if (!data) throw MerkError("clone: null data");
     auto t = data->getType();
-    DEBUG_LOG(LogLevel::ERROR, "CLONE type=", nodeTypeToString(t), " str=", data->toString());
     auto c = data->clone();
     
     if (!c) throw MerkError("clone returned null for type " + nodeTypeToString(t));
     c->flags = getFlags();
-    DEBUG_LOG(LogLevel::ERROR, "CLONE RESULT type=", nodeTypeToString(c->getType()), " str=", c->toString());
     return Node(c);
 }
 
@@ -380,10 +410,21 @@ SharedPtr<SetNode> Node::toSet() const {
 
 bool Node::isString() {return data->isString();}
 bool Node::isInt() {return data->isInt();}
-bool Node::isNull() const {return std::holds_alternative<NullType>(data->getValue());}
+bool Node::isNull() const {return data && data->getType() == NodeValueType::Null;}
 bool Node::isValid() const { return data != nullptr; }
 bool Node::isTruthy() const { return data && data->isTruthy(); }
-Node Node::negate() const {return Node(!toBool());}
+Node Node::negate() const {
+    if (isInt()) {
+        return Node(-toInt());
+    }
+    if (isFloat()) {
+        return Node(-toFloat());
+    }
+    if (isDouble()) {
+        return Node(-toDouble());
+    }
+    throw MerkError("Unary '-' requires a numeric operand, got " + nodeTypeToString(getType(), false));
+}
 
 DataTypeFlags& Node::getFlags() { return data->flags; }
 const DataTypeFlags& Node::getFlags() const { return data->flags; }
@@ -420,6 +461,10 @@ SharedPtr<NodeBase> BoolNode::clone() const { return makeShared<BoolNode>(*this)
 
 int BoolNode::toInt() const {  return value ? 1 : 0; }
 String BoolNode::toString() const { return value ? "true" : "false"; }
+std::size_t BoolNode::hash() const {
+    const std::size_t typeHash = static_cast<std::size_t>(NodeValueType::Bool) * 0x9e3779b97f4a7c15ULL;
+    return typeHash ^ (std::hash<bool>{}(value) + 0x9e3779b9 + (typeHash << 6) + (typeHash >> 2));
+}
 bool BoolNode::toBool() const { return value; }
 bool BoolNode::isTruthy() const { return toBool(); }
 
@@ -439,6 +484,10 @@ SharedPtr<NodeBase> StringNode::clone() const { return makeShared<StringNode>(*t
 
 int StringNode::toInt() const { throw MerkError("Cannot Implicitly cast String to Int"); }
 String StringNode::toString() const { return String(value); }
+std::size_t StringNode::hash() const {
+    const std::size_t typeHash = static_cast<std::size_t>(NodeValueType::String) * 0x9e3779b97f4a7c15ULL;
+    return typeHash ^ (std::hash<String>{}(value) + 0x9e3779b9 + (typeHash << 6) + (typeHash >> 2));
+}
 bool StringNode::toBool() const { return !value.empty(); }
 
 
@@ -473,6 +522,10 @@ char* CharNode::toChars() const { throw MerkError("Not Implemented CharNode::toC
 bool CharNode::isChar() const { return true; }
 char CharNode::toChar() const { return value; }
 String CharNode::toString() const { return TypeEvaluator::as<String>(value); }
+std::size_t CharNode::hash() const {
+    const std::size_t typeHash = static_cast<std::size_t>(NodeValueType::Char) * 0x9e3779b97f4a7c15ULL;
+    return typeHash ^ (std::hash<char>{}(value) + 0x9e3779b9 + (typeHash << 6) + (typeHash >> 2));
+}
 bool CharNode::isBool() const {String tmp = TypeEvaluator::as<String>(value); return tmp == "true" || tmp == "0" || tmp == "1" || tmp == "false";}
 
 bool CharNode::toBool() const { return false; }
@@ -502,6 +555,10 @@ float IntNode::toFloat() const {return float(value);}
 double IntNode::toDouble() const {return double(value);}
 
 String IntNode::toString() const { return std::to_string(value); }
+std::size_t IntNode::hash() const {
+    const std::size_t typeHash = static_cast<std::size_t>(NodeValueType::Int) * 0x9e3779b97f4a7c15ULL;
+    return typeHash ^ (std::hash<int>{}(value) + 0x9e3779b9 + (typeHash << 6) + (typeHash >> 2));
+}
 bool IntNode::toBool() const { return value != 0; }
 bool IntNode::isValid() const {return true;}
 bool IntNode::isTruthy() const { return toBool(); }
@@ -528,6 +585,10 @@ float FloatNode::toFloat() const { return value; }
 bool FloatNode::isFloat() const { return true; }
 
 String FloatNode::toString() const {return std::to_string(value);};
+std::size_t FloatNode::hash() const {
+    const std::size_t typeHash = static_cast<std::size_t>(NodeValueType::Float) * 0x9e3779b97f4a7c15ULL;
+    return typeHash ^ (std::hash<float>{}(value) + 0x9e3779b9 + (typeHash << 6) + (typeHash >> 2));
+}
 bool FloatNode::toBool() const { return value != 0; }
 bool FloatNode::isTruthy() const { return toBool(); }
 bool FloatNode::isValid() const { return toBool(); }
@@ -554,6 +615,10 @@ float DoubleNode::toFloat() const {return float(value); }
 bool DoubleNode::isDouble() const {return true; }
 
 String DoubleNode::toString() const {return std::to_string(value); }
+std::size_t DoubleNode::hash() const {
+    const std::size_t typeHash = static_cast<std::size_t>(NodeValueType::Double) * 0x9e3779b97f4a7c15ULL;
+    return typeHash ^ (std::hash<double>{}(value) + 0x9e3779b9 + (typeHash << 6) + (typeHash >> 2));
+}
 bool DoubleNode::toBool() const { return value != 0; }
 bool DoubleNode::isTruthy() const { return toBool(); }
 bool DoubleNode::isValid() const { return toBool(); }
@@ -626,7 +691,21 @@ void VarNode::setValue(Node other) {
     auto varName = varFlags.name;
     auto varType = varFlags.fullType.getBaseType();
 
-    valueNode = other;
+    const NodeValueType currType = valueNode.getType();
+    const NodeValueType nextType = other.getType();
+    const bool canUpdateInPlace =
+        valueNode.isValid() &&
+        currType == nextType &&
+        (nextType == NodeValueType::Int ||
+         nextType == NodeValueType::Float ||
+         nextType == NodeValueType::Double ||
+         nextType == NodeValueType::Bool);
+
+    if (canUpdateInPlace) {
+        valueNode.setValue(other.getValue());
+    } else {
+        valueNode = other;
+    }
     if (!other.isValid()) {throw MerkError("Other Is Invalid");}
 
     // Merge variable metadata into the value's flags without overwriting varFlags
@@ -658,7 +737,8 @@ Node& VarNode::pullValue() {return valueNode;}
 
 bool VarNode::isFunctionNode() const { return valueNode.isFunctionNode();}
 FunctionNode VarNode::toFunctionNode() const {return valueNode.toFunctionNode();}
-DataTypeFlags VarNode::getVarFlags() { return varFlags; }
+DataTypeFlags& VarNode::getVarFlags() { return varFlags; }
+const DataTypeFlags& VarNode::getVarFlags() const { return varFlags; }
 
 
 

@@ -219,6 +219,7 @@ enum class AstType {
     ElseStatement,
     ElifStatement,
     WhileLoop,
+    ForLoop,
     CodeBlock,
     
     Break,
@@ -257,7 +258,6 @@ enum class AstType {
     AttributeAssignment,
 
     Chain,
-    ChainOperation,
     Accessor,
 
     Unknown,
@@ -345,6 +345,7 @@ class ElifStatement;
 class ElseStatement;
 class CodeBlock;
 class IfStatement;
+class ForLoop;
 class FunctionBlock;
 class ClassInstanceNode;
 class CallableBody;

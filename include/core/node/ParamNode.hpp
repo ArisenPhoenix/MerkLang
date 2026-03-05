@@ -85,11 +85,11 @@ public:
 
     // NEW: call-time binding (does not mutate ParamList)
     Vector<Node> bindArguments(const Vector<Node>& args) const;
-    Vector<Node> bindArguments(ArgumentList& args) const;
+    Vector<Node> bindArguments(const ArgumentList& args) const;
 
     // Keep old API but re-route it (optional)
     void verifyArguments(Vector<Node> args);        // wrapper
-    void verifyArguments(ArgumentList& args);       // wrapper
+    void verifyArguments(const ArgumentList& args);       // wrapper
 
     // Helpers
     Vector<NodeValueType> getParameterTypes();

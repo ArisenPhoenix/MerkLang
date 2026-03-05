@@ -13,16 +13,16 @@ void ArgumentList::addNamedArg(const String& key, const Node& arg) {
     namedArgs[key] = arg;
 }
 
-std::unordered_map<String, Node> ArgumentList::getNamedArgs() {
+const std::unordered_map<String, Node>& ArgumentList::getNamedArgs() const {
     return namedArgs;
 }
 
-Node ArgumentList::getArg(size_t i) const {
+const Node& ArgumentList::getArg(size_t i) const {
     if (i >= positionalArgs.size()) {throw RunTimeError("Argument index out of range.");}
     return positionalArgs[i];
 }
 
-Node ArgumentList::getNamedArg(const String& name) const {
+const Node& ArgumentList::getNamedArg(const String& name) const {
     auto it = namedArgs.find(name);
     if (it == namedArgs.end()) {throw RunTimeError("Named argument not found: " + name);}
     return it->second;
@@ -37,12 +37,15 @@ size_t ArgumentList::positionalCount() const {
     return positionalArgs.size();
 }
 
-NodeList ArgumentList::getPositional() {
+NodeList& ArgumentList::getPositional() {
     return positionalArgs;
 }
 
+const NodeList& ArgumentList::getPositional() const {
+    return positionalArgs;
+}
 
-NodeList ArgumentList::getPositionalArgs() const {
+const NodeList& ArgumentList::getPositionalArgs() const {
     return positionalArgs;
 }
 
@@ -60,9 +63,9 @@ BoundArgs ArgumentList::bindToBound(const ParamList& params, bool allowDefaults)
     // ---- fixed ----
     out.fixed.reserve(fixedCount);
 
-    auto setFlagsFunc = [](Node& arg, ParamNode param) {
+    auto setFlagsFunc = [](Node& arg, const ParamNode& param) {
         if (!param.flags.name.empty()) {
-            arg.setFlags(param.flags);
+            arg.getFlags().applyDeclName(param.flags.name, param.flags.key);
         }
     };
 
@@ -77,8 +80,8 @@ BoundArgs ArgumentList::bindToBound(const ParamList& params, bool allowDefaults)
             arg = positionalArgs[i];
             setFlagsFunc(arg, param);
 
-        } else if (hasNamedArg(param.getName())) {
-            arg = getNamedArg(param.getName());
+        } else if (auto namedIt = namedArgs.find(param.getName()); namedIt != namedArgs.end()) {
+            arg = namedIt->second;
             setFlagsFunc(arg, param);
 
 
@@ -90,7 +93,7 @@ BoundArgs ArgumentList::bindToBound(const ParamList& params, bool allowDefaults)
             throw RunTimeError("Missing argument for parameter: " + param.getName());
         }
 
-        out.fixed.push_back(BoundArg{arg, param.getName(), wasDefault});
+        out.fixed.push_back(BoundArg{std::move(arg), param.getName(), wasDefault});
     }
 
     // ---- varargs tail ----
@@ -124,9 +127,9 @@ Vector<Node> ArgumentList::bindTo(const ParamList& params, bool allowDefaults) c
     if (params.size() > 0 && positionalArgs.size() == 0) {
         throw MerkError("NO ARGS");
     }
-    auto setFlagsFunc = [](Node& arg, ParamNode param) {
+    auto setFlagsFunc = [](Node& arg, const ParamNode& param) {
         if (!param.flags.name.empty()) {
-            arg.setFlags(param.flags);
+            arg.getFlags().applyDeclName(param.flags.name, param.flags.key);
         }
     };
     // Bind fixed parameters
@@ -197,7 +200,7 @@ Node& ArgumentList::back() {
     }
     return positionalArgs.back();
 }
-Node ArgumentList::back() const {
+const Node& ArgumentList::back() const {
     if (positionalArgs.empty()) {
         throw MerkError("ArgumentList is empty when calling back");
     }
@@ -205,7 +208,7 @@ Node ArgumentList::back() const {
 }
 
 
-bool ArgumentList::empty() {
+bool ArgumentList::empty() const {
     return positionalArgs.empty() && namedArgs.empty();
 }
 
@@ -217,7 +220,7 @@ const Node& ArgumentList::operator[](size_t index) const {
 }
 
 std::size_t ArgumentList::hash() const {
-    std::size_t h;
+    std::size_t h = 0;
     for (auto& arg : positionalArgs) {
         h += arg.hash();
     }

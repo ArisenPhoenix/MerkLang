@@ -13,6 +13,9 @@
 
 FreeVars CodeBlock::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
     freeVars.clear();
     FreeVars localDecls;
 
@@ -35,6 +38,7 @@ FreeVars CodeBlock::collectFreeVariables() const {
         }
     }
     localDecls.clear();
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
@@ -76,8 +80,13 @@ FreeVars VariableAssignment::collectFreeVariables() const {
 
 FreeVars ElseStatement::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
+    freeVars.clear();
     freeVars.merge(getBody()->collectFreeVariables());
 
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 
@@ -85,8 +94,13 @@ FreeVars ElseStatement::collectFreeVariables() const {
 
 FreeVars ElifStatement::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
+    freeVars.clear();
     freeVars.merge(getBody()->collectFreeVariables());
 
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 
@@ -94,6 +108,9 @@ FreeVars ElifStatement::collectFreeVariables() const {
 
 FreeVars IfStatement::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
     freeVars.clear();
     localAssign.clear();
   
@@ -111,6 +128,7 @@ FreeVars IfStatement::collectFreeVariables() const {
         freeVars.merge(getElse()->collectFreeVariables());
     }
 
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
@@ -147,6 +165,9 @@ FreeVars Return::collectFreeVariables() const {
 
 FreeVars WhileLoop::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
     freeVars.clear();
 
     if (condition) {
@@ -156,13 +177,42 @@ FreeVars WhileLoop::collectFreeVariables() const {
     if (body) {
         freeVars.merge(body->collectFreeVariables());
     }
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
+    return freeVars;
+}
+
+FreeVars ForLoop::collectFreeVariables() const {
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
+
+    freeVars.clear();
+    if (startExpr) {
+        freeVars.merge(startExpr->collectFreeVariables());
+    }
+    if (endExpr) {
+        freeVars.merge(endExpr->collectFreeVariables());
+    }
+    if (stepExpr) {
+        freeVars.merge(stepExpr->collectFreeVariables());
+    }
+    if (body) {
+        freeVars.merge(body->collectFreeVariables());
+    }
+
+    // Loop variable is assigned by this node, so it is not a free variable.
+    freeVars.erase(loopVariable);
+    markFreeVarsClean();
     return freeVars;
 }
 
 
 FreeVars BinaryOperation::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
     freeVars.clear();
 
     auto left = getLeftSide();
@@ -174,6 +224,7 @@ FreeVars BinaryOperation::collectFreeVariables() const {
         freeVars.merge(right->collectFreeVariables());
     }
 
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
@@ -190,15 +241,24 @@ FreeVars Argument::collectFreeVariables() const {
 }
 
 FreeVars Arguments::collectFreeVariables() const {
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
+    freeVars.clear();
     FreeVars freeVars;
     for (auto& arg : arguments) {
         freeVars.merge(arg.collectFreeVariables());
     }
-    return freeVars;
+    this->freeVars = std::move(freeVars);
+    markFreeVarsClean();
+    return this->freeVars;
 }
 
 FreeVars CallableDef::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
     freeVars.clear();
 
     std::unordered_set<String> paramNames;
@@ -213,21 +273,29 @@ FreeVars CallableDef::collectFreeVariables() const {
         }
     }
 
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
 
 FreeVars CallableCall::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
     freeVars.clear();
     freeVars.merge(arguments->collectFreeVariables());
 
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
 
 FreeVars Chain::collectFreeVariables() const {
     DEBUG_FLOW();
+    if (isFreeVarsCacheValid()) {
+        return freeVars;
+    }
     freeVars.clear();
 
     if (!elements.empty()) {
@@ -235,23 +303,8 @@ FreeVars Chain::collectFreeVariables() const {
         freeVars.merge(element.object->collectFreeVariables());
     }
 
+    markFreeVarsClean();
     DEBUG_FLOW_EXIT();
     return freeVars;
 }
-
-FreeVars ChainOperation::collectFreeVariables() const {
-    DEBUG_FLOW();
-    freeVars.clear();
-    if (getLeftSide()) {
-        freeVars.merge(getLeftSide()->collectFreeVariables());
-    }
- 
-    if (getRightSide()) {
-        freeVars.merge(getRightSide()->collectFreeVariables());
-    }
-
-    DEBUG_FLOW_EXIT();
-    return freeVars;
-}
-
 

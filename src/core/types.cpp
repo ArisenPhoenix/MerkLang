@@ -103,6 +103,7 @@ String astTypeToString(AstType type) {
         case AstType::ElifStatement: return highlight("ElifStatement", Colors::yellow);
         case AstType::ElseStatement: return highlight("ElseStatement", Colors::yellow);
         case AstType::WhileLoop: return highlight("WhileLoop", Colors::bold_yellow);
+        case AstType::ForLoop: return highlight("ForLoop", Colors::bold_yellow);
 
         case AstType::Break: return highlight("Break", Colors::bold_red);
         case AstType::Return: return highlight("Return", Colors::bold_red);
@@ -136,7 +137,6 @@ String astTypeToString(AstType type) {
         case AstType::AttributeAssignment: return highlight("AttributeAssignment", Colors::bold_cyan);
         case AstType::AttributeReference: return highlight("AttributeReference", Colors::teal);
         case AstType::Chain: return highlight("Chain", Colors::yellow);
-        case AstType::ChainOperation: return highlight("ChainOperation", Colors::bg_green);
         case AstType::Accessor: return highlight("Accessor", Colors::red);
 
         case AstType::CallableBody: return highlight("CallableBody", Colors::bold_red);

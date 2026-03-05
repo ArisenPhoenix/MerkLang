@@ -6,6 +6,13 @@
 #include "core/callables/classes/Method.hpp"
 #include "core/registry/TypeRegistry.hpp"
 
+namespace {
+String makeDeterministicChildBlockOwner(const Scope& parentScope, size_t childOrdinal) {
+    const String parentOwner = parentScope.owner.empty() ? String("AnonymousParent") : parentScope.owner;
+    return "ChildBlock(" + parentOwner + "#" + std::to_string(childOrdinal) + ")";
+}
+} // namespace
+
 Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
   : interpretMode(interpretMode)
 {
@@ -30,12 +37,16 @@ Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
 
 
 SharedPtr<Scope> Scope::createChildScope() {
+    const size_t childOrdinal = childScopes.size() + 1;
     auto c = makeShared<Scope>(shared_from_this(),
                                      globalFunctions,
                                      globalClasses,
                                      globalTypes,
                                      interpretMode);
     c->isRoot = false;
+    if (c->owner.empty()) {
+        c->owner = makeDeterministicChildBlockOwner(*this, childOrdinal);
+    }
     childScopes.push_back(c);
     Scope::counts.blocks += 1;
     return c;
@@ -139,11 +150,6 @@ void Scope::clear(bool internalCall) {
 }
 
 
-
-
-
-
-
 // Builds a simple shell scope for callables with only globalFunctions and globalClasses
 SharedPtr<Scope> Scope::makeCallScope() {
     DEBUG_FLOW(FlowLevel::NONE);
@@ -166,7 +172,6 @@ SharedPtr<Scope> Scope::makeCallScope() {
 }
 
 
-
 // creates a copy of the scope
 SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNames) {
     DEBUG_FLOW(FlowLevel::MED);
@@ -182,9 +187,11 @@ SharedPtr<Scope> Scope::detachScope(const std::unordered_set<String>& freeVarNam
     detached->owner = owner+"(detached)";
     includeMetaData(detached, true);
     for (const auto& name : freeVarNames) {
-        if (this->hasVariable(name)) {
-            VarNode original = getVariable(name);
+        try {
+            VarNode& original = getVariable(name);
             detached->declareVariable(name, original.uniqClone());
+        } catch (const VariableNotFoundError&) {
+            // Free var not visible from this scope; skip.
         }
     }
     detached->kind = ScopeKind::Detached;
@@ -203,12 +210,10 @@ SharedPtr<Scope> Scope::isolateScope(const std::unordered_set<String>& freeVarNa
     includeMetaData(isolated, true);
 
     for (const auto& name : freeVarNames) {
-        if (this->hasVariable(name)) {
+        try {
             isolated->declareVariable(name, getVariable(name).uniqClone());
-        } else if (auto parent = getParent()) {
-            if (parent->hasVariable(name)) {
-                isolated->declareVariable(name, getVariable(name).uniqClone());
-            }
+        } catch (const VariableNotFoundError&) {
+            // Free var not visible from this scope; skip.
         }
     }
     isolated->globalTypes = globalTypes;
@@ -256,6 +261,10 @@ SharedPtr<Scope> Scope::buildMethodCallScope(SharedPtr<Method> method, String na
 
 SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
     auto instanceScope = makeCallScope();
+    // Instance scope is re-homed under the captured clone during instantiation.
+    // Clear the default call-scope parent to avoid accidental reparent errors.
+    instanceScope->parentScope.reset();
+    instanceScope->scopeLevel = 0;
     includeMetaData(instanceScope, true);
     instanceScope->owner = generateScopeOwner("ClassInstance", classScope->owner);
 
@@ -286,19 +295,80 @@ SharedPtr<Scope> Scope::makeInstanceScope(SharedPtr<Scope> classScope) {
 // to be used on the ClassBase directly as it should contain all the necessary data
 SharedPtr<Scope> Scope::buildInstanceScope(SharedPtr<ClassBase> classTemplate, String className) {
     auto capturedScope = classTemplate->getCapturedScope();
-    auto capturedClone = capturedScope->clone(true);  // clone it safely
+    if (!capturedScope) {
+        throw MerkError("buildInstanceScope: class captured scope is null for class " + className);
+    }
+
+    SharedPtr<Scope> capturedClone = capturedScope->clone(true);  // clone it safely
     auto classScope = classTemplate->getClassScope();
 
     SharedPtr<Scope> instanceScope = makeInstanceScope(classScope);
     if (!instanceScope){throw MerkError("InstanceScope creation failed in ClassCall::evaluate()");}
 
+    // Strict clone validates parent existence on source, then we attach clone under class scope.
+#if MERK_SCOPE_DIAGNOSTICS
+    const size_t classChildrenBefore = classScope->getChildren().size();
+#endif
     classScope->appendChildScope(capturedClone);
+#if MERK_SCOPE_DIAGNOSTICS
+    const size_t classChildrenAfter = classScope->getChildren().size();
+    const size_t classDelta = (classChildrenAfter >= classChildrenBefore) ? (classChildrenAfter - classChildrenBefore) : 0;
+    classScopeAttachSamples.fetch_add(1, std::memory_order_relaxed);
+    if (classDelta != 1) {
+        classScopeAttachUnexpectedDelta.fetch_add(1, std::memory_order_relaxed);
+        DEBUG_LOG(
+            LogLevel::WARNING,
+            "[ScopeDiag] classScope attach delta != 1 | class=",
+            className,
+            " | owner=",
+            classScope->owner,
+            " | before=",
+            classChildrenBefore,
+            " | after=",
+            classChildrenAfter,
+            " | delta=",
+            classDelta
+        );
+    }
+#endif
     
     instanceScope->owner = generateScopeOwner("ClassInstance", className);
-    auto captured = instanceScope->getParent();
     capturedClone->owner = generateScopeOwner("InstanceCaptured", className);
     if (capturedClone->has(instanceScope)) { throw MerkError("Captured Scope Already Contains InstanceScope"); }
+#if MERK_SCOPE_DIAGNOSTICS
+    const size_t capturedChildrenBefore = capturedClone->getChildren().size();
+#endif
     capturedClone->appendChildScope(instanceScope);
+#if MERK_SCOPE_DIAGNOSTICS
+    const size_t capturedChildrenAfter = capturedClone->getChildren().size();
+    const size_t capturedDelta = (capturedChildrenAfter >= capturedChildrenBefore) ? (capturedChildrenAfter - capturedChildrenBefore) : 0;
+    capturedScopeAttachSamples.fetch_add(1, std::memory_order_relaxed);
+    if (capturedDelta != 1) {
+        capturedScopeAttachUnexpectedDelta.fetch_add(1, std::memory_order_relaxed);
+        DEBUG_LOG(
+            LogLevel::WARNING,
+            "[ScopeDiag] capturedScope attach delta != 1 | class=",
+            className,
+            " | owner=",
+            capturedClone->owner,
+            " | before=",
+            capturedChildrenBefore,
+            " | after=",
+            capturedChildrenAfter,
+            " | delta=",
+            capturedDelta
+        );
+    }
+#endif
+    auto parentAfterAttach = instanceScope->getParent();
+    if (!parentAfterAttach || parentAfterAttach.get() != capturedClone.get()) {
+        throw MerkError(
+            "buildInstanceScope: instance parent attach failed for class " + className +
+            " | expectedParent=" + capturedClone->metaString() +
+            " | actualParent=" + (parentAfterAttach ? parentAfterAttach->metaString() : String("<null>")) +
+            " | instance=" + instanceScope->metaString()
+        );
+    }
     instanceScope->kind = ScopeKind::Instance;
     Scope::counts.instanceCalls += 1;
     return instanceScope;
@@ -324,14 +394,14 @@ void Scope::includeMetaData(SharedPtr<Scope> newScope, bool thisIsDetached) cons
     newScope->isDetached = thisIsDetached;
     newScope->isClonedScope = newScope->isClonedScope ? newScope->isClonedScope : isClonedScope;
     newScope->isCallableScope = newScope->isCallableScope ? newScope->isCallableScope : isCallableScope;
-    if (newScope->isDetached) {
-        if (newScope->owner.empty()) {
-            newScope->owner = owner;
+    // Preserve explicit owners to avoid washing everything into GLOBAL.
+    // Only fill owner when a scope truly has no label yet.
+    if (newScope->owner.empty()) {
+        if (newScope->isDetached) {
+            newScope->owner = owner.empty() ? String("DetachedScope") : owner + "(detached)";
         } else {
-            newScope->owner = owner + "(detached)";
+            newScope->owner = owner.empty() ? String("Scope") : owner;
         }
-    } else {
-        newScope->owner = owner;
     }
 }
 

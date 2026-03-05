@@ -18,13 +18,14 @@ public:
     void addPositionalArg(const Node& arg);
     void addNamedArg(const String& name, const Node& arg);
 
-    Node getArg(size_t i) const;
-    Node getNamedArg(const String& name) const;
+    const Node& getArg(size_t i) const;
+    const Node& getNamedArg(const String& name) const;
     NodeList getRemainingArgs(size_t start) const;
-    NodeList getPositional();
-    NodeList getPositionalArgs() const;
+    NodeList& getPositional();
+    const NodeList& getPositional() const;
+    const NodeList& getPositionalArgs() const;
 
-    std::unordered_map<String, Node> getNamedArgs();
+    const std::unordered_map<String, Node>& getNamedArgs() const;
 
     size_t positionalCount() const;
     bool hasNamedArg(const String& name) const;
@@ -32,7 +33,7 @@ public:
     NodeList bindTo(const ParamList& params, bool allowDefaults = false) const;
     BoundArgs bindToBound(const ParamList& params, bool allowDefaults = false) const;
 
-    String toString() const;
+    String toString() const override;
 
     bool hasNamedArgs();
     size_t positionalCount();
@@ -46,11 +47,11 @@ public:
     auto cend() const { return positionalArgs.cend(); }
 
     Node& back();
-    Node back() const;
+    const Node& back() const;
 
     // Access parameters by index
     const Node& operator[](size_t index) const;
-    bool empty();
+    bool empty() const;
     size_t size();
     size_t size() const;
 

@@ -46,7 +46,7 @@ Vector<Token> Tokenizer::tokenize(LexerConfig& lexCfg) {
 
 LexerConfig& handleLex(LexerConfig& lexCfg) {
     if (lexCfg.keywords.size() == 0) {
-        lexCfg.keywords         = {"if","elif","else","from","as","import","while","continue","break","return","for","throw"};
+        lexCfg.keywords         = {"if","elif","else","from","as","import","while","continue","break","return","for","throw", "const", "mut"};
     }
 
     if (lexCfg.nativeClasses.size() == 0) {
@@ -88,7 +88,7 @@ Vector<Token> Tokenizer::lex(LexerConfig& lexCfg) {
     CommentConfig cfg       = handleScannerConfig();
     Scanner scanner(source, cfg);
     auto toks = scanner.scan();
-    printRawTokens(toks);
+    // printRawTokens(toks);
     LayoutConfig lcfg       = handleLayoutConfig();
     Structurizer structurizer(lcfg);
     auto structs = structurizer.structurize(toks);
@@ -98,14 +98,13 @@ Vector<Token> Tokenizer::lex(LexerConfig& lexCfg) {
     Lexer lexer(v);
     lexer.lex(structs, tokens);
 
-
-    debugLog(true, "LEXER OUTPUT: ");
-    bool colored = true;
-
-    debugLog(true, "TOKENIZER OUTPUT: ");
+    
     if (tokens.size() < 1) {
         debugLog(true, "No Tokens: ");
     }
+
+    
+    // printTokens(true);
     return tokens;
 
 }

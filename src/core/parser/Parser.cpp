@@ -216,15 +216,22 @@ void Parser::interpret(BaseAST* block_or_ast) const {
 }
 
 
-Token Parser::currentToken() const {
+const Token& Parser::currentToken() const {
+    if (!reinjectedTokens.empty()) {
+        return reinjectedTokens.back();
+    }
     if (position < tokens.size()) {
         return tokens[position];
     }
     return eofToken;
 }
 
-Token Parser::advance() {
+const Token& Parser::advance() {
     DEBUG_LOG(LogLevel::TRACE, "Advancing From Current Token: ", currentToken().toString());
+    if (!reinjectedTokens.empty()) {
+        reinjectedTokens.pop_back();
+        return currentToken();
+    }
     if (position < tokens.size() - 1) {
         ++position;
 
@@ -239,54 +246,68 @@ Token Parser::advance() {
 }
 
 
-Token Parser::lookBack(int number) {
-    position -= number;
-    Token last = currentToken();
-    position += number;
-    return last;
+const Token& Parser::lookBack(int number) const {
+    if (number < 0) {
+        return peek(-number);
+    }
+    const size_t distance = static_cast<size_t>(number);
+    if (distance <= position) {
+        return tokens[position - distance];
+    }
+    return eofToken;
 }
 
-Token Parser::peek(int number){
-    // ++position;
-    position += number;
-    Token nextToken = currentToken();
-    position -= number;
-    // --position;
-    return nextToken;
+const Token& Parser::peek(int number) const {
+    if (number < 0) {
+        return lookBack(-number);
+    }
+    const size_t offset = static_cast<size_t>(number);
+    if (offset < reinjectedTokens.size()) {
+        return reinjectedTokens[reinjectedTokens.size() - 1 - offset];
+    }
+    const size_t adjustedOffset = offset - reinjectedTokens.size();
+    const size_t nextPos = position + adjustedOffset;
+    if (nextPos < tokens.size()) {
+        return tokens[nextPos];
+    }
+    return eofToken;
 }
 
-bool Parser::consume(TokenType type, String value, String fromWhere) {
-    if (currentToken().type == type && currentToken().value == value) { // match only checks the type here because no value is provided
+bool Parser::consume(TokenType type, const String& value, const String& fromWhere) {
+    const Token& token = currentToken();
+    if (token.type == type && token.value == value) { // match only checks the type here because no value is provided
         advance();
         return true;
     }
 
-    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
+    throw UnexpectedTokenError(token, " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
 }
 
-bool Parser::consume(TokenType type, String fromWhere) {
-    if (currentToken().type == type) { // match only checks the type here because no value is provided
+bool Parser::consume(TokenType type, const String& fromWhere) {
+    const Token& token = currentToken();
+    if (token.type == type) { // match only checks the type here because no value is provided
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
+    throw UnexpectedTokenError(token, " Type: " + tokenTypeToString(type), " Parser::consume -> " + fromWhere);
 }
 
-bool Parser::consume(String value, String fromWhere) {
-    if (currentToken().value == value){
+bool Parser::consume(const String& value, const String& fromWhere) {
+    const Token& token = currentToken();
+    if (token.value == value){
         advance();
         return true;
     }
-    throw UnexpectedTokenError(currentToken(), value, " Parser::consume -> " + fromWhere);
+    throw UnexpectedTokenError(token, value, " Parser::consume -> " + fromWhere);
 }
 
 
-bool Parser::consume(TokenType type, Vector<String> values, String fromWhere) {
-    Token token = currentToken();
-    String val = token.value;
+bool Parser::consume(TokenType type, const Vector<String>& values, const String& fromWhere) {
+    const Token& token = currentToken();
+    const String& val = token.value;
     if (token.type == type){
-        if (values.size() > 0) {
-            for (auto& value : values) {
+        if (!values.empty()) {
+            for (const auto& value : values) {
                 if (val == value) {
                     advance();
                     return true;
@@ -308,7 +329,8 @@ bool Parser::consume(TokenType type, Vector<String> values, String fromWhere) {
 
 
 bool Parser::check(TokenType type, const String& value) const {
-    return currentToken().type == type && (value.empty() || currentToken().value == value);
+    const Token& token = currentToken();
+    return token.type == type && (value.empty() || token.value == value);
 }
 
 bool Parser::consumeIf(TokenType type, const String& value) {
@@ -362,7 +384,7 @@ Token Parser::find(TokenType type, int limit) {
 
 
 
-Token Parser::previousToken() const {
+const Token& Parser::previousToken() const {
     if (position > 0) {
         return tokens[position - 1];
     }
@@ -374,7 +396,7 @@ String Parser::getCurrentClassAccessor() {
     return classAccessors.back();
 }
 
-void Parser::addAccessor(String accessorName) {
+void Parser::addAccessor(const String& accessorName) {
     classAccessors.emplace_back(accessorName);
 }
 void Parser::popAccessor() {
@@ -426,7 +448,7 @@ int Parser::getOperatorPrecedence(const String& op) const {
     return -1; // ✅ unknown: not a binary operator
 }
 
-std::optional<std::type_index> getType(Token token){
+std::optional<std::type_index> getType(const Token& token){
     switch (token.type)
     {
     case TokenType::Number:
@@ -444,7 +466,7 @@ std::optional<std::type_index> getType(Token token){
 
 }
 
-std::optional<NodeValueType> Parser::getTypeFromString(String typeStr) {
+std::optional<NodeValueType> Parser::getTypeFromString(const String& typeStr) {
     auto val = stringToNodeType(typeStr);
     if (val == NodeValueType::UNKNOWN) {
         // This will be Where user defined types are pulled from scope
@@ -505,7 +527,7 @@ bool Parser::processNewLines(){
 
 
 void Parser::reinjectControlToken(const Token& token) {
-    tokens.insert(tokens.begin() + position, token);
+    reinjectedTokens.push_back(token);
 }
 
 void Parser::processBlankSpaces() {
@@ -513,7 +535,7 @@ void Parser::processBlankSpaces() {
 };
 
 
-bool Parser::expect(TokenType tokenType, bool strict, String fromWhere) {
+bool Parser::expect(TokenType tokenType, bool strict, const String& fromWhere) {
     if (currentToken().type == tokenType){
         return true;
     }
@@ -526,7 +548,7 @@ bool Parser::expect(TokenType tokenType, bool strict, String fromWhere) {
 }
 
 
-void Parser::displayPreviousTokens(String baseTokenName, size_t number, String location) {
+void Parser::displayPreviousTokens(const String& baseTokenName, size_t number, const String& location) {
     for (size_t i = number + 1; i > 1; i--) {
         if (int(position - i) < 0) { continue; }
         debugLog(true, baseTokenName, " Token For ", location, " Is: ", lookBack(i).toColoredString(), "back: ", i-1);
@@ -535,7 +557,7 @@ void Parser::displayPreviousTokens(String baseTokenName, size_t number, String l
 }
 
 
-void Parser::displayNextTokens(String baseTokenName, size_t number, String location) {
+void Parser::displayNextTokens(const String& baseTokenName, size_t number, const String& location) {
     debugLog(true, "Primary " + baseTokenName, " Token For ", location, " Is: ", currentToken().toColoredString());
     for (size_t i = 1; i < number + 1; i++) {
         debugLog(true, baseTokenName, " Token For ", location, " Is: ", peek(i).toColoredString());
@@ -584,14 +606,14 @@ ResolvedType Parser::parseResolvedType() {
 
 
 
-bool Parser::validate(Token token, Vector<TokenType> types, Vector<String> values, bool requiresBoth) {
-    for (auto type : types) {
+bool Parser::validate(const Token& token, const Vector<TokenType>& types, const Vector<String>& values, bool requiresBoth) {
+    for (const auto type : types) {
         if (token.type == type) {
             if (requiresBoth) {break;}
             return true;
         }
     }
-    for (auto& val : values) {
+    for (const auto& val : values) {
         if (token.value == val) {
             return true;
         }
@@ -600,7 +622,7 @@ bool Parser::validate(Token token, Vector<TokenType> types, Vector<String> value
     return false;
 }
 
-bool Parser::validate(Vector<TokenType> types, Vector<String> values, bool requiresBoth) {
+bool Parser::validate(const Vector<TokenType>& types, const Vector<String>& values, bool requiresBoth) {
     return validate(currentToken(), types, values, requiresBoth);
 }
 

@@ -377,7 +377,7 @@ Node ClassInstance::getField(const String& fieldName, TokenType type) const {
 
 
     DEBUG_FLOW_EXIT();
-    throw MerkError("Field or method '" + fieldName + "' not found in class instance. If a call was made that should take place in the ChainOperation");
+    throw MerkError("Field or method '" + fieldName + "' not found in class instance. This may indicate a chain resolution issue.");
 }
 
 Node ClassInstance::getField(const String& fieldName) const { 

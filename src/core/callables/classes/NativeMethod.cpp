@@ -27,7 +27,9 @@ Node NativeMethod::execute(
     SharedPtr<Scope> callScope,
     SharedPtr<ClassInstanceNode> instanceNode) const 
 {
-    if (!instanceNode) {throw RunTimeError("NativeMethod called without class instance.");}
+    if (!instanceNode && !isStatic) {
+        throw RunTimeError("NativeMethod called without class instance.");
+    }
     return methodFn(args, callScope, instanceNode);
 }
 
