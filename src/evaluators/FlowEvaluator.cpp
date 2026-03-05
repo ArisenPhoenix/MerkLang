@@ -152,6 +152,84 @@ bool tryEvalIntExprFast(const ASTStatement* expr,
             return false;
     }
 }
+
+bool computeBinary(const String& op, int lhs, int rhs, Node& out) {
+    if (op == "+")  { out = Node(lhs + rhs); return true; }
+    if (op == "-")  { out = Node(lhs - rhs); return true; }
+    if (op == "*")  { out = Node(lhs * rhs); return true; }
+    if (op == "/")  {
+        if (rhs == 0) throw MerkError("Division by zero");
+        out = Node(lhs / rhs);
+        return true;
+    }
+    if (op == "%")  {
+        if (rhs == 0) throw MerkError("Modulo by zero");
+        out = Node(lhs % rhs);
+        return true;
+    }
+    if (op == "==") { out = Node(lhs == rhs); return true; }
+    if (op == "!=") { out = Node(lhs != rhs); return true; }
+    if (op == "<")  { out = Node(lhs < rhs); return true; }
+    if (op == "<=") { out = Node(lhs <= rhs); return true; }
+    if (op == ">")  { out = Node(lhs > rhs); return true; }
+    if (op == ">=") { out = Node(lhs >= rhs); return true; }
+    return false;
+}
+
+bool computeBinaryMixedNumeric(const String& op, double lhs, double rhs, Node& out) {
+    if (op == "+")  { out = Node(lhs + rhs); return true; }
+    if (op == "-")  { out = Node(lhs - rhs); return true; }
+    if (op == "*")  { out = Node(lhs * rhs); return true; }
+    if (op == "/")  {
+        if (rhs == 0.0) throw MerkError("Division by zero");
+        out = Node(lhs / rhs);
+        return true;
+    }
+    if (op == "==") { out = Node(lhs == rhs); return true; }
+    if (op == "!=") { out = Node(lhs != rhs); return true; }
+    if (op == "<")  { out = Node(lhs < rhs); return true; }
+    if (op == "<=") { out = Node(lhs <= rhs); return true; }
+    if (op == ">")  { out = Node(lhs > rhs); return true; }
+    if (op == ">=") { out = Node(lhs >= rhs); return true; }
+    return false;
+}
+
+bool computeBinary(const String& op, const String& lhs, const String& rhs, Node& out) {
+    if (op == "+")  { out = Node(lhs + rhs); return true; }
+    if (op == "==") { out = Node(lhs == rhs); return true; }
+    if (op == "!=") { out = Node(lhs != rhs); return true; }
+    if (op == "<")  { out = Node(lhs < rhs); return true; }
+    if (op == "<=") { out = Node(lhs <= rhs); return true; }
+    if (op == ">")  { out = Node(lhs > rhs); return true; }
+    if (op == ">=") { out = Node(lhs >= rhs); return true; }
+    return false;
+}
+
+bool computeBinary(const String& op, bool lhs, bool rhs, Node& out) {
+    if (op == "and" || op == "&&") { out = Node(lhs && rhs); return true; }
+    if (op == "or"  || op == "||") { out = Node(lhs || rhs); return true; }
+    if (op == "==")               { out = Node(lhs == rhs); return true; }
+    if (op == "!=")               { out = Node(lhs != rhs); return true; }
+    return false;
+}
+
+bool dispatchTypedBinary(const String& op, const Node& lhs, const Node& rhs, Node& out) {
+    if (lhs.isInt() && rhs.isInt()) {
+        return computeBinary(op, lhs.toInt(), rhs.toInt(), out);
+    }
+    const bool lhsNumeric = lhs.isInt() || lhs.isFloat() || lhs.isDouble();
+    const bool rhsNumeric = rhs.isInt() || rhs.isFloat() || rhs.isDouble();
+    if (lhsNumeric && rhsNumeric) {
+        return computeBinaryMixedNumeric(op, lhs.toDouble(), rhs.toDouble(), out);
+    }
+    if (lhs.isString() && rhs.isString()) {
+        return computeBinary(op, lhs.toString(), rhs.toString(), out);
+    }
+    if (lhs.isBool() && rhs.isBool()) {
+        return computeBinary(op, lhs.toBool(), rhs.toBool(), out);
+    }
+    return false;
+}
 } // namespace
 
 EvalResult evaluateLiteral(Node value) {
@@ -256,27 +334,9 @@ EvalResult evaluateBinaryOperation(const String& op,
     // evaluatingFor(leftValue, "evaluateBinaryOperation", scope->getScopeLevel());
     // evaluatingFor(rightValue, "evaluateBinaryOperation", scope->getScopeLevel());
 
-    // Hot-path for integer arithmetic/comparison in tight loops.
-    if (leftValue.isInt() && rightValue.isInt()) {
-        const int li = leftValue.toInt();
-        const int ri = rightValue.toInt();
-        if (op == "+") return EvalResult::Normal(Node(li + ri));
-        if (op == "-") return EvalResult::Normal(Node(li - ri));
-        if (op == "*") return EvalResult::Normal(Node(li * ri));
-        if (op == "/") {
-            if (ri == 0) throw MerkError("Division by zero");
-            return EvalResult::Normal(Node(li / ri));
-        }
-        if (op == "%") {
-            if (ri == 0) throw MerkError("Modulo by zero");
-            return EvalResult::Normal(Node(li % ri));
-        }
-        if (op == "==") return EvalResult::Normal(Node(li == ri));
-        if (op == "!=") return EvalResult::Normal(Node(li != ri));
-        if (op == "<") return EvalResult::Normal(Node(li < ri));
-        if (op == "<=") return EvalResult::Normal(Node(li <= ri));
-        if (op == ">") return EvalResult::Normal(Node(li > ri));
-        if (op == ">=") return EvalResult::Normal(Node(li >= ri));
+    Node typedOut;
+    if (dispatchTypedBinary(op, leftValue, rightValue, typedOut)) {
+        return EvalResult::Normal(std::move(typedOut));
     }
 
     Node val;

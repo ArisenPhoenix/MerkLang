@@ -1,5 +1,6 @@
 #include "core/types.h"
 #include "core/Scope.hpp"
+#include "core/StackScope.hpp"
 
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/classes/ClassBase.hpp"
@@ -11,6 +12,8 @@ String makeDeterministicChildBlockOwner(const Scope& parentScope, size_t childOr
     const String parentOwner = parentScope.owner.empty() ? String("AnonymousParent") : parentScope.owner;
     return "ChildBlock(" + parentOwner + "#" + std::to_string(childOrdinal) + ")";
 }
+
+constexpr bool kUseStackScopeForCallScopes = true;
 } // namespace
 
 Scope::Scope(int scopeNum, bool interpretMode, bool isRootBool)
@@ -153,11 +156,17 @@ void Scope::clear(bool internalCall) {
 // Builds a simple shell scope for callables with only globalFunctions and globalClasses
 SharedPtr<Scope> Scope::makeCallScope() {
     DEBUG_FLOW(FlowLevel::NONE);
-    auto c = makeShared<Scope>(shared_from_this(),
-                                globalFunctions,
-                                globalClasses,
-                                globalTypes,
-                                interpretMode);
+    auto c = kUseStackScopeForCallScopes
+        ? static_pointer_cast<Scope>(makeShared<StackScope>(shared_from_this(),
+                                                            globalFunctions,
+                                                            globalClasses,
+                                                            globalTypes,
+                                                            interpretMode))
+        : makeShared<Scope>(shared_from_this(),
+                            globalFunctions,
+                            globalClasses,
+                            globalTypes,
+                            interpretMode);
     c->globalTypes    = globalTypes;
     c->globalTypeSigs = globalTypeSigs;
     c->localTypes.attach(*c->globalTypeSigs);
