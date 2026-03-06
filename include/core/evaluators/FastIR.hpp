@@ -28,7 +28,7 @@ enum class OpCode : uint8_t {
     Jump,
     JumpIfFalse,
 };
-
+ 
 struct Instr {
     OpCode op{};
     int arg = 0;

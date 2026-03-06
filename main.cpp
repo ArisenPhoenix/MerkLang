@@ -662,6 +662,7 @@ static int runBenchmark(const CliOptions& options) {
 // Parse once, eval many times (fresh scope per eval). Comparable to Python's compile-once-exec-many.
 static int runBenchmarkEvalOnly(int argc, char* argv[], const CliOptions& options) {
     const String codeDir = "code/";
+    std::cout << "codeDir: " << codeDir;
     const String filePath = getFilePath(argc, argv, codeDir, options.fileName);
     const bool interpretMode = false;
     const bool byBlock = false;
