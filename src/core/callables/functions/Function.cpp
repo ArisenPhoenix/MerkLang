@@ -6,7 +6,7 @@
 #include "core/types.h"
 #include "utilities/debugger.h"
 
-#include "core/Scope.hpp" 
+#include "core/Environments/Scope.hpp" 
 #include "ast/Ast.hpp"
 #include "ast/Exceptions.hpp"
 #include "ast/AstControl.hpp"

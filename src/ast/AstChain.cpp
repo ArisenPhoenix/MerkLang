@@ -3,7 +3,7 @@
 #include "core/node/Node.hpp"
 #include "core/node/ArgumentNode.hpp"
 #include "core/TypesFWD.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/AstBase.hpp"
 
 #include "utilities/debugger.h"
@@ -19,7 +19,7 @@
 #include "ast/AstChain.hpp"
 
 #include "core/errors.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/evaluators/FlowEvaluator.hpp"
 #include "core/evaluators/Evaluator.hpp"
 

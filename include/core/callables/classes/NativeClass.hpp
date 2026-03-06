@@ -7,7 +7,7 @@
 #include "core/callables/classes/NativeMethod.hpp"
 #include "core/callables/Callable.hpp"
 
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 class NativeClass : public ClassBase {
 private:

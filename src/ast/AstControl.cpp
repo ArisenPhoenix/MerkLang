@@ -21,7 +21,7 @@
 #include "utilities/helper_functions.h"
 
 #include "core/evaluators/FlowEvaluator.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 
 FreeVarCollection::~FreeVarCollection() {
@@ -389,8 +389,12 @@ EvalResult IfStatement::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInst
 
 
 void CodeBlock::setScope(SharedPtr<Scope> newScope) {
-    MARK_UNUSED_MULTI(newScope);
-    DEBUG_LOG(LogLevel::TRACE, highlight("Setting CodeBlock Scope", Colors::blue));
+    if (newScope) {
+        scope = newScope;
+        for (auto& child : getMutableChildren()) {
+            if (child) child->setScope(newScope);
+        }
+    }
 }
 
 SharedPtr<Scope> CodeBlock::getScope() const {

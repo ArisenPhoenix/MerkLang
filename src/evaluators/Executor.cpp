@@ -6,7 +6,7 @@
 #include "core/evaluators/EvalResult.hpp"
 #include "ast/AstControl.hpp"
 #include "core/node/ParamNode.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/Exceptions.hpp"
 
 void placeArgsInCallScope(const ArgumentList& evaluatedArgs, SharedPtr<Scope> callScope, ParamList& parameters) {

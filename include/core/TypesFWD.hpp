@@ -76,6 +76,7 @@ class MapNode;
 class SetNode;
 
 class Scope;
+class Environment;
 struct Token;
 
 using NodeList = Vector<Node>;

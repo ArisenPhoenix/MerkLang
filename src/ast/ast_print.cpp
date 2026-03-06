@@ -7,7 +7,7 @@
 #include "ast/AstChain.hpp"
 #include "ast/AstControl.hpp"
 #include "ast/AstClass.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/AstFunction.hpp"
 #include "ast/AstMethod.hpp"
 #include "ast/Exceptions.hpp"

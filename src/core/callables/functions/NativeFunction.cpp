@@ -1,7 +1,7 @@
 #include "core/node/ArgumentNode.hpp"
 #include "core/callables/functions/NativeFunction.hpp"
 #include "core/types.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "utilities/debugger.h"
 
 NativeFunction::NativeFunction(

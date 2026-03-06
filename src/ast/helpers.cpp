@@ -2,7 +2,7 @@
 #include "core/types.h"
 #include "core/node/ParamNode.hpp"
 
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/classes/Method.hpp"
 #include "core/node/Node.hpp"

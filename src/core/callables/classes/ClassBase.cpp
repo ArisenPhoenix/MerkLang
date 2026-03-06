@@ -9,7 +9,7 @@
 #include "ast/AstChain.hpp"
 #include "core/callables/classes/Method.hpp"
 #include "core/callables/classes/ClassBase.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/ast_validate.h"
 #include <cassert>
 #include "core/evaluators/Evaluator.hpp"

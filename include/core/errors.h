@@ -312,7 +312,7 @@ public:
 
 class ParentScopeNotFoundError : public ScopeError {
 public:
-    explicit ParentScopeNotFoundError();
+    explicit ParentScopeNotFoundError(const String& message = "");
 
     String errorPrefix() const override;
 

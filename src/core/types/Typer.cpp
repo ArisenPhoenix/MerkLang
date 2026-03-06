@@ -1,6 +1,6 @@
 #include "core/types/Typer.hpp"
 #include "ast/AstCallable.hpp"                 
-#include "core/Scope.hpp"                    
+#include "core/Environments/Scope.hpp"                    
 #include "core/registry/TypeSignatureRegistry.hpp"
 #include "core/node/ParamNode.hpp"
 

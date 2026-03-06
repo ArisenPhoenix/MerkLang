@@ -1,6 +1,6 @@
 #include "utilities/debugger.h"
 #include "core/errors.h"
-#include "core/Scope.hpp" 
+#include "core/Environments/Scope.hpp" 
 #include "core/callables/classes/Method.hpp"
 
 #include "ast/AstBase.hpp"

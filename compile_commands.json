@@ -1,0 +1,518 @@
+[
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/main.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/main.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/main.cpp",
+  "output": "CMakeFiles/merk.dir/main.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/Ast.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/Ast.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/Ast.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/Ast.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/AstCallable.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstCallable.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstCallable.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/AstCallable.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/AstChain.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstChain.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstChain.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/AstChain.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/AstClass.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstClass.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstClass.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/AstClass.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/AstControl.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstControl.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstControl.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/AstControl.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/AstFunction.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstFunction.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstFunction.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/AstFunction.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/AstMethod.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstMethod.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstMethod.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/AstMethod.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/AstNamespace.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstNamespace.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/AstNamespace.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/AstNamespace.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/Exceptions.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/Exceptions.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/Exceptions.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/Exceptions.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/ast_clone.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_clone.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_clone.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/ast_clone.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/ast_collect.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_collect.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_collect.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/ast_collect.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/ast_getAll.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_getAll.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_getAll.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/ast_getAll.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/ast_print.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_print.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_print.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/ast_print.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/ast_validate.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_validate.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/ast_validate.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/ast_validate.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/ast/helpers.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/helpers.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/ast/helpers.cpp",
+  "output": "CMakeFiles/merk.dir/src/ast/helpers.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/builtins.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/builtins.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/builtins.cpp",
+  "output": "CMakeFiles/merk.dir/src/builtins.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/cli/bench.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/cli/bench.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/cli/bench.cpp",
+  "output": "CMakeFiles/merk.dir/src/cli/bench.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/Scope.Builders.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Builders.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Builders.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/Scope.Builders.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/Scope.Callables.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Callables.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Callables.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/Scope.Callables.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/Scope.Classes.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Classes.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Classes.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/Scope.Classes.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/Scope.DebugRuntime.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.DebugRuntime.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.DebugRuntime.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/Scope.DebugRuntime.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/Scope.Formatters.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Formatters.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Formatters.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/Scope.Formatters.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/Scope.Types.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Types.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.Types.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/Scope.Types.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/Scope.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/Scope.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/Scope.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/StackScope.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/StackScope.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/StackScope.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/StackScope.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/Environments/scope_helpers.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/scope_helpers.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/Environments/scope_helpers.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/Environments/scope_helpers.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/Callable.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/Callable.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/Callable.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/Callable.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/Invocable.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/Invocable.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/Invocable.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/Invocable.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/classes/ClassBase.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/ClassBase.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/ClassBase.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/classes/ClassBase.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/classes/Method.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/Method.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/Method.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/classes/Method.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/classes/NativeClass.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/NativeClass.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/NativeClass.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/classes/NativeClass.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/classes/NativeMethod.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/NativeMethod.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/NativeMethod.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/classes/NativeMethod.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/classes/builtins.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/builtins.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/classes/builtins.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/classes/builtins.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/functions/Function.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/functions/Function.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/functions/Function.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/functions/Function.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/functions/NativeFunction.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/functions/NativeFunction.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/functions/NativeFunction.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/functions/NativeFunction.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/callables/functions/builtins.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/functions/builtins.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/callables/functions/builtins.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/callables/functions/builtins.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/errors/base_error.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/base_error.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/base_error.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/errors/base_error.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/errors/callable_errors.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/callable_errors.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/callable_errors.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/errors/callable_errors.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/errors/context_errors.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/context_errors.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/context_errors.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/errors/context_errors.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/errors/evaluation_errors.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/evaluation_errors.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/evaluation_errors.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/errors/evaluation_errors.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/errors/parser_errors.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/parser_errors.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/parser_errors.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/errors/parser_errors.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/errors/scope_errors.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/scope_errors.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/scope_errors.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/errors/scope_errors.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/errors/token_errors.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/token_errors.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/errors/token_errors.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/errors/token_errors.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/AnyNode.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/AnyNode.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/AnyNode.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/AnyNode.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/ArgumentNode.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/ArgumentNode.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/ArgumentNode.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/ArgumentNode.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/BoundArgs.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/BoundArgs.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/BoundArgs.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/BoundArgs.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/Node.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/Node.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/Node.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/Node.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/NodeConstructors.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeConstructors.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeConstructors.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/NodeConstructors.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/NodeIO.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeIO.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeIO.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/NodeIO.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/NodeOperators.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeOperators.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeOperators.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/NodeOperators.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/NodeStructures.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeStructures.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/NodeStructures.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/NodeStructures.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/node/ParamNode.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/ParamNode.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/node/ParamNode.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/node/ParamNode.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/parser/Parser.Basic.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Basic.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Basic.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/parser/Parser.Basic.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/parser/Parser.Classes.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Classes.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Classes.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/parser/Parser.Classes.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/parser/Parser.Control.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Control.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Control.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/parser/Parser.Control.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/parser/Parser.Functions.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Functions.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.Functions.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/parser/Parser.Functions.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/parser/Parser.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/parser/Parser.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/parser/Parser.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/registry/ClassRegistry.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/ClassRegistry.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/ClassRegistry.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/registry/ClassRegistry.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/registry/Context.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/Context.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/Context.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/registry/Context.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/registry/FunctionRegistry.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/FunctionRegistry.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/FunctionRegistry.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/registry/FunctionRegistry.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/registry/TypeRegistry.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/TypeRegistry.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/TypeRegistry.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/registry/TypeRegistry.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/registry/TypeSignatureRegistry.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/TypeSignatureRegistry.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/TypeSignatureRegistry.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/registry/TypeSignatureRegistry.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/registry/TypeSignatureRegistryManager.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/TypeSignatureRegistryManager.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/registry/TypeSignatureRegistryManager.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/registry/TypeSignatureRegistryManager.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/tokenizer/Tokenizer.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/Tokenizer.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/Tokenizer.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/tokenizer/Tokenizer.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_helpers.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_helpers.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_helpers.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_helpers.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_lex.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_lex.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_lex.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_lex.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_main.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_main.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_main.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_main.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_white_space.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_white_space.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/tokenizer/tokenizer_white_space.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/tokenizer/tokenizer_white_space.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/types.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/types.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/types.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/types.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/types/TypeSig.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/types/TypeSig.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/types/TypeSig.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/types/TypeSig.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/core/types/Typer.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/core/types/Typer.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/core/types/Typer.cpp",
+  "output": "CMakeFiles/merk.dir/src/core/types/Typer.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/evaluators/Evaluator.Callables.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/Evaluator.Callables.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/Evaluator.Callables.cpp",
+  "output": "CMakeFiles/merk.dir/src/evaluators/Evaluator.Callables.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/evaluators/Evaluator.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/Evaluator.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/Evaluator.cpp",
+  "output": "CMakeFiles/merk.dir/src/evaluators/Evaluator.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/evaluators/Executor.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/Executor.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/Executor.cpp",
+  "output": "CMakeFiles/merk.dir/src/evaluators/Executor.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/evaluators/FastIR.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/FastIR.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/FastIR.cpp",
+  "output": "CMakeFiles/merk.dir/src/evaluators/FastIR.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/evaluators/FlowEvaluator.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/FlowEvaluator.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/FlowEvaluator.cpp",
+  "output": "CMakeFiles/merk.dir/src/evaluators/FlowEvaluator.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/evaluators/TypeEvaluator.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/TypeEvaluator.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/evaluators/TypeEvaluator.cpp",
+  "output": "CMakeFiles/merk.dir/src/evaluators/TypeEvaluator.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/lex/Lexer.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/lex/Lexer.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/lex/Lexer.cpp",
+  "output": "CMakeFiles/merk.dir/src/lex/Lexer.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/lex/Scanner.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/lex/Scanner.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/lex/Scanner.cpp",
+  "output": "CMakeFiles/merk.dir/src/lex/Scanner.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/lex/Structurizer.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/lex/Structurizer.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/lex/Structurizer.cpp",
+  "output": "CMakeFiles/merk.dir/src/lex/Structurizer.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/utilities/debugger.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/utilities/debugger.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/utilities/debugger.cpp",
+  "output": "CMakeFiles/merk.dir/src/utilities/debugger.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/utilities/helper_functions.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/utilities/helper_functions.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/utilities/helper_functions.cpp",
+  "output": "CMakeFiles/merk.dir/src/utilities/helper_functions.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/src/utilities/lsan_defaults.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/src/utilities/lsan_defaults.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/src/utilities/lsan_defaults.cpp",
+  "output": "CMakeFiles/merk.dir/src/utilities/lsan_defaults.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/debugger_config.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/debugger_config.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/debugger_config.cpp",
+  "output": "CMakeFiles/merk.dir/debugger_config.cpp.o"
+},
+{
+  "directory": "/mnt/Internal_SSD/Programming/C++/MerkLang/build",
+  "command": "/usr/bin/c++ -DENABLE_DEBUG=0 -DMERK_SCOPE_DIAGNOSTICS=1 -I/mnt/Internal_SSD/Programming/C++/MerkLang/include -O3 -DNDEBUG -std=gnu++20 -Wall -Wextra -pedantic -O3 -march=native -DNDEBUG -o CMakeFiles/merk.dir/a_info.cpp.o -c /mnt/Internal_SSD/Programming/C++/MerkLang/a_info.cpp",
+  "file": "/mnt/Internal_SSD/Programming/C++/MerkLang/a_info.cpp",
+  "output": "CMakeFiles/merk.dir/a_info.cpp.o"
+}
+]

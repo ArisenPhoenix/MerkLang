@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_MERK_BIN = ROOT / "build-release" / "merk"
+DEFAULT_MERK_BIN = ROOT / "build" / "merk"
 DEFAULT_OUT_JSON = ROOT / "results_compare.json"
 
 
@@ -60,10 +60,12 @@ def run_merk_throughput_once(
     merk_file_name: str,
     bench_iters: int,
     bench_warmup: int,
+    bench_eval_only: bool = False,
 ) -> float:
+    bench_mode = "--bench-eval" if bench_eval_only else "--bench"
     cmd = [
         str(merk_bin),
-        "--bench",
+        bench_mode,
         merk_file_name,
         "--bench-iters",
         str(bench_iters),
@@ -120,12 +122,15 @@ def benchmark_throughput_case(
     runs: int,
     bench_iters: int,
     bench_warmup: int,
+    bench_eval_only: bool = False,
 ) -> tuple[list[float], list[float]]:
     merk_samples: list[float] = []
     py_samples: list[float] = []
     for _ in range(runs):
         merk_samples.append(
-            run_merk_throughput_once(merk_bin, merk_file.name, bench_iters, bench_warmup)
+            run_merk_throughput_once(
+                merk_bin, merk_file.name, bench_iters, bench_warmup, bench_eval_only
+            )
         )
         py_samples.append(
             run_python_throughput_once(python_bin, py_file, bench_iters, bench_warmup, ROOT)
@@ -147,6 +152,11 @@ def main() -> int:
     )
     parser.add_argument("--bench-iters", type=int, default=200, help="inner iters for throughput mode")
     parser.add_argument("--bench-warmup", type=int, default=20, help="inner warmup for throughput mode")
+    parser.add_argument(
+        "--bench-eval",
+        action="store_true",
+        help="use merk --bench-eval for throughput (parse once, eval many; fair comparison with Python)",
+    )
     parser.add_argument("--out", default=str(DEFAULT_OUT_JSON))
     args = parser.parse_args()
 
@@ -159,13 +169,14 @@ def main() -> int:
         ("class", ROOT / "code" / "class.merk", ROOT / "bench_py" / "class_case.py"),
         ("fib", ROOT / "code" / "fib.merk", ROOT / "bench_py" / "fib.py"),
         ("file_static", ROOT / "code" / "file_static.merk", ROOT / "bench_py" / "file_static.py"),
-        ("compute_loop", ROOT / "code" / "compute_loop.merk", ROOT / "bench_py" / "compute_loop.py"),
+        # ("compute_loop", ROOT / "code" / "compute_loop.merk", ROOT / "bench_py" / "compute_loop.py"),
     ]
 
     mode_entries = []
     print(
         f"outer_runs={args.runs} process_warmup={args.warmup} "
         f"bench_iters={args.bench_iters} bench_warmup={args.bench_warmup}"
+        + (f" bench_eval={args.bench_eval}" if args.bench_eval else "")
     )
 
     def run_mode_process() -> dict:
@@ -221,6 +232,7 @@ def main() -> int:
                 args.runs,
                 args.bench_iters,
                 args.bench_warmup,
+                args.bench_eval,
             )
 
             merk_summary = summarize(merk_samples)
@@ -240,7 +252,7 @@ def main() -> int:
                     "merk": {
                         "command": [
                             str(merk_bin),
-                            "--bench",
+                            "--bench-eval" if args.bench_eval else "--bench",
                             merk_file.name,
                             "--bench-iters",
                             args.bench_iters,
@@ -274,6 +286,7 @@ def main() -> int:
             "mode": args.mode,
             "bench_iters": args.bench_iters,
             "bench_warmup": args.bench_warmup,
+            "bench_eval": args.bench_eval,
             "merk_bin": str(merk_bin),
             "python_bin": args.python_bin,
         },

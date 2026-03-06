@@ -54,12 +54,13 @@ public:
     ~ClassDef();
 
     Node evaluate(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode = nullptr) const override;
+    UniquePtr<BaseAST> clone() const override;
 
     // Print the AST for debugging.
     void printAST(std::ostream& os, int indent = 0) const override;
     AstType getAstType() const override {return AstType::ClassDefinition;}
     void setClassAccessor(String accessorName);
-    String getClassAccessor();
+    String getClassAccessor() const;
     ParamList& getParameters();
 }; 
 

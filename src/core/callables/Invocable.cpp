@@ -1,4 +1,4 @@
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 #include "core/callables/Invocable.hpp"
 

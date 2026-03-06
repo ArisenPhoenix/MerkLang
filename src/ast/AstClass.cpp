@@ -7,7 +7,7 @@
 #include "core/TypesFWD.hpp"
 #include "utilities/debugger.h"
 #include "utilities/helper_functions.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 #include "core/evaluators/Evaluator.hpp"
 #include "ast/Ast.hpp"
@@ -39,7 +39,7 @@ ClassDef::ClassDef(String name, ParamList parameters, UniquePtr<ClassBody> body,
 
 void ClassDef::setClassAccessor(String accessorName){accessor = accessorName;}
 
-String ClassDef::getClassAccessor() {return accessor;}
+String ClassDef::getClassAccessor() const {return accessor;}
     
 ParamList& ClassDef::getParameters() {return parameters;}
 
@@ -70,14 +70,15 @@ Node ClassDef::evaluate(SharedPtr<Scope> defScope, [[maybe_unused]] SharedPtr<Cl
     SharedPtr<Scope> classScope = classDefCapturedScope->createChildScope();
     if (!classDefCapturedScope){throw MerkError("classScope was not created correctly on the ClassBase.");}
 
-    if (!parameters.eraseByName(accessor)) {throw MerkError("No Accessor Was Provided In Class Constructor");}
+    ParamList paramsForCls = parameters.clone();
+    if (!paramsForCls.eraseByName(accessor)) {throw MerkError("No Accessor Was Provided In Class Constructor");}
 
     DEBUG_LOG(LogLevel::TRACE, highlight("Attempting captured setting on cls", Colors::yellow));
 
     SharedPtr<ClassBase> cls = makeShared<ClassBase>(name, accessor, classScope);
     cls->setClassScope(classScope);
     cls->setCapturedScope(classDefCapturedScope);
-    cls->setParameters(parameters.clone());
+    cls->setParameters(std::move(paramsForCls));
 
     auto classBody = static_cast<ClassBody*>(getBody());
     classBody->setClassScope(classScope);

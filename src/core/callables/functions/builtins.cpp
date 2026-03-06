@@ -8,7 +8,7 @@
 #include "core/callables/functions/NativeFunction.hpp"
 #include "core/callables/functions/Function.hpp"
 #include "core/callables/functions/builtins.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/evaluators/TypeEvaluator.hpp"
 // Define native functions 
 

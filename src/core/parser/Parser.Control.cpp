@@ -11,7 +11,7 @@
 #include "ast/AstBase.hpp"
 #include "ast/Ast.hpp"
 #include "ast/AstControl.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 #include "utilities/streaming.h"
 #include "utilities/debugging_functions.h"

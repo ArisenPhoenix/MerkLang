@@ -10,7 +10,7 @@
 
 #include "core/types.h"
 #include "core/errors.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 // New flow types
 #include "core/evaluators/EvalResult.hpp"
@@ -91,7 +91,7 @@
 namespace FlowEvaluator {
 
 namespace {
-constexpr bool kEnableFastIntExprAssign = false;
+constexpr bool kEnableFastIntExprAssign = true;
 
 bool tryApplyIntBinary(const String& op, int lhs, int rhs, int& out) {
     if (op == "+") { out = lhs + rhs; return true; }
@@ -119,10 +119,7 @@ bool tryEvalIntExprFast(const ASTStatement* expr,
     switch (expr->getAstType()) {
         case AstType::VariableReference: {
             const auto* ref = static_cast<const VariableReference*>(expr);
-            const Node& n = scope->getVariable(ref->getName()).getValueNode();
-            if (!n.isInt()) return false;
-            out = n.toInt();
-            return true;
+            return scope->tryReadInt(ref->getName(), out);
         }
         case AstType::Literal: {
             Node n = expr->evaluate(scope, instanceNode);
@@ -284,10 +281,10 @@ EvalResult evaluateVariableAssignment(String name,
 
     int fastInt = 0;
     if (kEnableFastIntExprAssign && tryEvalIntExprFast(value, scope, instanceNode, fastInt)) {
-        Node finalVal(fastInt);
-        scope->updateVariable(name, finalVal);
-        DEBUG_FLOW_EXIT();
-        return EvalResult::Normal(std::move(finalVal));
+        if (scope->tryWriteInt(name, fastInt)) {
+            DEBUG_FLOW_EXIT();
+            return EvalResult::Normal(Node(fastInt));
+        }
     }
 
     Node finalVal = value->evaluate(scope, instanceNode);

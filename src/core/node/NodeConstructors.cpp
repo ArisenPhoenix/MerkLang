@@ -5,7 +5,7 @@
 
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/evaluators/TypeEvaluator.hpp"
 
 DataTypeFlags::DataTypeFlags() = default;

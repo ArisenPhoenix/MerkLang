@@ -20,11 +20,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include_directories(${MERK_INCLUDE_DIR})
 
 file(GLOB_RECURSE MERK_SOURCES "${MERK_SRC_DIR}/*.cpp")
-list(REMOVE_ITEM MERK_SOURCES "${MERK_SRC_DIR}/core/scope/Scope.Debug.cpp")
+list(REMOVE_ITEM MERK_SOURCES "${MERK_SRC_DIR}/core/Environments/Scope.Debug.cpp")
 list(APPEND MERK_SOURCES "${CMAKE_SOURCE_DIR}/debugger_config.cpp")
 list(APPEND MERK_SOURCES "${CMAKE_SOURCE_DIR}/a_info.cpp")
+# Ensure StackScope.cpp is always included (GLOB can miss files if cmake cache is stale)
+list(FIND MERK_SOURCES "${MERK_SRC_DIR}/core/Environments/StackScope.cpp" _STACK_SCOPE_IDX)
+if(_STACK_SCOPE_IDX EQUAL -1)
+    list(APPEND MERK_SOURCES "${MERK_SRC_DIR}/core/Environments/StackScope.cpp")
+endif()
 
 add_executable(merk ${MERK_MAIN} ${MERK_SOURCES})
+
+if(CMAKE_EXPORT_COMPILE_COMMANDS)
+    add_custom_target(sync_compile_commands ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}/compile_commands.json"
+            "${CMAKE_SOURCE_DIR}/compile_commands.json"
+        COMMENT "Sync compile_commands.json to project root"
+    )
+endif()
 
 message(STATUS "Include directories: ${MERK_INCLUDE_DIR}")
 # === Build configurations and Compiler specific flags ===

@@ -3,7 +3,7 @@
 #include "core/node/ParamNode.hpp"
 // #include "core/types.h"
 #include "core/TypesFWD.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/errors.h"
 #include "utilities/debugger.h"
 #include "ast/AstBase.hpp"
@@ -220,6 +220,13 @@ UniquePtr<BaseAST> MethodCall::clone() const {
     return makeUnique<MethodCall>(name, std::move(cloneArgs()), getScope());
 }
 
+UniquePtr<BaseAST> ClassDef::clone() const {
+    if (!getScope()) { throw MerkError("ClassDef::clone: no scope"); }
+    UniquePtr<BaseAST> clonedBodyBase = body->clone();
+    auto clonedBody = static_unique_ptr_cast<ClassBody>(std::move(clonedBodyBase));
+    return makeUnique<ClassDef>(name, parameters.clone(), std::move(clonedBody), getClassAccessor(), getScope()->clone());
+}
+
 UniquePtr<BaseAST> ClassBody::clone() const {
     if (!getScope()){throw MerkError("No Scope Present in ClassBody::clone()");}
 
@@ -263,10 +270,10 @@ UniquePtr<BaseAST> MethodDef::clone() const {
     
     auto clonedBody = static_unique_ptr_cast<MethodBody>(std::move(clonedBodyBase));
     if (!getScope()) {throw MerkError("MethodDef::clone -> No scope");}
-    auto methodDef = makeUnique<MethodDef>(name, parameters.clone(), std::move(clonedBody), callType, getScope()->clone());
+    
+    auto methodDef = makeUnique<MethodDef>(name, parameters.clone(), std::move(clonedBody), InvocableType, getScope()->clone());
     String access = getMethodAccessor();
 
-    clonedBody->setNonStaticElements(nonStaticElements);
     methodDef->setNonStaticElements(nonStaticElements);
 
     methodDef->setMethodAccessor(access);

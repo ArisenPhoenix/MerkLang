@@ -22,11 +22,11 @@ String ScopeError::errorHint() const {
     return "";
 }
 
-ParentScopeNotFoundError::ParentScopeNotFoundError()
-    : ScopeError("Parent scope not found. This operation is invalid for the root scope.") {}
+ParentScopeNotFoundError::ParentScopeNotFoundError(const String& message)
+    : ScopeError("Parent scope not found. This operation is invalid for the root scope.\n" + message) {}
 
 String ParentScopeNotFoundError::errorPrefix() const {
-    return highlight("Parent Scope Not Found Error: ", Colors::red);
+    return highlight("ParentScopeNotFoundError: ", Colors::red);
 }
 
 String ParentScopeNotFoundError::errorHint() const {

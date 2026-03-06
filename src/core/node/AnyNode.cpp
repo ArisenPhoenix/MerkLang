@@ -5,7 +5,7 @@
 #include "core/node/Node.hpp"
 #include "core/node/NodeStructures.hpp"
 #include "core/types.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include <charconv>
 #include "core/evaluators/TypeEvaluator.hpp"
 

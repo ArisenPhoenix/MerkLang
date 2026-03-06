@@ -7,7 +7,7 @@
 #include "ast/AstClass.hpp"
 #include "ast/AstMethod.hpp"
 #include "ast/AstChain.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/helpers.h"
 #include "ast/ast_validate.h"
 #include "core/callables/Callable.hpp"
@@ -184,7 +184,7 @@ Node evaluateMethodDef(
 }
 
 Node evaluateFunctionCall(String name, SharedPtr<Scope> scope, Arguments* arguments, SharedPtr<ClassInstanceNode> instanceNode) {
-    DEBUG_FLOW(FlowLevel::PERMISSIVE); 
+    DEBUG_FLOW(FlowLevel::PERMISSIVE);
     if (!scope) {throw MerkError("scope passed to FunctionCall::evaluate is null");}
     if (name == "showScope") {scope->debugPrint(); return Node(Null);}
     auto callArgs = arguments->evaluateAll(scope, instanceNode);
@@ -196,19 +196,22 @@ Node evaluateFunctionCall(String name, SharedPtr<Scope> scope, Arguments* argume
         optSig = sigOpt.value();
     } else {
         // scope->debugPrint();
-        
-        auto& var = scope->getVariable(name);
-        if (var.isFunctionNode()) {
-            auto funcNode = var.toFunctionNode();
-            auto opt = funcNode.getFunction(name, callArgs, scope);
-            if (opt.has_value()) {
-                optSig = opt.value();
-            } else {
-                throw MerkError("Could Not Determine Overload for function " + name);
+        if (scope->hasVariable(name)) {
+            auto& var = scope->getVariable(name);
+            if (var.isFunctionNode()) {
+                auto funcNode = var.toFunctionNode();
+                auto opt = funcNode.getFunction(name, callArgs, scope);
+                if (opt.has_value()) {
+                    optSig = opt.value();
+                } else {
+                    throw MerkError("Could Not Determine Overload for function " + name);
+                }
+            }        
+            if (var.getValueNode().getType() == NodeValueType::Function) {
+                throw MerkError("IS A FUNCTION>>>>YAAAAAAY");
             }
-        }        
-        if (var.getValueNode().getType() == NodeValueType::Function) {
-            throw MerkError("IS A FUNCTION>>>>YAAAAAAY");
+        } else {
+            throw FunctionNotFoundError(name);
         }
     }
 

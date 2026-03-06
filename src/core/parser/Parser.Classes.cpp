@@ -5,7 +5,7 @@
 #include "utilities/debugging_functions.h"
 
 #include "core/Tokenizer.hpp"      // For token types
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/AstCallable.hpp"
 #include "ast/AstMethod.hpp"
 #include "core/Parser.hpp"

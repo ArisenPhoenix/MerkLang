@@ -13,7 +13,7 @@
 #include "ast/AstControl.hpp"
 #include "ast/AstFunction.hpp"
 #include "ast/AstCallable.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 #include "utilities/utilities.h"
 #include "utilities/streaming.h"

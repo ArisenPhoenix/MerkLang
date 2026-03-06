@@ -8,7 +8,7 @@
 #include "core/errors.h"
 #include "utilities/debugger.h"
 #include "utilities/helper_functions.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/AstBase.hpp"
 #include "ast/Ast.hpp"
 #include "ast/AstControl.hpp"

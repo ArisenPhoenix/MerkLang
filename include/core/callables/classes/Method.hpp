@@ -2,7 +2,7 @@
 
 // #include "core/types.h"
 #include "core/TypesFWD.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "ast/AstFunction.hpp" 
 #include "ast/AstCallable.hpp"
 #include "core/callables/Invocable.hpp"

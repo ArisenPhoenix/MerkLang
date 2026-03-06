@@ -4,7 +4,7 @@
 // #include "core/node/Node.hpp"
 // #include <algorithm>
 // #include "core/callables/classes/ClassBase.hpp"
-// #include "core/Scope.hpp"
+// #include "core/Environments/Scope.hpp"
 
 // TypeSignatureRegistry::TypeSignatureRegistry() = default;
 // void TypeSignatureRegistry::ensureInit() {
@@ -293,7 +293,7 @@
 #include "core/registry/TypeSignatureRegistry.hpp"
 
 #include "core/registry/TypeRegistry.hpp"
-#include "core/Scope.hpp"   // if bindResolvedType needs it (it does)
+#include "core/Environments/Scope.hpp"   // if bindResolvedType needs it (it does)
 #include "core/node/Node.hpp"
 #include "core/TypesFWD.hpp"
 

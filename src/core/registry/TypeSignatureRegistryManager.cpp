@@ -2,7 +2,7 @@
 #include "core/registry/TypeRegistry.hpp"
 #include "core/errors.h"
 #include "core/node/Node.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 #include <algorithm>
 

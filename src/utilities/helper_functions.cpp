@@ -5,7 +5,7 @@
 #include <variant>
 #include <iostream>
 #include "core/types.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "utilities/debugging_functions.h"
 #include <filesystem>
 

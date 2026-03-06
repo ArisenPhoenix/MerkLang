@@ -1,7 +1,7 @@
 #include "core/node/ArgumentNode.hpp"
 #include <tuple>
 #include "core/types.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/callables/classes/bultins.h"
 #include "core/callables/classes/ClassBase.hpp"
 #include "core/callables/classes/NativeMethod.hpp"

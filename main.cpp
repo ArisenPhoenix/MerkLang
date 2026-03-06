@@ -18,7 +18,8 @@
 #include "ast/AstControl.hpp"
 #include "ast/Ast.hpp"
 
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
+#include "core/Environments/StackScope.hpp"
 #include "core/builtins.h"
 
 #include "utilities/helper_functions.h"
@@ -31,6 +32,7 @@
 #include "lex/Structurizer.hpp"
 #include "lex/Lexer.hpp"
 #include "core/evaluators/TypeEvaluator.hpp"
+#include "core/evaluators/FastIR.hpp"
 
 
 
@@ -52,7 +54,9 @@ std::tuple<String, String> getFileContents(int argc, char* argv[], bool onlyPath
 }
 
 SharedPtr<Scope> generateGlobalScope(bool interpretMode, LexerConfig& lCfg) {
-    SharedPtr<Scope> globalScope = makeShared<Scope>(0, interpretMode, true);
+    StackScope::resetInstrumentation();
+    // StackScope(0, false,true);
+    SharedPtr<Scope> globalScope = makeShared<StackScope>(0, interpretMode, true);
     globalScope->owner = "GLOBAL";
     globalScope->kind = ScopeKind::Root;
 
@@ -178,6 +182,7 @@ int run_original(int argc, char* argv[]) {
     globalScope->clear();
     globalScope.reset();
     Scope::printScopeReport();
+    StackScope::printInstrumentation();
     
     return 0;
 }
@@ -187,6 +192,8 @@ int run_original(int argc, char* argv[]) {
 
 struct CliOptions {
     bool benchmark = false;
+    bool benchmarkEvalOnly = false;
+    bool benchmarkEvalFastInt = false;
     bool nodeBenchmark = false;
     bool manualComputeBenchmark = false;
     int benchmarkIters = 10;
@@ -252,6 +259,15 @@ static CliOptions parseCliOptions(int argc, char* argv[]) {
             options.benchmark = true;
             continue;
         }
+        if (arg == "--bench-eval") {
+            options.benchmarkEvalOnly = true;
+            continue;
+        }
+        if (arg == "--bench-eval-fastint") {
+            options.benchmarkEvalOnly = true;
+            options.benchmarkEvalFastInt = true;
+            continue;
+        }
         if (arg == "--bench-node") {
             options.nodeBenchmark = true;
             continue;
@@ -289,6 +305,8 @@ static void printUsage() {
         << "Usage:\n"
         << "  ./merk [file.merk]\n"
         << "  ./merk --bench [file.merk] [--bench-iters N] [--bench-warmup N]\n"
+        << "  ./merk --bench-eval [file.merk] [--bench-iters N] [--bench-warmup N]\n"
+        << "  ./merk --bench-eval-fastint [file.merk] [--bench-iters N] [--bench-warmup N]\n"
         << "  ./merk --bench-node [--bench-iters N] [--bench-warmup N]\n"
         << "  ./merk --bench-manual [--bench-iters N] [--bench-warmup N]\n";
 }
@@ -587,6 +605,7 @@ static RunMetrics runPipelineOnce(const String& filePath, bool printScopeReport)
     globalScope.reset();
     if (printScopeReport) {
         Scope::printScopeReport();
+        StackScope::printInstrumentation();
     }
 
     auto tTotalEnd = Clock::now();
@@ -640,6 +659,94 @@ static int runBenchmark(const CliOptions& options) {
     return 0;
 }
 
+// Parse once, eval many times (fresh scope per eval). Comparable to Python's compile-once-exec-many.
+static int runBenchmarkEvalOnly(int argc, char* argv[], const CliOptions& options) {
+    const String codeDir = "code/";
+    const String filePath = getFilePath(argc, argv, codeDir, options.fileName);
+    const bool interpretMode = false;
+    const bool byBlock = false;
+    LexerConfig lCfg;
+    SharedPtr<Scope> parseScope = generateGlobalScope(interpretMode, lCfg);
+
+    UniquePtr<CodeBlock> ast;
+    size_t tokenCount = 0;
+    FastIR::Program fastProgram;
+    bool fastProgramReady = false;
+
+    try {
+        Tokenizer tokenizer(filePath, true);
+        auto tokens = tokenizer.tokenize(lCfg);
+        tokenCount = tokens.size();
+
+        Parser parser(tokens, parseScope, interpretMode, byBlock);
+        ast = parser.parse();
+        if (options.benchmarkEvalFastInt) {
+            fastProgramReady = FastIR::lowerCodeBlock(*ast, fastProgram);
+        }
+    } catch (MerkError& e) {
+        std::cerr << e.errorString() << std::endl;
+        return 1;
+    } catch (const std::exception& ex) {
+        std::cerr << "Error during parse: " << ex.what() << std::endl;
+        return 1;
+    }
+
+    double totalEval = 0.0;
+    {
+        ScopedSilenceCout silence(true);
+
+        for (int i = 0; i < options.benchmarkWarmup; ++i) {
+            SharedPtr<Scope> scope = parseScope->clone();
+            if (fastProgramReady) {
+                FastIR::execute(fastProgram, scope);
+            } else {
+                ast->evaluateFlow(scope);
+            }
+            scope->clear();
+            scope.reset();
+        }
+
+        for (int i = 0; i < options.benchmarkIters; ++i) {
+            SharedPtr<Scope> scope = parseScope->clone();
+
+            auto t0 = std::chrono::steady_clock::now();
+            if (fastProgramReady) {
+                FastIR::execute(fastProgram, scope);
+            } else {
+                ast->evaluateFlow(scope);
+            }
+            auto t1 = std::chrono::steady_clock::now();
+
+            totalEval += std::chrono::duration<double, std::milli>(t1 - t0).count();
+            scope->clear();
+            scope.reset();
+        }
+    }
+
+    ast->clear();
+    ast.reset();
+    parseScope->clear();
+    parseScope.reset();
+
+    const double denom = static_cast<double>(options.benchmarkIters);
+    const double avgEval = totalEval / denom;
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << "\nBenchmark Results (eval-only, parse once)\n";
+    std::cout << "File: " << filePath << "\n";
+    std::cout << "Iterations: " << options.benchmarkIters
+              << " (warmup: " << options.benchmarkWarmup << ")\n";
+    std::cout << "Tokens: " << tokenCount << "\n";
+    if (options.benchmarkEvalFastInt) {
+        std::cout << "FastIR:       " << (fastProgramReady ? "enabled" : "fallback (unsupported AST)") << "\n";
+        if (!fastProgramReady && !fastProgram.unsupportedReason.empty()) {
+            std::cout << "FastIR note:  " << fastProgram.unsupportedReason << "\n";
+        }
+    }
+    std::cout << "Avg eval:     " << avgEval << " ms\n";
+    std::cout << "Avg total:    " << avgEval << " ms\n";
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
     Debug::configureDebugger();
 
@@ -651,6 +758,9 @@ int main(int argc, char* argv[]) {
         }
         if (options.benchmark) {
             return runBenchmark(options);
+        }
+        if (options.benchmarkEvalOnly) {
+            return runBenchmarkEvalOnly(argc, argv, options);
         }
         if (options.nodeBenchmark) {
             return runNodeBenchmark(options);
@@ -665,8 +775,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 }
-
-
 
 
 

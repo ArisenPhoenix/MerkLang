@@ -20,7 +20,7 @@
 
 #include "core/errors.h"
 #include "core/evaluators/FlowEvaluator.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "utilities/debugger.h"
 
 
@@ -47,8 +47,7 @@ LiteralValue::~LiteralValue()  {
 }
 
 void ASTStatement::setScope(SharedPtr<Scope> newScope) {
-    MARK_UNUSED_MULTI(newScope);
-    // scope = newScope;
+    scope = newScope;
 }
 
 EvalResult ASTStatement::evaluateFlow(SharedPtr<Scope> scope, SharedPtr<ClassInstanceNode> instanceNode) const {
@@ -357,7 +356,6 @@ void CallableCall::setScope(SharedPtr<Scope> newScope) {
 }
 
 void CallableDef::setScope(SharedPtr<Scope> newScope) {
-    MARK_UNUSED_MULTI(newScope);
-    // scope = newScope;
-    // body->setScope(newScope);
+    ASTStatement::setScope(newScope);
+    if (body) body->setScope(newScope);
 }

@@ -13,9 +13,9 @@
 #include "core/errors.h"
 
 
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/evaluators/Evaluator.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 
 #include "utilities/helper_functions.h"
 #include "utilities/debugging_functions.h"
@@ -101,7 +101,7 @@ void evaluatingFor(const Node& value, const String& methodName, int scopeLevel =
 namespace Evaluator {
 
 namespace {
-constexpr bool kEnableFastIntExprAssign = false;
+constexpr bool kEnableFastIntExprAssign = true;
 
 bool tryApplyIntBinary(const String& op, int lhs, int rhs, int& out) {
     if (op == "+") { out = lhs + rhs; return true; }
@@ -129,10 +129,7 @@ bool tryEvalIntExprFast(const ASTStatement* expr,
     switch (expr->getAstType()) {
         case AstType::VariableReference: {
             const auto* ref = static_cast<const VariableReference*>(expr);
-            const Node& n = scope->getVariable(ref->getName()).getValueNode();
-            if (!n.isInt()) return false;
-            out = n.toInt();
-            return true;
+            return scope->tryReadInt(ref->getName(), out);
         }
         case AstType::Literal: {
             Node n = expr->evaluate(scope, instanceNode);
@@ -302,14 +299,13 @@ bool dispatchTypedBinary(const String& op, const Node& lhs, const Node& rhs, Nod
 
         int fastInt = 0;
         if (kEnableFastIntExprAssign && tryEvalIntExprFast(value, scope, instanceNode, fastInt)) {
-            Node finalVal(fastInt);
-            if (instanceNode) {
-                instanceNode->getInstanceScope()->updateVariable(name, finalVal);
-            } else {
-                scope->updateVariable(name, finalVal);
+            const bool wrote = instanceNode
+                ? instanceNode->getInstanceScope()->tryWriteInt(name, fastInt)
+                : scope->tryWriteInt(name, fastInt);
+            if (wrote) {
+                DEBUG_FLOW_EXIT();
+                return Node(fastInt);
             }
-            DEBUG_FLOW_EXIT();
-            return finalVal;
         }
 
         Node finalVal = value->evaluate(scope, instanceNode);

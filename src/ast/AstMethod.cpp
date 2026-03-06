@@ -1,6 +1,6 @@
 #include "core/node/ArgumentNode.hpp"
 #include "core/TypesFWD.hpp"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "core/evaluators/Evaluator.hpp"
 #include "core/evaluators/FlowEvaluator.hpp"
 

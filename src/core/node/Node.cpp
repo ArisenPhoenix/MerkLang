@@ -1,7 +1,7 @@
 #include "core/node/Node.hpp"
 #include "core/node/NodeStructures.hpp"
 #include "core/types.h"
-#include "core/Scope.hpp"
+#include "core/Environments/Scope.hpp"
 #include "utilities/debugger.h"
 #include "utilities/debugging_functions.h"
 #include "core/callables/classes/ClassBase.hpp"
